@@ -53,7 +53,7 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
     if (error) {
       notifications.show({
         title: "Не удалось привязать аккаунт",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;

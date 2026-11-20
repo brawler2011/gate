@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -117,12 +118,8 @@ func (s *IntegrationTestSuite) TestListPostsPagination() {
 
 	got, err := s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: ids[0]})
 	s.Require().NoError(err)
-	postModel, ok := got.(*corev1.PostModel)
-	s.Require().True(ok)
-	s.Equal("Paged Post 0", postModel.Title)
+	s.Equal("Paged Post 0", got.Title)
 
-	notfound, err := s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: uuid.New()})
-	s.Require().NoError(err)
-	_, isNotFound := notfound.(*corev1.GetPostByIdNotFound)
-	s.True(isNotFound)
+	_, err = s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: uuid.New()})
+	s.Equal(http.StatusNotFound, s.getStatusCode(err))
 }

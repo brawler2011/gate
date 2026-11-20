@@ -69,7 +69,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось запустить перепроверку контеста",
+          message: err.detail || "Не удалось запустить перепроверку контеста",
           color: "red",
         });
         return;

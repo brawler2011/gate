@@ -213,7 +213,7 @@ type Invoker interface {
 	// Create a new post.
 	//
 	// POST /posts
-	CreatePost(ctx context.Context, request *CreatePostReq) (CreatePostRes, error)
+	CreatePost(ctx context.Context, request *CreatePostReq) (*CreatedPost, error)
 	// CreateProblem invokes CreateProblem operation.
 	//
 	// Create problem.
@@ -303,7 +303,7 @@ type Invoker interface {
 	// Delete a post by ID.
 	//
 	// DELETE /posts/{id}
-	DeletePostById(ctx context.Context, params DeletePostByIdParams) (DeletePostByIdRes, error)
+	DeletePostById(ctx context.Context, params DeletePostByIdParams) error
 	// DeleteProblem invokes DeleteProblem operation.
 	//
 	// Delete problem.
@@ -431,7 +431,7 @@ type Invoker interface {
 	// Get a single post by ID.
 	//
 	// GET /posts/{id}
-	GetPostById(ctx context.Context, params GetPostByIdParams) (GetPostByIdRes, error)
+	GetPostById(ctx context.Context, params GetPostByIdParams) (*PostModel, error)
 	// GetPostImage invokes GetPostImage operation.
 	//
 	// Get image of the post by ID.
@@ -737,7 +737,7 @@ type Invoker interface {
 	// Partially update a post by ID.
 	//
 	// PATCH /posts/{id}
-	PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (PatchPostByIdRes, error)
+	PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) error
 	// Register invokes Register operation.
 	//
 	// Register.
@@ -3488,12 +3488,12 @@ func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request 
 // Create a new post.
 //
 // POST /posts
-func (c *Client) CreatePost(ctx context.Context, request *CreatePostReq) (CreatePostRes, error) {
+func (c *Client) CreatePost(ctx context.Context, request *CreatePostReq) (*CreatedPost, error) {
 	res, err := c.sendCreatePost(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (res CreatePostRes, err error) {
+func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (res *CreatedPost, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
@@ -4772,12 +4772,12 @@ func (c *Client) sendDeleteOrganization(ctx context.Context, params DeleteOrgani
 // Delete a post by ID.
 //
 // DELETE /posts/{id}
-func (c *Client) DeletePostById(ctx context.Context, params DeletePostByIdParams) (DeletePostByIdRes, error) {
-	res, err := c.sendDeletePostById(ctx, params)
-	return res, err
+func (c *Client) DeletePostById(ctx context.Context, params DeletePostByIdParams) error {
+	_, err := c.sendDeletePostById(ctx, params)
+	return err
 }
 
-func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdParams) (res DeletePostByIdRes, err error) {
+func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdParams) (res *DeletePostByIdOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
@@ -6293,12 +6293,12 @@ func (c *Client) sendGetOrganization(ctx context.Context, params GetOrganization
 // Get a single post by ID.
 //
 // GET /posts/{id}
-func (c *Client) GetPostById(ctx context.Context, params GetPostByIdParams) (GetPostByIdRes, error) {
+func (c *Client) GetPostById(ctx context.Context, params GetPostByIdParams) (*PostModel, error) {
 	res, err := c.sendGetPostById(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendGetPostById(ctx context.Context, params GetPostByIdParams) (res GetPostByIdRes, err error) {
+func (c *Client) sendGetPostById(ctx context.Context, params GetPostByIdParams) (res *PostModel, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
@@ -11080,12 +11080,12 @@ func (c *Client) sendMarkNotificationAsRead(ctx context.Context, params MarkNoti
 // Partially update a post by ID.
 //
 // PATCH /posts/{id}
-func (c *Client) PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (PatchPostByIdRes, error) {
-	res, err := c.sendPatchPostById(ctx, request, params)
-	return res, err
+func (c *Client) PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) error {
+	_, err := c.sendPatchPostById(ctx, request, params)
+	return err
 }
 
-func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (res PatchPostByIdRes, err error) {
+func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (res *PatchPostByIdOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string

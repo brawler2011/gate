@@ -144,7 +144,7 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 		s.NotEmpty(rr.Header().Get("Retry-After"))
 		var body map[string]any
 		s.Require().NoError(json.Unmarshal(rr.Body.Bytes(), &body))
-		s.Equal("Too Many Requests", body["error"])
+		s.Equal("rate_limited", body["code"])
 	}
 	s.rateRedis.SetTime(now.Add(25 * time.Minute))
 	s.Equal(http.StatusTooManyRequests, send(user.Id).Code)

@@ -47,7 +47,7 @@ const RegistrationPageContent = () => {
       if (!err) {
         setIsSuccess(true);
       } else {
-        setError(err?.message || "Ошибка при регистрации");
+        setError(err?.detail || "Ошибка при регистрации");
       }
     } catch {
       setError("Не удалось подключиться к серверу");
@@ -72,7 +72,7 @@ const RegistrationPageContent = () => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось отправить письмо",
+          message: err.detail || "Не удалось отправить письмо",
           color: "red",
         });
       }

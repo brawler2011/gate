@@ -112,7 +112,7 @@ export const CreateOrgButton = (): ReactNode => {
     setLoading(false);
 
     if (error) {
-      setFormError(translateApiError(error.message || "Ошибка создания организации"));
+      setFormError(translateApiError(error.detail || "Ошибка создания организации"));
       return;
     }
 

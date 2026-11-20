@@ -297,7 +297,7 @@ func (UnimplementedHandler) CreateOrganizationJoinRequest(ctx context.Context, r
 // Create a new post.
 //
 // POST /posts
-func (UnimplementedHandler) CreatePost(ctx context.Context, req *CreatePostReq) (r CreatePostRes, _ error) {
+func (UnimplementedHandler) CreatePost(ctx context.Context, req *CreatePostReq) (r *CreatedPost, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -432,8 +432,8 @@ func (UnimplementedHandler) DeleteOrganization(ctx context.Context, params Delet
 // Delete a post by ID.
 //
 // DELETE /posts/{id}
-func (UnimplementedHandler) DeletePostById(ctx context.Context, params DeletePostByIdParams) (r DeletePostByIdRes, _ error) {
-	return r, ht.ErrNotImplemented
+func (UnimplementedHandler) DeletePostById(ctx context.Context, params DeletePostByIdParams) error {
+	return ht.ErrNotImplemented
 }
 
 // DeleteProblem implements DeleteProblem operation.
@@ -623,7 +623,7 @@ func (UnimplementedHandler) GetOrganization(ctx context.Context, params GetOrgan
 // Get a single post by ID.
 //
 // GET /posts/{id}
-func (UnimplementedHandler) GetPostById(ctx context.Context, params GetPostByIdParams) (r GetPostByIdRes, _ error) {
+func (UnimplementedHandler) GetPostById(ctx context.Context, params GetPostByIdParams) (r *PostModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1082,8 +1082,8 @@ func (UnimplementedHandler) MarkNotificationAsRead(ctx context.Context, params M
 // Partially update a post by ID.
 //
 // PATCH /posts/{id}
-func (UnimplementedHandler) PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) (r PatchPostByIdRes, _ error) {
-	return r, ht.ErrNotImplemented
+func (UnimplementedHandler) PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) error {
+	return ht.ErrNotImplemented
 }
 
 // Register implements Register operation.
@@ -1336,4 +1336,12 @@ func (UnimplementedHandler) UploadProblemDraft(ctx context.Context, req *UploadP
 // POST /auth/verify-email
 func (UnimplementedHandler) VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (r *VerifyEmailResponseHeaders, _ error) {
 	return r, ht.ErrNotImplemented
+}
+
+// NewError creates *ProblemStatusCodeWithHeaders from error returned by handler.
+//
+// Used for common default response.
+func (UnimplementedHandler) NewError(ctx context.Context, err error) (r *ProblemStatusCodeWithHeaders) {
+	r = new(ProblemStatusCodeWithHeaders)
+	return r
 }

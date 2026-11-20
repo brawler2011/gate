@@ -106,7 +106,7 @@ const Page = (): ReactNode => {
           </Stack>
         </Paper>
       ) : (
-        <ErrorDisplay error={{status: 404, message: "Contest not found"}} />
+        <ErrorDisplay error={{status: 404}} />
       )}
     </Container>
   );

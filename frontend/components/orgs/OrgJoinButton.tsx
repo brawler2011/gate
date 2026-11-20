@@ -71,7 +71,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -99,7 +99,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -131,7 +131,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;

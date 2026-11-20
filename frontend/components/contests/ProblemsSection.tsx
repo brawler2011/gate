@@ -134,7 +134,7 @@ export const ProblemsSection = ({
       console.error("Failed to add problem:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось добавить задачу",
+        message: error.detail || "Не удалось добавить задачу",
         color: "red",
       });
       setStatusMessage({
@@ -169,7 +169,7 @@ export const ProblemsSection = ({
       console.error("Failed to delete problem:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось удалить задачу",
+        message: error.detail || "Не удалось удалить задачу",
         color: "red",
       });
       setStatusMessage({
@@ -273,7 +273,7 @@ export const ProblemsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось сохранить порядок задач",
+        message: error.detail || "Не удалось сохранить порядок задач",
         color: "red",
       });
       return;
@@ -339,7 +339,7 @@ export const ProblemsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось обновить пакет задачи",
+        message: error.detail || "Не удалось обновить пакет задачи",
         color: "red",
       });
       return;

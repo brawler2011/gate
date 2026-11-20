@@ -448,6 +448,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		corev1.WithMiddleware(authzMw),
 		corev1.WithMaxMultipartMemory(64*1024),
 		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
+		corev1.WithNotFound(middleware.NotFound),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create core api server: %w", err)

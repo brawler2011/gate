@@ -88,7 +88,7 @@ export const DraftsClient = ({
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Ошибка при сохранении черновика",
+          message: error.detail || "Ошибка при сохранении черновика",
           color: "red",
         });
       } else if (response?.id) {
@@ -127,7 +127,7 @@ export const DraftsClient = ({
     } else {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось удалить черновик",
+        message: error.detail || "Не удалось удалить черновик",
         color: "red",
       });
     }

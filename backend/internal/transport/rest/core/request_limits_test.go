@@ -26,6 +26,10 @@ type bodyLimitHandler struct {
 	bytes int64
 }
 
+func (*bodyLimitHandler) NewError(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHeaders {
+	return middleware.NewProblem(ctx, err)
+}
+
 func (h *bodyLimitHandler) Login(context.Context, *corev1.LoginRequestModel) (*corev1.AuthResponseModelHeaders, error) {
 	h.calls++
 	return nil, pkg.ErrConflict

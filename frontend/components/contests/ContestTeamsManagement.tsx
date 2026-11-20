@@ -126,7 +126,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось добавить команду",
+        message: error.detail || "Не удалось добавить команду",
         color: "red",
       });
       setStatusMessage({
@@ -162,7 +162,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось удалить команду",
+        message: error.detail || "Не удалось удалить команду",
         color: "red",
       });
       setStatusMessage({
@@ -212,7 +212,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось изменить роль команды",
+        message: error.detail || "Не удалось изменить роль команды",
         color: "red",
       });
       setStatusMessage({

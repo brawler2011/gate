@@ -47,7 +47,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
       if (error || !data) {
         notifications.show({
           title: "Ошибка импорта",
-          message: error?.message ?? "Не удалось импортировать пакет",
+          message: error?.detail ?? "Не удалось импортировать пакет",
           color: "red",
         });
         return;

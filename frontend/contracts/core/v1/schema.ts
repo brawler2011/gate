@@ -2029,30 +2029,40 @@ export interface components {
             /** @enum {string} */
             state: "cancelled";
         };
-        /**
-         * @description Error data.
-         * @example {
-         *       "error": "Not Found",
-         *       "message": "Post not found",
-         *       "request_id": "req-123e4567-e89b-42d3-a456-426614174000"
-         *     }
-         */
-        Error: {
+        /** @description RFC 9457 problem details. Clients branch and translate on `code` and `params`; `detail` is English text for debugging. */
+        Problem: {
+            /** @example about:blank */
+            type: string;
             /** @example Not Found */
-            error?: string;
-            /** @example Post not found */
-            message?: string;
-            /** @example req-123e4567-e89b-42d3-a456-426614174000 */
-            request_id?: string;
-            /** @description Invalid values of the request body, each at an RFC 6901 JSON Pointer into it. */
-            fields?: components["schemas"]["FieldError"][];
+            title: string;
+            /** @example 404 */
+            status: number;
+            /** @example post not found */
+            detail?: string;
+            code: components["schemas"]["ErrorCode"];
+            params?: {
+                [key: string]: unknown;
+            };
+            /** @example 123e4567-e89b-42d3-a456-426614174000 */
+            request_id: string;
+            /** @description Invalid values of the request body. */
+            errors?: components["schemas"]["FieldProblem"][];
         };
         /** @description One invalid value of a request body. */
-        FieldError: {
-            /** @example /tests/3/input/generator */
+        FieldProblem: {
+            /**
+             * @description RFC 6901 JSON Pointer into the request body.
+             * @example /tests/3/input/generator
+             */
             pointer: string;
-            message: string;
+            code: components["schemas"]["ErrorCode"];
+            params?: {
+                [key: string]: unknown;
+            };
+            detail?: string;
         };
+        /** @enum {string} */
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented";
         /**
          * @description Result of creation.
          * @example {
@@ -5128,6 +5138,17 @@ export interface components {
         };
     };
     responses: {
+        /** @description Error. */
+        Problem: {
+            headers: {
+                /** @description Seconds to wait before retrying; sent with 429. */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Successfully verified email */
         VerifyEmailResponse: {
             headers: {
@@ -5271,8 +5292,9 @@ export type ProblemPackage = components['schemas']['ProblemPackage'];
 export type ProblemBuild = components['schemas']['ProblemBuild'];
 export type ProblemBuildAccepted = components['schemas']['ProblemBuildAccepted'];
 export type ProblemBuildCancelled = components['schemas']['ProblemBuildCancelled'];
-export type Error = components['schemas']['Error'];
-export type FieldError = components['schemas']['FieldError'];
+export type Problem = components['schemas']['Problem'];
+export type FieldProblem = components['schemas']['FieldProblem'];
+export type ErrorCode = components['schemas']['ErrorCode'];
 export type CreationResponseModel = components['schemas']['CreationResponseModel'];
 export type UpdateUserRequestModel = components['schemas']['UpdateUserRequestModel'];
 export type PaginationModel = components['schemas']['PaginationModel'];
@@ -5404,6 +5426,7 @@ export type ContestClarificationModel = components['schemas']['ContestClarificat
 export type CreateContestClarificationRequestModel = components['schemas']['CreateContestClarificationRequestModel'];
 export type AnswerContestClarificationRequestModel = components['schemas']['AnswerContestClarificationRequestModel'];
 export type ListContestClarificationsResponseModel = components['schemas']['ListContestClarificationsResponseModel'];
+export type ResponseProblem = components['responses']['Problem'];
 export type ResponseVerifyEmailResponse = components['responses']['VerifyEmailResponse'];
 export type ParameterExpectedRevisionQuery = components['parameters']['ExpectedRevisionQuery'];
 export type ParameterIdempotencyKeyHeader = components['parameters']['IdempotencyKeyHeader'];
@@ -5469,6 +5492,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     SaveProblemDraft: {
@@ -5503,6 +5527,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     BuildProblemPackage: {
@@ -5537,6 +5562,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemBuildAccepted"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblemBuilds: {
@@ -5560,6 +5586,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemBuild"][];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetProblemBuild: {
@@ -5585,6 +5612,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemBuild"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CancelProblemBuild: {
@@ -5613,6 +5641,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemBuildCancelled"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     UploadProblemDraft: {
@@ -5658,6 +5687,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetProblemDraftObject: {
@@ -5683,6 +5713,7 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ExportProblemDraft: {
@@ -5706,6 +5737,7 @@ export interface operations {
                     "application/zip": string;
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetLanguages: {
@@ -5726,6 +5758,7 @@ export interface operations {
                     "application/json": components["schemas"]["SupportedLanguagesResponse"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetSystemLibrary: {
@@ -5746,6 +5779,7 @@ export interface operations {
                     "application/json": components["schemas"]["SystemLibrary"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblems: {
@@ -5787,6 +5821,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListProblemsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateProblem: {
@@ -5823,6 +5858,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblemTemplates: {
@@ -5846,6 +5882,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemTemplateModel"][];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetProblem: {
@@ -5869,6 +5906,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetProblemResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteProblem: {
@@ -5890,6 +5928,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateProblem: {
@@ -5916,6 +5955,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListAdminContests: {
@@ -5958,6 +5998,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     AdminChangeEmail: {
@@ -5987,6 +6028,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     AdminSetPassword: {
@@ -6016,6 +6058,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     AdminSendPasswordReset: {
@@ -6040,6 +6083,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     AdminResendVerification: {
@@ -6064,6 +6108,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListUserContests: {
@@ -6110,6 +6155,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListUserContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListWorkshopContests: {
@@ -6152,6 +6198,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListPublicContests: {
@@ -6192,6 +6239,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListOrganizationContests: {
@@ -6225,6 +6273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContest: {
@@ -6259,6 +6308,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetContest: {
@@ -6284,6 +6334,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetContestResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContest: {
@@ -6307,6 +6358,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateContest: {
@@ -6335,6 +6387,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DownloadContestStatementsPdf: {
@@ -6363,6 +6416,7 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestProblem: {
@@ -6391,6 +6445,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ReorderContestProblems: {
@@ -6419,6 +6474,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetContestProblem: {
@@ -6446,6 +6502,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetContestProblemResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContestProblem: {
@@ -6471,6 +6528,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetContestProblemAsset: {
@@ -6503,6 +6561,7 @@ export interface operations {
                     "image/*": string;
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestMembers: {
@@ -6533,6 +6592,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestMembersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestMember: {
@@ -6559,6 +6619,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContestMember: {
@@ -6585,6 +6646,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateContestMember: {
@@ -6613,6 +6675,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestTeams: {
@@ -6638,6 +6701,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestTeamsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestTeam: {
@@ -6666,6 +6730,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContestTeam: {
@@ -6692,6 +6757,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateContestTeam: {
@@ -6720,6 +6786,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetMyContestRole: {
@@ -6745,6 +6812,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetMyContestRoleResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestSubmissions: {
@@ -6794,6 +6862,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListSubmissionsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     RejudgeSubmission: {
@@ -6819,6 +6888,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     BlockSubmission: {
@@ -6849,6 +6919,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UnblockSubmission: {
@@ -6874,6 +6945,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetProblemBlockStatusForUser: {
@@ -6903,6 +6975,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemBlockStatusResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     BlockProblemForUser: {
@@ -6935,6 +7008,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UnblockProblemForUser: {
@@ -6965,6 +7039,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RejudgeContestProblem: {
@@ -6990,6 +7065,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RejudgeContest: {
@@ -7013,6 +7089,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetContestScoreboard: {
@@ -7041,6 +7118,7 @@ export interface operations {
                     "application/json": components["schemas"]["ScoreboardResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestDrafts: {
@@ -7071,6 +7149,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestDraftsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestDraft: {
@@ -7101,6 +7180,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContestDraft: {
@@ -7126,6 +7206,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestJoinRequests: {
@@ -7151,6 +7232,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestJoinRequestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestJoinRequest: {
@@ -7181,6 +7263,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContestJoinRequestResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetMyContestJoinRequest: {
@@ -7206,6 +7289,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContestJoinRequestNullableResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CancelContestJoinRequest: {
@@ -7229,6 +7313,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ApproveContestJoinRequest: {
@@ -7254,6 +7339,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RejectContestJoinRequest: {
@@ -7279,6 +7365,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestAnnouncements: {
@@ -7309,6 +7396,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestAnnouncementsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestAnnouncement: {
@@ -7339,6 +7427,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContestAnnouncementModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteContestAnnouncement: {
@@ -7364,6 +7453,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListContestClarifications: {
@@ -7398,6 +7488,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestClarificationsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateContestClarification: {
@@ -7428,6 +7519,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContestClarificationModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     AnswerContestClarification: {
@@ -7460,6 +7552,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContestClarificationModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListSubmissions: {
@@ -7506,6 +7599,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListSubmissionsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateSubmission: {
@@ -7543,6 +7637,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetSubmission: {
@@ -7566,6 +7661,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetSubmissionResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetHealth: {
@@ -7586,6 +7682,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetHealthResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListUsers: {
@@ -7621,6 +7718,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListUsersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetUser: {
@@ -7647,6 +7745,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetUserResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateUser: {
@@ -7676,6 +7775,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListUserSubmissions: {
@@ -7721,6 +7821,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListSubmissionsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetMe: {
@@ -7741,6 +7842,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetUserResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetMyDashboard: {
@@ -7761,6 +7863,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetUserDashboardResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ClaimTemporaryUser: {
@@ -7786,6 +7889,7 @@ export interface operations {
                     "application/json": components["schemas"]["ClaimTemporaryUserResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListMyClaimedAccounts: {
@@ -7806,6 +7910,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListClaimedAccountsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ChangePassword: {
@@ -7833,6 +7938,7 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     RequestEmailChange: {
@@ -7856,6 +7962,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetUserAvatar: {
@@ -7894,24 +8001,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     UploadAvatar: {
@@ -7949,6 +8039,7 @@ export interface operations {
                     };
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteAvatar: {
@@ -7973,6 +8064,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblemTeams: {
@@ -7996,6 +8088,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListProblemTeamsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateProblemTeam: {
@@ -8022,6 +8115,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteProblemTeam: {
@@ -8046,6 +8140,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateProblemTeam: {
@@ -8072,6 +8167,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblemMembers: {
@@ -8100,6 +8196,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListProblemMembersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateProblemMember: {
@@ -8126,6 +8223,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteProblemMember: {
@@ -8150,6 +8248,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateProblemMember: {
@@ -8176,6 +8275,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ImportProblem: {
@@ -8215,6 +8315,7 @@ export interface operations {
                     "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListProblemPackages: {
@@ -8246,6 +8347,7 @@ export interface operations {
                     };
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DownloadProblemPackage: {
@@ -8270,6 +8372,7 @@ export interface operations {
                     "application/zip": string;
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListOrganizations: {
@@ -8297,6 +8400,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListOrganizationsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateOrganization: {
@@ -8324,6 +8428,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreateOrganizationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetOrganization: {
@@ -8347,6 +8452,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetOrganizationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteOrganization: {
@@ -8368,6 +8474,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateOrganization: {
@@ -8394,6 +8501,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListOrganizationMembers: {
@@ -8422,6 +8530,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListOrganizationMembersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     AddOrganizationMember: {
@@ -8448,6 +8557,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RemoveOrganizationMember: {
@@ -8472,6 +8582,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     BatchCreateOrganizationUsers: {
@@ -8500,6 +8611,7 @@ export interface operations {
                     "application/json": components["schemas"]["BatchCreateOrganizationUsersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListOrganizationInvitations: {
@@ -8523,6 +8635,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListOrganizationInvitationsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     InviteOrganizationMember: {
@@ -8551,6 +8664,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrganizationInvitationModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CancelOrganizationInvitation: {
@@ -8574,6 +8688,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     AcceptOrganizationInvitation: {
@@ -8595,6 +8710,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeclineOrganizationInvitation: {
@@ -8616,6 +8732,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListOrganizationJoinRequests: {
@@ -8639,6 +8756,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListOrganizationJoinRequestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateOrganizationJoinRequest: {
@@ -8667,6 +8785,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrganizationJoinRequestResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetMyOrganizationJoinRequest: {
@@ -8690,6 +8809,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrganizationJoinRequestNullableResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CancelOrganizationJoinRequest: {
@@ -8711,6 +8831,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ApproveOrganizationJoinRequest: {
@@ -8739,6 +8860,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RejectOrganizationJoinRequest: {
@@ -8762,6 +8884,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListNotifications: {
@@ -8789,6 +8912,7 @@ export interface operations {
                     "application/json": components["schemas"]["NotificationsListResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetUnreadNotificationsCount: {
@@ -8809,6 +8933,7 @@ export interface operations {
                     "application/json": components["schemas"]["UnreadNotificationsCountResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     MarkNotificationAsRead: {
@@ -8830,6 +8955,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     MarkAllNotificationsAsRead: {
@@ -8848,6 +8974,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListTeams: {
@@ -8877,6 +9004,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListTeamsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreateTeam: {
@@ -8906,6 +9034,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     GetTeam: {
@@ -8929,6 +9058,7 @@ export interface operations {
                     "application/json": components["schemas"]["GetTeamResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     DeleteTeam: {
@@ -8950,6 +9080,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateTeam: {
@@ -8976,6 +9107,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListTeamMembers: {
@@ -9004,6 +9136,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListTeamMembersResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     AddTeamMember: {
@@ -9030,6 +9163,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     RemoveTeamMember: {
@@ -9054,6 +9188,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     UpdateTeamMemberRole: {
@@ -9080,6 +9215,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListTeamContests: {
@@ -9108,6 +9244,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListTeamProblems: {
@@ -9136,6 +9273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListProblemsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     ListPosts: {
@@ -9163,6 +9301,7 @@ export interface operations {
                     "application/json": components["schemas"]["ListPostsResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     CreatePost: {
@@ -9194,33 +9333,7 @@ export interface operations {
                     "application/json": components["schemas"]["CreatedPost"];
                 };
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     GetPostById: {
@@ -9244,24 +9357,7 @@ export interface operations {
                     "application/json": components["schemas"]["PostModel"];
                 };
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     DeletePostById: {
@@ -9283,42 +9379,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     PatchPostById: {
@@ -9351,42 +9412,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     GetPostImage: {
@@ -9422,24 +9448,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            default: components["responses"]["Problem"];
         };
     };
     Register: {
@@ -9465,6 +9474,7 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     Login: {
@@ -9492,6 +9502,7 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponseModel"];
                 };
             };
+            default: components["responses"]["Problem"];
         };
     };
     Logout: {
@@ -9512,6 +9523,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     VerifyEmail: {
@@ -9529,6 +9541,7 @@ export interface operations {
         };
         responses: {
             200: components["responses"]["VerifyEmailResponse"];
+            default: components["responses"]["Problem"];
         };
     };
     ResendVerification: {
@@ -9552,6 +9565,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ForgotPassword: {
@@ -9575,6 +9589,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ResetPassword: {
@@ -9598,6 +9613,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
     ConfirmEmailChange: {
@@ -9621,6 +9637,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            default: components["responses"]["Problem"];
         };
     };
 }

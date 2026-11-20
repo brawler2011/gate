@@ -82,7 +82,7 @@ export const BatchCreateUsersModal = ({
     if (error) {
       notifications.show({
         title: "Ошибка создания пользователей",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;

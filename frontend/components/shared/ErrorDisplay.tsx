@@ -3,11 +3,10 @@ import {useLocation, Link} from "react-router-dom";
 
 import {RefreshButton} from "./RefreshButton";
 
-import type {ApiError} from "@/lib/api";
 import type {ReactNode} from "react";
 
 type Props = {
-  error: ApiError;
+  error: {status: number; request_id?: string};
 };
 
 const getErrorDisplay = (status: number): { title: string; description: string } => {
@@ -62,8 +61,8 @@ export const ErrorDisplay = ({error}: Props): ReactNode => {
             {display.description}
           </Text>
 
-          {error.requestId && (
-            <Code style={{fontSize: "0.75rem"}}>{error.requestId}</Code>
+          {error.request_id && (
+            <Code style={{fontSize: "0.75rem"}}>{error.request_id}</Code>
           )}
 
           <Group>

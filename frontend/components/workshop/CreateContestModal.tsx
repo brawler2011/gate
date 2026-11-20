@@ -87,7 +87,7 @@ export const CreateContestModal = ({
         },
       );
       if (error || !response) {
-        throw new Error(error?.message || "Не удалось создать контест");
+        throw new Error(error?.detail || "Не удалось создать контест");
       }
       const orgSlug = selectedOrg.login;
       onClose();

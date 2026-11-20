@@ -228,7 +228,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       console.error("Failed to update contest:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось обновить настройки",
+        message: error.detail || "Не удалось обновить настройки",
         color: "red",
       });
       setStatusMessage({

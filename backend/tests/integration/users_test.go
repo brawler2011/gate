@@ -5,13 +5,14 @@ package integration
 
 import (
 	"bytes"
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"image"
 	"image/png"
 	"io"
 	"net/http"
 	"net/textproto"
 	"time"
+
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -105,12 +106,10 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 	})
 
 	s.Run("GetAvatarImage404", func() {
-		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
+		_, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
 			Username: user.Username,
 		})
-		s.Require().NoError(err)
-		_, isNotFound := resp.(*corev1.GetUserAvatarNotFound)
-		s.True(isNotFound)
+		s.Equal(http.StatusNotFound, s.getStatusCode(err))
 	})
 }
 

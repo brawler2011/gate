@@ -18,6 +18,9 @@ func TestStrictAuthzPoliciesCoverStrictOperations(t *testing.T) {
 
 	for i := 0; i < handlerInterfaceType.NumMethod(); i++ {
 		operationID := handlerInterfaceType.Method(i).Name
+		if operationID == "NewError" {
+			continue
+		}
 		evaluators, ok := endpointPolicies[operationID]
 		if !ok || len(evaluators.evaluators) == 0 {
 			t.Errorf("missing authz policy for operation %q", operationID)

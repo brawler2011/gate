@@ -77,7 +77,7 @@ export const ContestJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -105,7 +105,7 @@ export const ContestJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;

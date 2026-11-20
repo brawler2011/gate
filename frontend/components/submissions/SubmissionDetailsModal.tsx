@@ -38,7 +38,7 @@ export const SubmissionDetailsModal = ({
       },
     );
     if (err) {
-      throw new Error(err.message || "Не удалось загрузить данные посылки");
+      throw new Error(err.detail || "Не удалось загрузить данные посылки");
     }
     return res?.submission ?? null;
   }, enabled: Boolean(opened && submissionId ? ["submission-details", submissionId] : null)});

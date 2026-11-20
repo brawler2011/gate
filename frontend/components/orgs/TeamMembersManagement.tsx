@@ -84,7 +84,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     });
     setAdding(false);
     if (error) {
-      const msg = error.message || "Не удалось добавить участника";
+      const msg = error.detail || "Не удалось добавить участника";
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;
@@ -105,7 +105,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     });
     setDeletingId(null);
     if (error) {
-      const msg = error.message || "Не удалось добавить участника";
+      const msg = error.detail || "Не удалось добавить участника";
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;
@@ -141,7 +141,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     setModalOpened(false);
 
     if (error) {
-      const msg = error.message || "Не удалось добавить участника";
+      const msg = error.detail || "Не удалось добавить участника";
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;

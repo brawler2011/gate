@@ -115,7 +115,7 @@ export const AdminSubmissionsContent = ({
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось перепроверить посылку",
+          message: err.detail || "Не удалось перепроверить посылку",
           color: "red",
         });
         return;

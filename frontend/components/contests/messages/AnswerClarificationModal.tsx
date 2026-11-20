@@ -88,7 +88,7 @@ export const AnswerClarificationModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось отправить ответ",
+        message: err.detail || "Не удалось отправить ответ",
         color: "red",
       });
       return;

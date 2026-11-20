@@ -14,18 +14,18 @@ export const RouteError = (): ReactNode => {
     return (
       <>
         <title>Ошибка</title>
-        <ErrorDisplay error={{status: error.status, message: error.statusText}} />
+        <ErrorDisplay error={{status: error.status}} />
       </>
     );
   }
-  const failure = error as {status?: number; message?: string};
+  const failure = error as {status?: number; request_id?: string};
   if (failure?.status === 404) {
     return <NotFound />;
   }
   return (
     <>
       <title>Ошибка</title>
-      <ErrorDisplay error={{status: failure?.status ?? 500, message: failure?.message ?? "Ошибка загрузки"}} />
+      <ErrorDisplay error={{status: failure?.status ?? 500, request_id: failure?.request_id}} />
     </>
   );
 };

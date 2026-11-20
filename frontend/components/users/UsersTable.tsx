@@ -43,7 +43,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось обновить роль пользователя",
+          message: err.detail || "Не удалось обновить роль пользователя",
           color: "red",
         });
         return;

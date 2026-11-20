@@ -24,7 +24,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
     });
     setLoading(false);
     if (error) {
-      notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
+      notifications.show({title: 'Ошибка', message: error.detail, color: 'red'});
       return;
     }
     navigate('/orgs');

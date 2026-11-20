@@ -87,7 +87,7 @@ export const ContestMessagesClient = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось удалить объявление",
+        message: err.detail || "Не удалось удалить объявление",
         color: "red",
       });
       return;

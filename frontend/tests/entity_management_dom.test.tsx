@@ -7,7 +7,7 @@ import React from "react";
 import {ContestTeamsManagement} from "@/components/contests/ContestTeamsManagement";
 import {OrgMembersManagement} from "@/components/orgs/OrgMembersManagement";
 
-import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor, within} from "./test-utils";
+import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor, within, problemResponse} from "./test-utils";
 
 describe("Production entity management", () => {
   let cleanupDOM: () => void;
@@ -37,7 +37,7 @@ describe("Production entity management", () => {
     mockFetch(async (_url, init) => {
       if (init?.method === "DELETE") {
         if (failure) {
-          return Response.json({message: "Denied"}, {status: 403});
+          return problemResponse(403, "Denied");
         }
         deleted = true;
         return new Response(null, {status: 204});
@@ -65,7 +65,7 @@ describe("Production entity management", () => {
     mockFetch(async (url, init) => {
       if (init?.method === "DELETE") {
         if (failure) {
-          return Response.json({message: "Denied"}, {status: 403});
+          return problemResponse(403, "Denied");
         }
         removed = true;
         return new Response(null, {status: 204});
@@ -104,7 +104,7 @@ describe("Production entity management", () => {
     mockFetch(async (url, init) => {
       if (init?.method === "PATCH") {
         if (failure) {
-          return Response.json({message: "Denied"}, {status: 403});
+          return problemResponse(403, "Denied");
         }
         role = url.searchParams.get("role") ?? role;
         return new Response(null, {status: 204});
@@ -167,7 +167,7 @@ describe("Production entity management", () => {
       if (init?.method === "POST") {
         const teamId = url.searchParams.get("team_id");
         if (teamId !== "team") {
-          return Response.json({message: "Unknown team"}, {status: 404});
+          return problemResponse(404, "Unknown team");
         }
         added = {capabilities: ["change_role", "remove"], team_id: teamId, team_name: "Team A", contest_role: url.searchParams.get("role") ?? ""};
         return new Response(null, {status: 204});
@@ -199,11 +199,11 @@ describe("Production entity management", () => {
     mockFetch(async (url, init) => {
       if (init?.method === "POST") {
         if (failure) {
-          return Response.json({message: "Denied"}, {status: 403});
+          return problemResponse(403, "Denied");
         }
         const body = JSON.parse(String(init.body)) as {capabilities: ["change_role", "remove"], user_id: string; role: string};
         if (body.user_id !== "user") {
-          return Response.json({message: "Unknown user"}, {status: 404});
+          return problemResponse(404, "Unknown user");
         }
         invited = {id: "invite", username: "alice", role: body.role, created_at: "2026-01-01", inviter_username: "owner"};
         return new Response(null, {status: 204});

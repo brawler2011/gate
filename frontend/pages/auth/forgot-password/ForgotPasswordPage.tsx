@@ -25,7 +25,7 @@ const ForgotPasswordPage = (): ReactNode => {
       if (!err) {
         setSubmitted(true);
       } else {
-        setError(err?.message || "Ошибка при отправке запроса");
+        setError(err?.detail || "Ошибка при отправке запроса");
       }
     } catch {
       setError("Не удалось подключиться к серверу");

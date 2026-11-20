@@ -51,7 +51,7 @@ const LoginPageContent = () => {
         setUser(data.user);
         navigate(returnTo);
       } else {
-        const msg = err?.message || "Неверный логин или пароль";
+        const msg = err?.detail || "Неверный логин или пароль";
         if (
           msg.toLowerCase().includes("email not verified") ||
           msg.toLowerCase().includes("не подтверждена")
@@ -88,7 +88,7 @@ const LoginPageContent = () => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось отправить письмо",
+          message: err.detail || "Не удалось отправить письмо",
           color: "red",
         });
       }

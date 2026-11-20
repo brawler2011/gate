@@ -57,7 +57,7 @@ const VerifyEmailContent = () => {
           }
           setSuccess(true);
         } else {
-          setError(err?.message || "Недействительная или устаревшая ссылка подтверждения.");
+          setError(err?.detail || "Недействительная или устаревшая ссылка подтверждения.");
         }
       } catch {
         if (isMounted) {

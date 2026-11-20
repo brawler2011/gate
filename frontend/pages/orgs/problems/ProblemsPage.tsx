@@ -45,7 +45,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const problemsError = problemsErr
     ? {
       status: problemsResponse.status,
-      message: problemsErr.message || problemsResponse.statusText,
+      message: problemsErr.detail || problemsResponse.statusText,
     }
     : null;
   return {orgData, problemsError, problemsData, me};

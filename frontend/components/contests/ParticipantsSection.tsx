@@ -158,7 +158,7 @@ export const ParticipantsSection = ({
       console.error("Failed to add participant:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось добавить участника",
+        message: error.detail || "Не удалось добавить участника",
         color: "red",
       });
       setStatusMessage({
@@ -195,7 +195,7 @@ export const ParticipantsSection = ({
       console.error("Failed to delete participant:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось удалить участника",
+        message: error.detail || "Не удалось удалить участника",
         color: "red",
       });
       setStatusMessage({
@@ -246,7 +246,7 @@ export const ParticipantsSection = ({
       console.error("Failed to change role:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось изменить роль",
+        message: error.detail || "Не удалось изменить роль",
         color: "red",
       });
       setStatusMessage({
@@ -283,7 +283,7 @@ export const ParticipantsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось одобрить заявку",
+        message: error.detail || "Не удалось одобрить заявку",
         color: "red",
       });
       return;
@@ -316,7 +316,7 @@ export const ParticipantsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось отклонить заявку",
+        message: error.detail || "Не удалось отклонить заявку",
         color: "red",
       });
       return;

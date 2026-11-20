@@ -60,7 +60,7 @@ const ResetPasswordContent = () => {
       if (!err) {
         setSuccess(true);
       } else {
-        setError(err?.message || "Не удалось сбросить пароль. Возможно, срок действия ссылки истёк.");
+        setError(err?.detail || "Не удалось сбросить пароль. Возможно, срок действия ссылки истёк.");
       }
     } catch {
       setError("Не удалось подключиться к серверу");
