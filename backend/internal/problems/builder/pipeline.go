@@ -251,7 +251,7 @@ func (e *execution) archive(f *os.File) (string, int64, error) {
 	if err != nil {
 		return "", 0, fail("archive", 0, "infrastructure", err)
 	}
-	// Tests sharing one object are written once each, so the package can unpack larger than the build directory.
+	// Judges unpack the package within the same budget.
 	if !stats.Extracts(size, e.build.Snapshot.Limits) {
 		return "", 0, fail("package", 0, "quota", fmt.Errorf("package unpacks to %d bytes in %d files, over the disk quota", stats.Bytes+size, stats.Files))
 	}

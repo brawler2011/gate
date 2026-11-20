@@ -28,6 +28,8 @@ type BuiltTest struct{ Input, Answer string }
 type Package struct {
 	Manifest *gfmt.Problem
 	files    []file
+	// Test files by source, so tests sharing an object or a built file share one file.
+	names map[string]string
 }
 
 type file struct {
@@ -64,6 +66,7 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 	p := &Package{Manifest: &gfmt.Problem{FormatVersion: gfmt.FormatVersion, Title: d.Title, Type: d.Type, MaxScore: d.MaxScore,
 		Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, InputFile: d.InputFile, OutputFile: d.OutputFile,
 		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]gfmt.Expectation{}}}
+	p.names = map[string]string{}
 	m := p.Manifest
 	program := func(role, name string, prog model.DraftProgram, source gfmt.Source) string {
 		path := ProgramPath(languages, role, name, prog.Language)
@@ -75,11 +78,8 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 	if c := d.Checker; c != nil {
 		source := gfmt.Source{Standard: c.Standard}
 		for i, t := range c.Tests {
-			test := gfmt.ProgramTest{Input: fmt.Sprintf("checker/%02d", i+1), Verdict: t.Verdict, Points: t.Points}
-			test.Output, test.Answer = test.Input+".o", test.Input+".a"
-			p.object(test.Input, t.Input)
-			p.object(test.Output, t.Output)
-			p.object(test.Answer, t.Answer)
+			name := fmt.Sprintf("checker/%02d", i+1)
+			test := gfmt.ProgramTest{Input: p.object(name, t.Input), Output: p.object(name+".o", t.Output), Answer: p.object(name+".a", t.Answer), Verdict: t.Verdict, Points: t.Points}
 			source.Tests = append(source.Tests, test)
 		}
 		name := "checker"
@@ -97,8 +97,7 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 			source.Groups = append(source.Groups, d.Subtask(id).Name)
 		}
 		for i, t := range v.Tests {
-			test := gfmt.ProgramTest{Input: fmt.Sprintf("validators/%s/%02d", v.Name, i+1), Verdict: map[bool]string{true: "valid", false: "invalid"}[t.Valid], Group: t.Group}
-			p.object(test.Input, t.Input)
+			test := gfmt.ProgramTest{Input: p.object(fmt.Sprintf("validators/%s/%02d", v.Name, i+1), t.Input), Verdict: map[bool]string{true: "valid", false: "invalid"}[t.Valid], Group: t.Group}
 			source.Tests = append(source.Tests, test)
 		}
 		program("validator", v.Name, v.DraftProgram, source)
@@ -142,8 +141,23 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 	return p, p.tests(d, solutions, built)
 }
 
-func (p *Package) object(name string, oid uuid.UUID) {
-	p.files = append(p.files, file{name: gfmt.TestFolder + "/" + name, object: oid})
+// object adds a file under tests/ unless its source is there already, and returns the name to refer to.
+func (p *Package) object(name string, oid uuid.UUID) string {
+	return p.test(name, "object:"+oid.String(), file{object: oid})
+}
+
+func (p *Package) local(name, path string) string {
+	return p.test(name, "local:"+path, file{local: path})
+}
+
+func (p *Package) test(name, source string, f file) string {
+	if existing, ok := p.names[source]; ok {
+		return existing
+	}
+	p.names[source] = name
+	f.name = gfmt.TestFolder + "/" + name
+	p.files = append(p.files, f)
+	return name
 }
 
 func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uuid.UUID]BuiltTest) error {
@@ -174,22 +188,18 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 		}
 		switch {
 		case isBuilt:
-			test.Input = name
-			p.files = append(p.files, file{name: gfmt.TestFolder + "/" + name, local: local.Input})
+			test.Input = p.local(name, local.Input)
 		case t.Input.ObjectID != nil:
-			test.Input = name
-			p.object(name, *t.Input.ObjectID)
+			test.Input = p.object(name, *t.Input.ObjectID)
 		}
 		if t.Answer.Mode == "generated" && t.Answer.Solution != nil {
 			test.Solution = solutions[*t.Answer.Solution]
 		}
 		switch {
 		case isBuilt:
-			test.Answer = name + ".a"
-			p.files = append(p.files, file{name: gfmt.TestFolder + "/" + test.Answer, local: local.Answer})
+			test.Answer = p.local(name+".a", local.Answer)
 		case t.Answer.Mode == "provided" && t.Answer.ObjectID != nil:
-			test.Answer = name + ".a"
-			p.object(test.Answer, *t.Answer.ObjectID)
+			test.Answer = p.object(name+".a", *t.Answer.ObjectID)
 		}
 		subtask := m.Subtasks[names[t.SubtaskID]]
 		subtask.Tests = append(subtask.Tests, test)
