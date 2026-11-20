@@ -52,7 +52,7 @@ const ConfirmEmailChangeContent = () => {
         if (!err) {
           setSuccess(true);
         } else {
-          setError(err?.message || "Недействительная или устаревшая ссылка подтверждения смены email.");
+          setError(err?.detail || "Недействительная или устаревшая ссылка подтверждения смены email.");
         }
       } catch {
         if (isMounted) {

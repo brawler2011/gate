@@ -71,9 +71,7 @@ func (h *CoreServer) GetUserAvatar(ctx context.Context, params corev1.GetUserAva
 			}, nil
 		}
 		if errors.Is(err, storage.ErrNotFound) {
-			return &corev1.GetUserAvatarNotFound{
-				Error: corev1.NewOptString("avatar not found"),
-			}, nil
+			return nil, pkg.Wrap(pkg.ErrNotFound, err, "avatar not found")
 		}
 		return nil, wrapAvatarError(err, "failed to get avatar")
 	}

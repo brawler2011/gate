@@ -45,7 +45,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const teamsError = teamsErr
     ? {
       status: teamsResponse.status,
-      message: teamsErr.message || teamsResponse.statusText,
+      message: teamsErr.detail || teamsResponse.statusText,
     }
     : null;
   return {org, showMembersTab, teamsError, teamsData};

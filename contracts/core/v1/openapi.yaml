@@ -38,6 +38,8 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -54,6 +56,8 @@ paths:
       - $ref: '#/components/parameters/ExpectedRevisionQuery'
       - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -77,6 +81,8 @@ paths:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '202':
           description: Success
           content:
@@ -105,6 +111,8 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -123,6 +131,8 @@ paths:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/BuildIDPath'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -140,6 +150,8 @@ paths:
       - $ref: '#/components/parameters/BuildIDPath'
       - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -157,6 +169,8 @@ paths:
       - $ref: '#/components/parameters/ExpectedRevisionQuery'
       - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -211,6 +225,8 @@ paths:
           type: string
           format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Success
           content:
@@ -228,6 +244,8 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         '200':
           description: Draft archive
           content:
@@ -241,6 +259,8 @@ paths:
       operationId: GetLanguages
       summary: Get supported programming languages
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -254,6 +274,8 @@ paths:
       summary: Get the system library files
       description: The files auto-updated library files of problem drafts build with, such as testlib.h.
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -293,6 +315,8 @@ paths:
           schema:
             type: boolean
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -321,6 +345,8 @@ paths:
             type: string
           example: builtin:a-plus-b
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -335,6 +361,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -351,6 +379,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProblemIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -364,6 +394,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProblemIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -381,6 +413,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateProblemRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -404,6 +438,8 @@ paths:
         - $ref: "#/components/parameters/SortByQuery"
         - $ref: "#/components/parameters/ContestSortOrderQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -425,6 +461,8 @@ paths:
             schema:
               $ref: "#/components/schemas/AdminChangeEmailRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -443,6 +481,8 @@ paths:
             schema:
               $ref: "#/components/schemas/AdminSetPasswordRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -454,6 +494,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/UsernamePath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -465,6 +507,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/UsernamePath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -491,6 +535,8 @@ paths:
           example: last_submission_time
         - $ref: "#/components/parameters/ContestSortOrderQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -510,6 +556,8 @@ paths:
         - $ref: "#/components/parameters/ContestSortOrderQuery"
         - $ref: "#/components/parameters/OrganizationIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -528,6 +576,8 @@ paths:
         - $ref: "#/components/parameters/SortByQuery"
         - $ref: "#/components/parameters/ContestSortOrderQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -556,6 +606,8 @@ paths:
             type: string
           example: contest-1
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -572,6 +624,8 @@ paths:
         - $ref: "#/components/parameters/PageSizeQuery"
         - $ref: "#/components/parameters/ContestSearchQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -587,6 +641,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -601,6 +657,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     patch:
@@ -618,6 +676,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateContestRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/statements.pdf:
@@ -635,6 +695,8 @@ paths:
             type: string
             default: ru
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: PDF booklet containing contest problem statements
           content:
@@ -659,6 +721,8 @@ paths:
             type: string
             format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "204":
           description: No Content
   /organizations/{org_login}/contests/{contest_login}/problems/reorder:
@@ -677,6 +741,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ReorderContestProblemsRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}:
@@ -689,6 +755,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -704,6 +772,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}:
@@ -724,6 +794,8 @@ paths:
             type: string
             pattern: "^[0-9a-f]{64}$"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Statement image from the problem package used by the contest
           headers:
@@ -752,6 +824,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -767,6 +841,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/UserIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "204":
           description: No Content
     delete:
@@ -778,6 +854,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     patch:
@@ -790,6 +868,8 @@ paths:
         - $ref: "#/components/parameters/UserIDQuery"
         - $ref: "#/components/parameters/ContestRoleQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/teams:
@@ -801,6 +881,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -824,6 +906,8 @@ paths:
             enum: [moderator, participant]
             default: participant
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     delete:
@@ -835,6 +919,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/TeamIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     patch:
@@ -847,6 +933,8 @@ paths:
         - $ref: "#/components/parameters/TeamIDQuery"
         - $ref: "#/components/parameters/ContestTeamRoleQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
 
@@ -859,6 +947,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -881,6 +971,8 @@ paths:
         - $ref: "#/components/parameters/SubmissionSortOrderQuery"
         - $ref: "#/components/parameters/LanguageQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -897,6 +989,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/SubmissionIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block:
@@ -916,6 +1010,8 @@ paths:
             schema:
               $ref: "#/components/schemas/BlockSubmissionRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock:
@@ -928,6 +1024,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/SubmissionIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block:
@@ -948,6 +1046,8 @@ paths:
             schema:
               $ref: "#/components/schemas/BlockProblemRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     delete:
@@ -967,6 +1067,8 @@ paths:
             type: boolean
             default: false
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     get:
@@ -979,6 +1081,8 @@ paths:
         - $ref: "#/components/parameters/UserIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -995,6 +1099,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/rejudge:
@@ -1006,6 +1112,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/scoreboard:
@@ -1023,6 +1131,8 @@ paths:
           schema:
             type: boolean
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1045,6 +1155,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateContestDraftRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1061,6 +1173,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1083,6 +1197,8 @@ paths:
             type: string
             format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /organizations/{org_login}/contests/{contest_login}/requests:
@@ -1094,6 +1210,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of contest join requests
           content:
@@ -1115,6 +1233,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateContestJoinRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request created or user registered
           content:
@@ -1130,6 +1250,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: My pending contest join request
           content:
@@ -1144,6 +1266,8 @@ paths:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request canceled
   /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve:
@@ -1156,6 +1280,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/JoinRequestIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request approved
   /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject:
@@ -1168,6 +1294,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/JoinRequestIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request rejected
 
@@ -1182,6 +1310,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of contest announcements
           content:
@@ -1203,6 +1333,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateContestAnnouncementRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Announcement created
           content:
@@ -1226,6 +1358,8 @@ paths:
             type: string
             format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Announcement deleted
 
@@ -1251,6 +1385,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of contest clarifications
           content:
@@ -1272,6 +1408,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateContestClarificationRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Clarification question submitted
           content:
@@ -1302,6 +1440,8 @@ paths:
             schema:
               $ref: "#/components/schemas/AnswerContestClarificationRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Clarification answered
           content:
@@ -1343,6 +1483,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateSubmissionRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1363,6 +1505,8 @@ paths:
         - $ref: "#/components/parameters/SubmissionSortOrderQuery"
         - $ref: "#/components/parameters/LanguageQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1377,6 +1521,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/SubmissionIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1389,6 +1535,8 @@ paths:
       tags: [system]
       operationId: GetHealth
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1416,6 +1564,8 @@ paths:
             type: string
           example: admin
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1430,6 +1580,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/UsernamePath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1450,6 +1602,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateUserRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content: {}
@@ -1467,6 +1621,8 @@ paths:
         - $ref: "#/components/parameters/StateQuery"
         - $ref: "#/components/parameters/SubmissionSortOrderQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1479,6 +1635,8 @@ paths:
       tags: [users]
       operationId: GetMe
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1491,6 +1649,8 @@ paths:
       tags: [users]
       operationId: GetMyDashboard
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1510,6 +1670,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ClaimTemporaryUserRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1522,6 +1684,8 @@ paths:
       operationId: ListMyClaimedAccounts
       summary: List claimed temporary accounts
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1541,6 +1705,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ChangePasswordRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Password successfully changed
           headers:
@@ -1566,6 +1732,8 @@ paths:
             schema:
               $ref: "#/components/schemas/RequestEmailChangeRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Email change requested
           content: {}
@@ -1579,6 +1747,8 @@ paths:
         - $ref: "#/components/parameters/IfNoneMatchHeader"
         - $ref: "#/components/parameters/UsernamePath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: User avatar
           headers:
@@ -1596,18 +1766,6 @@ paths:
             ETag:
               schema:
                 type: string
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
     post:
       tags: [users]
       operationId: UploadAvatar
@@ -1630,6 +1788,8 @@ paths:
                   type: string
                   format: binary
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Avatar uploaded successfully
           content:
@@ -1651,6 +1811,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/UsernamePath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Avatar deleted successfully
   /problems/{id}/teams:
@@ -1661,6 +1823,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProblemIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1682,6 +1846,8 @@ paths:
             type: string
             default: read
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     delete:
@@ -1692,6 +1858,8 @@ paths:
         - $ref: "#/components/parameters/ProblemIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     patch:
@@ -1708,6 +1876,8 @@ paths:
           schema:
             type: string
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /problems/{id}/members:
@@ -1720,6 +1890,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1741,6 +1913,8 @@ paths:
             type: string
             default: viewer
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     delete:
@@ -1751,6 +1925,8 @@ paths:
         - $ref: "#/components/parameters/ProblemIDPath"
         - $ref: "#/components/parameters/UserIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
     patch:
@@ -1762,6 +1938,8 @@ paths:
         - $ref: "#/components/parameters/UserIDQuery"
         - $ref: "#/components/parameters/ProblemRoleQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
   /problems/{id}/import:
@@ -1787,6 +1965,8 @@ paths:
                   format: binary
                   description: Problem package archive (zip)
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Draft after the import
           content:
@@ -1803,6 +1983,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of problem packages
           content:
@@ -1832,6 +2014,8 @@ paths:
             type: string
             format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Package archive
           content:
@@ -1849,6 +2033,8 @@ paths:
         - $ref: "#/components/parameters/PageSizeQuery"
         - $ref: "#/components/parameters/SearchQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of organizations
           content:
@@ -1880,6 +2066,8 @@ paths:
             type: string
             enum: [open, by_request, invite_only]
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Organization created successfully
           content:
@@ -1894,6 +2082,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Organization details
           content:
@@ -1914,6 +2104,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateOrganizationRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Organization updated successfully
     delete:
@@ -1923,6 +2115,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Organization deleted successfully
   /organizations/{login}/members:
@@ -1935,6 +2129,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of organization members
           content:
@@ -1950,6 +2146,8 @@ paths:
         - $ref: "#/components/parameters/UserIDQuery"
         - $ref: "#/components/parameters/OrganizationRoleQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Member added successfully
     delete:
@@ -1960,6 +2158,8 @@ paths:
         - $ref: "#/components/parameters/OrganizationLoginPath"
         - $ref: "#/components/parameters/UserIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Member removed successfully
   /organizations/{login}/members/batch:
@@ -1977,6 +2177,8 @@ paths:
             schema:
               $ref: "#/components/schemas/BatchCreateOrganizationUsersRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -1991,6 +2193,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of invitations
           content:
@@ -2011,6 +2215,8 @@ paths:
             schema:
               $ref: "#/components/schemas/InviteOrganizationMemberRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Invitation sent
           content:
@@ -2026,6 +2232,8 @@ paths:
         - $ref: "#/components/parameters/OrganizationLoginPath"
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Invitation canceled
   /invitations/{id}/accept:
@@ -2036,6 +2244,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Invitation accepted
   /invitations/{id}/decline:
@@ -2046,6 +2256,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Invitation declined
   /organizations/{login}/requests:
@@ -2056,6 +2268,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of join requests
           content:
@@ -2076,6 +2290,8 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateOrganizationJoinRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request submitted or user joined
           content:
@@ -2090,6 +2306,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: My pending join request
           content:
@@ -2103,6 +2321,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request canceled
   /organizations/{login}/requests/{id}/approve:
@@ -2121,6 +2341,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ApproveOrganizationJoinRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request approved
   /organizations/{login}/requests/{id}/reject:
@@ -2132,6 +2354,8 @@ paths:
         - $ref: "#/components/parameters/OrganizationLoginPath"
         - $ref: "#/components/parameters/JoinRequestIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Request rejected
   /notifications:
@@ -2149,6 +2373,8 @@ paths:
           schema:
             type: boolean
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of notifications
           content:
@@ -2161,6 +2387,8 @@ paths:
       operationId: GetUnreadNotificationsCount
       summary: Get count of unread notifications
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Unread notifications count
           content:
@@ -2181,6 +2409,8 @@ paths:
             type: string
             format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Notification marked as read
   /notifications/read-all:
@@ -2189,6 +2419,8 @@ paths:
       operationId: MarkAllNotificationsAsRead
       summary: Mark all notifications as read
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: All notifications marked as read
   /teams:
@@ -2202,6 +2434,8 @@ paths:
         - $ref: "#/components/parameters/SearchQuery"
         - $ref: "#/components/parameters/OrganizationIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of teams
           content:
@@ -2234,6 +2468,8 @@ paths:
                   type: string
                   format: uuid
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Team created successfully
           content:
@@ -2248,6 +2484,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/TeamIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Team details
           content:
@@ -2268,6 +2506,8 @@ paths:
             schema:
               $ref: "#/components/schemas/UpdateTeamRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Team updated successfully
     delete:
@@ -2277,6 +2517,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/TeamIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Team deleted successfully
   /teams/{id}/members:
@@ -2289,6 +2531,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: List of team members
           content:
@@ -2311,6 +2555,8 @@ paths:
             enum: [maintainer, member]
             default: member
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Member added successfully
     patch:
@@ -2322,6 +2568,8 @@ paths:
         - $ref: "#/components/parameters/UserIDQuery"
         - $ref: "#/components/parameters/TeamRoleQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Member role updated successfully
     delete:
@@ -2332,6 +2580,8 @@ paths:
         - $ref: "#/components/parameters/TeamIDPath"
         - $ref: "#/components/parameters/UserIDQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Member removed successfully
   /teams/{id}/contests:
@@ -2344,6 +2594,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -2360,6 +2612,8 @@ paths:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: OK
           content:
@@ -2385,6 +2639,8 @@ paths:
               - desc
             default: desc
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: A list of posts
           content:
@@ -2425,30 +2681,14 @@ paths:
                   type: string
                   format: binary
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "201":
           description: Post created successfully
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreatedPost"
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
   /posts/{id}:
     get:
       tags: [posts]
@@ -2457,24 +2697,14 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PostIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: A single post
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostModel"
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
     patch:
       tags: [posts]
       security:
@@ -2505,32 +2735,10 @@ paths:
                   type: string
                   format: binary
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Post partially updated successfully
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
     delete:
       tags: [posts]
       security:
@@ -2540,32 +2748,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PostIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Post deleted successfully
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
   /posts/{id}/image:
     get:
       tags: [posts]
@@ -2575,6 +2761,8 @@ paths:
         - $ref: "#/components/parameters/IfNoneMatchHeader"
         - $ref: "#/components/parameters/PostIDPath"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Post image
           headers:
@@ -2592,18 +2780,6 @@ paths:
             ETag:
               schema:
                 type: string
-        "400":
-          description: bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
   /auth/register:
     post:
       summary: "Register"
@@ -2617,6 +2793,8 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Successfully registered
           content:
@@ -2636,6 +2814,8 @@ paths:
             schema:
               $ref: "#/components/schemas/LoginRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Successfully logged in
           headers:
@@ -2654,6 +2834,8 @@ paths:
       tags: [auth]
       operationId: Logout
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Successfully logged out
           headers:
@@ -2675,6 +2857,8 @@ paths:
             schema:
               $ref: "#/components/schemas/VerifyEmailRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           $ref: "#/components/responses/VerifyEmailResponse"
   /auth/resend-verification:
@@ -2690,6 +2874,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ResendVerificationRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Verification email resent
           content: {}
@@ -2706,6 +2892,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ForgotPasswordRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Password reset email sent
           content: {}
@@ -2722,6 +2910,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ResetPasswordRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Password reset successfully
           content: {}
@@ -2738,11 +2928,24 @@ paths:
             schema:
               $ref: "#/components/schemas/ConfirmEmailChangeRequestModel"
       responses:
+        default:
+          $ref: "#/components/responses/Problem"
         "200":
           description: Email change confirmed successfully
           content: {}
 components:
   responses:
+    Problem:
+      description: Error.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying; sent with 429.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     VerifyEmailResponse:
       description: Successfully verified email
       headers:
@@ -3715,38 +3918,64 @@ components:
           type: string
           enum:
           - cancelled
-    Error:
-      description: "Error data."
-      example:
-        error: Not Found
-        message: Post not found
-        request_id: req-123e4567-e89b-42d3-a456-426614174000
+    Problem:
+      description: RFC 9457 problem details. Clients branch and translate on `code` and `params`; `detail` is English text for debugging.
       type: object
+      required: [type, title, status, code, request_id]
       properties:
-        error:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
           example: Not Found
+        status:
+          type: integer
+          example: 404
+        detail:
           type: string
-        message:
-          example: Post not found
-          type: string
+          example: post not found
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        params:
+          type: object
+          additionalProperties: true
         request_id:
-          example: req-123e4567-e89b-42d3-a456-426614174000
           type: string
-        fields:
-          description: Invalid values of the request body, each at an RFC 6901 JSON Pointer into it.
+          example: 123e4567-e89b-42d3-a456-426614174000
+        errors:
+          description: Invalid values of the request body.
           type: array
           items:
-            $ref: "#/components/schemas/FieldError"
-    FieldError:
-      description: "One invalid value of a request body."
+            $ref: "#/components/schemas/FieldProblem"
+    FieldProblem:
+      description: One invalid value of a request body.
       type: object
-      required: [pointer, message]
+      required: [pointer, code]
       properties:
         pointer:
+          description: RFC 6901 JSON Pointer into the request body.
           type: string
           example: /tests/3/input/generator
-        message:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        params:
+          type: object
+          additionalProperties: true
+        detail:
           type: string
+    ErrorCode:
+      type: string
+      enum:
+        - invalid
+        - unauthenticated
+        - forbidden
+        - not_found
+        - conflict
+        - payload_too_large
+        - rate_limited
+        - internal
+        - not_implemented
     CreationResponseModel:
       description: "Result of creation."
       example:

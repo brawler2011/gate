@@ -10,15 +10,8 @@ export const QueryState = ({
   error?: unknown;
 }): ReactNode => {
   if (error) {
-    const failure = error as { status?: number; message?: string; info?: {message?: string} };
-    return (
-      <ErrorDisplay
-        error={{
-          status: failure.status ?? 500,
-          message: failure.info?.message ?? failure.message ?? "Ошибка загрузки",
-        }}
-      />
-    );
+    const failure = error as {status?: number; request_id?: string};
+    return <ErrorDisplay error={{status: failure.status ?? 500, request_id: failure.request_id}} />;
   }
   return (
     <Center py="xl">

@@ -45,7 +45,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const contestsError = contestsErr
     ? {
       status: contestsResponse.status,
-      message: contestsErr.message || contestsResponse.statusText,
+      message: contestsErr.detail || contestsResponse.statusText,
     }
     : null;
 

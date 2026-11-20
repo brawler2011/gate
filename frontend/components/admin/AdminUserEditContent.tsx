@@ -62,7 +62,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось изменить роль",
+          message: error.detail || "Не удалось изменить роль",
           color: "red",
         });
         return;
@@ -104,7 +104,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось изменить email",
+          message: error.detail || "Не удалось изменить email",
           color: "red",
         });
         return;
@@ -156,7 +156,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось установить пароль",
+          message: error.detail || "Не удалось установить пароль",
           color: "red",
         });
         return;
@@ -199,7 +199,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось отправить письмо для сброса",
+          message: error.detail || "Не удалось отправить письмо для сброса",
           color: "red",
         });
         return;
@@ -236,7 +236,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось отправить письмо",
+          message: error.detail || "Не удалось отправить письмо",
           color: "red",
         });
         return;

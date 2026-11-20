@@ -54,7 +54,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	}, nil
 }
 
-func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
+func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (*corev1.CreatedPost, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -79,7 +79,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 	}, nil
 }
 
-func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
+func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (*corev1.PostModel, error) {
 	post, err := s.BlogReads.GetPostByID(ctx, params.ID)
 	if err != nil {
 		return nil, wrapBlogError(err, "post not found")
@@ -98,7 +98,7 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 	}, nil
 }
 
-func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {
+func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) error {
 	var titlePtr, descriptionPtr, textPtr *string
 	var imageReader io.Reader
 	var filename string
@@ -123,18 +123,18 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 
 	err := s.Blogs.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
-		return nil, wrapBlogError(err, "post not found")
+		return wrapBlogError(err, "post not found")
 	}
-	return &corev1.PatchPostByIdOK{}, nil
+	return nil
 }
 
-func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
+func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) error {
 	err := s.Blogs.DeletePost(ctx, params.ID)
 	if err != nil {
-		return nil, wrapBlogError(err, "post not found")
+		return wrapBlogError(err, "post not found")
 	}
 
-	return &corev1.DeletePostByIdOK{}, nil
+	return nil
 }
 
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {

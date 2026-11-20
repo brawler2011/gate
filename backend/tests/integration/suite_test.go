@@ -98,6 +98,10 @@ func (s *IntegrationTestSuite) getStatusCode(err error) int {
 	if err == nil {
 		return http.StatusOK
 	}
+	var problem *corev1.ProblemStatusCodeWithHeaders
+	if errors.As(err, &problem) {
+		return problem.StatusCode
+	}
 	var scErr *validate.UnexpectedStatusCodeError
 	if errors.As(err, &scErr) {
 		return scErr.StatusCode
@@ -222,6 +226,7 @@ func (s *IntegrationTestSuite) initApp() {
 		secHandler,
 		corev1.WithMiddleware(authzMw),
 		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
+		corev1.WithNotFound(middleware.NotFound),
 	)
 	s.Require().NoError(err)
 

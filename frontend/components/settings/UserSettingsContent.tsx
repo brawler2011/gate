@@ -66,7 +66,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка смены пароля",
-          message: error.message || "Неверный текущий пароль",
+          message: error.detail || "Неверный текущий пароль",
           color: "red",
         });
         return;
@@ -108,7 +108,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка смены email",
-          message: error.message || "Не удалось запросить смену почты",
+          message: error.detail || "Не удалось запросить смену почты",
           color: "red",
         });
         return;
@@ -152,7 +152,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: error.message || "Не удалось отправить письмо",
+          message: error.detail || "Не удалось отправить письмо",
           color: "red",
         });
       }

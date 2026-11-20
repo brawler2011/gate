@@ -72,7 +72,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
         if (err) {
           notifications.show({
             title: "Ошибка",
-            message: err.message || "Не удалось обновить пост",
+            message: err.detail || "Не удалось обновить пост",
             color: "red",
           });
           return;
@@ -89,7 +89,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
         if (err) {
           notifications.show({
             title: "Ошибка",
-            message: err.message || "Не удалось создать пост",
+            message: err.detail || "Не удалось создать пост",
             color: "red",
           });
           return;
@@ -123,10 +123,10 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
       console.error("Error deleting post:", err);
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось удалить пост",
+        message: err.detail || "Не удалось удалить пост",
         color: "red",
       });
-      throw new Error(err.message);
+      throw new Error(err.detail);
     }
 
     setStatusMessage({

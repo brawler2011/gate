@@ -6,7 +6,7 @@ import React from "react";
 
 import {useProblemDraft, useSaveDraft} from "@/components/workshop/draft/useDraft";
 
-import {cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
+import {cleanup, fireEvent, renderWithProviders, waitFor, problemResponse} from "./test-utils";
 
 let restore: (() => void) | undefined;
 afterEach(() => {
@@ -67,7 +67,7 @@ describe("workshop draft editing", () => {
     let reads = 0;
     const calls = mockApi(({method}) => {
       if (method === "PUT") {
-        return Response.json({message: "conflict"}, {status: 409});
+        return problemResponse(409, "conflict");
       }
       reads++;
       return Response.json(reads === 1 ? draft(3, "Original") : draft(5, "Changed elsewhere"));
@@ -83,7 +83,7 @@ describe("workshop draft editing", () => {
     const shown = spyOn(notifications, "show").mockReturnValue("test");
     mockApi(({method}) =>
       method === "PUT"
-        ? Response.json({message: "invalid draft", fields: [{pointer: "/generators/0/language", message: "invalid language"}]}, {status: 400})
+        ? problemResponse(400, "invalid draft", {errors: [{pointer: "/generators/0/language", code: "invalid", detail: "invalid language"}]})
         : Response.json(draft(3, "Original")),
     );
     const view = renderWithProviders(<Editor />);

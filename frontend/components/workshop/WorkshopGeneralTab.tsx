@@ -180,7 +180,7 @@ const CatalogSettings = ({problemId}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.message ?? "Не удалось обновить настройки шаблона",
+          message: error.detail ?? "Не удалось обновить настройки шаблона",
           color: "red",
         });
         return;

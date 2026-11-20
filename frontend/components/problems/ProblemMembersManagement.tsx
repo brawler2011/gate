@@ -98,7 +98,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось добавить участника",
+        message: error.detail || "Не удалось добавить участника",
         color: "red",
       });
       setStatusMessage({
@@ -130,7 +130,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось удалить участника",
+        message: error.detail || "Не удалось удалить участника",
         color: "red",
       });
       setStatusMessage({
@@ -177,7 +177,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message || "Не удалось изменить роль участника",
+        message: error.detail || "Не удалось изменить роль участника",
         color: "red",
       });
       setStatusMessage({

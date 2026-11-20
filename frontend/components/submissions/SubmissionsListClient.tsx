@@ -48,7 +48,7 @@ export const SubmissionsListClient = ({
     }
 
     setLoading(true);
-    let err: {message?: string} | null | undefined = null;
+    let err: {detail?: string} | null | undefined = null;
 
     if (modalState.type === "submission") {
       setRejudgingId(modalState.id);
@@ -101,7 +101,7 @@ export const SubmissionsListClient = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось отправить решения на перетестирование",
+        message: err.detail || "Не удалось отправить решения на перетестирование",
         color: "red",
       });
     } else {

@@ -2,12 +2,11 @@ import {notifications} from "@mantine/notifications";
 import {useMutation, useQuery, useQueryClient, type UseQueryResult} from "@tanstack/react-query";
 import {useCallback} from "react";
 
-import {api, unwrap} from "@/lib/api";
+import {api, unwrap, type Problem} from "@/lib/api";
 
 import {describePointer, type OpResult} from "./draftOps";
 
 import type {
-  FieldError,
   ProblemDraft,
   ProblemDraftCheckerTest,
   ProblemDraftTest,
@@ -16,15 +15,15 @@ import type {
 
 export const draftKey = (problemId: string): readonly ["problem-draft", string] => ["problem-draft", problemId];
 
-type DraftError = Error & {status?: number; info?: {fields?: FieldError[]}};
+type DraftError = Error & Partial<Problem>;
 
 const isConflict = (error: unknown): boolean => (error as DraftError | undefined)?.status === 409;
 
 // Resolve error pointers against the draft sent with the request.
 export const errorMessage = (error: unknown, draft?: ProblemDraft): string => {
-  const fields = (error as DraftError | undefined)?.info?.fields;
+  const fields = (error as DraftError | undefined)?.errors;
   if (draft && fields && fields.length > 0) {
-    return fields.map((field) => `${describePointer(draft, field.pointer)}: ${field.message}`).join("\n");
+    return fields.map((field) => `${describePointer(draft, field.pointer)}: ${field.detail ?? field.code}`).join("\n");
   }
   return error instanceof Error ? error.message : "Неизвестная ошибка";
 };

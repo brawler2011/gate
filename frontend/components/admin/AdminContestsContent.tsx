@@ -57,10 +57,10 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
       console.error("Error deleting contest:", err);
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось удалить контест",
+        message: err.detail || "Не удалось удалить контест",
         color: "red",
       });
-      throw new Error(err.message);
+      throw new Error(err.detail);
     }
 
     setStatusMessage({

@@ -49,10 +49,10 @@ func TestRateLimit(t *testing.T) {
 			rr := send("192.0.2.1:5678")
 			require.Equal(t, http.StatusTooManyRequests, rr.Code)
 			require.NotEmpty(t, rr.Header().Get("Retry-After"))
-			require.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+			require.Equal(t, "application/problem+json", rr.Header().Get("Content-Type"))
 			var body map[string]any
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-			require.Equal(t, "Too Many Requests", body["error"])
+			require.Equal(t, "rate_limited", body["code"])
 			if tc.authenticated {
 				require.Equal(t, http.StatusTooManyRequests, send("192.0.2.2:1234").Code)
 				ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New()})

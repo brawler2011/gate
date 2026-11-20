@@ -138,7 +138,7 @@ export const CreateProblemModal = ({
         },
       );
       if (createError) {
-        throw new Error(createError.message);
+        throw new Error(createError.detail);
       }
       if (!createResponse?.id) {
         throw new Error("Не получен ID задачи");

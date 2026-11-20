@@ -100,10 +100,10 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.message || "Не удалось удалить организацию",
+          message: err.detail || "Не удалось удалить организацию",
           color: "red",
         });
-        throw new Error(err.message);
+        throw new Error(err.detail);
       }
 
       notifications.show({

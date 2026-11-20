@@ -49,7 +49,7 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
     setLoading(false);
 
     if (error) {
-      setFormError(error.message || "Не удалось создать команду");
+      setFormError(error.detail || "Не удалось создать команду");
       return;
     }
 

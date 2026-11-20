@@ -18,7 +18,7 @@ export const loader = (async () => {
   const error = orgsErr
     ? {
       status: orgsResponse.status,
-      message: orgsErr.message || orgsResponse.statusText,
+      message: orgsErr.detail || orgsResponse.statusText,
     }
     : null;
   return {user, error, data};

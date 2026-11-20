@@ -110,7 +110,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось принять приглашение",
+        message: error.detail || "Не удалось принять приглашение",
       });
       return;
     }
@@ -139,7 +139,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось отклонить приглашение",
+        message: error.detail || "Не удалось отклонить приглашение",
       });
       return;
     }
@@ -173,7 +173,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось одобрить заявку",
+        message: error.detail || "Не удалось одобрить заявку",
       });
       return;
     }
@@ -206,7 +206,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось отклонить заявку",
+        message: error.detail || "Не удалось отклонить заявку",
       });
       return;
     }
@@ -246,7 +246,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось одобрить заявку",
+        message: error.detail || "Не удалось одобрить заявку",
       });
       return;
     }
@@ -286,7 +286,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.message || "Не удалось отклонить заявку",
+        message: error.detail || "Не удалось отклонить заявку",
       });
       return;
     }

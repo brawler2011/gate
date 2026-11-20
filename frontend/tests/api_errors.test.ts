@@ -12,10 +12,10 @@ it("API errors retain requestId and log only safe operation metadata", async () 
   const logged = spyOn(console, "error").mockImplementation(() => {});
   try {
     globalThis.fetch = (async () => new Response(JSON.stringify({
-      message: "body-secret", request_id: "request-123", token: "token-secret",
-    }), {status: 500, statusText: "status-secret", headers: {"Content-Type": "application/json"}})) as unknown as typeof fetch;
+      type: "about:blank", title: "Internal Server Error", status: 500, code: "internal", detail: "body-secret", request_id: "request-123",
+    }), {status: 500, statusText: "status-secret", headers: {"Content-Type": "application/problem+json"}})) as unknown as typeof fetch;
     const {error} = await api.GET("/users/me");
-    expect((error as unknown as {request_id?: string})?.request_id).toBe("request-123");
+    expect(error?.request_id).toBe("request-123");
     expect(logged.mock.calls).toEqual([["API Error:", {operation: "/users/me", status: 500, requestId: "request-123", errorType: "ApiError"}]]);
     expect(JSON.stringify(logged.mock.calls)).not.toContain("secret");
     logged.mockClear();
@@ -24,7 +24,7 @@ it("API errors retain requestId and log only safe operation metadata", async () 
     }) as unknown as typeof fetch;
     const failed = await api.GET("/users/me");
     expect(failed.response.status).toBe(500);
-    expect(failed.error).toMatchObject({status: 500, message: "Не удалось выполнить запрос"});
+    expect(failed.error).toMatchObject({status: 500, code: "internal", detail: "Не удалось выполнить запрос"});
     expect(logged.mock.calls).toEqual([["API Error:", {operation: "/users/me", status: 500, requestId: undefined, errorType: "ApiError"}]]);
   } finally {
     logged.mockRestore();
@@ -37,11 +37,11 @@ for (const status of [401, 403, 404, 500]) {
     const logged = spyOn(console, "error").mockImplementation(() => {});
     const client = new QueryClient({defaultOptions: {queries: {retry: false, gcTime: 0}}});
     try {
-      globalThis.fetch = (async () => Response.json({message: "Access denied", request_id: "req-1"}, {
+      globalThis.fetch = (async () => Response.json({type: "about:blank", title: "x", status, code: "forbidden", detail: "Access denied", request_id: "req-1"}, {
         status, headers: {"Content-Length": "1", "X-Request-Id": "req-1"},
       })) as unknown as typeof fetch;
       await expect(client.fetchQuery(api.queryOptions("get", "/users/me"))).rejects.toMatchObject({
-        status, message: "Access denied", request_id: "req-1", requestId: "req-1",
+        status, code: "forbidden", detail: "Access denied", request_id: "req-1",
       });
       const {response} = await api.GET("/users/me");
       expect(response.status).toBe(status);
@@ -61,7 +61,7 @@ it("normalizes non-JSON HTTP errors for query consumers", async () => {
   try {
     globalThis.fetch = (async () => new Response("proxy error", {status: 502, statusText: "Bad Gateway"})) as unknown as typeof fetch;
     await expect(client.fetchQuery(api.queryOptions("get", "/users/me"))).rejects.toMatchObject({
-      status: 502, message: "Bad Gateway",
+      status: 502, title: "Bad Gateway", code: "internal",
     });
   } finally {
     client.clear();
@@ -89,12 +89,44 @@ it("returns network errors for mutations and throws normalized errors in queries
       params: {path: {login: "school"}},
     });
     expect(response.ok).toBe(false);
-    expect(error).toMatchObject({status: 500, message: "Не удалось выполнить запрос"});
+    expect(error).toMatchObject({status: 500, detail: "Не удалось выполнить запрос"});
     await expect(client.fetchQuery(api.queryOptions("get", "/users/me"))).rejects.toMatchObject({
-      status: 500, message: "Не удалось выполнить запрос",
+      status: 500, detail: "Не удалось выполнить запрос",
     });
   } finally {
     client.clear();
+    logged.mockRestore();
+  }
+});
+
+it("unwrap throws the problem as an Error with its detail as message", async () => {
+  const {api, unwrap} = await import("../lib/api");
+  const logged = spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const errors = [{pointer: "/title", code: "invalid", detail: "empty title"}];
+    globalThis.fetch = (async () => Response.json(
+      {type: "about:blank", title: "Bad Request", status: 400, code: "invalid", detail: "bad draft", request_id: "req-2", errors},
+      {status: 400, headers: {"Content-Type": "application/problem+json"}},
+    )) as unknown as typeof fetch;
+    const thrown = await unwrap(api.GET("/users/me")).catch((e: unknown) => e);
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown).toMatchObject({message: "bad draft", status: 400, code: "invalid", request_id: "req-2", errors});
+  } finally {
+    logged.mockRestore();
+  }
+});
+
+it("fills a missing detail with the title so error notifications are never blank", async () => {
+  const {api} = await import("../lib/api");
+  const logged = spyOn(console, "error").mockImplementation(() => {});
+  try {
+    globalThis.fetch = (async () => Response.json(
+      {type: "about:blank", title: "Internal Server Error", status: 500, code: "internal", request_id: "req-3"},
+      {status: 500, headers: {"Content-Type": "application/problem+json"}},
+    )) as unknown as typeof fetch;
+    const {error} = await api.GET("/users/me");
+    expect(error?.detail).toBe("Internal Server Error");
+  } finally {
     logged.mockRestore();
   }
 });

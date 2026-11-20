@@ -53,7 +53,7 @@ export const SubmissionSanctionsModal = ({
     }
 
     setLoading(true);
-    let err: {message?: string} | null | undefined = null;
+    let err: {detail?: string} | null | undefined = null;
 
     if (actionType === "block_submission" && submissionId) {
       const {error} = await api.POST(
@@ -129,7 +129,7 @@ export const SubmissionSanctionsModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.message || "Не удалось применить санкцию",
+        message: err.detail || "Не удалось применить санкцию",
         color: "red",
       });
     } else {

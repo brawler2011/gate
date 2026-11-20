@@ -114,7 +114,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -143,7 +143,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -168,7 +168,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -200,7 +200,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;
@@ -226,7 +226,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.message,
+        message: error.detail,
         color: "red",
       });
       return;

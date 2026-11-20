@@ -50,7 +50,7 @@ const Page = (): ReactNode => {
     return <QueryState error={contest.error} />;
   }
   if (targetPosition <= 0 || !targetProblem) {
-    return <ErrorDisplay error={{status: 404, message: 'Задача не найдена'}} />;
+    return <ErrorDisplay error={{status: 404}} />;
   }
   if (!problemQuery.data) {
     return <QueryState error={problemQuery.error} />;

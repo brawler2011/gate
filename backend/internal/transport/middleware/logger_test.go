@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -69,14 +70,15 @@ func TestErrorResponse(t *testing.T) {
 		err     error
 		cancel  bool
 		status  int
+		code    corev1.ErrorCode
 		message string
 		level   string
 	}{
-		{"internal error is logged but hidden", internalErr, false, 500, "internal server error", "ERROR"},
-		{"raw error is logged but hidden", errors.New("open /tmp/x: permission denied"), false, 500, "internal server error", "ERROR"},
-		{"client error message is public", pkg.Wrap(pkg.ErrBadInput, nil, "empty title"), false, 400, "empty title", "WARN"},
-		{"client disconnect", fmt.Errorf("query: %w", context.Canceled), true, 499, "", "INFO"},
-		{"server-side cancellation", fmt.Errorf("query: %w", context.Canceled), false, 500, "internal server error", "ERROR"},
+		{"internal error is logged but hidden", internalErr, false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
+		{"raw error is logged but hidden", errors.New("open /tmp/x: permission denied"), false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
+		{"client error message is public", pkg.Wrap(pkg.ErrBadInput, nil, "empty title"), false, 400, corev1.ErrorCodeInvalid, "empty title", "WARN"},
+		{"client disconnect", fmt.Errorf("query: %w", context.Canceled), true, 499, corev1.ErrorCodeInternal, "", "INFO"},
+		{"server-side cancellation", fmt.Errorf("query: %w", context.Canceled), false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
@@ -108,9 +110,12 @@ func TestErrorResponse(t *testing.T) {
 				require.Empty(t, rr.Body.String())
 				return
 			}
-			var body errorResponse
+			require.Equal(t, "application/problem+json", rr.Header().Get("Content-Type"))
+			var body corev1.Problem
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-			require.Equal(t, tc.message, body.Msg)
+			require.Equal(t, tc.message, body.Detail.Or(""))
+			require.Equal(t, tc.code, body.Code)
+			require.Equal(t, tc.status, body.Status)
 			require.Equal(t, id, body.RequestID)
 		})
 	}
@@ -240,6 +245,19 @@ func TestErrorResponseWriteFailureStaysOnRequestLine(t *testing.T) {
 	}))
 	h.ServeHTTP(brokenWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil))
 	require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+	require.Contains(t, buf.String(), "broken pipe")
+}
+
+func TestHandlerErrorWriteFailureStaysOnRequestLine(t *testing.T) {
+	var buf bytes.Buffer
+	h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		res := NewProblem(r.Context(), pkg.Wrap(pkg.ErrConflict, nil, "taken"))
+		w.WriteHeader(res.StatusCode)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	h.ServeHTTP(brokenWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil))
+	require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+	require.Contains(t, buf.String(), "taken")
 	require.Contains(t, buf.String(), "broken pipe")
 }
 

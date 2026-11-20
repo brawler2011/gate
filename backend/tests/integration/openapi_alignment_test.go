@@ -26,6 +26,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
 	_ "golang.org/x/image/webp"
@@ -273,16 +274,13 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusNotFound, rec.Code)
 		s.Equal("envelope-test-id", rec.Header().Get("X-Request-ID"))
 
-		var envelope struct {
-			Error     string `json:"error"`
-			Message   string `json:"message"`
-			RequestID string `json:"request_id"`
-		}
-		err := json.NewDecoder(rec.Body).Decode(&envelope)
-		s.Require().NoError(err)
-		s.NotEmpty(envelope.Error, "envelope 'error' field must be populated")
-		s.NotEmpty(envelope.Message, "envelope 'message' field must be populated")
-		s.Equal("envelope-test-id", envelope.RequestID, "envelope 'request_id' must match client/middleware request id")
+		s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+		var problem corev1.Problem
+		s.Require().NoError(problem.Decode(jx.DecodeBytes(rec.Body.Bytes())))
+		s.Require().NoError(problem.Validate())
+		s.Equal(corev1.ErrorCodeNotFound, problem.Code)
+		s.Equal(http.StatusNotFound, problem.Status)
+		s.Equal("envelope-test-id", problem.RequestID)
 	})
 
 	s.Run("ServerMetadataBasePath", func() {

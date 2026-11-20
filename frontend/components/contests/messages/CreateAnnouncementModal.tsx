@@ -79,7 +79,7 @@ export const CreateAnnouncementModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка публикации",
-        message: err.message || "Не удалось создать объявление",
+        message: err.detail || "Не удалось создать объявление",
         color: "red",
       });
       return;

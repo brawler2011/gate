@@ -199,7 +199,7 @@ type Handler interface {
 	// Create a new post.
 	//
 	// POST /posts
-	CreatePost(ctx context.Context, req *CreatePostReq) (CreatePostRes, error)
+	CreatePost(ctx context.Context, req *CreatePostReq) (*CreatedPost, error)
 	// CreateProblem implements CreateProblem operation.
 	//
 	// Create problem.
@@ -289,7 +289,7 @@ type Handler interface {
 	// Delete a post by ID.
 	//
 	// DELETE /posts/{id}
-	DeletePostById(ctx context.Context, params DeletePostByIdParams) (DeletePostByIdRes, error)
+	DeletePostById(ctx context.Context, params DeletePostByIdParams) error
 	// DeleteProblem implements DeleteProblem operation.
 	//
 	// Delete problem.
@@ -417,7 +417,7 @@ type Handler interface {
 	// Get a single post by ID.
 	//
 	// GET /posts/{id}
-	GetPostById(ctx context.Context, params GetPostByIdParams) (GetPostByIdRes, error)
+	GetPostById(ctx context.Context, params GetPostByIdParams) (*PostModel, error)
 	// GetPostImage implements GetPostImage operation.
 	//
 	// Get image of the post by ID.
@@ -723,7 +723,7 @@ type Handler interface {
 	// Partially update a post by ID.
 	//
 	// PATCH /posts/{id}
-	PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) (PatchPostByIdRes, error)
+	PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) error
 	// Register implements Register operation.
 	//
 	// Register.
@@ -892,6 +892,10 @@ type Handler interface {
 	//
 	// POST /auth/verify-email
 	VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error)
+	// NewError creates *ProblemStatusCodeWithHeaders from error returned by handler.
+	//
+	// Used for common default response.
+	NewError(ctx context.Context, err error) *ProblemStatusCodeWithHeaders
 }
 
 // Server implements http server based on OpenAPI v3 specification and

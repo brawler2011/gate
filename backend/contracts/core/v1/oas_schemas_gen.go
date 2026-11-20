@@ -3,6 +3,7 @@
 package corev1
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -11,6 +12,10 @@ import (
 	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
 )
+
+func (s *ProblemStatusCodeWithHeaders) Error() string {
+	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
+}
 
 // AcceptOrganizationInvitationOK is response for AcceptOrganizationInvitation operation.
 type AcceptOrganizationInvitationOK struct{}
@@ -2600,14 +2605,6 @@ func (s *CreateOrganizationResponseModel) SetLogin(val string) {
 	s.Login = val
 }
 
-type CreatePostBadRequest Error
-
-func (*CreatePostBadRequest) createPostRes() {}
-
-type CreatePostForbidden Error
-
-func (*CreatePostForbidden) createPostRes() {}
-
 type CreatePostReq struct {
 	Title        string           `json:"title"`
 	Description  string           `json:"description"`
@@ -2654,10 +2651,6 @@ func (s *CreatePostReq) SetText(val string) {
 func (s *CreatePostReq) SetPreviewImage(val ht.MultipartFile) {
 	s.PreviewImage = val
 }
-
-type CreatePostUnauthorized Error
-
-func (*CreatePostUnauthorized) createPostRes() {}
 
 // CreateProblemMemberOK is response for CreateProblemMember operation.
 type CreateProblemMemberOK struct{}
@@ -2721,8 +2714,6 @@ func (s *CreatedPost) GetPostID() OptUUID {
 func (s *CreatedPost) SetPostID(val OptUUID) {
 	s.PostID = val
 }
-
-func (*CreatedPost) createPostRes() {}
 
 // Result of creation.
 // Ref: #/components/schemas/CreationResponseModel
@@ -3019,26 +3010,8 @@ type DeleteContestTeamOK struct{}
 // DeleteOrganizationOK is response for DeleteOrganization operation.
 type DeleteOrganizationOK struct{}
 
-type DeletePostByIdBadRequest Error
-
-func (*DeletePostByIdBadRequest) deletePostByIdRes() {}
-
-type DeletePostByIdForbidden Error
-
-func (*DeletePostByIdForbidden) deletePostByIdRes() {}
-
-type DeletePostByIdNotFound Error
-
-func (*DeletePostByIdNotFound) deletePostByIdRes() {}
-
 // DeletePostByIdOK is response for DeletePostById operation.
 type DeletePostByIdOK struct{}
-
-func (*DeletePostByIdOK) deletePostByIdRes() {}
-
-type DeletePostByIdUnauthorized Error
-
-func (*DeletePostByIdUnauthorized) deletePostByIdRes() {}
 
 // DeleteProblemMemberOK is response for DeleteProblemMember operation.
 type DeleteProblemMemberOK struct{}
@@ -3080,54 +3053,95 @@ func (s DownloadProblemPackageOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
-// Error data.
-// Ref: #/components/schemas/Error
-type Error struct {
-	Error     OptString `json:"error"`
-	Message   OptString `json:"message"`
-	RequestID OptString `json:"request_id"`
-	// Invalid values of the request body, each at an RFC 6901 JSON Pointer into it.
-	Fields []FieldError `json:"fields"`
+// Ref: #/components/schemas/ErrorCode
+type ErrorCode string
+
+const (
+	ErrorCodeInvalid         ErrorCode = "invalid"
+	ErrorCodeUnauthenticated ErrorCode = "unauthenticated"
+	ErrorCodeForbidden       ErrorCode = "forbidden"
+	ErrorCodeNotFound        ErrorCode = "not_found"
+	ErrorCodeConflict        ErrorCode = "conflict"
+	ErrorCodePayloadTooLarge ErrorCode = "payload_too_large"
+	ErrorCodeRateLimited     ErrorCode = "rate_limited"
+	ErrorCodeInternal        ErrorCode = "internal"
+	ErrorCodeNotImplemented  ErrorCode = "not_implemented"
+)
+
+// AllValues returns all ErrorCode values.
+func (ErrorCode) AllValues() []ErrorCode {
+	return []ErrorCode{
+		ErrorCodeInvalid,
+		ErrorCodeUnauthenticated,
+		ErrorCodeForbidden,
+		ErrorCodeNotFound,
+		ErrorCodeConflict,
+		ErrorCodePayloadTooLarge,
+		ErrorCodeRateLimited,
+		ErrorCodeInternal,
+		ErrorCodeNotImplemented,
+	}
 }
 
-// GetError returns the value of Error.
-func (s *Error) GetError() OptString {
-	return s.Error
+// MarshalText implements encoding.TextMarshaler.
+func (s ErrorCode) MarshalText() ([]byte, error) {
+	switch s {
+	case ErrorCodeInvalid:
+		return []byte(s), nil
+	case ErrorCodeUnauthenticated:
+		return []byte(s), nil
+	case ErrorCodeForbidden:
+		return []byte(s), nil
+	case ErrorCodeNotFound:
+		return []byte(s), nil
+	case ErrorCodeConflict:
+		return []byte(s), nil
+	case ErrorCodePayloadTooLarge:
+		return []byte(s), nil
+	case ErrorCodeRateLimited:
+		return []byte(s), nil
+	case ErrorCodeInternal:
+		return []byte(s), nil
+	case ErrorCodeNotImplemented:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
 }
 
-// GetMessage returns the value of Message.
-func (s *Error) GetMessage() OptString {
-	return s.Message
-}
-
-// GetRequestID returns the value of RequestID.
-func (s *Error) GetRequestID() OptString {
-	return s.RequestID
-}
-
-// GetFields returns the value of Fields.
-func (s *Error) GetFields() []FieldError {
-	return s.Fields
-}
-
-// SetError sets the value of Error.
-func (s *Error) SetError(val OptString) {
-	s.Error = val
-}
-
-// SetMessage sets the value of Message.
-func (s *Error) SetMessage(val OptString) {
-	s.Message = val
-}
-
-// SetRequestID sets the value of RequestID.
-func (s *Error) SetRequestID(val OptString) {
-	s.RequestID = val
-}
-
-// SetFields sets the value of Fields.
-func (s *Error) SetFields(val []FieldError) {
-	s.Fields = val
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ErrorCode) UnmarshalText(data []byte) error {
+	switch ErrorCode(data) {
+	case ErrorCodeInvalid:
+		*s = ErrorCodeInvalid
+		return nil
+	case ErrorCodeUnauthenticated:
+		*s = ErrorCodeUnauthenticated
+		return nil
+	case ErrorCodeForbidden:
+		*s = ErrorCodeForbidden
+		return nil
+	case ErrorCodeNotFound:
+		*s = ErrorCodeNotFound
+		return nil
+	case ErrorCodeConflict:
+		*s = ErrorCodeConflict
+		return nil
+	case ErrorCodePayloadTooLarge:
+		*s = ErrorCodePayloadTooLarge
+		return nil
+	case ErrorCodeRateLimited:
+		*s = ErrorCodeRateLimited
+		return nil
+	case ErrorCodeInternal:
+		*s = ErrorCodeInternal
+		return nil
+	case ErrorCodeNotImplemented:
+		*s = ErrorCodeNotImplemented
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type ExportProblemDraftOK struct {
@@ -3227,30 +3241,64 @@ func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 }
 
 // One invalid value of a request body.
-// Ref: #/components/schemas/FieldError
-type FieldError struct {
-	Pointer string `json:"pointer"`
-	Message string `json:"message"`
+// Ref: #/components/schemas/FieldProblem
+type FieldProblem struct {
+	// RFC 6901 JSON Pointer into the request body.
+	Pointer string                `json:"pointer"`
+	Code    ErrorCode             `json:"code"`
+	Params  OptFieldProblemParams `json:"params"`
+	Detail  OptString             `json:"detail"`
 }
 
 // GetPointer returns the value of Pointer.
-func (s *FieldError) GetPointer() string {
+func (s *FieldProblem) GetPointer() string {
 	return s.Pointer
 }
 
-// GetMessage returns the value of Message.
-func (s *FieldError) GetMessage() string {
-	return s.Message
+// GetCode returns the value of Code.
+func (s *FieldProblem) GetCode() ErrorCode {
+	return s.Code
+}
+
+// GetParams returns the value of Params.
+func (s *FieldProblem) GetParams() OptFieldProblemParams {
+	return s.Params
+}
+
+// GetDetail returns the value of Detail.
+func (s *FieldProblem) GetDetail() OptString {
+	return s.Detail
 }
 
 // SetPointer sets the value of Pointer.
-func (s *FieldError) SetPointer(val string) {
+func (s *FieldProblem) SetPointer(val string) {
 	s.Pointer = val
 }
 
-// SetMessage sets the value of Message.
-func (s *FieldError) SetMessage(val string) {
-	s.Message = val
+// SetCode sets the value of Code.
+func (s *FieldProblem) SetCode(val ErrorCode) {
+	s.Code = val
+}
+
+// SetParams sets the value of Params.
+func (s *FieldProblem) SetParams(val OptFieldProblemParams) {
+	s.Params = val
+}
+
+// SetDetail sets the value of Detail.
+func (s *FieldProblem) SetDetail(val OptString) {
+	s.Detail = val
+}
+
+type FieldProblemParams map[string]jx.Raw
+
+func (s *FieldProblemParams) init() FieldProblemParams {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // ForgotPasswordOK is response for ForgotPassword operation.
@@ -3458,22 +3506,6 @@ func (s *GetOrganizationResponseModel) SetOrganization(val OrganizationModel) {
 	s.Organization = val
 }
 
-type GetPostByIdBadRequest Error
-
-func (*GetPostByIdBadRequest) getPostByIdRes() {}
-
-type GetPostByIdNotFound Error
-
-func (*GetPostByIdNotFound) getPostByIdRes() {}
-
-type GetPostImageBadRequest Error
-
-func (*GetPostImageBadRequest) getPostImageRes() {}
-
-type GetPostImageNotFound Error
-
-func (*GetPostImageNotFound) getPostImageRes() {}
-
 // GetPostImageNotModified is response for GetPostImage operation.
 type GetPostImageNotModified struct {
 	ETag OptString
@@ -3594,14 +3626,6 @@ func (s *GetTeamResponseModel) GetTeam() TeamModel {
 func (s *GetTeamResponseModel) SetTeam(val TeamModel) {
 	s.Team = val
 }
-
-type GetUserAvatarBadRequest Error
-
-func (*GetUserAvatarBadRequest) getUserAvatarRes() {}
-
-type GetUserAvatarNotFound Error
-
-func (*GetUserAvatarNotFound) getUserAvatarRes() {}
 
 // GetUserAvatarNotModified is response for GetUserAvatar operation.
 type GetUserAvatarNotModified struct {
@@ -5720,6 +5744,52 @@ func (o OptFailedTestDetailModel) Or(d FailedTestDetailModel) FailedTestDetailMo
 	return d
 }
 
+// NewOptFieldProblemParams returns new OptFieldProblemParams with value set to v.
+func NewOptFieldProblemParams(v FieldProblemParams) OptFieldProblemParams {
+	return OptFieldProblemParams{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFieldProblemParams is optional FieldProblemParams.
+type OptFieldProblemParams struct {
+	Value FieldProblemParams
+	Set   bool
+}
+
+// IsSet returns true if OptFieldProblemParams was set.
+func (o OptFieldProblemParams) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFieldProblemParams) Reset() {
+	var v FieldProblemParams
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFieldProblemParams) SetTo(v FieldProblemParams) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFieldProblemParams) Get() (v FieldProblemParams, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFieldProblemParams) Or(d FieldProblemParams) FieldProblemParams {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptFloat64 returns new OptFloat64 with value set to v.
 func NewOptFloat64(v float64) OptFloat64 {
 	return OptFloat64{
@@ -5760,6 +5830,52 @@ func (o OptFloat64) Get() (v float64, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptInt returns new OptInt with value set to v.
+func NewOptInt(v int) OptInt {
+	return OptInt{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInt is optional int.
+type OptInt struct {
+	Value int
+	Set   bool
+}
+
+// IsSet returns true if OptInt was set.
+func (o OptInt) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt) Reset() {
+	var v int
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt) SetTo(v int) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt) Get() (v int, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt) Or(d int) int {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6378,6 +6494,52 @@ func (o OptPatchPostByIdReq) Get() (v PatchPostByIdReq, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptPatchPostByIdReq) Or(d PatchPostByIdReq) PatchPostByIdReq {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptProblemParams returns new OptProblemParams with value set to v.
+func NewOptProblemParams(v ProblemParams) OptProblemParams {
+	return OptProblemParams{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptProblemParams is optional ProblemParams.
+type OptProblemParams struct {
+	Value ProblemParams
+	Set   bool
+}
+
+// IsSet returns true if OptProblemParams was set.
+func (o OptProblemParams) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptProblemParams) Reset() {
+	var v ProblemParams
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptProblemParams) SetTo(v ProblemParams) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptProblemParams) Get() (v ProblemParams, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptProblemParams) Or(d ProblemParams) ProblemParams {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7544,22 +7706,8 @@ func (s *PaginationModel) SetTotalPages(val int32) {
 	s.TotalPages = val
 }
 
-type PatchPostByIdBadRequest Error
-
-func (*PatchPostByIdBadRequest) patchPostByIdRes() {}
-
-type PatchPostByIdForbidden Error
-
-func (*PatchPostByIdForbidden) patchPostByIdRes() {}
-
-type PatchPostByIdNotFound Error
-
-func (*PatchPostByIdNotFound) patchPostByIdRes() {}
-
 // PatchPostByIdOK is response for PatchPostById operation.
 type PatchPostByIdOK struct{}
-
-func (*PatchPostByIdOK) patchPostByIdRes() {}
 
 type PatchPostByIdReq struct {
 	Title        OptString        `json:"title"`
@@ -7607,10 +7755,6 @@ func (s *PatchPostByIdReq) SetText(val OptString) {
 func (s *PatchPostByIdReq) SetPreviewImage(val OptMultipartFile) {
 	s.PreviewImage = val
 }
-
-type PatchPostByIdUnauthorized Error
-
-func (*PatchPostByIdUnauthorized) patchPostByIdRes() {}
 
 // Post data.
 // Ref: #/components/schemas/PostModel
@@ -7716,7 +7860,100 @@ func (s *PostModel) SetAuthorUsername(val string) {
 	s.AuthorUsername = val
 }
 
-func (*PostModel) getPostByIdRes() {}
+// RFC 9457 problem details. Clients branch and translate on `code` and `params`; `detail` is English
+// text for debugging.
+// Ref: #/components/schemas/Problem
+type Problem struct {
+	Type      string           `json:"type"`
+	Title     string           `json:"title"`
+	Status    int              `json:"status"`
+	Detail    OptString        `json:"detail"`
+	Code      ErrorCode        `json:"code"`
+	Params    OptProblemParams `json:"params"`
+	RequestID string           `json:"request_id"`
+	// Invalid values of the request body.
+	Errors []FieldProblem `json:"errors"`
+}
+
+// GetType returns the value of Type.
+func (s *Problem) GetType() string {
+	return s.Type
+}
+
+// GetTitle returns the value of Title.
+func (s *Problem) GetTitle() string {
+	return s.Title
+}
+
+// GetStatus returns the value of Status.
+func (s *Problem) GetStatus() int {
+	return s.Status
+}
+
+// GetDetail returns the value of Detail.
+func (s *Problem) GetDetail() OptString {
+	return s.Detail
+}
+
+// GetCode returns the value of Code.
+func (s *Problem) GetCode() ErrorCode {
+	return s.Code
+}
+
+// GetParams returns the value of Params.
+func (s *Problem) GetParams() OptProblemParams {
+	return s.Params
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *Problem) GetRequestID() string {
+	return s.RequestID
+}
+
+// GetErrors returns the value of Errors.
+func (s *Problem) GetErrors() []FieldProblem {
+	return s.Errors
+}
+
+// SetType sets the value of Type.
+func (s *Problem) SetType(val string) {
+	s.Type = val
+}
+
+// SetTitle sets the value of Title.
+func (s *Problem) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetStatus sets the value of Status.
+func (s *Problem) SetStatus(val int) {
+	s.Status = val
+}
+
+// SetDetail sets the value of Detail.
+func (s *Problem) SetDetail(val OptString) {
+	s.Detail = val
+}
+
+// SetCode sets the value of Code.
+func (s *Problem) SetCode(val ErrorCode) {
+	s.Code = val
+}
+
+// SetParams sets the value of Params.
+func (s *Problem) SetParams(val OptProblemParams) {
+	s.Params = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *Problem) SetRequestID(val string) {
+	s.RequestID = val
+}
+
+// SetErrors sets the value of Errors.
+func (s *Problem) SetErrors(val []FieldProblem) {
+	s.Errors = val
+}
 
 // Result of problem block status.
 // Ref: #/components/schemas/ProblemBlockStatusResponseModel
@@ -9792,6 +10029,17 @@ func (s *ProblemPackage) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+type ProblemParams map[string]jx.Raw
+
+func (s *ProblemParams) init() ProblemParams {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 type ProblemRoleQuery string
 
 const (
@@ -9963,6 +10211,43 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// ProblemStatusCodeWithHeaders wraps Problem with status code and response headers.
+type ProblemStatusCodeWithHeaders struct {
+	StatusCode int
+	RetryAfter OptInt
+	Response   Problem
+}
+
+// GetStatusCode returns the value of StatusCode.
+func (s *ProblemStatusCodeWithHeaders) GetStatusCode() int {
+	return s.StatusCode
+}
+
+// GetRetryAfter returns the value of RetryAfter.
+func (s *ProblemStatusCodeWithHeaders) GetRetryAfter() OptInt {
+	return s.RetryAfter
+}
+
+// GetResponse returns the value of Response.
+func (s *ProblemStatusCodeWithHeaders) GetResponse() Problem {
+	return s.Response
+}
+
+// SetStatusCode sets the value of StatusCode.
+func (s *ProblemStatusCodeWithHeaders) SetStatusCode(val int) {
+	s.StatusCode = val
+}
+
+// SetRetryAfter sets the value of RetryAfter.
+func (s *ProblemStatusCodeWithHeaders) SetRetryAfter(val OptInt) {
+	s.RetryAfter = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ProblemStatusCodeWithHeaders) SetResponse(val Problem) {
+	s.Response = val
 }
 
 // Problem team data.

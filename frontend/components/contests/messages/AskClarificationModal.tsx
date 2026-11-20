@@ -66,7 +66,7 @@ export const AskClarificationModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка отправки",
-        message: err.message || "Не удалось отправить вопрос",
+        message: err.detail || "Не удалось отправить вопрос",
         color: "red",
       });
       return;

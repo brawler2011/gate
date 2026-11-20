@@ -62,3 +62,11 @@ export const renderRoute = (
   errorElement: <RouteError />, hydrateFallbackElement: <QueryState />} ]});
 
 export * from "@testing-library/react";
+
+const problemCodes: Record<number, string> = {400: "invalid", 401: "unauthenticated", 403: "forbidden", 404: "not_found", 409: "conflict"};
+
+export const problemResponse = (status: number, detail: string, extra: Record<string, unknown> = {}): Response =>
+  Response.json(
+    {type: "about:blank", title: "", status, code: problemCodes[status] ?? "internal", detail, request_id: "", ...extra},
+    {status, headers: {"Content-Type": "application/problem+json"}},
+  );
