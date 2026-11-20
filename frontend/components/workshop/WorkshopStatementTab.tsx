@@ -39,7 +39,7 @@ const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
   return (
     <Stack gap="md" className="problem-statement">
       <Text fw={700} size="xl">
-        {draft.title}
+        {statement.title.trim() || draft.title}
       </Text>
       {STATEMENT_SECTIONS.filter((key) => deferred[key].trim() !== "").map((key) => (
         <Box key={key}>
@@ -58,12 +58,18 @@ const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
 const StatementForm = ({draft, problemId, statement: stored}: StatementProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const [statement, setLocal] = useState(stored);
-  const changed = STATEMENT_SECTIONS.some((key) => statement[key] !== stored[key]);
+  const changed = statement.title !== stored.title || STATEMENT_SECTIONS.some((key) => statement[key] !== stored[key]);
   const sections = STATEMENT_SECTIONS.filter((key) => key !== "interaction" || draft.type === "interactive" || stored.interaction !== "");
   return (
     <Stack gap="md">
       <SimpleGrid cols={{base: 1, md: 2}} spacing="md">
         <Stack gap="sm">
+          <TextInput
+            label="Название"
+            placeholder={draft.title}
+            value={statement.title}
+            onChange={(e) => setLocal({...statement, title: e.currentTarget.value})}
+          />
           {sections.map((key) => (
             <Textarea
               key={key}
@@ -130,7 +136,7 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
           </Button>
         </Group>
         <Text size="xs" c="dimmed">
-          Название задачи берётся из черновика. Изображения подключаются по имени ресурса: ![](pic.png).
+          Пустое название — название задачи. Изображения подключаются по имени ресурса: ![](pic.png).
         </Text>
         <StatementForm key={language} draft={draft} problemId={problemId} statement={stored} />
       </Stack>

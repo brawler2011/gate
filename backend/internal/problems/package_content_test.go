@@ -65,6 +65,17 @@ func (storedStatement) FindPackageAssets(context.Context, uuid.UUID, string) ([]
 	return nil, nil
 }
 
+func TestReadStatementShowsItsTitle(t *testing.T) {
+	problemID := uuid.New()
+	statements := []model.DraftStatement{{Language: "en"}, {Language: "ru", Title: "Сумма"}}
+	content := &PackageContent{Repo: storedStatement{p: model.PackageStatement{ProblemID: problemID, Title: "Sum", Statements: statements}}}
+	title := func(language string) string {
+		return content.ReadStatement(context.Background(), problemID, uuid.New(), language).Statement.Title
+	}
+	require.Equal(t, "Сумма", title("ru"))
+	require.Equal(t, "Sum", title("en"))
+}
+
 func TestReadStatementFallsBackToEnglishThenFirstLanguage(t *testing.T) {
 	problemID := uuid.New()
 	read := func(language string, statements ...model.DraftStatement) string {

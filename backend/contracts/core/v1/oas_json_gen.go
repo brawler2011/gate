@@ -18130,6 +18130,10 @@ func (s *ProblemDraftStatement) encodeFields(e *jx.Encoder) {
 		e.Str(s.Language)
 	}
 	{
+		e.FieldStart("title")
+		e.Str(s.Title)
+	}
+	{
 		e.FieldStart("legend")
 		e.Str(s.Legend)
 	}
@@ -18155,14 +18159,15 @@ func (s *ProblemDraftStatement) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraftStatement = [7]string{
+var jsonFieldsNameOfProblemDraftStatement = [8]string{
 	0: "language",
-	1: "legend",
-	2: "input",
-	3: "output",
-	4: "notes",
-	5: "interaction",
-	6: "scoring",
+	1: "title",
+	2: "legend",
+	3: "input",
+	4: "output",
+	5: "notes",
+	6: "interaction",
+	7: "scoring",
 }
 
 // Decode decodes ProblemDraftStatement from json.
@@ -18186,8 +18191,20 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"language\"")
 			}
-		case "legend":
+		case "title":
 			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Title = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"title\"")
+			}
+		case "legend":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.Legend = string(v)
@@ -18199,7 +18216,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"legend\"")
 			}
 		case "input":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.Input = string(v)
@@ -18211,7 +18228,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"input\"")
 			}
 		case "output":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Output = string(v)
@@ -18223,7 +18240,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"output\"")
 			}
 		case "notes":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.Notes = string(v)
@@ -18235,7 +18252,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"notes\"")
 			}
 		case "interaction":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.Interaction = string(v)
@@ -18247,7 +18264,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"interaction\"")
 			}
 		case "scoring":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.Scoring = string(v)
@@ -18268,7 +18285,7 @@ func (s *ProblemDraftStatement) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b01111111,
+		0b11111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

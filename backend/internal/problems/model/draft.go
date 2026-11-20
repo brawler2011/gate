@@ -99,7 +99,9 @@ func (f *DraftLibraryFile) Text() string {
 }
 
 type DraftStatement struct {
-	Language    string `json:"language"`
+	Language string `json:"language"`
+	// Empty shows the problem title.
+	Title       string `json:"title"`
 	Legend      string `json:"legend"`
 	Input       string `json:"input"`
 	Output      string `json:"output"`
@@ -197,6 +199,7 @@ func (s *DraftStatement) Section(name string) *string {
 // TrimStatements drops trailing whitespace, as the import does, so an exported draft imports back unchanged.
 func (d *Draft) TrimStatements() {
 	for i := range d.Statements {
+		d.Statements[i].Title = strings.TrimSpace(d.Statements[i].Title)
 		for _, name := range StatementSections {
 			section := d.Statements[i].Section(name)
 			*section = strings.TrimRightFunc(*section, unicode.IsSpace)
@@ -562,6 +565,9 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 			v.fail(at+"/language", "invalid or duplicate language %q", s.Language)
 		}
 		languages[s.Language] = true
+		if !utf8.ValidString(s.Title) || len(s.Title) > 1024 {
+			v.fail(at+"/title", "title must be UTF-8 of at most 1024 bytes")
+		}
 		for _, name := range StatementSections {
 			text(at+"/"+name, *s.Section(name))
 		}

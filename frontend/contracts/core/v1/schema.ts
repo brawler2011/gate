@@ -1898,6 +1898,8 @@ export interface components {
         /** @description The statement in one language as Markdown sections. */
         ProblemDraftStatement: {
             language: string;
+            /** @description Shown with this statement instead of the problem title; empty shows the problem title. */
+            title: string;
             legend: string;
             input: string;
             output: string;

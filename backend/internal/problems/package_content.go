@@ -70,6 +70,9 @@ func selectStatement(title string, statements []model.DraftStatement, language s
 	if s != nil {
 		statement.Legend, statement.InputFormat, statement.OutputFormat = s.Legend, s.Input, s.Output
 		statement.Notes, statement.Interaction, statement.Scoring = s.Notes, s.Interaction, s.Scoring
+		if s.Title != "" {
+			statement.Title = s.Title
+		}
 	}
 	return &statement
 }

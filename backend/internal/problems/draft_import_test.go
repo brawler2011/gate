@@ -466,6 +466,20 @@ func TestImportSplitsPolygonStatementIntoSections(t *testing.T) {
 	}
 }
 
+func TestImportKeepsStatementTitles(t *testing.T) {
+	xml, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/problem.xml")
+	require.NoError(t, err)
+	renamed := strings.Replace(string(xml), `<name language="russian" value="A+B"/>`, `<name language="russian" value="Сумма"/>`, 1)
+	require.NotEqual(t, string(xml), renamed)
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{"problem.xml": renamed})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, "A+B", plan.draft.Title)
+	require.Empty(t, plan.draft.Statement("en").Title)
+	require.Equal(t, "Сумма", plan.draft.Statement("ru").Title)
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+}
+
 // Old Russian packages use windows-1251: Polygon declares it, PCMS2 sources leave it implicit.
 func TestImportConvertsWindows1251Text(t *testing.T) {
 	cp1251 := charmap.Windows1251.NewEncoder()

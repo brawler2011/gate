@@ -18,7 +18,7 @@ const draft = {
   memory_limit_mb: 256, input_file: "", output_file: "", max_score: null, checker: null, interactor: null, validators: [], generators: [],
   solutions: [], main_solution: null, library: [], subtasks: [], tests: [],
   assets: [{name: "график.png", object_id: "graph"}],
-  statements: [{language: "ru", legend: "![граф](./график.png#center)", input: "", output: "", notes: "", interaction: "", scoring: ""}],
+  statements: [{language: "ru", title: "", legend: "![граф](./график.png#center)", input: "", output: "", notes: "", interaction: "", scoring: ""}],
 };
 
 describe("workshop statement tab", () => {
