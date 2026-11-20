@@ -44,8 +44,9 @@ VALUES($1,$2,$3,$4,$5::jsonb,'running',$6,clock_timestamp()+interval '1 hour',1,
 	if created.IsZero() {
 		created = time.Now()
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at,samples) VALUES($1,$2,$3,$4,$5,$6,$7,'[]')`,
-		packageID, problemID, organizationID, buildID, objectID, hash, created); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at,revision,title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pass-fail',$11,$12,'','','[]','[]')`,
+		packageID, problemID, organizationID, buildID, objectID, hash, created, revision, title, shortName, timeMs, memoryMb); err != nil {
 		return uuid.Nil, fmt.Errorf("package: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL,finished_at=clock_timestamp() WHERE id=$1`, buildID); err != nil {

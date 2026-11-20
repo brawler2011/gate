@@ -147,13 +147,23 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 		if err != nil {
 			return uuid.Nil, err
 		}
-		packageData, err := uc.PackageContent.Repo.GetPackageDescriptor(ctx, ready.ID)
+		descriptor, err := uc.PackageContent.Repo.GetPackageDescriptor(ctx, ready.ID)
 		if err != nil {
 			return uuid.Nil, err
 		}
-		plan = &draftImport{draft: packageData.Snapshot.Draft, objects: []importObject{}}
-		plan.draft.ProblemID = id
-		plan.draft.Revision = 1
+		archive, _, err := uc.Store.DownloadFile(ctx, uc.Bucket, descriptor.Object.Key, nil)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		plan, err = uc.parseImport(ctx, archive, id, 1)
+		closeErr := archive.Close()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		defer plan.Close()
+		if closeErr != nil {
+			return uuid.Nil, fmt.Errorf("close: %w", closeErr)
+		}
 	}
 	plan.draft.Title = input.Title
 	plan.draft.ShortName = "problem-" + id.String()[:8]
@@ -164,7 +174,6 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	if err != nil {
 		return uuid.Nil, err
 	}
-	// Clones reuse same-organization objects; only imported bytes need uploading.
 	var objects []model.StoredObject
 	if len(plan.objects) > 0 {
 		replay, uploaded, err := uc.uploadImport(ctx, k, plan)

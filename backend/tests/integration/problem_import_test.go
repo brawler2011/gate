@@ -54,14 +54,14 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 			if draft.Type == corev1.ProblemDraftTypeInteractive {
 				role = "interactor"
 			}
-			_, ok := built.Programs[role]
+			_, _, ok := built.Program(role)
 			s.True(ok, "package has no %s", role)
 		})
 	}
 }
 
 // Built inputs match the Polygon package, including generated tests.
-func (s *IntegrationTestSuite) requirePolygonInputs(dir string, built *gfmt.GateFormat) {
+func (s *IntegrationTestSuite) requirePolygonInputs(dir string, built *gfmt.Built) {
 	for _, subtask := range built.Problem.Subtasks {
 		for _, test := range subtask.Tests {
 			want, err := os.ReadFile(filepath.Join(dir, "tests", fmt.Sprintf("%02d", test.Ordinal)))
@@ -69,7 +69,7 @@ func (s *IntegrationTestSuite) requirePolygonInputs(dir string, built *gfmt.Gate
 				continue
 			}
 			s.Require().NoError(err)
-			got, err := os.ReadFile(filepath.Join(built.Path, test.Manual))
+			got, err := os.ReadFile(filepath.Join(built.Path, gfmt.TestFolder, test.Input))
 			s.Require().NoError(err)
 			// The import converts CRLF line endings of text files.
 			s.Equal(strings.ReplaceAll(string(want), "\r\n", "\n"), string(got), "input of test %d", test.Ordinal)

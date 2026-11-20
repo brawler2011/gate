@@ -41,11 +41,11 @@ func (r templateOrganizations) GetUserOrganizations(context.Context, uuid.UUID) 
 	return []organizationsmodel.Organization{{ID: r.id}}, nil
 }
 
-type templateManifests struct{ id uuid.UUID }
+type templatePackages struct{ id uuid.UUID }
 
-func (r *templateManifests) GetDraft(_ context.Context, id uuid.UUID) (problemsmodel.Draft, error) {
+func (r *templatePackages) GetReadyPackage(_ context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error) {
 	r.id = id
-	return problemsmodel.Draft{Type: "interactive", DraftContent: problemsmodel.DraftContent{Statements: []problemsmodel.DraftStatement{{Language: "en", Legend: "Template description"}}}}, nil
+	return problemsmodel.ProblemPackage{Title: "Organization template", Type: "interactive", Statements: []problemsmodel.DraftStatement{{Language: "en", Legend: "Template description"}}}, nil
 }
 
 func TestProblemReadsBindViewerAndPagination(t *testing.T) {
@@ -114,7 +114,7 @@ func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
 func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {
 	id, org := uuid.New(), uuid.New()
 	reads := &problemReads{list: &problemsmodel.ProblemsList{Problems: []problemsmodel.Problem{{ID: id, Title: "Organization template"}}}}
-	manifests := &templateManifests{}
+	manifests := &templatePackages{}
 	reader := NewProblemsUseCase(reads, nil, templateOrganizations{id: org}, nil, manifests)
 	ctx := problemActorContext()
 	templates, err := reader.ListTemplates(ctx, uuid.Nil)

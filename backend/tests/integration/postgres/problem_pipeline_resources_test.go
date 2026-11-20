@@ -3,6 +3,7 @@
 package postgres_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -73,7 +74,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	uploads := &problems.DraftUseCase{
 		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10},
 		Repo:        repo, Problems: fixedProblem{org}, Permissions: allowAll{}, Store: services.store, Bucket: "objects",
-		TempDir: work, UploadTTL: 5 * time.Minute, ObjectBytes: objectBytes, BuildOptions: options,
+		TempDir: work, UploadTTL: 5 * time.Minute, BuildOptions: options,
 		Languages: &sandbox.Config{Langs: services.langs},
 	}
 	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
@@ -216,7 +217,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	require.ErrorAs(t, err, &failure)
 	require.Equal(t, "compile", failure.Stage)
 	require.Equal(t, "configuration", failure.Kind)
-	require.Contains(t, failure.Message, "checkers/check.cpp")
+	require.Contains(t, failure.Message, "checkers/checker")
 
 	changed := maps.Clone(h.options.Languages)
 	cpp := changed["cpp17"]
@@ -366,6 +367,35 @@ func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 }
 
 // The disk budget is enforced while materializing the snapshot, before any sandbox work.
+// Tests sharing an input fit the build directory once but the package once per test, and judges must unpack it.
+func TestPipelineRejectsPackageThatUnpacksOverQuota(t *testing.T) {
+	t.Parallel()
+	h := newPipelineHarness(t, 4<<20, 16<<20)
+	subtask := uuid.New()
+	h.save(t, func(d *model.Draft) {
+		d.Checker = checker("cpp17", acceptEverythingChecker)
+		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
+	})
+	first := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
+	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
+	require.NoError(t, err)
+	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &first},
+		map[string]io.Reader{"input": bytes.NewReader(make([]byte, 3<<20)), "answer": strings.NewReader("0\n")})
+	require.NoError(t, err)
+	h.save(t, func(d *model.Draft) {
+		for i := 2; i <= 6; i++ {
+			test := d.Tests[0]
+			test.ID, test.Ordinal = uuid.New(), i
+			d.Tests = append(d.Tests, test)
+		}
+	})
+	_, err = h.pipeline().Execute(h.ctx, h.enqueueAndClaim(t))
+	var failure *builder.Failure
+	require.ErrorAs(t, err, &failure)
+	require.Equal(t, "package", failure.Stage)
+	require.Equal(t, "quota", failure.Kind)
+}
+
 func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 16<<20, 4<<20)

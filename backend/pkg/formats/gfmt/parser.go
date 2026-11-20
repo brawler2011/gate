@@ -171,10 +171,10 @@ func mainSolution(main string, solutions []spec.Program) string {
 // Samples in scored subtasks are numbered there, not duplicated under samples.
 func groups(manifest *Problem, generators map[string]string, files map[string]bool) ([]spec.Group, error) {
 	key := func(t Test) string {
-		if t.Manual != "" {
-			return "manual:" + t.Manual
+		if t.Generate != "" {
+			return "generator:" + t.Generate
 		}
-		return "generator:" + t.Generate
+		return "input:" + t.Input
 	}
 	// Ordinals mark an exported draft, whose subtask named samples is an ordinary one.
 	legacy := !manifest.hasOrdinals()
@@ -221,8 +221,8 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 
 func convertTest(t Test, generators map[string]string, files map[string]bool) (spec.Test, error) {
 	test := spec.Test{Points: t.Points, Ordinal: t.Ordinal}
-	if t.Manual != "" {
-		test.Input = TestFolder + "/" + t.Manual
+	if t.Generate == "" {
+		test.Input = TestFolder + "/" + t.Input
 	} else {
 		argv, err := spec.ParseCommand(t.Generate)
 		if err != nil {
@@ -235,14 +235,12 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 		test.Generator, test.Args = name, argv[1:]
 	}
 	switch {
-	case t.Answer != "" && t.Solution != "":
-		return test, fmt.Errorf("test has both an answer and a solution")
 	case t.Solution != "":
 		test.AnswerSolution = RoleFolder("solution") + "/" + t.Solution
 	case t.Answer != "":
 		test.Answer = TestFolder + "/" + t.Answer
-	case t.Manual != "":
-		for _, candidate := range TestOutputNames(t.Manual) {
+	case t.Generate == "":
+		for _, candidate := range TestOutputNames(t.Input) {
 			if files[TestFolder+"/"+candidate] {
 				test.Answer = TestFolder + "/" + candidate
 				break

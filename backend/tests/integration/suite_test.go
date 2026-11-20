@@ -164,8 +164,8 @@ func (s *IntegrationTestSuite) initApp() {
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}
-	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T())}
-	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, problemDrafts)
+	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T())}
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)

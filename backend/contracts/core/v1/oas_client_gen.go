@@ -336,7 +336,8 @@ type Invoker interface {
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
 	// DownloadProblemPackage invokes DownloadProblemPackage operation.
 	//
-	// Download a built problem package archive.
+	// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
+	// built from.
 	//
 	// GET /problems/{id}/packages/{packageId}/download
 	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
@@ -5243,7 +5244,8 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 
 // DownloadProblemPackage invokes DownloadProblemPackage operation.
 //
-// Download a built problem package archive.
+// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
+// built from.
 //
 // GET /problems/{id}/packages/{packageId}/download
 func (c *Client) DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error) {

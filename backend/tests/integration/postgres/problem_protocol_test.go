@@ -140,16 +140,16 @@ func TestStaleAttemptCannotPublish(t *testing.T) {
 
 	stale := packageObject(org)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, first.ID, *first.LeaseToken, []byte(`{"message":"late"}`), false), pkg.ErrConflict)
-	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, nil)
+	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, model.NewPackageIndex(d, nil))
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
 
 	output := packageObject(org)
-	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, nil)
+	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, model.NewPackageIndex(d, nil))
 	require.NoError(t, err)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1 AND object_id=$2`, packageID, output.ID))
 	// A retry after a lost commit response resolves to the same Package and records nothing.
-	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), nil)
+	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), model.NewPackageIndex(d, nil))
 	require.NoError(t, err)
 	require.Equal(t, packageID, again)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
@@ -186,7 +186,7 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	output := packageObject(org)
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, nil)
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -431,7 +431,7 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, build, output, asset := claimedBuildWithAsset(t)
 	samples := []model.Sample{{Input: "1 2\n", Output: "3\n"}}
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, samples)
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, samples))
 	require.NoError(t, err)
 
 	statement, err := repo.GetPackageStatement(ctx, packageID)

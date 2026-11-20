@@ -237,17 +237,18 @@ func (q *Queries) InsertDraftObject(ctx context.Context, arg InsertDraftObjectPa
 
 const insertPackageAssets = `-- name: InsertPackageAssets :exec
 INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
-SELECT $1::uuid,b.organization_id,a->>'name',(a->>'object_id')::uuid
-FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=$2
+SELECT $1::uuid,$2::uuid,a.name,a.object_id
+FROM jsonb_to_recordset($3::jsonb) a(name text,object_id uuid)
 `
 
 type InsertPackageAssetsParams struct {
-	PackageID uuid.UUID `json:"package_id"`
-	BuildID   uuid.UUID `json:"build_id"`
+	PackageID      uuid.UUID `json:"package_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Assets         []byte    `json:"assets"`
 }
 
 func (q *Queries) InsertPackageAssets(ctx context.Context, arg InsertPackageAssetsParams) error {
-	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.BuildID)
+	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.OrganizationID, arg.Assets)
 	return err
 }
 
@@ -281,8 +282,9 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 }
 
 const insertProblemPackage = `-- name: InsertProblemPackage :exec
-INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,samples)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
+ title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 `
 
 type InsertProblemPackageParams struct {
@@ -293,6 +295,14 @@ type InsertProblemPackageParams struct {
 	ObjectID       uuid.UUID `json:"object_id"`
 	PackageHash    string    `json:"package_hash"`
 	Revision       int64     `json:"revision"`
+	Title          string    `json:"title"`
+	ShortName      string    `json:"short_name"`
+	Type           string    `json:"type"`
+	TimeLimitMs    int32     `json:"time_limit_ms"`
+	MemoryLimitMb  int32     `json:"memory_limit_mb"`
+	InputFile      string    `json:"input_file"`
+	OutputFile     string    `json:"output_file"`
+	Statements     []byte    `json:"statements"`
 	Samples        []byte    `json:"samples"`
 }
 
@@ -305,6 +315,14 @@ func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPac
 		arg.ObjectID,
 		arg.PackageHash,
 		arg.Revision,
+		arg.Title,
+		arg.ShortName,
+		arg.Type,
+		arg.TimeLimitMs,
+		arg.MemoryLimitMb,
+		arg.InputFile,
+		arg.OutputFile,
+		arg.Statements,
 		arg.Samples,
 	)
 	return err
@@ -742,28 +760,19 @@ func (q *Queries) ReadOperationResult(ctx context.Context, arg ReadOperationResu
 }
 
 const readPackageDescriptor = `-- name: ReadPackageDescriptor :one
-SELECT p.id,p.build_id,p.problem_id,p.object_id,b.snapshot
-FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1
+SELECT id,problem_id,object_id FROM problem_packages WHERE id=$1
 `
 
 type ReadPackageDescriptorRow struct {
 	ID        uuid.UUID `json:"id"`
-	BuildID   uuid.UUID `json:"build_id"`
 	ProblemID uuid.UUID `json:"problem_id"`
 	ObjectID  uuid.UUID `json:"object_id"`
-	Snapshot  []byte    `json:"snapshot"`
 }
 
 func (q *Queries) ReadPackageDescriptor(ctx context.Context, id uuid.UUID) (ReadPackageDescriptorRow, error) {
 	row := q.db.QueryRow(ctx, readPackageDescriptor, id)
 	var i ReadPackageDescriptorRow
-	err := row.Scan(
-		&i.ID,
-		&i.BuildID,
-		&i.ProblemID,
-		&i.ObjectID,
-		&i.Snapshot,
-	)
+	err := row.Scan(&i.ID, &i.ProblemID, &i.ObjectID)
 	return i, err
 }
 

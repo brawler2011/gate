@@ -2,6 +2,8 @@ package builder
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,13 +16,12 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/judging"
+	"github.com/brawler2011/gate/backend/internal/problems/archive"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 	"golang.org/x/sys/unix"
-	"gopkg.in/yaml.v3"
 )
 
 type ObjectStore interface {
@@ -32,7 +33,7 @@ type BuildRepository interface {
 	HeartbeatBuild(context.Context, uuid.UUID, uuid.UUID, time.Duration) error
 	RecoverBuilds(context.Context) error
 	BuildInputObjects(context.Context, uuid.UUID) ([]model.StoredObject, error)
-	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, []model.Sample) (uuid.UUID, error)
+	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, model.PackageIndex) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 	RecordBuildSolutions(context.Context, uuid.UUID, uuid.UUID, []model.SolutionResult) error
 	RecordBuildProgramTests(context.Context, uuid.UUID, uuid.UUID, []model.ProgramTestResult) error
@@ -91,9 +92,10 @@ type execution struct {
 	build    model.ProblemBuild
 	dir      *directory
 	sandbox  *sandbox.Sandbox
-	layout   packageLayout
+	pkg      *archive.Package
+	// What each test materialized, relative to dir.
+	tests    map[uuid.UUID]archive.BuiltTest
 	compiled map[string]compilation
-	manifest *gfmt.Problem
 	samples  []model.Sample
 	// Test results of the solutions that run, by name.
 	solutions map[string][]judging.TestResult
@@ -127,16 +129,22 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 			p.Logger.WarnContext(ctx, "remove build directory", "error", err, "build_id", b.ID, "left", names)
 		}
 	}()
-	tree := filepath.Join(root, "tree")
-	if err := os.Mkdir(tree, 0700); err != nil {
+	work := filepath.Join(root, "work")
+	if err := os.Mkdir(work, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft, p.Languages), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: work, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), tests: testFiles(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}}
 	defer e.releaseComponents()
+	local := map[uuid.UUID]archive.BuiltTest{}
+	for id, t := range e.tests {
+		local[id] = archive.BuiltTest{Input: filepath.Join(work, t.Input), Answer: filepath.Join(work, t.Answer)}
+	}
+	if e.pkg, err = archive.Layout(s.Draft, p.Languages, local); err != nil {
+		return uuid.Nil, fail("package", 0, "infrastructure", err)
+	}
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
 	}
-	e.makeManifest()
 	if err := e.compile(ctx); err != nil {
 		return uuid.Nil, err
 	}
@@ -151,31 +159,20 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.checkSolutions(ctx); err != nil {
 		return uuid.Nil, err
 	}
-	data, err := yaml.Marshal(e.manifest)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("marshal: %w", err)
-	}
-	if err := e.dir.write("problem.yaml", data); err != nil {
-		return uuid.Nil, fail("manifest", 0, "author", err)
-	}
-	if _, err := gfmt.OpenBuiltPackage(tree); err != nil {
-		return uuid.Nil, fail("package", 0, "author", err)
-	}
-	archivePath := filepath.Join(root, "package.zip")
-	digest, size, err := e.dir.archive(ctx, archivePath)
+	f, err := os.OpenFile(filepath.Join(root, "package.zip"), os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return uuid.Nil, fail("archive", 0, "infrastructure", err)
 	}
-	object := model.NewStoredObject(b.OrganizationID, model.UploadSpec{Purpose: "package", SHA256: digest, Size: size})
-	f, err := os.Open(archivePath)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("open: %w", err)
-	}
 	defer f.Close()
+	digest, size, err := e.archive(f)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	object := model.NewStoredObject(b.OrganizationID, model.UploadSpec{Purpose: "package", SHA256: digest, Size: size})
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, e.samples)
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, e.samples))
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
@@ -192,13 +189,24 @@ func objectReferences(d model.Draft, id uuid.UUID) string {
 	return fmt.Sprintf("object %s (%s)", id, strings.Join(refs, ", "))
 }
 
+// testFiles places every test's input and answer: objects keep their ID, built files the test's.
+func testFiles(d model.Draft) map[uuid.UUID]archive.BuiltTest {
+	files := make(map[uuid.UUID]archive.BuiltTest, len(d.Tests))
+	for _, t := range d.Tests {
+		f := archive.BuiltTest{Input: "tests/" + t.ID.String() + ".in", Answer: "tests/" + t.ID.String() + ".ans"}
+		if t.Input.Mode == "manual" {
+			f.Input = "objects/" + t.Input.ObjectID.String()
+		}
+		if t.Answer.Mode == "provided" {
+			f.Answer = "objects/" + t.Answer.ObjectID.String()
+		}
+		files[t.ID] = f
+	}
+	return files
+}
+
 func (e *execution) materialize(ctx context.Context) error {
 	s := e.build.Snapshot
-	for path, text := range e.layout.texts {
-		if err := e.dir.write(path, []byte(text)); err != nil {
-			return err
-		}
-	}
 	objects, err := e.pipeline.Repo.BuildInputObjects(ctx, e.build.ID)
 	if err != nil {
 		return err
@@ -218,7 +226,7 @@ func (e *execution) materialize(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
 		}
-		digest, n, copyErr := e.dir.copy(".gate/objects/"+o.ID.String(), r, o.Size)
+		digest, n, copyErr := e.dir.copy("objects/"+o.ID.String(), r, o.Size)
 		closeErr := r.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
@@ -227,44 +235,36 @@ func (e *execution) materialize(ctx context.Context) error {
 			return fmt.Errorf("%s: snapshot object bytes differ from registry", objectReferences(s.Draft, o.ID))
 		}
 	}
-	for path, object := range e.layout.assets {
-		f, err := os.Open(filepath.Join(e.dir.root, ".gate/objects/"+object.String()))
-		if err != nil {
-			return fmt.Errorf("open: %w", err)
-		}
-		_, _, copyErr := e.dir.copy(path, f, int64(s.Limits.ObjectBytes))
-		closeErr := f.Close()
-		if err := errors.Join(copyErr, closeErr); err != nil {
-			return err
-		}
-	}
-	data, err := json.Marshal(s)
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-	return e.dir.write(".gate/snapshot.json", data)
+	return nil
 }
-func (e *execution) makeManifest() {
-	s := e.build.Snapshot
-	d := s.Draft
-	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
-		InputFile: d.InputFile, OutputFile: d.OutputFile, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}}
-	for _, s := range d.Statements {
-		if s.Title != "" {
-			if m.Titles == nil {
-				m.Titles = map[string]string{}
-			}
-			m.Titles[s.Language] = s.Title
-		}
+
+// archive writes the package into f within the build budget and checks that the judge accepts it.
+func (e *execution) archive(f *os.File) (string, int64, error) {
+	hash := sha256.New()
+	stats, err := e.pkg.Write(io.MultiWriter(quotaWriter{f, e.dir}, hash), func(oid uuid.UUID) (io.ReadCloser, error) {
+		return os.Open(filepath.Join(e.dir.root, "objects", oid.String()))
+	})
+	if err != nil {
+		return "", 0, fail("archive", 0, "infrastructure", err)
 	}
-	for _, g := range d.Subtasks {
-		deps := []string{}
-		for _, id := range g.DependsOn {
-			deps = append(deps, id.String())
-		}
-		m.Subtasks[g.ID.String()] = gfmt.Subtask{Ordinal: g.Ordinal, Points: g.Points, Policy: g.Policy, Dependencies: deps, Tests: []gfmt.Test{}}
+	size, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return "", 0, fail("archive", 0, "infrastructure", err)
 	}
-	e.manifest = m
+	// Tests sharing one object are written once each, so the package can unpack larger than the build directory.
+	if !stats.Extracts(size, e.build.Snapshot.Limits) {
+		return "", 0, fail("package", 0, "quota", fmt.Errorf("package unpacks to %d bytes in %d files, over the disk quota", stats.Bytes+size, stats.Files))
+	}
+	err = e.pkg.Manifest.CheckBuilt(func(name string) error {
+		if !stats.Names[name] {
+			return fmt.Errorf("package has no %s", name)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", 0, fail("package", 0, "author", err)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), size, nil
 }
 func (e *execution) release(id string) {
 	if id == "" {
@@ -324,7 +324,7 @@ func (e *execution) compile(ctx context.Context) error {
 			judged[key] = true
 		}
 	}
-	for _, p := range e.layout.programs {
+	for _, p := range programs(d, e.pipeline.Languages) {
 		if !required[p.key] && !judged[p.key] {
 			continue
 		}
@@ -349,9 +349,6 @@ func (e *execution) compile(ctx context.Context) error {
 			return fail("compile", 0, "infrastructure", fmt.Errorf("%s: %w", p.path, err))
 		}
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
-		if p.role == "checker" || p.role == "interactor" {
-			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language}
-		}
 	}
 	return nil
 }
@@ -373,11 +370,10 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			e.release(id)
 		}
 	}()
-	inputPath := ".gate/objects/"
+	files := e.tests[test.ID]
 	var inputID string
 	if test.Input.Mode == "manual" {
-		inputPath += test.Input.ObjectID.String()
-		id, err := e.upload(ctx, inputPath)
+		id, err := e.upload(ctx, files.Input)
 		if err != nil {
 			return fail("input", test.Ordinal, "infrastructure", err)
 		}
@@ -394,8 +390,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("generate", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
 		}
 		inputID = result.OutputID
-		inputPath = ".gate/tests/" + test.ID.String() + ".in"
-		if err := e.download(ctx, inputPath, inputID, int64(s.Limits.ObjectBytes)); err != nil {
+		if err := e.download(ctx, files.Input, inputID, int64(s.Limits.ObjectBytes)); err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
@@ -417,7 +412,6 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: exit %d: %s", validator.Name, result.ExitStatus, result.Stderr))
 		}
 	}
-	answerPath := ""
 	var outputID, answerID string
 	if s.Draft.Type == "interactive" {
 		// The main solution's interactor output becomes the answer for later judging.
@@ -432,14 +426,12 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
 		outputID, answerID = result.OutputID, result.OutputID
-		answerPath = ".gate/tests/" + test.ID.String() + ".ans"
-		if err := e.download(ctx, answerPath, answerID, int64(s.Limits.ObjectBytes)); err != nil {
+		if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
 			return fail("interact", test.Ordinal, "infrastructure", err)
 		}
 	} else {
 		if test.Answer.Mode == "provided" {
-			answerPath = ".gate/objects/" + test.Answer.ObjectID.String()
-			id, err := e.upload(ctx, answerPath)
+			id, err := e.upload(ctx, files.Answer)
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)
 			}
@@ -464,8 +456,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			outputID = result.OutputID
 			if test.Answer.Mode == "generated" {
 				answerID = outputID
-				answerPath = ".gate/tests/" + test.ID.String() + ".ans"
-				if err := e.download(ctx, answerPath, answerID, int64(s.Limits.ObjectBytes)); err != nil {
+				if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
 					return fail("answer", test.Ordinal, "infrastructure", err)
 				}
 			}
@@ -492,17 +483,14 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		e.solutions[sol.Name] = append(e.solutions[sol.Name], result)
 	}
 	if test.Sample {
-		sampleAnswer := answerPath
+		sampleAnswer := files.Answer
 		if s.Draft.Type == "interactive" {
 			sampleAnswer = "" // the interactor's output is no sample output
 		}
-		if err := e.addSample(inputPath, sampleAnswer); err != nil {
+		if err := e.addSample(files.Input, sampleAnswer); err != nil {
 			return fail("sample", test.Ordinal, "infrastructure", err)
 		}
 	}
-	group := e.manifest.Subtasks[test.SubtaskID.String()]
-	group.Tests = append(group.Tests, gfmt.Test{Ordinal: test.Ordinal, Points: test.Points, Manual: inputPath, Answer: answerPath, AnswerMode: test.Answer.Mode, Sample: test.Sample})
-	e.manifest.Subtasks[test.SubtaskID.String()] = group
 	return nil
 }
 
@@ -562,7 +550,7 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 		if e.uncompiled[sol.Name] {
 			result.Verdict = string(sandbox.StatusCE)
 		} else if d.Type == "scoring" {
-			score := judging.NewVerdictCalculator(d.Type, e.manifest).Calculate(tests).Score
+			score := judging.NewVerdictCalculator(d.Type, e.pkg.Manifest).Calculate(tests).Score
 			result.Points = &score
 		}
 		result.Mismatch = sol.Mismatch(!e.uncompiled[sol.Name], verdicts, result.Points)
@@ -593,7 +581,7 @@ func (e *execution) checkPrograms(ctx context.Context) error {
 		if id, ok := uploaded[oid]; ok {
 			return sandbox.FileID(id), nil
 		}
-		id, err := e.upload(ctx, ".gate/objects/"+oid.String())
+		id, err := e.upload(ctx, "objects/"+oid.String())
 		if err != nil {
 			return sandbox.File{}, err
 		}

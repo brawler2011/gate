@@ -173,8 +173,8 @@ func testProblem() *gfmt.Problem {
 			"samples": {
 				Policy: "complete",
 				Tests: []gfmt.Test{
-					{Ordinal: 1, Points: 40 * points.Unit, Manual: "01.in"},
-					{Ordinal: 2, Points: 60 * points.Unit, Manual: "02.in"},
+					{Ordinal: 1, Points: 40 * points.Unit, Input: "01.in"},
+					{Ordinal: 2, Points: 60 * points.Unit, Input: "02.in"},
 				},
 			},
 		},
@@ -188,16 +188,16 @@ func testProblemWithGroups() *gfmt.Problem {
 			"group1": {
 				Policy: "each",
 				Tests: []gfmt.Test{
-					{Ordinal: 1, Points: 3333, Manual: "01.in"},
-					{Ordinal: 2, Points: 3333, Manual: "02.in"},
+					{Ordinal: 1, Points: 3333, Input: "01.in"},
+					{Ordinal: 2, Points: 3333, Input: "02.in"},
 				},
 			},
 			"group2": {
 				Policy:       "complete",
 				Dependencies: []string{"group1"},
 				Tests: []gfmt.Test{
-					{Ordinal: 3, Points: 1000, Manual: "03.in"},
-					{Ordinal: 4, Points: 2000, Manual: "04.in"},
+					{Ordinal: 3, Points: 1000, Input: "03.in"},
+					{Ordinal: 4, Points: 2000, Input: "04.in"},
 				},
 			},
 		},

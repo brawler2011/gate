@@ -22,9 +22,10 @@ import (
 type PackageObjects interface {
 	GetPackageDescriptor(context.Context, uuid.UUID) (model.PackageDescriptor, error)
 }
+
 // LoadedPackage is shared with concurrent jobs: read it, never write to it.
 type LoadedPackage struct {
-	Format     *gfmt.GateFormat
+	Format     *gfmt.Built
 	Descriptor model.PackageDescriptor
 	handle     *diskcache.Handle
 }
@@ -52,7 +53,7 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (*LoadedP
 		return nil, err //nolint:wrapcheck // fetch errors keep their kind for the judge
 	}
 	tree := filepath.Join(h.Dir(), "tree")
-	format, err := gfmt.OpenBuiltPackage(tree)
+	format, err := gfmt.OpenBuilt(tree)
 	if err != nil {
 		h.Release()
 		return nil, err
@@ -92,14 +93,6 @@ func (l *PackageLoader) fetch(ctx context.Context, p model.PackageDescriptor, ro
 	if err := errors.Join(err, z.Close(), os.Remove(archivePath)); err != nil {
 		return err
 	}
-	format, err := gfmt.OpenBuiltPackage(tree)
-	if err != nil {
-		return err
-	}
-	d := p.Snapshot.Draft
-	if format.Problem.Title != d.Title || format.Problem.Type != d.Type || format.Problem.Limits.TimeMs != d.TimeLimitMs || format.Problem.Limits.MemoryMb != d.MemoryLimitMb ||
-		format.Problem.InputFile != d.InputFile || format.Problem.OutputFile != d.OutputFile {
-		return fmt.Errorf("package metadata differs from build snapshot")
-	}
-	return nil
+	_, err = gfmt.OpenBuilt(tree)
+	return err
 }

@@ -799,6 +799,7 @@ type ProblemPackage struct {
 	CreatedAt      time.Time `json:"created_at"`
 	Title          string    `json:"title"`
 	ShortName      string    `json:"short_name"`
+	Type           string    `json:"type"`
 	TimeLimitMs    int32     `json:"time_limit_ms"`
 	MemoryLimitMb  int32     `json:"memory_limit_mb"`
 	InputFile      string    `json:"input_file"`

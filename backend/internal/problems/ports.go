@@ -28,8 +28,8 @@ type ProblemsRepo interface {
 	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
 }
 
-type DraftsRepo interface {
-	GetDraft(context.Context, uuid.UUID) (problemsmodel.Draft, error)
+type TemplatePackages interface {
+	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 }
 
 type ProblemPermissions interface {

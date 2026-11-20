@@ -6,15 +6,12 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
 type Problem struct {
-	// A built package names each judge-compiled role at most once.
-	Programs      map[string]Program `yaml:"programs,omitempty" json:"programs,omitempty"`
-	UpdatedAt     time.Time          `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
+	// Gate writes the max score of scoring problems for the judge; imports recompute it.
 	MaxScore      *points.Value      `yaml:"max_score,omitempty" json:"max_score,omitempty"`
 	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
 	FormatVersion string             `yaml:"format_version" json:"format_version"`
@@ -34,12 +31,6 @@ type Problem struct {
 	SystemLibrary []string `yaml:"system_library,omitempty" json:"system_library,omitempty"`
 }
 
-// The judge compiles this source with every lib/ file using its own image.
-type Program struct {
-	Source   string `yaml:"source" json:"source"`
-	Language string `yaml:"language" json:"language"`
-}
-
 type Limits struct {
 	TimeMs   int `yaml:"time_ms" json:"time_ms"`
 	MemoryMb int `yaml:"memory_mb" json:"memory_mb"`
@@ -53,13 +44,14 @@ type Subtask struct {
 	Tests        []Test       `yaml:"tests" json:"tests"`
 }
 
+// A built package holds every input and answer as a file; Generate and Solution stay the source on import.
 type Test struct {
-	Points     points.Value `yaml:"points" json:"points"`
-	Ordinal    int          `yaml:"ordinal,omitempty" json:"ordinal,omitempty"`
-	Answer     string       `yaml:"answer,omitempty" json:"answer,omitempty"`
-	AnswerMode string       `yaml:"answer_mode,omitempty" json:"answer_mode,omitempty"`
-	Manual     string       `yaml:"manual,omitempty" json:"manual,omitempty"`
-	Generate   string       `yaml:"generate,omitempty" json:"generate,omitempty"`
+	Points  points.Value `yaml:"points" json:"points"`
+	Ordinal int          `yaml:"ordinal,omitempty" json:"ordinal,omitempty"`
+	// Input names a file under tests/.
+	Input    string `yaml:"input,omitempty" json:"input,omitempty"`
+	Generate string `yaml:"generate,omitempty" json:"generate,omitempty"`
+	Answer   string `yaml:"answer,omitempty" json:"answer,omitempty"`
 	// Solution names the solutions/ file whose output is the answer.
 	Solution string `yaml:"solution,omitempty" json:"solution,omitempty"`
 	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`

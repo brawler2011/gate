@@ -4936,7 +4936,8 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [2]string, argsE
 
 // handleDownloadProblemPackageRequest handles DownloadProblemPackage operation.
 //
-// Download a built problem package archive.
+// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
+// built from.
 //
 // GET /problems/{id}/packages/{packageId}/download
 func (s *Server) handleDownloadProblemPackageRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

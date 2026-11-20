@@ -1,8 +1,9 @@
 package problemsmodel
 
 import (
-	"github.com/brawler2011/gate/backend/pkg/points"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/points"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"
@@ -58,7 +59,7 @@ type TestGroup struct {
 	Points       points.Value `json:"points"`
 	PointsPolicy string       `json:"points_policy"`
 	DependsOn    []int        `json:"depends_on"`
-	Tests        [2]int       `json:"tests"`         // range [start, end]
+	Tests        [2]int       `json:"tests"` // range [start, end]
 }
 
 type TestCase struct {
@@ -124,6 +125,8 @@ type ProblemPackage struct {
 	Revision       int64
 	PackageHash    string
 	CreatedAt      time.Time
+	Title, Type    string
+	Statements     []DraftStatement
 }
 
 type CreateProblemInput struct {

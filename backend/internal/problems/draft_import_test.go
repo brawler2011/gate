@@ -27,9 +27,9 @@ var importQuotas = model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Fil
 
 func newImportUseCase(t *testing.T) *DraftUseCase {
 	return &DraftUseCase{
-		TempDir: t.TempDir(), UploadTTL: 1e10, ObjectBytes: 1 << 30, DraftQuotas: importQuotas,
+		TempDir: t.TempDir(), UploadTTL: 1e10, DraftQuotas: importQuotas,
 		BuildOptions: model.BuildOptions{
-			Limits:    model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000},
+			Limits:    model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000, ObjectBytes: 1 << 30},
 			Languages: testCatalog.Langs,
 		},
 		Languages: testCatalog,
