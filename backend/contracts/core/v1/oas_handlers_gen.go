@@ -7290,7 +7290,7 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 		}
 	}()
 
-	var response *ProblemImport
+	var response *ProblemDraft
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -7319,7 +7319,7 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 		type (
 			Request  = *ImportProblemReq
 			Params   = ImportProblemParams
-			Response = *ProblemImport
+			Response = *ProblemDraft
 		)
 		response, err = middleware.HookMiddleware[
 			Request,

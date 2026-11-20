@@ -9441,33 +9441,6 @@ func (s *ProblemDraftValidatorTest) SetGroup(val string) {
 	s.Group = val
 }
 
-// Ref: #/components/schemas/ProblemImport
-type ProblemImport struct {
-	Draft ProblemDraft `json:"draft"`
-	// Package paths of text files converted to UTF-8 from another encoding.
-	ConvertedFiles []string `json:"converted_files"`
-}
-
-// GetDraft returns the value of Draft.
-func (s *ProblemImport) GetDraft() ProblemDraft {
-	return s.Draft
-}
-
-// GetConvertedFiles returns the value of ConvertedFiles.
-func (s *ProblemImport) GetConvertedFiles() []string {
-	return s.ConvertedFiles
-}
-
-// SetDraft sets the value of Draft.
-func (s *ProblemImport) SetDraft(val ProblemDraft) {
-	s.Draft = val
-}
-
-// SetConvertedFiles sets the value of ConvertedFiles.
-func (s *ProblemImport) SetConvertedFiles(val []string) {
-	s.ConvertedFiles = val
-}
-
 // Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {

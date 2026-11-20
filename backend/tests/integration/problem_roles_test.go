@@ -57,10 +57,9 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			s.Require().NoError(err)
 			current, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
-			imported, err := s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "draft.zip", File: bytes.NewReader(archive), Size: int64(len(archive))}},
+			draft, err := s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "draft.zip", File: bytes.NewReader(archive), Size: int64(len(archive))}},
 				corev1.ImportProblemParams{ID: problem.ID, ExpectedRevision: current.Revision, IdempotencyKey: uuid.NewString()})
 			s.Require().NoError(err)
-			draft := imported.Draft
 			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
 			languages := map[string]string{}
 			if checker, ok := draft.Checker.Get(); ok {

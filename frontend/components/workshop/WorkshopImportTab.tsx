@@ -58,16 +58,8 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         message: "Черновик заменён содержимым архива",
         color: "green",
       });
-      if (data.converted_files.length > 0) {
-        notifications.show({
-          title: "Файлы перекодированы в UTF-8",
-          message: data.converted_files.join(", "),
-          color: "yellow",
-          autoClose: false,
-        });
-      }
       setPackageFile(null);
-      queryClient.setQueryData(draftKey(problemId), data.draft);
+      queryClient.setQueryData(draftKey(problemId), data);
       void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
     });
   };

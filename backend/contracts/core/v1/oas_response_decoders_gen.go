@@ -3001,7 +3001,7 @@ func decodeGetUserAvatarResponse(resp *http.Response) (res GetUserAvatarRes, _ e
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeImportProblemResponse(resp *http.Response) (res *ProblemImport, _ error) {
+func decodeImportProblemResponse(resp *http.Response) (res *ProblemDraft, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -3017,7 +3017,7 @@ func decodeImportProblemResponse(resp *http.Response) (res *ProblemImport, _ err
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response ProblemImport
+			var response ProblemDraft
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err

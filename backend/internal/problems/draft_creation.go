@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -92,7 +93,10 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	if replay != nil {
 		return *replay, nil
 	}
-	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, append([]string{}, plan.converted...), objects)
+	if len(plan.converted) > 0 {
+		slog.InfoContext(ctx, "import converted text files to UTF-8", "problem_id", id, "files", plan.converted)
+	}
+	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {
 	user := accessmodel.UserFromContext(ctx)

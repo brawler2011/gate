@@ -1936,11 +1936,6 @@ export interface components {
             /** Format: uuid */
             object_id: string;
         };
-        ProblemImport: {
-            draft: components["schemas"]["ProblemDraft"];
-            /** @description Package paths of text files converted to UTF-8 from another encoding. */
-            converted_files: string[];
-        };
         /** @description The editable problem as typed entries without package paths. Programs are referred to by their names, unique within a role, and library files are included by their names; subtasks and tests are referred to by ID. */
         ProblemDraft: {
             /** Format: uuid */
@@ -5266,7 +5261,6 @@ export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement
 export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];
 export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
 export type ProblemDraftAsset = components['schemas']['ProblemDraftAsset'];
-export type ProblemImport = components['schemas']['ProblemImport'];
 export type ProblemDraft = components['schemas']['ProblemDraft'];
 export type ProblemPackage = components['schemas']['ProblemPackage'];
 export type ProblemBuild = components['schemas']['ProblemBuild'];
@@ -8213,7 +8207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProblemImport"];
+                    "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
         };

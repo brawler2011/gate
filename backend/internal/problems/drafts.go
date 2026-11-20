@@ -20,7 +20,7 @@ import (
 )
 
 type DraftRepository interface {
-	FinalizeImport(context.Context, model.MutationKey, uuid.UUID, int64, model.Draft, []string, []model.StoredObject) (model.MutationResult, error)
+	FinalizeImport(context.Context, model.MutationKey, uuid.UUID, int64, model.Draft, []model.StoredObject) (model.MutationResult, error)
 	FinalizeCreate(context.Context, model.MutationKey, uuid.UUID, model.Draft, []model.StoredObject) (model.MutationResult, error)
 	GetDraft(context.Context, uuid.UUID) (model.Draft, error)
 	SaveDraft(context.Context, model.MutationKey, model.Draft) (model.MutationResult, error)

@@ -494,7 +494,7 @@ type Handler interface {
 	// Replace the draft with the contents of a problem archive.
 	//
 	// POST /problems/{id}/import
-	ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (*ProblemImport, error)
+	ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
 	// InviteOrganizationMember implements InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
