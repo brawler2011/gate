@@ -281,12 +281,12 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 	}
 
 	if err := u.emailService.SendEmailChangeVerification(ctx, newEmail, user.Username, token); err != nil {
-		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "email", newEmail)
+		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "user_id", user.Id)
 	}
 
 	if user.Email != nil && *user.Email != "" {
 		if err := u.emailService.SendEmailChangeAlert(ctx, *user.Email, user.Username, newEmail); err != nil {
-			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "old_email", *user.Email)
+			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "user_id", user.Id)
 		}
 	}
 
