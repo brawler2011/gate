@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/brawler2011/gate/backend/internal/access"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/google/uuid"
 )
@@ -22,6 +23,7 @@ type TxStore interface {
 	BlogsRepo
 	access.Loader
 	LockPost(context.Context, uuid.UUID) error
+	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 }
 type Transactions interface {
 	Within(context.Context, func(TxStore) error) error

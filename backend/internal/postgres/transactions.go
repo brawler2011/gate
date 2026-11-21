@@ -160,8 +160,9 @@ func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
 	return authorizing(pool, func(q *sqlc.Queries) blogs.TxStore {
 		return struct {
 			*BlogsRepo
+			*UsersRepo
 			Access
-		}{&BlogsRepo{queries: q}, commandAccess(q)}
+		}{&BlogsRepo{queries: q}, &UsersRepo{queries: q}, commandAccess(q)}
 	})
 }
 

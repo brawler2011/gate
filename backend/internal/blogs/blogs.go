@@ -211,9 +211,13 @@ func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, 
 }
 
 func (uc *BlogsUseCase) withinAdmin(ctx context.Context, fn func(TxStore, accessmodel.User) error) error {
-	return access.WithinActor(ctx, uc.transactions, func(store TxStore, user accessmodel.User) error {
-		if !user.IsAdmin() {
+	return access.WithinActor(ctx, uc.transactions, func(store TxStore, actor accessmodel.User) error {
+		if !actor.IsAdmin() {
 			return pkg.ErrForbidden
+		}
+		user, err := store.GetUserById(ctx, actor.Id)
+		if err != nil {
+			return err
 		}
 		return fn(store, user)
 	})

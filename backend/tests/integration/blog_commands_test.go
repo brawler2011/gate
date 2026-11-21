@@ -71,6 +71,7 @@ func (s *IntegrationTestSuite) TestBlogCommandsAuthorizeAfterUploadAndSerializeI
 	post, err := pgstore.NewBlogsRepo(s.dbPool).GetPostByID(s.ctx, id)
 	s.Require().NoError(err)
 	s.Equal(admin.Id, post.AuthorUUID)
+	s.Equal(admin.Username, post.AuthorName)
 	objects, err = local.ListFiles(s.ctx, "blogs", "")
 	s.Require().NoError(err)
 	s.Equal([]string{post.ImageKey}, objects, "serialized updates clean up each displaced image")
