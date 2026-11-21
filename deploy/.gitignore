@@ -33,8 +33,3 @@ Thumbs.db
 .vscode/
 .idea/
 *.sublime-*
-
-# Ignore Docker volumes (if accidentally copied locally)
-postgres-data/
-redis-data/
-nats-data/

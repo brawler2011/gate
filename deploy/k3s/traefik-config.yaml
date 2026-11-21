@@ -6,7 +6,7 @@ metadata:
 spec:
   valuesContent: |-
     ports:
-      # Local k3s serves Traefik on loopback through this NodePort; ServiceLB host ports skip loopback.
+      # The LoadBalancer address is the node IP, so local k3s reaches Traefik on loopback through this NodePort.
       websecure:
         nodePort: 30443
       web:
