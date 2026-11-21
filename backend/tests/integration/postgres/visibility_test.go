@@ -12,8 +12,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/postgres"
 
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
-
 	"github.com/brawler2011/gate/backend/internal/access"
 	m "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -23,6 +21,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -194,7 +193,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			wantP, wantC, wantT := []uuid.UUID{}, []uuid.UUID{}, []uuid.UUID{}
 			for i, p := range problemIDs {
 				allow := access.RequireProblem(in, pf[p], m.ActionViewProblem) == nil
-				allowed, err := permissions.HasProblemPermission(actorCtx, p, u.Id, m.ActionViewProblem)
+				allowed, err := permissions.CanProblem(m.WithUser(actorCtx, m.User{Id: u.Id}), p, m.ActionViewProblem)
 				if name == "expired" || name == "expiry equality" {
 					require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 				} else {
@@ -206,7 +205,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 				}
 				c := contestIDs[i]
 				allow = access.RequireContest(in, cf[c], m.ActionViewContest) == nil
-				allowed, err = permissions.HasContestPermission(actorCtx, c, u.Id, m.ActionViewContest)
+				allowed, err = permissions.CanContest(m.WithUser(actorCtx, m.User{Id: u.Id}), c, m.ActionViewContest)
 				if name == "expired" || name == "expiry equality" {
 					require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 				} else {
@@ -265,7 +264,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.Empty(t, et)
 			require.Equal(t, tt, etTotal)
 			for _, team := range teamIDs {
-				allowed, err := permissions.HasTeamPermission(actorCtx, team, u.Id, m.ActionViewTeam)
+				allowed, err := permissions.CanTeam(m.WithUser(actorCtx, m.User{Id: u.Id}), team, m.ActionViewTeam)
 				if name == "expired" || name == "expiry equality" {
 					require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 				} else {
@@ -381,10 +380,10 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		defer cancel()
 		legacy := access.NewPermissionsUseCase(nil, postgres.NewUsersRepo(pool), nil, nil, nil)
 		permissions := access.NewMetadataPermissions(legacy, postgres.NewPolicyFactsRepo(pool))
-		allowed, err := permissions.HasProblemPermission(readCtx, problemIDs[1], actor.Id, m.ActionViewProblem)
+		allowed, err := permissions.CanProblem(m.WithUser(readCtx, m.User{Id: actor.Id}), problemIDs[1], m.ActionViewProblem)
 		require.NoError(t, err)
 		require.True(t, allowed)
-		allowed, err = permissions.HasContestPermission(readCtx, contestIDs[1], actor.Id, m.ActionViewContest)
+		allowed, err = permissions.CanContest(m.WithUser(readCtx, m.User{Id: actor.Id}), contestIDs[1], m.ActionViewContest)
 		require.NoError(t, err)
 		require.True(t, allowed)
 		teamUC := organizations.NewTeamsUseCase(postgres.NewTeamsRepo(pool), permissions, nil, permissions)
@@ -448,7 +447,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		exec(`UPDATE problem_teams SET permission='read' WHERE team_id=$1`, closed)
 		exec(`UPDATE contest_teams SET role='participant' WHERE team_id=$1`, closed)
 		exec(`UPDATE team_members SET role='__policy_unknown' WHERE team_id=$1 AND user_id=$2`, closed, actor.Id)
-		allowed, err := permissions.HasTeamPermission(actorCtx, closed, actor.Id, m.ActionViewTeam)
+		allowed, err := permissions.CanTeam(m.WithUser(actorCtx, m.User{Id: actor.Id}), closed, m.ActionViewTeam)
 		require.NoError(t, err)
 		require.False(t, allowed)
 		ts, _, err := postgres.NewTeamsRepo(pool).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 1, PageSize: 100}, actor.Id)
@@ -460,7 +459,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		exec(`UPDATE users SET role='__policy_unknown' WHERE id=$1`, actor.Id)
 		actor.Role = "__policy_unknown"
 		verify()
-		allowed, err = permissions.HasProblemPermission(actorCtx, problemIDs[0], actor.Id, m.ActionViewProblem)
+		allowed, err = permissions.CanProblem(m.WithUser(actorCtx, m.User{Id: actor.Id}), problemIDs[0], m.ActionViewProblem)
 		require.False(t, allowed)
 		require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 		exec(`UPDATE users SET role='user' WHERE id=$1`, actor.Id)

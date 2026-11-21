@@ -99,9 +99,9 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return uuid.Nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return uuid.Nil, err
 	}
 	if input == nil || strings.TrimSpace(input.Title) == "" {
 		return uuid.Nil, pkg.AtField("/title", pkg.Invalid(pkg.ErrRequired, "title is required", nil))

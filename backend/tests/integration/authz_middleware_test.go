@@ -420,7 +420,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			})
 			if caller.Id == otherUser.Id {
 				s.Require().Error(err)
-				s.Equal(http.StatusForbidden, s.getStatusCode(err))
+				s.Equal(http.StatusNotFound, s.getStatusCode(err))
 			} else {
 				s.Require().NoError(err)
 			}

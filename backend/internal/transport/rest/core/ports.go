@@ -116,9 +116,9 @@ type OrganizationsUC interface {
 }
 
 type PermissionsUC interface {
-	GetContestPermissions(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*accessmodel.ContestPermissions, error)
+	GetContestPermissions(ctx context.Context, contestID uuid.UUID) (*accessmodel.ContestPermissions, error)
 
-	HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action accessmodel.ContestAction) (bool, error)
+	CanContest(ctx context.Context, contestID uuid.UUID, action accessmodel.ContestAction) (bool, error)
 
 	GetEffectiveContestRole(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*contestsmodel.ContestRole, error)
 }

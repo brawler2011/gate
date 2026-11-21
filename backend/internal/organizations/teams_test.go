@@ -3,7 +3,6 @@ package organizations
 import (
 	"context"
 	"testing"
-	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -31,9 +30,9 @@ type teamsListPermissions struct {
 	caller, org  uuid.UUID
 }
 
-func (p *teamsListPermissions) HasOrganizationPermission(_ context.Context, org, caller uuid.UUID, action accessmodel.OrgAction) (bool, error) {
+func (p *teamsListPermissions) CanOrganization(ctx context.Context, org uuid.UUID, action accessmodel.OrgAction) (bool, error) {
 	p.actions = append(p.actions, action)
-	p.caller, p.org = caller, org
+	p.caller, p.org = accessmodel.UserFromContext(ctx).Id, org
 	if action == p.errAction {
 		return false, context.Canceled
 	}
@@ -84,17 +83,12 @@ func TestListTeamsScopeAndPagination(t *testing.T) {
 
 func TestListTeamsRejectsInvalidRequests(t *testing.T) {
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-	expired := caller
-	past := time.Now().Add(-time.Hour)
-	expired.ExpiresAt = &past
 	for _, tc := range []struct {
 		name   string
 		caller accessmodel.User
 		filter *organizationsmodel.TeamsFilter
 		err    error
 	}{
-		{name: "guest", caller: accessmodel.Guest, filter: &organizationsmodel.TeamsFilter{}, err: pkg.ErrUnauthenticated},
-		{name: "expired", caller: expired, filter: &organizationsmodel.TeamsFilter{}, err: pkg.ErrUnauthenticated},
 		{name: "nil filter", caller: caller, err: pkg.ErrInvalid},
 		{name: "negative page", caller: caller, filter: &organizationsmodel.TeamsFilter{Page: -1}, err: pkg.ErrInvalid},
 		{name: "negative size", caller: caller, filter: &organizationsmodel.TeamsFilter{PageSize: -1}, err: pkg.ErrInvalid},
@@ -117,7 +111,7 @@ func TestListTeamsPropagatesFailures(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 }
 
-func (p *teamsListPermissions) HasTeamPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.TeamAction) (bool, error) {
+func (p *teamsListPermissions) CanTeam(_ context.Context, _ uuid.UUID, action accessmodel.TeamAction) (bool, error) {
 	if p.errAction != "" {
 		return false, context.Canceled
 	}

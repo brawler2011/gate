@@ -7,8 +7,6 @@ import (
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
@@ -54,11 +52,6 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 }
 
 func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (*corev1.CreatedPost, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}

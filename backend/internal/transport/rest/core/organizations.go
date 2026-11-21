@@ -7,8 +7,6 @@ import (
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -185,11 +183,6 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing body")
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	var ttlDays *int32
 	if req.TTLDays.IsSet() {
 		ttlDays = &req.TTLDays.Value
@@ -221,11 +214,6 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 }
 
 func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params corev1.ListOrganizationInvitationsParams) (*corev1.ListOrganizationInvitationsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	invs, err := h.Organizations.ListInvitations(ctx, params.Login)
 	if err != nil {
 		return nil, err
@@ -235,11 +223,6 @@ func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params cor
 }
 
 func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.InviteOrganizationMemberRequestModel, params corev1.InviteOrganizationMemberParams) (*corev1.OrganizationInvitationModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
@@ -259,11 +242,6 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 }
 
 func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params corev1.CancelOrganizationInvitationParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	err := h.Organizations.CancelInvitation(ctx, params.Login, params.ID)
 	if err != nil {
 		return err
@@ -293,11 +271,6 @@ func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params c
 }
 
 func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params corev1.ListOrganizationJoinRequestsParams) (*corev1.ListOrganizationJoinRequestsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	reqs, err := h.Organizations.ListJoinRequests(ctx, params.Login)
 	if err != nil {
 		return nil, err
@@ -331,11 +304,6 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 }
 
 func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params corev1.GetMyOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestNullableResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return &corev1.OrganizationJoinRequestNullableResponseModel{}, nil
-	}
-
 	joinReq, err := h.Organizations.GetMyPendingJoinRequest(ctx, params.Login)
 	if err != nil {
 		return nil, err
@@ -363,11 +331,6 @@ func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params c
 }
 
 func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req corev1.OptApproveOrganizationJoinRequestModel, params corev1.ApproveOrganizationJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	role := organizationsmodel.OrgRoleMember
 	if req.IsSet() && req.Value.Role.IsSet() {
 		role = organizationsmodel.OrganizationRole(req.Value.Role.Value)
@@ -385,11 +348,6 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 }
 
 func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params corev1.RejectOrganizationJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	err := h.Organizations.RejectJoinRequest(ctx, params.Login, params.ID)
 	if err != nil {
 		return err

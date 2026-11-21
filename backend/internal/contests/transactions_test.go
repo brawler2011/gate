@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -15,7 +16,7 @@ type contestEventsTestStore struct {
 	OutboxRepo
 }
 
-func (contestEventsTestStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (contestEventsTestStore) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
 func (s contestEventsTestStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {

@@ -35,7 +35,7 @@ import (
 
 type allowAll struct{}
 
-func (allowAll) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (allowAll) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
 

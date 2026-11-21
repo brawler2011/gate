@@ -13,7 +13,7 @@ import (
 
 type communicationPermissions struct{ view, manage bool }
 
-func (p communicationPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (p communicationPermissions) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	if action == accessmodel.ActionManageContest {
 		return p.manage, nil
 	}
@@ -53,7 +53,7 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 	}{
 		{name: "participant", view: true},
 		{name: "moderator", view: true, manage: true},
-		{name: "outsider", err: pkg.ErrForbidden},
+		{name: "outsider", err: pkg.ErrNotFound},
 		{name: "guest", guest: true, view: true, err: pkg.ErrUnauthenticated},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, reads.called)
 			} else {
-				require.ErrorIs(t, err, pkg.ErrForbidden)
+				require.ErrorIs(t, err, pkg.ErrNotFound)
 				require.False(t, reads.called)
 			}
 		})
@@ -99,7 +99,7 @@ type deniedCommunicationStore struct {
 	contestEventsTestStore
 }
 
-func (s *deniedCommunicationStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (s *deniedCommunicationStore) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return false, nil
 }
 
@@ -110,13 +110,13 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 	ctx := accessmodel.WithUser(context.Background(), actor)
 	announcements := NewAnnouncementsUseCase(transactions, nil, nil)
 	_, err := announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{ContestID: uuid.New(), Title: "Title", Body: "Body"})
-	require.ErrorIs(t, err, pkg.ErrForbidden)
-	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.ErrForbidden)
+	require.ErrorIs(t, err, pkg.ErrNotFound)
+	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.ErrNotFound)
 	clarifications := NewClarificationsUseCase(transactions, nil, nil)
 	_, err = clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})
-	require.ErrorIs(t, err, pkg.ErrForbidden)
+	require.ErrorIs(t, err, pkg.ErrNotFound)
 	_, err = clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{ContestID: uuid.New(), Answer: "Answer"})
-	require.ErrorIs(t, err, pkg.ErrForbidden)
+	require.ErrorIs(t, err, pkg.ErrNotFound)
 }
 
 func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {

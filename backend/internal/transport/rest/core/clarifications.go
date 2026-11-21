@@ -4,18 +4,11 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
@@ -40,11 +33,6 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 }
 
 func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
@@ -68,11 +56,6 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 }
 
 func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1.AnswerContestClarificationRequestModel, params corev1.AnswerContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err

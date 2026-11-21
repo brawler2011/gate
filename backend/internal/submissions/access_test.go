@@ -13,7 +13,7 @@ import (
 
 type denySubmissionPermissions struct{ Permissions }
 
-func (denySubmissionPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (denySubmissionPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return false, nil
 }
 
@@ -22,7 +22,7 @@ func TestCommandsEnforceAccessWithoutHTTP(t *testing.T) {
 	contestID, submissionID := uuid.New(), uuid.New()
 	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
 		ctx := accessmodel.WithUser(context.Background(), caller)
-		want := pkg.ErrForbidden
+		want := pkg.ErrNotFound
 		if caller.IsGuest() {
 			want = pkg.ErrUnauthenticated
 		}

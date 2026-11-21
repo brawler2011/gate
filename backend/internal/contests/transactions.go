@@ -18,7 +18,7 @@ import (
 
 type ContestEventsTxStore interface {
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
-	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	CreateAnnouncement(ctx context.Context, authorID uuid.UUID, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
 	DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error
 	CreateClarification(ctx context.Context, userID uuid.UUID, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
@@ -58,8 +58,8 @@ type CommandTxStore interface {
 	UpdateContestTeamRole(context.Context, uuid.UUID, uuid.UUID, contestsmodel.ContestRole) error
 	DeleteContestTeam(context.Context, uuid.UUID, uuid.UUID) error
 
-	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
-	HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error)
+	CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error)
 	ScoreboardStore
 	eventdata.Writer
 	CreateContest(context.Context, *contestsmodel.CreateContestParams) error

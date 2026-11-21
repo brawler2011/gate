@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/brawler2011/gate/backend/internal/access"
-
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -22,7 +21,10 @@ type problemCommandStore struct {
 }
 
 func (*problemCommandStore) LockContestProblemOrder(context.Context, uuid.UUID) error { return nil }
-func (s *problemCommandStore) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (s *problemCommandStore) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+	if action == accessmodel.ActionGetContest {
+		return true, nil
+	}
 	if action != accessmodel.ActionManageContest {
 		panic("unexpected contest action")
 	}
@@ -48,17 +50,23 @@ type problemCommandPermissions struct {
 	calls                   int
 }
 
-func (p *problemCommandPermissions) HasContestPermission(_ context.Context, contest, user uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	require.Equal(p.t, p.actor, user)
+func (p *problemCommandPermissions) CanContest(ctx context.Context, contest uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+	require.Equal(p.t, p.actor, accessmodel.UserFromContext(ctx).Id)
 	require.Equal(p.t, p.contest, contest)
+	if action == accessmodel.ActionGetContest {
+		return true, nil
+	}
 	require.Equal(p.t, accessmodel.ActionManageContest, action)
 	return p.manage, p.contestErr
 }
 
-func (p *problemCommandPermissions) HasProblemPermission(_ context.Context, problem, user uuid.UUID, action accessmodel.ProblemAction) (bool, error) {
-	p.calls++
-	require.Equal(p.t, p.actor, user)
+func (p *problemCommandPermissions) CanProblem(ctx context.Context, problem uuid.UUID, action accessmodel.ProblemAction) (bool, error) {
+	require.Equal(p.t, p.actor, accessmodel.UserFromContext(ctx).Id)
 	require.Equal(p.t, p.problem, problem)
+	if action == accessmodel.ActionViewProblem {
+		return true, nil
+	}
+	p.calls++
 	require.Equal(p.t, accessmodel.ActionUseProblem, action)
 	return p.allowed, p.err
 }
@@ -81,7 +89,6 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 				{name: "source denied", manage: true, want: pkg.ErrForbidden},
 				{name: "destination error", manage: true, use: true, contestErr: failure, want: failure},
 				{name: "source error", manage: true, use: true, sourceErr: failure, want: failure},
-				{name: "guest", guest: true, manage: true, use: true, want: pkg.ErrUnauthenticated},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
@@ -106,7 +113,7 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 						require.NoError(t, err)
 						require.Equal(t, 1, store.writes)
 					}
-					if tc.guest || !tc.manage || tc.contestErr != nil {
+					if !tc.manage || tc.contestErr != nil {
 						require.Zero(t, permissions.calls)
 					} else {
 						require.Equal(t, 1, permissions.calls)

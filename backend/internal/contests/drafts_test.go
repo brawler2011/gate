@@ -164,7 +164,7 @@ type draftTestStore struct{ *mockDraftsRepo }
 func (draftTestStore) GetContest(_ context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
 	return contestsmodel.Contest{ID: id}, nil
 }
-func (draftTestStore) HasContestPermission(ctx context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (draftTestStore) CanContest(ctx context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	return action == accessmodel.ActionGetContest || accessmodel.UserFromContext(ctx).IsAdmin(), nil
 }
 

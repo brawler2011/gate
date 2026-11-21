@@ -14,7 +14,7 @@ import (
 type ProblemTxStore interface {
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
+	CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
 	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)
 	UpdateProblem(context.Context, uuid.UUID, *problemsmodel.ProblemUpdate) error

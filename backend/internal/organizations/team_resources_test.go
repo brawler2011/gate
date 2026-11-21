@@ -3,7 +3,6 @@ package organizations
 import (
 	"context"
 	"testing"
-	"time"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -40,9 +39,6 @@ func (r *teamResourcesRepo) GetTeamProblems(_ context.Context, teamID, caller uu
 
 func TestTeamResourcesAuthorization(t *testing.T) {
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-	expired := caller
-	past := time.Now().Add(-time.Hour)
-	expired.ExpiresAt = &past
 	for _, resource := range []string{"contests", "problems"} {
 		for _, tc := range []struct {
 			name                            string
@@ -53,10 +49,9 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 		}{
 			{name: "allowed", user: caller, view: true, wantCalls: 1},
 			{name: "storage failure", user: caller, view: true, repoErr: context.Canceled, wantErr: context.Canceled, wantCalls: 1},
-			{name: "team denied", user: caller, wantErr: pkg.ErrForbidden},
+			{name: "team hidden", user: caller, wantErr: pkg.ErrNotFound},
 			{name: "permission failure", user: caller, permissionErr: context.Canceled, wantErr: context.Canceled},
 			{name: "guest", user: accessmodel.Guest, wantErr: pkg.ErrUnauthenticated},
-			{name: "expired", user: expired, view: true, wantErr: pkg.ErrUnauthenticated},
 		} {
 			t.Run(resource+"/"+tc.name, func(t *testing.T) {
 				teamID := uuid.New()

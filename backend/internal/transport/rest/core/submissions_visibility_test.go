@@ -37,7 +37,7 @@ func (m *visibilityStub) GetContestByOrgLoginAndContestLogin(context.Context, st
 	return m.contest, nil
 }
 
-func (m *visibilityStub) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (m *visibilityStub) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	return &m.permissions, m.permissionErr
 }
 

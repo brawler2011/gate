@@ -137,5 +137,5 @@ func (s *IntegrationTestSuite) TestProblemTemplateCatalogHidesPrivateOrganizatio
 		s.NotEqual(created.ID.String(), template.ID)
 	}
 	_, err = s.client.ListProblemMembers(withTestUser(s.ctx, outsider.Id), corev1.ListProblemMembersParams{ID: created.ID})
-	s.Equal(http.StatusForbidden, s.getStatusCode(err))
+	s.Equal(http.StatusNotFound, s.getStatusCode(err))
 }

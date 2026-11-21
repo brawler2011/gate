@@ -888,11 +888,6 @@ func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, params co
 }
 
 func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.ListContestJoinRequestsParams) (*corev1.ListContestJoinRequestsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	reqs, err := h.Contests.ListJoinRequests(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
@@ -926,11 +921,6 @@ func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.Op
 }
 
 func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.GetMyContestJoinRequestParams) (*corev1.ContestJoinRequestNullableResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return &corev1.ContestJoinRequestNullableResponseModel{}, nil
-	}
-
 	joinReq, err := h.Contests.GetMyPendingJoinRequest(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
@@ -958,11 +948,6 @@ func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1
 }
 
 func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev1.ApproveContestJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	err := h.Contests.ApproveJoinRequest(ctx, params.OrgLogin, params.ContestLogin, params.ID)
 	if err != nil {
 		return err
@@ -972,11 +957,6 @@ func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev
 }
 
 func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, params corev1.RejectContestJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	err := h.Contests.RejectJoinRequest(ctx, params.OrgLogin, params.ContestLogin, params.ID)
 	if err != nil {
 		return err

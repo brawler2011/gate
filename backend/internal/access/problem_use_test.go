@@ -49,7 +49,7 @@ func TestUseProblemRequiresAuthenticatedReadAccess(t *testing.T) {
 			if tc.role != "" {
 				f.problems.members[problem.ID.String()+":"+actor.Id.String()] = problemsmodel.ProblemMember{Role: tc.role}
 			}
-			allowed, err := f.permUC.HasProblemPermission(context.Background(), problem.ID, actor.Id, accessmodel.ActionUseProblem)
+			allowed, err := f.permUC.CanProblem(accessmodel.WithUser(context.Background(), accessmodel.User{Id: actor.Id}), problem.ID, accessmodel.ActionUseProblem)
 			require.NoError(t, err)
 			require.Equal(t, tc.want, allowed)
 		})

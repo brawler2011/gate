@@ -25,13 +25,13 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 		return nil, pkg.AtField("/question", pkg.Invalid(pkg.ErrRequired, "question cannot be empty", nil))
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	var clarification *contestsmodel.ContestClarification
-	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionGetContest, func(tx ContestEventsTxStore) error {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionGetContest, func(tx ContestEventsTxStore) error {
 		contest, err := tx.GetContest(ctx, input.ContestID)
 		if err != nil {
 			return err
@@ -79,12 +79,12 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 		return nil, pkg.AtField("/answer", pkg.Invalid(pkg.ErrRequired, "answer cannot be empty", nil))
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	var clarification *contestsmodel.ContestClarification
-	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
 		clarification, err = tx.AnswerClarification(
 			ctx,

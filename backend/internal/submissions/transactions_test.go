@@ -39,14 +39,14 @@ func (submissionTestStore) GetContestUserProblemBlock(context.Context, uuid.UUID
 
 type allowSubmissionPermissions struct{}
 
-func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (allowSubmissionPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
-func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }
 
-func (submissionTestStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (submissionTestStore) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
 

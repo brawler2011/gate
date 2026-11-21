@@ -10,11 +10,10 @@ import (
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
-	paging "github.com/brawler2011/gate/backend/internal/page"
-
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/organizations"
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -106,12 +105,12 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 			}
 			wantContests, wantProblems := []uuid.UUID{}, []uuid.UUID{}
 			for i := len(contestIDs) - 1; i >= 0; i-- {
-				allowed, err := permissions.HasContestPermission(ctx, contestIDs[i], viewerID, accessmodel.ActionGetContest)
+				allowed, err := permissions.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: viewerID}), contestIDs[i], accessmodel.ActionGetContest)
 				require.NoError(t, err)
 				if allowed {
 					wantContests = append(wantContests, contestIDs[i])
 				}
-				allowed, err = permissions.HasProblemPermission(ctx, problemIDs[i], viewerID, accessmodel.ActionViewProblem)
+				allowed, err = permissions.CanProblem(accessmodel.WithUser(ctx, accessmodel.User{Id: viewerID}), problemIDs[i], accessmodel.ActionViewProblem)
 				require.NoError(t, err)
 				if allowed {
 					wantProblems = append(wantProblems, problemIDs[i])

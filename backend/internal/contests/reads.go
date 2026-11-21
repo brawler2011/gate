@@ -12,9 +12,6 @@ import (
 )
 
 func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
 	return uc.contestRepo.ListPublicContests(ctx, filter)
 }
 
@@ -55,9 +52,6 @@ func (uc *ContestsUseCase) ListAdminContests(ctx context.Context, filter contest
 }
 
 func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, login, search string, page, size int32) (*contestsmodel.ContestsList, error) {
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
 	var err error
 	page, size, err = paging.Normalize(page, size, 50)
 	if err != nil {
@@ -67,20 +61,12 @@ func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, login, 
 }
 
 func (uc *ContestsUseCase) authorizeRoster(ctx context.Context, contest uuid.UUID) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+	// Participants and scoreboard viewers see the roster.
+	allowed, err := uc.permissions.CanContest(ctx, contest, accessmodel.ActionListOwnSubmissions)
+	if err != nil || allowed {
+		return err
 	}
-	for _, action := range []accessmodel.ContestAction{accessmodel.ActionGetMonitor, accessmodel.ActionListOwnSubmissions} {
-		allowed, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, action)
-		if err != nil {
-			return err
-		}
-		if allowed {
-			return nil
-		}
-	}
-	return pkg.ErrForbidden
+	return access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetMonitor)
 }
 
 func (uc *ContestsUseCase) GetContestTeams(ctx context.Context, contest uuid.UUID) ([]contestsmodel.ContestTeam, error) {

@@ -21,18 +21,21 @@ func TestExpiredAccountCannotResolvePermissions(t *testing.T) {
 	uc := NewPermissionsUseCase(nil, users, nil, nil, nil)
 	for name, check := range map[string]func() error{
 		"contest action": func() error {
-			_, err := uc.HasContestPermission(ctx, uuid.New(), actor.Id, accessmodel.ActionManageContest)
+			_, err := uc.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: actor.Id}), uuid.New(), accessmodel.ActionManageContest)
 			return err
 		},
 		"problem action": func() error {
-			_, err := uc.HasProblemPermission(ctx, uuid.New(), actor.Id, accessmodel.ActionEditProblem)
+			_, err := uc.CanProblem(accessmodel.WithUser(ctx, accessmodel.User{Id: actor.Id}), uuid.New(), accessmodel.ActionEditProblem)
 			return err
 		},
 		"organization action": func() error {
-			_, err := uc.HasOrganizationPermission(ctx, uuid.New(), actor.Id, accessmodel.ActionManageOrganization)
+			_, err := uc.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: actor.Id}), uuid.New(), accessmodel.ActionManageOrganization)
 			return err
 		},
-		"contest permissions": func() error { _, err := uc.GetContestPermissions(ctx, uuid.New(), actor.Id); return err },
+		"contest permissions": func() error {
+			_, err := uc.GetContestPermissions(accessmodel.WithUser(ctx, accessmodel.User{Id: actor.Id}), uuid.New())
+			return err
+		},
 		"problem permissions": func() error { _, err := uc.GetProblemPermissions(ctx, uuid.New(), actor.Id); return err },
 	} {
 		t.Run(name, func(t *testing.T) { require.ErrorIs(t, check(), pkg.ErrUnauthenticated) })

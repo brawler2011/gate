@@ -22,5 +22,5 @@ type Scoreboard interface {
 }
 
 type PermissionsUC interface {
-	GetContestPermissions(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*accessmodel.ContestPermissions, error)
+	GetContestPermissions(ctx context.Context, contestID uuid.UUID) (*accessmodel.ContestPermissions, error)
 }

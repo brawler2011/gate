@@ -98,16 +98,16 @@ func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
 	reader := NewProblemsUseCase(nil, nil, nil, denyProblemPermissions{}, nil)
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), problemActorContext()} {
-		expected := pkg.ErrForbidden
+		hidden, forbidden := pkg.ErrNotFound, pkg.ErrForbidden
 		if accessmodel.UserFromContext(ctx).IsGuest() {
-			expected = pkg.ErrUnauthenticated
+			hidden, forbidden = pkg.ErrUnauthenticated, pkg.ErrUnauthenticated
 		}
 		_, err := reader.ListProblemMembers(ctx, uuid.New(), paging.Request{})
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, hidden)
 		_, err = reader.GetProblemTeams(ctx, uuid.New())
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, hidden)
 		_, err = reader.ListDashboardProblems(ctx, user, 5)
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, forbidden)
 	}
 }
 
@@ -135,6 +135,6 @@ func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {
 
 type denyProblemPermissions struct{}
 
-func (denyProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (denyProblemPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }

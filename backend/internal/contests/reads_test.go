@@ -43,12 +43,12 @@ type rosterPermissions struct {
 	err     error
 }
 
-func (p *rosterPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (p *rosterPermissions) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	p.actions = append(p.actions, action)
 	return action == p.allow, p.err
 }
 
-func (p *rosterPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (p *rosterPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }
 
@@ -65,9 +65,9 @@ func TestProtectedContestReadsRejectBeforeStorage(t *testing.T) {
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), accessmodel.WithUser(context.Background(), actor)} {
 		reader := newContestReader(nil, &rosterPermissions{})
-		expected := pkg.ErrForbidden
+		expected, hidden := pkg.ErrForbidden, pkg.ErrNotFound
 		if accessmodel.UserFromContext(ctx).IsGuest() {
-			expected = pkg.ErrUnauthenticated
+			expected, hidden = pkg.ErrUnauthenticated, pkg.ErrUnauthenticated
 		}
 		_, err := reader.ListAdminContests(ctx, contestsmodel.AdminContestsFilter{})
 		require.ErrorIs(t, err, expected)
@@ -78,9 +78,9 @@ func TestProtectedContestReadsRejectBeforeStorage(t *testing.T) {
 		_, err = reader.ListDashboardContests(ctx, user, 5)
 		require.ErrorIs(t, err, expected)
 		_, err = reader.GetContestTeams(ctx, uuid.New())
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, hidden)
 		_, err = reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{})
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, hidden)
 	}
 }
 

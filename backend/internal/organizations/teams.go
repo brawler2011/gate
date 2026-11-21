@@ -16,7 +16,7 @@ import (
 )
 
 type TeamVisibility interface {
-	HasTeamPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.TeamAction) (bool, error)
+	CanTeam(context.Context, uuid.UUID, accessmodel.TeamAction) (bool, error)
 }
 
 type TeamsUseCase struct {
@@ -41,25 +41,17 @@ func NewTeamsUseCase(
 }
 
 func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
-	creatorID := user.Id
-
+	creatorID := accessmodel.UserFromContext(ctx).Id
 	var team *organizationsmodel.Team
 	err := uc.transactor.Within(ctx, func(tx TeamTxStore) error {
 		if _, err := tx.GetOrganizationByID(ctx, input.OrganizationID); err != nil {
 			return err
 		}
-		allowed, err := tx.HasOrganizationPermission(ctx, input.OrganizationID, creatorID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Organization(ctx, tx, input.OrganizationID, accessmodel.ActionManageOrganization); err != nil {
 			return err
 		}
-		if !allowed {
-			return pkg.ErrForbidden
-		}
 
+		var err error
 		team, err = tx.CreateTeam(ctx, input)
 		if err != nil {
 			return fmt.Errorf("create team: %w", err)
@@ -81,24 +73,13 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 }
 
 func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID uuid.UUID) (*organizationsmodel.Team, error) {
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
-	user, err := accessmodel.RequireUser(ctx)
-	if err != nil {
-		return nil, err
-	}
 	team, err := uc.repo.GetTeamByID(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
 
-	allowed, err := uc.visibility.HasTeamPermission(ctx, teamID, user.Id, accessmodel.ActionViewTeam)
-	if err != nil {
+	if err := access.Team(ctx, uc.visibility, teamID, accessmodel.ActionViewTeam); err != nil {
 		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.ErrForbidden
 	}
 
 	return team, nil
@@ -106,12 +87,6 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID uuid.UUID) (*organiz
 
 func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter) (*organizationsmodel.TeamsList, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 	if filter == nil {
 		return nil, pkg.ErrInvalid
 	}
@@ -132,56 +107,27 @@ func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmode
 }
 
 func (uc *TeamsUseCase) UpdateTeam(ctx context.Context, teamID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error {
-	userID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinTeam(ctx, teamID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
-		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Team(ctx, uc.teamAccess(tx, team), teamID, accessmodel.ActionUpdateTeam); err != nil {
 			return err
-		}
-		if !allowed {
-			member, err := tx.GetTeamMember(ctx, teamID, userID)
-			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
-				return err
-			}
-			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return tx.UpdateTeam(ctx, teamID, input)
 	})
 }
 
 func (uc *TeamsUseCase) DeleteTeam(ctx context.Context, teamID uuid.UUID) error {
-	userID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinTeam(ctx, teamID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
-		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Team(ctx, uc.teamAccess(tx, team), teamID, accessmodel.ActionDeleteTeam); err != nil {
 			return err
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return tx.DeleteTeam(ctx, teamID)
 	})
 }
 
 func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput) error {
-	requestUserID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinTeam(ctx, input.TeamID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
-		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Team(ctx, uc.teamAccess(tx, team), input.TeamID, accessmodel.ActionManageTeamMembers); err != nil {
 			return err
-		}
-		if !allowed {
-			member, err := tx.GetTeamMember(ctx, input.TeamID, requestUserID)
-			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
-				return err
-			}
-			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		if _, err := tx.GetMember(ctx, team.OrganizationID, input.UserID); err != nil {
 			return err
@@ -206,43 +152,22 @@ func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID uuid.UUID, r
 }
 
 func (uc *TeamsUseCase) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error {
-	requestUserID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinTeam(ctx, teamID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
-		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Team(ctx, uc.teamAccess(tx, team), teamID, accessmodel.ActionManageTeamMembers); err != nil {
 			return err
-		}
-		if !allowed {
-			member, err := tx.GetTeamMember(ctx, teamID, requestUserID)
-			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
-				return err
-			}
-			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return tx.UpdateTeamMemberRole(ctx, teamID, userID, role)
 	})
 }
 
 func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error {
-	requestUserID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinTeam(ctx, teamID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
-		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-		if err != nil {
+		action := accessmodel.ActionManageTeamMembers
+		if userID == accessmodel.UserFromContext(ctx).Id {
+			action = accessmodel.ActionLeaveTeam
+		}
+		if err := access.Team(ctx, uc.teamAccess(tx, team), teamID, action); err != nil {
 			return err
-		}
-		if !allowed {
-			member, err := tx.GetTeamMember(ctx, teamID, requestUserID)
-			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
-				return err
-			}
-			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
-		}
-		allowed = allowed || userID == requestUserID
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return tx.RemoveTeamMember(ctx, teamID, userID)
 	})
@@ -279,9 +204,6 @@ func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID uuid.UUID, r
 }
 
 func (uc *TeamsUseCase) withinTeam(ctx context.Context, id uuid.UUID, fn func(TeamTxStore, *organizationsmodel.Team) error) error {
-	if accessmodel.UserFromContext(ctx).IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
 	return uc.transactor.Within(ctx, func(tx TeamTxStore) error {
 		current, err := tx.GetTeamByID(ctx, id)
 		if err != nil {
@@ -289,4 +211,37 @@ func (uc *TeamsUseCase) withinTeam(ctx context.Context, id uuid.UUID, fn func(Te
 		}
 		return fn(tx, current)
 	})
+}
+
+func (uc *TeamsUseCase) teamAccess(tx TeamTxStore, team *organizationsmodel.Team) teamAccess {
+	return teamAccess{tx: tx, visibility: uc.visibility, org: team.OrganizationID}
+}
+
+// Grants are read in the transaction; pool visibility only decides between 403 and 404.
+type teamAccess struct {
+	tx         TeamTxStore
+	visibility TeamVisibility
+	org        uuid.UUID
+}
+
+func (a teamAccess) CanTeam(ctx context.Context, id uuid.UUID, action accessmodel.TeamAction) (bool, error) {
+	if action == accessmodel.ActionViewTeam {
+		return a.visibility.CanTeam(ctx, id, action)
+	}
+	// Also revalidates the caller under lock, which leaving relies on.
+	manager, err := a.tx.CanOrganization(ctx, a.org, accessmodel.ActionManageOrganization)
+	if err != nil || manager {
+		return manager, err
+	}
+	switch action {
+	case accessmodel.ActionLeaveTeam:
+		return !accessmodel.UserFromContext(ctx).IsGuest(), nil
+	case accessmodel.ActionUpdateTeam, accessmodel.ActionManageTeamMembers:
+		member, err := a.tx.GetTeamMember(ctx, id, accessmodel.UserFromContext(ctx).Id)
+		if errors.Is(err, pkg.ErrNotFound) {
+			return false, nil
+		}
+		return err == nil && member.Role == organizationsmodel.TeamRoleMaintainer, err
+	}
+	return false, nil
 }

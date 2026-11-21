@@ -65,7 +65,7 @@ func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter)
 		}
 		return user, nil, nil
 	}
-	permissions, err := s.permissions.GetContestPermissions(ctx, *filter.ContestId, user.Id)
+	permissions, err := s.permissions.GetContestPermissions(ctx, *filter.ContestId)
 	return user, permissions, err
 }
 
@@ -129,7 +129,7 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 		if meta.ContestId == nil {
 			return writeEvent(conn, event.DTOPayload)
 		}
-		p, err := s.permissions.GetContestPermissions(ctx, *meta.ContestId, user.Id)
+		p, err := s.permissions.GetContestPermissions(ctx, *meta.ContestId)
 		if err != nil {
 			return closeVerification(conn, err)
 		}

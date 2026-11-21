@@ -35,11 +35,11 @@ func (r *scoreboardAccessRepo) GetContestScoreboardFromStandings(context.Context
 
 type scoreboardAccessPermissions struct{ monitor, manage, hidden bool }
 
-func (scoreboardAccessPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (scoreboardAccessPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }
 
-func (p scoreboardAccessPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (p scoreboardAccessPermissions) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	switch action {
 	case accessmodel.ActionGetMonitor:
 		return p.monitor, nil
@@ -51,9 +51,9 @@ func (p scoreboardAccessPermissions) HasContestPermission(_ context.Context, _, 
 
 func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 	for _, tc := range []struct {
-		name                                                   string
+		name                                                           string
 		monitor, manage, unfrozen, future, owner, admin, guest, hidden bool
-		want                                                   error
+		want                                                           error
 	}{
 		{name: "participant frozen monitor", monitor: true},
 		{name: "participant cannot unfreeze", monitor: true, unfrozen: true, want: pkg.ErrForbidden},

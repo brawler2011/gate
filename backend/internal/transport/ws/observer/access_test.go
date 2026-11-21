@@ -46,7 +46,7 @@ func (m *accessStub) Authenticate(context.Context, uuid.UUID) (accessmodel.User,
 	return m.user, m.authErr
 }
 
-func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	m.mu.Lock()
 	p, err, hook := m.permissions, m.permissionErr, m.onPermissions
 	m.onPermissions = nil

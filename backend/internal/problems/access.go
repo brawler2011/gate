@@ -3,45 +3,16 @@ package problems
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 func withinProblem(ctx context.Context, transactions ProblemTransactions, id uuid.UUID, action accessmodel.ProblemAction, fn func(ProblemTxStore) error) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
 	return transactions.Within(ctx, func(tx ProblemTxStore) error {
-		if err := authorizeProblem(ctx, tx, id, action); err != nil {
+		if err := access.Problem(ctx, tx, id, action); err != nil {
 			return err
 		}
 		return fn(tx)
 	})
-}
-
-func authorizeProblem(ctx context.Context, permissions ProblemPermissions, id uuid.UUID, action accessmodel.ProblemAction) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() && action != accessmodel.ActionViewProblem {
-		return pkg.ErrUnauthenticated
-	}
-	allowed, err := permissions.HasProblemPermission(ctx, id, user.Id, action)
-	if err != nil {
-		return err
-	}
-	if allowed {
-		return nil
-	}
-	// A problem the caller cannot see is hidden; only a visible one is forbidden.
-	if action != accessmodel.ActionViewProblem {
-		visible, err := permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
-		if err != nil {
-			return err
-		}
-		if visible {
-			return pkg.ErrForbidden
-		}
-	}
-	return pkg.ErrNotFound
 }

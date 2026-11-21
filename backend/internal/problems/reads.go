@@ -22,9 +22,6 @@ func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *problemsmod
 	if filter == nil {
 		return nil, pkg.ErrInvalid
 	}
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
 	copy := *filter
 	var err error
 	copy.Page, copy.PageSize, err = paging.Normalize(copy.Page, copy.PageSize, 50)
@@ -36,23 +33,8 @@ func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *problemsmod
 	return uc.repo.ListProblems(ctx, &copy)
 }
 
-func (uc *ProblemsUseCase) authorizeView(ctx context.Context, id uuid.UUID) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
-	allowed, err := uc.permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.ErrForbidden
-	}
-	return nil
-}
-
 func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemMember], error) {
-	if err := uc.authorizeView(ctx, id); err != nil {
+	if err := access.Problem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
 		return nil, err
 	}
 	request, err := request.Normalize()
@@ -67,7 +49,7 @@ func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID,
 }
 
 func (uc *ProblemsUseCase) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
-	if err := uc.authorizeView(ctx, id); err != nil {
+	if err := access.Problem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
 		return nil, err
 	}
 	return uc.repo.GetProblemTeams(ctx, id)
@@ -84,9 +66,9 @@ func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, user uuid.
 }
 
 func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if orgID == uuid.Nil {
 		organizations, err := uc.organizations.GetUserOrganizations(ctx, user.Id)

@@ -41,9 +41,10 @@ func metadataDecision(err error) (bool, error) {
 	}
 	return err == nil, err
 }
-func (uc *MetadataPermissions) HasProblemPermission(ctx context.Context, id, user uuid.UUID, action m.ProblemAction) (bool, error) {
+func (uc *MetadataPermissions) CanProblem(ctx context.Context, id uuid.UUID, action m.ProblemAction) (bool, error) {
+	user := m.UserFromContext(ctx).Id
 	if action != m.ActionViewProblem && action != m.ActionUseProblem {
-		return uc.PermissionsUseCase.HasProblemPermission(ctx, id, user, action)
+		return uc.PermissionsUseCase.CanProblem(ctx, id, action)
 	}
 	in, err := uc.input(ctx, user)
 	if err != nil {
@@ -59,7 +60,8 @@ func (uc *MetadataPermissions) HasProblemPermission(ctx context.Context, id, use
 	}
 	return metadataDecision(RequireProblem(in, c, action))
 }
-func (uc *MetadataPermissions) HasContestPermission(ctx context.Context, id, user uuid.UUID, action m.ContestAction) (bool, error) {
+func (uc *MetadataPermissions) CanContest(ctx context.Context, id uuid.UUID, action m.ContestAction) (bool, error) {
+	user := m.UserFromContext(ctx).Id
 	in, err := uc.input(ctx, user)
 	if err != nil {
 		return false, err
@@ -77,7 +79,8 @@ func (uc *MetadataPermissions) HasContestPermission(ctx context.Context, id, use
 	}
 	return metadataDecision(RequireContest(in, c, action))
 }
-func (uc *MetadataPermissions) HasTeamPermission(ctx context.Context, id, user uuid.UUID, action m.TeamAction) (bool, error) {
+func (uc *MetadataPermissions) CanTeam(ctx context.Context, id uuid.UUID, action m.TeamAction) (bool, error) {
+	user := m.UserFromContext(ctx).Id
 	in, err := uc.input(ctx, user)
 	if err != nil {
 		return false, err
@@ -93,12 +96,8 @@ func (uc *MetadataPermissions) HasTeamPermission(ctx context.Context, id, user u
 	return metadataDecision(RequireTeam(in, c, action))
 }
 
-func CheckReadActor(ctx context.Context) error {
-	in := m.PolicyInput{Actor: m.UserFromContext(ctx), Now: m.ReadTime(ctx)}
-	return validateInput(in)
-}
-
-func (uc *MetadataPermissions) AuthorizeContestAudience(ctx context.Context, id, user uuid.UUID, audience string, owner uuid.UUID) error {
+func (uc *MetadataPermissions) AuthorizeContestAudience(ctx context.Context, id uuid.UUID, audience string, owner uuid.UUID) error {
+	user := m.UserFromContext(ctx).Id
 	in, err := uc.input(ctx, user)
 	if err != nil {
 		return err
