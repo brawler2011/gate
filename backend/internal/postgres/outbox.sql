@@ -18,7 +18,7 @@ WITH picked AS (
           SELECT 1 FROM outbox_events earlier
           WHERE earlier.aggregate_id = e.aggregate_id
             AND earlier.aggregate_version < e.aggregate_version
-            AND earlier.status <> 'completed'
+            AND earlier.status NOT IN ('completed', 'failed')
       )
     ORDER BY e.created_at, e.id
     LIMIT sqlc.arg(limit_count)::int

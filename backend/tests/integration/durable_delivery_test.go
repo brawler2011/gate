@@ -124,7 +124,7 @@ func (s *IntegrationTestSuite) TestOutboxRetriesSameMessageAfterPubAckCrash() {
 	s.EqualValues(1, info.State.Msgs, "republication must keep the stable Nats-Msg-Id")
 }
 
-func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndRetainsPermanentFailures() {
+func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndSkipsPermanentFailures() {
 	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: "test.retry", Payload: struct{}{}}))
@@ -147,9 +147,10 @@ func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndRetainsPermanentFailures(
 	s.Require().NoError(err)
 	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: "test.later", Payload: struct{}{}}))
 	s.Require().NoError(repo.DeleteOldEvents(s.ctx, 14))
-	blocked, err := repo.PickEvents(s.ctx, 10, 30)
+	later, err := repo.PickEvents(s.ctx, 10, 30)
 	s.Require().NoError(err)
-	s.Empty(blocked, "retained permanent failures block later aggregate versions")
+	s.Require().Len(later, 1, "a permanent failure must not block later aggregate versions")
+	s.Equal("test.later", later[0].EventType)
 	var count int
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE id=$1 AND status='failed' AND error_message='permanent'", picked[0].Id).Scan(&count))
 	s.Equal(1, count)

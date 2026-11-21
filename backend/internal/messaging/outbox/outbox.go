@@ -115,8 +115,9 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 	defer cancelCompletion()
 
 	if err != nil {
-		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error", err)
-		if markErr := w.outboxRepo.MarkAsFailed(completionCtx, event.Id, event.LeaseToken, err.Error(), eventdata.IsPermanent(err)); markErr != nil {
+		permanent := eventdata.IsPermanent(err)
+		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "permanent", permanent, "error", err)
+		if markErr := w.outboxRepo.MarkAsFailed(completionCtx, event.Id, event.LeaseToken, err.Error(), permanent); markErr != nil {
 			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error", markErr)
 		}
 		return
