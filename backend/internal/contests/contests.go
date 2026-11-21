@@ -78,7 +78,6 @@ func (uc *ContestsUseCase) CreateContest(
 		Title:          c.Title,
 		Login:          c.Login,
 		Description:    c.Description,
-		Settings:       c.Settings,
 		StartTime:      c.StartTime,
 		EndTime:        c.EndTime,
 	}
@@ -294,7 +293,7 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 
 	isFrozen := contest.IsFrozenAt(accessmodel.ReadTime(ctx))
 	freezeTime := contest.GetFreezeTime()
-	penaltyPerAttempt := contest.GetPenaltyPerAttempt()
+	penaltyPerAttempt := contestsmodel.PenaltyPerAttempt
 
 	problems, err := uc.contestRepo.GetContestProblems(ctx, contestID)
 	if err != nil {
@@ -546,7 +545,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		if !errors.Is(err, pkg.ErrNotFound) {
 			return err
 		}
-		mode := contest.TypedSettings().GetParticipationMode()
+		mode := contest.Settings.ParticipationMode
 		if mode == contestsmodel.ParticipationModeInviteOnly {
 			return pkg.Wrap(pkg.ErrInviteOnly, nil, "the contest accepts participants by invitation only")
 		}
@@ -854,7 +853,7 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 		return nil, err
 	}
 	response := &contestsmodel.ScoreboardResponse{ContestID: contestID, ContestLogin: contest.Login, OrganizationLogin: contest.OrganizationLogin,
-		IsFrozen: contest.IsFrozenAt(accessmodel.ReadTime(ctx)), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contest.GetPenaltyPerAttempt(),
+		IsFrozen: contest.IsFrozenAt(accessmodel.ReadTime(ctx)), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contestsmodel.PenaltyPerAttempt,
 		Items: []contestsmodel.ScoreboardItem{}, Problems: make([]contestsmodel.ScoreboardProblemHeader, len(problems))}
 	for i, problem := range problems {
 		response.Problems[i] = contestsmodel.ScoreboardProblemHeader{ProblemID: problem.ProblemID, Title: problem.Title, ShortName: problem.ShortName, Ordinal: int32(problem.Ordinal)} // #nosec G115
@@ -923,7 +922,7 @@ type scoreboardRules struct {
 }
 
 func newScoreboardRules(contest contestsmodel.Contest, frozen bool) scoreboardRules {
-	return scoreboardRules{contest: contest, frozen: frozen, freezeTime: contest.GetFreezeTime(), manualFreeze: contest.GetFreezeStatus() == contestsmodel.FreezeStatusFrozen, penaltyPerAttempt: contest.GetPenaltyPerAttempt()}
+	return scoreboardRules{contest: contest, frozen: frozen, freezeTime: contest.GetFreezeTime(), manualFreeze: contest.Settings.FreezeStatus == contestsmodel.FreezeStatusFrozen, penaltyPerAttempt: contestsmodel.PenaltyPerAttempt}
 }
 
 func scoreboardUserResults(ctx context.Context, store interface {

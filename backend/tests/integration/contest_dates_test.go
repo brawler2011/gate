@@ -35,7 +35,6 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 					ID: id, OrganizationID: org.ID, OwnerID: &owner.Id,
 					Title: "Original title", Login: login, Description: "Keep description",
 					Visibility: contestsmodel.ContestVisibilityPublic,
-					Settings:   map[string]interface{}{"enable_drafts": true},
 					StartTime:  &start, EndTime: &end,
 				})
 				s.Require().NoError(err)
@@ -100,7 +99,7 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 						s.True(date.actual.Equal(*date.expected))
 					}
 				}
-				s.Equal(true, stored.Settings["enable_drafts"])
+				s.True(stored.Settings.EnableDrafts)
 				s.Equal(&owner.Id, stored.OwnerID)
 				s.Equal(contestsmodel.ContestVisibilityPublic, stored.Visibility)
 				s.Equal(http.StatusForbidden, patch(outsider.Id, `{"start_time":null,"end_time":null}`))
@@ -118,17 +117,21 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 	org := s.createOrganization("settings-"+uuid.NewString()[:8], "Settings", owner.Id)
 	for _, tc := range []struct {
 		name, body   string
-		freeze       any
+		status       int
+		freeze       *int32
 		drafts       bool
 		description  string
-		freezeStatus string
+		freezeStatus contestsmodel.FreezeStatus
+		monitor      contestsmodel.ContestScope
 	}{
-		{"omitted", `{}`, float64(30), true, "Original", "frozen"},
-		{"null", `{"freeze_duration_minutes":null}`, nil, true, "Original", "frozen"},
-		{"zero", `{"freeze_duration_minutes":0}`, float64(0), true, "Original", "frozen"},
-		{"false", `{"enable_drafts":false}`, float64(30), false, "Original", "frozen"},
-		{"empty", `{"description":""}`, float64(30), true, "", "frozen"},
-		{"explicit_auto", `{"freeze_status":"auto"}`, float64(30), true, "Original", "auto"},
+		{"omitted", `{}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"null", `{"freeze_duration_minutes":null}`, http.StatusOK, nil, true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"zero", `{"freeze_duration_minutes":0}`, http.StatusBadRequest, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"false", `{"enable_drafts":false}`, http.StatusOK, new(int32(30)), false, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"empty", `{"description":""}`, http.StatusOK, new(int32(30)), true, "", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"public_scope", `{"monitor_scope":"public"}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopePublic},
+		{"unknown_scope", `{"monitor_scope":"owner"}`, http.StatusBadRequest, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"explicit_auto", `{"freeze_status":"auto"}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusAuto, contestsmodel.ScopeParticipant},
 	} {
 		s.Run(tc.name, func() {
 			id := uuid.New()
@@ -136,25 +139,26 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 			s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 				ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Settings", Login: login,
 				Description: "Original", Visibility: contestsmodel.ContestVisibilityPublic,
-				Settings: map[string]interface{}{"freeze_duration_minutes": 30, "enable_drafts": true, "enable_upsolving": true, "freeze_status": "frozen"},
 			}))
+			frozen := contestsmodel.FreezeStatusFrozen
+			s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{
+				FreezeStatus: &frozen, FreezeDurationMinutes: new(int32(30)), FreezeDurationSet: true,
+			}}))
 			req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("X-Test-User-ID", owner.Id.String())
 			recorder := httptest.NewRecorder()
 			s.handler.ServeHTTP(recorder, req)
-			s.Equal(http.StatusOK, recorder.Code, recorder.Body.String())
+			s.Equal(tc.status, recorder.Code, recorder.Body.String())
 			got, err := s.contestsRepo.GetContest(s.ctx, id)
 			s.Require().NoError(err)
-			s.Equal(tc.freeze, got.Settings["freeze_duration_minutes"])
-			if tc.freeze == nil {
-				_, exists := got.Settings["freeze_duration_minutes"]
-				s.False(exists, "null clears the stored setting")
-			}
-			s.Equal(tc.drafts, got.Settings["enable_drafts"])
-			s.Equal(true, got.Settings["enable_upsolving"])
+			s.Equal(tc.freeze, got.Settings.FreezeDurationMinutes)
+			s.Equal(tc.drafts, got.Settings.EnableDrafts)
+			s.True(got.Settings.EnableUpsolving)
 			s.Equal(tc.description, got.Description)
-			s.Equal(tc.freezeStatus, got.Settings["freeze_status"])
+			s.Equal(tc.freezeStatus, got.Settings.FreezeStatus)
+			s.Equal(tc.freezeStatus == contestsmodel.FreezeStatusFrozen, got.Settings.FreezeStartedAt != nil, "manual freeze records its start")
+			s.Equal(tc.monitor, got.Settings.MonitorScope)
 		})
 	}
 }
@@ -167,8 +171,9 @@ func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
 	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Freeze status", Login: login,
 		Visibility: contestsmodel.ContestVisibilityPublic,
-		Settings:   map[string]interface{}{"freeze_status": "frozen"},
 	}))
+	frozen := contestsmodel.FreezeStatusFrozen
+	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{FreezeStatus: &frozen}}))
 
 	req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(`{"freeze_status":null}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -179,5 +184,5 @@ func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
 
 	got, err := s.contestsRepo.GetContest(s.ctx, id)
 	s.Require().NoError(err)
-	s.Equal("frozen", got.Settings["freeze_status"])
+	s.Equal(contestsmodel.FreezeStatusFrozen, got.Settings.FreezeStatus)
 }

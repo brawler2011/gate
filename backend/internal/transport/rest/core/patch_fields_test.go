@@ -31,10 +31,14 @@ func (m *patchContestsModule) GetContestByOrgLoginAndContestLogin(context.Contex
 
 func (m *patchContestsModule) UpdateContest(_ context.Context, update contestsmodel.ContestUpdateInput) error {
 	m.lastUpdate = update
-	if update.Settings != nil {
-		for key, value := range *update.Settings {
-			m.contest.Settings[key] = value
-		}
+	if v := update.Settings.AllowClarifications; v != nil {
+		m.contest.Settings.AllowClarifications = *v
+	}
+	if v := update.Settings.HideStatements; v != nil {
+		m.contest.Settings.HideStatements = *v
+	}
+	if v := update.Settings.FreezeStatus; v != nil {
+		m.contest.Settings.FreezeStatus = *v
 	}
 	return nil
 }
@@ -58,7 +62,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 			t.Run(fmt.Sprintf("initial=%t/%s", initial, tc.name), func(t *testing.T) {
 				store := &patchContestsModule{contest: contestsmodel.Contest{
 					ID: uuid.New(), Login: "round", OrganizationLogin: "org", Visibility: contestsmodel.ContestVisibilityPublic,
-					Settings: map[string]interface{}{"allow_clarifications": initial, "hide_statements": true, "freeze_status": "frozen"},
+					Settings: contestsmodel.ContestSettings{AllowClarifications: initial, HideStatements: true, FreezeStatus: contestsmodel.FreezeStatusFrozen},
 				}}
 				server := NewCoreServer(Services{Contests: store, ContestDetails: store}, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
@@ -69,14 +73,10 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 				rec := httptest.NewRecorder()
 				handler.ServeHTTP(rec, req)
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-				var flagSet bool
-				if store.lastUpdate.Settings != nil {
-					_, flagSet = (*store.lastUpdate.Settings)["allow_clarifications"]
-				}
-				require.Equal(t, tc.settingsUpdate, flagSet)
-				require.Equal(t, tc.want, store.contest.Settings["allow_clarifications"])
-				require.Equal(t, true, store.contest.Settings["hide_statements"])
-				require.Equal(t, "frozen", store.contest.Settings["freeze_status"], "omitted freeze_status must preserve the stored mode")
+				require.Equal(t, tc.settingsUpdate, store.lastUpdate.Settings.AllowClarifications != nil)
+				require.Equal(t, tc.want, store.contest.Settings.AllowClarifications)
+				require.True(t, store.contest.Settings.HideStatements)
+				require.Equal(t, contestsmodel.FreezeStatusFrozen, store.contest.Settings.FreezeStatus, "omitted freeze_status must preserve the stored mode")
 
 				rec = httptest.NewRecorder()
 				handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))

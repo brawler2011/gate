@@ -88,7 +88,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canViewProblems(contest) && user?.id && (contest.enable_drafts ?? true)) {
+  if (checker.canViewProblems(contest) && user?.id && contest.enable_drafts) {
     items.push({
       key: "drafts",
       label: "Черновики",

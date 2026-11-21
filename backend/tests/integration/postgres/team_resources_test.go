@@ -61,8 +61,8 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 		contestIDs = append(contestIDs, contestID)
 		problemIDs = append(problemIDs, problemID)
 		// Resource lists preserve descending creation order.
-		exec(`INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, settings, created_at)
-        VALUES ($1, $2, $3, $4, 'Contest', $5, '{}', '2026-01-01'::timestamptz + $6 * interval '1 day')`, contestID, orgID, users["owner"], visibility, contestID.String(), i)
+		exec(`INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, created_at)
+        VALUES ($1, $2, $3, $4, 'Contest', $5, '2026-01-01'::timestamptz + $6 * interval '1 day')`, contestID, orgID, users["owner"], visibility, contestID.String(), i)
 		owner := users["owner"]
 		require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, OwnerID: &owner, Visibility: visibility,
 			Title: "Problem", ShortName: problemID.String(), CreatedAt: time.Date(2026, 1, 1+i, 0, 0, 0, 0, time.UTC)}))

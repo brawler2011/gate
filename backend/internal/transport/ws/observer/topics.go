@@ -46,7 +46,7 @@ func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 	e.topics = map[string]topicProjection{}
 	for _, audience := range []string{"public", "participants", "managers", "own"} {
 		actor := m.Guest
-		fact := m.ContestContext{ID: c.ID, StartTime: c.StartTime, EndTime: c.EndTime, Settings: c.Settings, Visibility: m.Visibility(c.Visibility), ParticipationMode: m.ParticipationMode(c.TypedSettings().GetParticipationMode()), Organization: m.OrganizationContext{ID: c.OrganizationID, JoinPolicy: m.JoinOpen}}
+		fact := m.ContestContext{ID: c.ID, StartTime: c.StartTime, EndTime: c.EndTime, MonitorScope: m.ContestScope(c.Settings.MonitorScope), SubmissionsListScope: m.ContestScope(c.Settings.SubmissionsListScope), SubmissionsReviewScope: m.ContestScope(c.Settings.SubmissionsReviewScope), SubmissionDetailsScope: m.ContestScope(c.Settings.SubmissionDetailsScope), HideStatements: c.Settings.HideStatements, Visibility: m.Visibility(c.Visibility), ParticipationMode: m.ParticipationMode(c.Settings.ParticipationMode), Organization: m.OrganizationContext{ID: c.OrganizationID, JoinPolicy: m.JoinOpen}}
 		if audience != "public" {
 			actor = m.User{Id: uuid.New(), Role: m.UserRoleUser}
 			fact.DirectRole = m.ContestParticipant

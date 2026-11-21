@@ -90,7 +90,7 @@ func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, i
 	if err != nil {
 		return contestsmodel.ContestProblem{}, false, err
 	}
-	if !contest.GetHideStatements() {
+	if !contest.Settings.HideStatements {
 		return link, true, nil
 	}
 	user := accessmodel.UserFromContext(ctx)
@@ -142,7 +142,7 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 	}
 
 	if !isManager {
-		if contest.GetHideStatements() {
+		if contest.Settings.HideStatements {
 			return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
 		}
 		if contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {

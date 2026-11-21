@@ -53,7 +53,6 @@ WITH actor AS (
   WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
-    AND COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open') IN ('open', 'by_request', 'invite_only')
     AND (c.visibility = 'public' OR EXISTS (
     SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
     OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))

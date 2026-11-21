@@ -76,7 +76,7 @@ type wsFixture struct {
 
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
-	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public"}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
+	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
 	f := &wsFixture{stub: stub, hub: NewHub(100, stub, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub, middleware.ResponseErrorHandler(slog.Default())), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
@@ -230,7 +230,7 @@ func TestHandshake(t *testing.T) {
 func TestSubmissionHistoryQueueLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ListOwnSubmissions: true}
-	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	other := uuid.New()
 	meta := f.meta(other)
 	created := &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: submissionsmodel.Saved, Source: "secret code"}
@@ -295,7 +295,7 @@ func TestDeliveryRevalidates(t *testing.T) {
 func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
-	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	conn := f.connect(t, f.path("submissions"))
 	meta := f.meta(uuid.New())
 	id := uuid.New()
@@ -312,7 +312,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, true, readPayload(t, conn)["frozen"])
 	f.stub.change(func() {
-		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen}
+		f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	})
 	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
@@ -444,7 +444,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 			end := time.Now().Add(30 * time.Minute)
 			boundary := end.Add(-time.Hour)
 			f.stub.contest.EndTime = &end
-			f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": test.status, "freeze_duration_minutes": 60}
+			f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatus(test.status), FreezeDurationMinutes: new(int32(60)), SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			if test.noBoundary {
 				f.stub.contest.EndTime = nil
 			}
@@ -474,7 +474,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 func TestPublicGuestAudience(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
-	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "frozen"}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	conn, resp, err := f.dial(t, f.path("submissions"), false)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -525,10 +525,10 @@ func TestIdleRevisionInvalidation(t *testing.T) {
 func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
-	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "unfrozen"}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
 	f.stub.change(func() {
-		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "frozen"}
+		f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	})
 	conn := f.connect(t, f.path("submissions"))
 	requireClose(t, conn, websocket.CloseTryAgainLater)

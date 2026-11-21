@@ -17,12 +17,13 @@ func TestSubmissionViewFreeze(t *testing.T) {
 	viewer := uuid.New()
 	other := uuid.New()
 	for _, test := range []struct {
-		name, status string
-		created      time.Time
-		author       *uuid.UUID
-		moderator    bool
-		duration     bool
-		frozen       bool
+		name      string
+		status    contestsmodel.FreezeStatus
+		created   time.Time
+		author    *uuid.UUID
+		moderator bool
+		duration  bool
+		frozen    bool
 	}{
 		{"before", "auto", boundary.Add(-time.Nanosecond), &other, false, true, false},
 		{"boundary", "auto", boundary, &other, false, true, true},
@@ -34,11 +35,10 @@ func TestSubmissionViewFreeze(t *testing.T) {
 		{"missing author", "auto", boundary, nil, false, true, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			settings := map[string]any{"freeze_status": test.status}
+			contest := contestsmodel.Contest{Settings: contestsmodel.ContestSettings{FreezeStatus: test.status}}
 			if test.duration {
-				settings["freeze_duration_minutes"] = 60
+				contest.Settings.FreezeDurationMinutes = new(int32(60))
 			}
-			contest := contestsmodel.Contest{Settings: settings}
 			if test.duration {
 				contest.EndTime = &end
 			}
@@ -50,6 +50,6 @@ func TestSubmissionViewFreeze(t *testing.T) {
 		})
 	}
 	futureEnd := now.Add(2 * time.Hour)
-	contest := contestsmodel.Contest{EndTime: &futureEnd, Settings: map[string]any{"freeze_duration_minutes": 60}}
+	contest := contestsmodel.Contest{EndTime: &futureEnd, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60))}}
 	require.False(t, SubmissionView(&contest, &other, futureEnd, viewer, &accessmodel.ContestPermissions{}, now).Frozen)
 }

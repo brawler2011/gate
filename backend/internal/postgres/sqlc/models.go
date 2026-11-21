@@ -104,6 +104,49 @@ func (ns NullContestRole) Value() (driver.Value, error) {
 	return string(ns.ContestRole), nil
 }
 
+type ContestScope string
+
+const (
+	ContestScopePublic      ContestScope = "public"
+	ContestScopeParticipant ContestScope = "participant"
+	ContestScopeModerator   ContestScope = "moderator"
+)
+
+func (e *ContestScope) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContestScope(s)
+	case string:
+		*e = ContestScope(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContestScope: %T", src)
+	}
+	return nil
+}
+
+type NullContestScope struct {
+	ContestScope ContestScope `json:"contest_scope"`
+	Valid        bool         `json:"valid"` // Valid is true if ContestScope is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContestScope) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContestScope, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContestScope.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContestScope) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContestScope), nil
+}
+
 type ContestVisibility string
 
 const (
@@ -145,6 +188,49 @@ func (ns NullContestVisibility) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ContestVisibility), nil
+}
+
+type FreezeStatus string
+
+const (
+	FreezeStatusAuto     FreezeStatus = "auto"
+	FreezeStatusFrozen   FreezeStatus = "frozen"
+	FreezeStatusUnfrozen FreezeStatus = "unfrozen"
+)
+
+func (e *FreezeStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FreezeStatus(s)
+	case string:
+		*e = FreezeStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FreezeStatus: %T", src)
+	}
+	return nil
+}
+
+type NullFreezeStatus struct {
+	FreezeStatus FreezeStatus `json:"freeze_status"`
+	Valid        bool         `json:"valid"` // Valid is true if FreezeStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFreezeStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.FreezeStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FreezeStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFreezeStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FreezeStatus), nil
 }
 
 type OrganizationRole string
@@ -276,6 +362,49 @@ func (ns NullPackageStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.PackageStatus), nil
+}
+
+type ParticipationMode string
+
+const (
+	ParticipationModeOpen       ParticipationMode = "open"
+	ParticipationModeByRequest  ParticipationMode = "by_request"
+	ParticipationModeInviteOnly ParticipationMode = "invite_only"
+)
+
+func (e *ParticipationMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ParticipationMode(s)
+	case string:
+		*e = ParticipationMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ParticipationMode: %T", src)
+	}
+	return nil
+}
+
+type NullParticipationMode struct {
+	ParticipationMode ParticipationMode `json:"participation_mode"`
+	Valid             bool              `json:"valid"` // Valid is true if ParticipationMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullParticipationMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.ParticipationMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ParticipationMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullParticipationMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ParticipationMode), nil
 }
 
 type ProblemPermission string
@@ -507,18 +636,30 @@ type AuthToken struct {
 }
 
 type Contest struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
+	ID                     uuid.UUID                       `json:"id"`
+	OrganizationID         uuid.UUID                       `json:"organization_id"`
+	OwnerID                *uuid.UUID                      `json:"owner_id"`
+	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
+	Title                  string                          `json:"title"`
+	Login                  string                          `json:"login"`
+	Description            string                          `json:"description"`
+	ParticipationMode      contestsmodel.ParticipationMode `json:"participation_mode"`
+	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
+	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
+	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
+	SubmissionDetailsScope contestsmodel.ContestScope      `json:"submission_details_scope"`
+	FreezeStatus           contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationMinutes  *int32                          `json:"freeze_duration_minutes"`
+	FreezeStartedAt        *time.Time                      `json:"freeze_started_at"`
+	HideStatements         bool                            `json:"hide_statements"`
+	AllowClarifications    bool                            `json:"allow_clarifications"`
+	EnableDrafts           bool                            `json:"enable_drafts"`
+	EnableUpsolving        bool                            `json:"enable_upsolving"`
+	Languages              []string                        `json:"languages"`
+	StartTime              *time.Time                      `json:"start_time"`
+	EndTime                *time.Time                      `json:"end_time"`
+	CreatedAt              time.Time                       `json:"created_at"`
+	UpdatedAt              time.Time                       `json:"updated_at"`
 }
 
 type ContestAnnouncement struct {

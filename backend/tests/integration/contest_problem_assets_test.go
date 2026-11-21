@@ -91,7 +91,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	contestID := uuid.New()
 	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID: contestID, OrganizationID: org.ID, OwnerID: &ownerID, Visibility: contestsmodel.ContestVisibilityPrivate,
-		Title: "Asset contest", Login: "asset-contest", Settings: map[string]interface{}{},
+		Title: "Asset contest", Login: "asset-contest",
 	}))
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
 

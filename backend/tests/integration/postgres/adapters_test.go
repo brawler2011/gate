@@ -305,11 +305,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 	contestID := uuid.New()
 	login := "contest_" + suffix
 	title := "Contest Title " + suffix
-	settings := map[string]interface{}{
-		"freeze_monitor":    true,
-		"penalty_per_wrong": float64(20),
-	}
-
 	err := repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: orgID,
@@ -317,7 +312,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Login:          login,
 		Description:    "Description for contest",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       settings,
 	})
 	require.NoError(t, err)
 
@@ -327,8 +321,11 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Equal(t, login, c.Login)
 	require.Equal(t, title, c.Title)
 	require.Equal(t, orgID, c.OrganizationID)
-	require.Equal(t, true, c.Settings["freeze_monitor"])
-	require.Equal(t, float64(20), c.Settings["penalty_per_wrong"])
+	require.Equal(t, contestsmodel.ContestSettings{
+		ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopeParticipant,
+		SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator,
+		FreezeStatus: contestsmodel.FreezeStatusAuto, AllowClarifications: true, EnableDrafts: true, EnableUpsolving: true, Languages: []string{},
+	}, c.Settings)
 
 	// Duplicate contest logins map to ErrConflict.
 	err = repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
@@ -337,7 +334,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Title:          "Duplicate Login Contest",
 		Login:          login,
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       map[string]interface{}{},
 	})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrConflict), "expected ErrConflict on duplicate contest login, got: %v", err)
@@ -349,7 +345,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Title:          "Orphan Contest",
 		Login:          "orphan_" + suffix,
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       map[string]interface{}{},
 	})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "violates foreign key constraint")
@@ -378,21 +373,18 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.NotNil(t, updatedC.StartTime)
 	require.NotNil(t, updatedC.EndTime)
 
-	// Settings patches preserve false values and unrelated existing settings.
+	// Settings patches preserve false values and fields they omit.
 	for _, allowed := range []bool{true, false} {
-		patch := map[string]interface{}{"allow_clarifications": allowed}
-		require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: &patch}))
+		require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: contestsmodel.ContestSettingsPatch{AllowClarifications: &allowed}}))
 		stored, err := repo.GetContest(ctx, contestID)
 		require.NoError(t, err)
-		require.Equal(t, allowed, stored.Settings["allow_clarifications"])
-		require.Equal(t, true, stored.Settings["freeze_monitor"])
+		require.Equal(t, allowed, stored.Settings.AllowClarifications)
 
-		// Omitting the flag, including when changing another setting, preserves it.
-		for _, settingsPatch := range []*map[string]interface{}{nil, {"hide_statements": true}} {
+		for _, settingsPatch := range []contestsmodel.ContestSettingsPatch{{}, {HideStatements: new(true)}} {
 			require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: settingsPatch}))
 			stored, err = repo.GetContest(ctx, contestID)
 			require.NoError(t, err)
-			require.Equal(t, allowed, stored.Settings["allow_clarifications"])
+			require.Equal(t, allowed, stored.Settings.AllowClarifications)
 		}
 	}
 }
@@ -416,8 +408,8 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 
 	contestID := uuid.New()
 	_, err = pool.Exec(ctx,
-		`INSERT INTO contests (id, organization_id, visibility, title, login, description, settings)
-		 VALUES ($1, $2, 'public', 'Sub Contest', $3, 'desc', '{}')`,
+		`INSERT INTO contests (id, organization_id, visibility, title, login, description)
+		 VALUES ($1, $2, 'public', 'Sub Contest', $3, 'desc')`,
 		contestID, orgID, "sub_c_"+suffix,
 	)
 	require.NoError(t, err)

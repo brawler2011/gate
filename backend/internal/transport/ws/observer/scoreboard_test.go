@@ -47,9 +47,9 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 	for _, frozen := range []bool{false, true} {
 		t.Run(map[bool]string{false: "live", true: "frozen"}[frozen], func(t *testing.T) {
 			contestID, userID := uuid.New(), uuid.New()
-			contest := contestsmodel.Contest{ID: contestID, OrganizationID: uuid.New(), Visibility: "public"}
+			contest := contestsmodel.Contest{ID: contestID, OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}
 			if frozen {
-				contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
+				contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			}
 			source := &scoreboardStub{accessStub: &accessStub{contest: contest}}
 			h := NewHub(10, source, source)
@@ -79,7 +79,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 			}
 			require.NotEmpty(t, first.scoreboardPublic)
 			require.NotEmpty(t, first.scoreboardUnfrozen)
-			source.contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen, "penalty_per_attempt": 30}
+			source.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			require.NoError(t, h.Handle(context.WithValue(context.Background(), eventdata.MessageStreamSequenceKey, uint64(2)), submissionsmodel.SubmissionEventCompleted, payload))
 			require.Equal(t, 1, source.snapshots)
 			for _, sub := range h.subscribers {
@@ -101,7 +101,7 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 		t.Run(map[bool]string{false: "spectator", true: "manager"}[manager], func(t *testing.T) {
 			f := newWSFixture(t)
 			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: manager}
-			f.stub.contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
+			f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
 			f.hub.scoreboard = source
@@ -165,7 +165,7 @@ func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
 			f := newWSFixture(t)
 			end := time.Now().Add(300 * time.Millisecond)
 			f.stub.contest.EndTime = &end
-			f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": status}
+			f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatus(status), SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
@@ -185,7 +185,7 @@ func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
 func TestMonitorAudienceDoesNotPublishModeratorOnlySubmissions(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
-	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "moderator", "freeze_status": "frozen"}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopeModerator, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	source := &scoreboardStub{accessStub: f.stub}
 	f.hub.contests = source
 	f.hub.scoreboard = source

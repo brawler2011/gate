@@ -19,38 +19,6 @@ func (s *ApproveOrganizationJoinRequestModel) setDefaults() {
 }
 
 // setDefaults set default value of fields.
-func (s *ContestModel) setDefaults() {
-	{
-		val := ContestModelFreezeStatus("auto")
-		s.FreezeStatus = val
-	}
-	{
-		val := bool(true)
-		s.EnableDrafts.SetTo(val)
-	}
-	{
-		val := bool(true)
-		s.AllowClarifications.SetTo(val)
-	}
-	{
-		val := bool(true)
-		s.EnableUpsolving.SetTo(val)
-	}
-	{
-		val := bool(false)
-		s.EnableVirtualContests.SetTo(val)
-	}
-	{
-		val := ContestModelParticipationMode("open")
-		s.ParticipationMode.SetTo(val)
-	}
-	{
-		val := bool(false)
-		s.HideStatements.SetTo(val)
-	}
-}
-
-// setDefaults set default value of fields.
 func (s *InviteOrganizationMemberRequestModel) setDefaults() {
 	{
 		val := InviteOrganizationMemberRequestModelRole("member")

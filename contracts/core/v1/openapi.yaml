@@ -4448,6 +4448,13 @@ components:
       properties:
         problem:
           $ref: "#/components/schemas/ContestProblemModel"
+    ContestScope:
+      description: Lowest audience that may see a contest view.
+      type: string
+      enum:
+        - public
+        - participant
+        - moderator
     ContestModel:
       description: "Contest data."
       example:
@@ -4459,11 +4466,17 @@ components:
         title: Test contest
         description: Example description
         visibility: example
-        monitor_scope: example
-        submissions_list_scope: example
-        submissions_review_scope: example
-        submission_details_scope: example
+        monitor_scope: participant
+        submissions_list_scope: moderator
+        submissions_review_scope: moderator
+        submission_details_scope: moderator
         freeze_status: auto
+        participation_mode: open
+        hide_statements: false
+        allow_clarifications: true
+        enable_drafts: true
+        enable_upsolving: true
+        languages: []
         created_by: 123e4567-e89b-42d3-a456-426614174000
         created_at: '2026-01-01T12:00:00Z'
         updated_at: '2026-01-01T12:00:00Z'
@@ -4482,6 +4495,12 @@ components:
         - submissions_review_scope
         - submission_details_scope
         - freeze_status
+        - participation_mode
+        - hide_statements
+        - allow_clarifications
+        - enable_drafts
+        - enable_upsolving
+        - languages
         - created_by
         - created_at
         - updated_at
@@ -4511,17 +4530,17 @@ components:
         visibility:
           type: string
         monitor_scope:
-          type: string
+          $ref: "#/components/schemas/ContestScope"
         submissions_list_scope:
-          type: string
+          $ref: "#/components/schemas/ContestScope"
         submissions_review_scope:
-          type: string
+          $ref: "#/components/schemas/ContestScope"
         submission_details_scope:
-          type: string
+          $ref: "#/components/schemas/ContestScope"
         freeze_duration_minutes:
           type: integer
           format: int32
-          minimum: 0
+          minimum: 1
           nullable: true
           description: Freeze duration in minutes before contest end
         freeze_status:
@@ -4530,7 +4549,6 @@ components:
             - auto
             - frozen
             - unfrozen
-          default: auto
           description: Freeze mode status
         created_by:
           type: string
@@ -4553,26 +4571,18 @@ components:
           nullable: true
         enable_drafts:
           type: boolean
-          default: true
         allow_clarifications:
           type: boolean
-          default: true
         enable_upsolving:
           type: boolean
-          default: true
-        enable_virtual_contests:
-          type: boolean
-          default: false
         participation_mode:
           type: string
           enum:
             - open
             - by_request
             - invite_only
-          default: open
         hide_statements:
           type: boolean
-          default: false
         languages:
           description: Language configurations contestants may submit in; empty allows the whole catalog.
           type: array
@@ -4590,11 +4600,17 @@ components:
           title: Test contest
           description: Example description
           visibility: example
-          monitor_scope: example
-          submissions_list_scope: example
-          submissions_review_scope: example
-          submission_details_scope: example
+          monitor_scope: participant
+          submissions_list_scope: moderator
+          submissions_review_scope: moderator
+          submission_details_scope: moderator
           freeze_status: auto
+          participation_mode: open
+          hide_statements: false
+          allow_clarifications: true
+          enable_drafts: true
+          enable_upsolving: true
+          languages: []
           created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
@@ -4626,11 +4642,17 @@ components:
           title: Test contest
           description: Example description
           visibility: example
-          monitor_scope: example
-          submissions_list_scope: example
-          submissions_review_scope: example
-          submission_details_scope: example
+          monitor_scope: participant
+          submissions_list_scope: moderator
+          submissions_review_scope: moderator
+          submission_details_scope: moderator
           freeze_status: auto
+          participation_mode: open
+          hide_statements: false
+          allow_clarifications: true
+          enable_drafts: true
+          enable_upsolving: true
+          languages: []
           created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
@@ -4713,11 +4735,17 @@ components:
           title: Test contest
           description: Example description
           visibility: example
-          monitor_scope: example
-          submissions_list_scope: example
-          submissions_review_scope: example
-          submission_details_scope: example
+          monitor_scope: participant
+          submissions_list_scope: moderator
+          submissions_review_scope: moderator
+          submission_details_scope: moderator
           freeze_status: auto
+          participation_mode: open
+          hide_statements: false
+          allow_clarifications: true
+          enable_drafts: true
+          enable_upsolving: true
+          languages: []
           created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
@@ -4796,7 +4824,7 @@ components:
         visibility: private
         monitor_scope: participant
         submissions_list_scope: moderator
-        submissions_review_scope: admin
+        submissions_review_scope: moderator
         submission_details_scope: moderator
         freeze_duration_minutes: 1
         freeze_status: auto
@@ -4805,7 +4833,6 @@ components:
         enable_drafts: false
         allow_clarifications: false
         enable_upsolving: false
-        enable_virtual_contests: false
         participation_mode: open
         hide_statements: false
       type: object
@@ -4822,21 +4849,17 @@ components:
           type: string
           example: private
         monitor_scope:
-          type: string
-          example: participant
+          $ref: "#/components/schemas/ContestScope"
         submissions_list_scope:
-          type: string
-          example: moderator
+          $ref: "#/components/schemas/ContestScope"
         submissions_review_scope:
-          type: string
-          example: admin
+          $ref: "#/components/schemas/ContestScope"
         submission_details_scope:
-          type: string
-          example: moderator
+          $ref: "#/components/schemas/ContestScope"
         freeze_duration_minutes:
           type: integer
           format: int32
-          minimum: 0
+          minimum: 1
           nullable: true
           description: Freeze duration in minutes before contest end
         freeze_status:
@@ -4859,8 +4882,6 @@ components:
         allow_clarifications:
           type: boolean
         enable_upsolving:
-          type: boolean
-        enable_virtual_contests:
           type: boolean
         participation_mode:
           type: string

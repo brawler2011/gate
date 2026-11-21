@@ -89,7 +89,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			if tc.beforeStart {
 				start = time.Now().Add(time.Hour)
 			}
-			store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, Settings: map[string]interface{}{"hide_statements": tc.hidden}}, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
+			store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, Settings: contestsmodel.ContestSettings{HideStatements: tc.hidden}}, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
 			statements, compiler := &detailStatements{}, &detailCompiler{}
 			reader := NewDetailsReader(store, statements, detailPermissions{view: true, problems: tc.allowed, manage: tc.manage}, compiler, nil)
 			ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})

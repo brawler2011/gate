@@ -120,7 +120,7 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 }
 
 func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
-	store := contestEventsTestStore{Contest: contestsmodel.Contest{Settings: map[string]interface{}{"allow_clarifications": false}}}
+	store := contestEventsTestStore{Contest: contestsmodel.Contest{Settings: contestsmodel.ContestSettings{AllowClarifications: false}}}
 	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store}, nil, nil)
 	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})

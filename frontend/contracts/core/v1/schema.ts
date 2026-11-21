@@ -2401,6 +2401,11 @@ export interface components {
             problem: components["schemas"]["ContestProblemModel"];
         };
         /**
+         * @description Lowest audience that may see a contest view.
+         * @enum {string}
+         */
+        ContestScope: "public" | "participant" | "moderator";
+        /**
          * @description Contest data.
          * @example {
          *       "capabilities": [
@@ -2413,11 +2418,17 @@ export interface components {
          *       "title": "Test contest",
          *       "description": "Example description",
          *       "visibility": "example",
-         *       "monitor_scope": "example",
-         *       "submissions_list_scope": "example",
-         *       "submissions_review_scope": "example",
-         *       "submission_details_scope": "example",
+         *       "monitor_scope": "participant",
+         *       "submissions_list_scope": "moderator",
+         *       "submissions_review_scope": "moderator",
+         *       "submission_details_scope": "moderator",
          *       "freeze_status": "auto",
+         *       "participation_mode": "open",
+         *       "hide_statements": false,
+         *       "allow_clarifications": true,
+         *       "enable_drafts": true,
+         *       "enable_upsolving": true,
+         *       "languages": [],
          *       "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z"
@@ -2436,10 +2447,10 @@ export interface components {
             title: string;
             description: string;
             visibility: string;
-            monitor_scope: string;
-            submissions_list_scope: string;
-            submissions_review_scope: string;
-            submission_details_scope: string;
+            monitor_scope: components["schemas"]["ContestScope"];
+            submissions_list_scope: components["schemas"]["ContestScope"];
+            submissions_review_scope: components["schemas"]["ContestScope"];
+            submission_details_scope: components["schemas"]["ContestScope"];
             /**
              * Format: int32
              * @description Freeze duration in minutes before contest end
@@ -2447,7 +2458,6 @@ export interface components {
             freeze_duration_minutes?: number | null;
             /**
              * @description Freeze mode status
-             * @default auto
              * @enum {string}
              */
             freeze_status: "auto" | "frozen" | "unfrozen";
@@ -2462,23 +2472,14 @@ export interface components {
             start_time?: string | null;
             /** Format: date-time */
             end_time?: string | null;
-            /** @default true */
             enable_drafts: boolean;
-            /** @default true */
             allow_clarifications: boolean;
-            /** @default true */
             enable_upsolving: boolean;
-            /** @default false */
-            enable_virtual_contests: boolean;
-            /**
-             * @default open
-             * @enum {string}
-             */
+            /** @enum {string} */
             participation_mode: "open" | "by_request" | "invite_only";
-            /** @default false */
             hide_statements: boolean;
             /** @description Language configurations contestants may submit in; empty allows the whole catalog. */
-            languages?: string[];
+            languages: string[];
         };
         /**
          * @description Paginated collection of contests.
@@ -2495,11 +2496,17 @@ export interface components {
          *           "title": "Test contest",
          *           "description": "Example description",
          *           "visibility": "example",
-         *           "monitor_scope": "example",
-         *           "submissions_list_scope": "example",
-         *           "submissions_review_scope": "example",
-         *           "submission_details_scope": "example",
+         *           "monitor_scope": "participant",
+         *           "submissions_list_scope": "moderator",
+         *           "submissions_review_scope": "moderator",
+         *           "submission_details_scope": "moderator",
          *           "freeze_status": "auto",
+         *           "participation_mode": "open",
+         *           "hide_statements": false,
+         *           "allow_clarifications": true,
+         *           "enable_drafts": true,
+         *           "enable_upsolving": true,
+         *           "languages": [],
          *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *           "created_at": "2026-01-01T12:00:00Z",
          *           "updated_at": "2026-01-01T12:00:00Z"
@@ -2532,11 +2539,17 @@ export interface components {
          *           "title": "Test contest",
          *           "description": "Example description",
          *           "visibility": "example",
-         *           "monitor_scope": "example",
-         *           "submissions_list_scope": "example",
-         *           "submissions_review_scope": "example",
-         *           "submission_details_scope": "example",
+         *           "monitor_scope": "participant",
+         *           "submissions_list_scope": "moderator",
+         *           "submissions_review_scope": "moderator",
+         *           "submission_details_scope": "moderator",
          *           "freeze_status": "auto",
+         *           "participation_mode": "open",
+         *           "hide_statements": false,
+         *           "allow_clarifications": true,
+         *           "enable_drafts": true,
+         *           "enable_upsolving": true,
+         *           "languages": [],
          *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *           "created_at": "2026-01-01T12:00:00Z",
          *           "updated_at": "2026-01-01T12:00:00Z"
@@ -2606,11 +2619,17 @@ export interface components {
          *         "title": "Test contest",
          *         "description": "Example description",
          *         "visibility": "example",
-         *         "monitor_scope": "example",
-         *         "submissions_list_scope": "example",
-         *         "submissions_review_scope": "example",
-         *         "submission_details_scope": "example",
+         *         "monitor_scope": "participant",
+         *         "submissions_list_scope": "moderator",
+         *         "submissions_review_scope": "moderator",
+         *         "submission_details_scope": "moderator",
          *         "freeze_status": "auto",
+         *         "participation_mode": "open",
+         *         "hide_statements": false,
+         *         "allow_clarifications": true,
+         *         "enable_drafts": true,
+         *         "enable_upsolving": true,
+         *         "languages": [],
          *         "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *         "created_at": "2026-01-01T12:00:00Z",
          *         "updated_at": "2026-01-01T12:00:00Z"
@@ -2683,7 +2702,7 @@ export interface components {
          *       "visibility": "private",
          *       "monitor_scope": "participant",
          *       "submissions_list_scope": "moderator",
-         *       "submissions_review_scope": "admin",
+         *       "submissions_review_scope": "moderator",
          *       "submission_details_scope": "moderator",
          *       "freeze_duration_minutes": 1,
          *       "freeze_status": "auto",
@@ -2692,7 +2711,6 @@ export interface components {
          *       "enable_drafts": false,
          *       "allow_clarifications": false,
          *       "enable_upsolving": false,
-         *       "enable_virtual_contests": false,
          *       "participation_mode": "open",
          *       "hide_statements": false
          *     }
@@ -2705,14 +2723,10 @@ export interface components {
             description?: string;
             /** @example private */
             visibility?: string;
-            /** @example participant */
-            monitor_scope?: string;
-            /** @example moderator */
-            submissions_list_scope?: string;
-            /** @example admin */
-            submissions_review_scope?: string;
-            /** @example moderator */
-            submission_details_scope?: string;
+            monitor_scope?: components["schemas"]["ContestScope"];
+            submissions_list_scope?: components["schemas"]["ContestScope"];
+            submissions_review_scope?: components["schemas"]["ContestScope"];
+            submission_details_scope?: components["schemas"]["ContestScope"];
             /**
              * Format: int32
              * @description Freeze duration in minutes before contest end
@@ -2730,7 +2744,6 @@ export interface components {
             enable_drafts?: boolean;
             allow_clarifications?: boolean;
             enable_upsolving?: boolean;
-            enable_virtual_contests?: boolean;
             /** @enum {string} */
             participation_mode?: "open" | "by_request" | "invite_only";
             hide_statements?: boolean;
@@ -5301,6 +5314,7 @@ export type ListProblemsResponseModel = components['schemas']['ListProblemsRespo
 export type GetProblemResponseModel = components['schemas']['GetProblemResponseModel'];
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];
+export type ContestScope = components['schemas']['ContestScope'];
 export type ContestModel = components['schemas']['ContestModel'];
 export type ListContestsResponseModel = components['schemas']['ListContestsResponseModel'];
 export type ListUserContestsResponseModel = components['schemas']['ListUserContestsResponseModel'];

@@ -27,7 +27,6 @@ func (s *IntegrationTestSuite) TestListContests() {
 		Login:          "test-contest",
 		Description:    "A test contest",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
 
@@ -65,7 +64,6 @@ func (s *IntegrationTestSuite) TestListPublicContestsPagination() {
 			Login:          fmt.Sprintf("%s-%d", prefix, i),
 			Description:    "Public contest pagination test",
 			Visibility:     contestsmodel.ContestVisibilityPublic,
-			Settings:       make(map[string]interface{}),
 		})
 		s.Require().NoError(err)
 	}
@@ -104,7 +102,6 @@ func (s *IntegrationTestSuite) TestClarificationsLifecycle() {
 		Title:          "Clar Contest",
 		Login:          login,
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
 

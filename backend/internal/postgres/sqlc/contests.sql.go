@@ -76,9 +76,9 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 }
 
 const createContest = `-- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time, created_at, updated_at
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, organization_id, owner_id, visibility, title, login, description, participation_mode, monitor_scope, submissions_list_scope, submissions_review_scope, submission_details_scope, freeze_status, freeze_duration_minutes, freeze_started_at, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, languages, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -89,7 +89,6 @@ type CreateContestParams struct {
 	Title          string                          `json:"title"`
 	Login          string                          `json:"login"`
 	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
 	StartTime      *time.Time                      `json:"start_time"`
 	EndTime        *time.Time                      `json:"end_time"`
 }
@@ -103,7 +102,6 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		arg.Title,
 		arg.Login,
 		arg.Description,
-		arg.Settings,
 		arg.StartTime,
 		arg.EndTime,
 	)
@@ -116,7 +114,19 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.Title,
 		&i.Login,
 		&i.Description,
-		&i.Settings,
+		&i.ParticipationMode,
+		&i.MonitorScope,
+		&i.SubmissionsListScope,
+		&i.SubmissionsReviewScope,
+		&i.SubmissionDetailsScope,
+		&i.FreezeStatus,
+		&i.FreezeDurationMinutes,
+		&i.FreezeStartedAt,
+		&i.HideStatements,
+		&i.AllowClarifications,
+		&i.EnableDrafts,
+		&i.EnableUpsolving,
+		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
 		&i.CreatedAt,
@@ -214,27 +224,39 @@ func (q *Queries) GetAuthorizationContestMember(ctx context.Context, arg GetAuth
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1
 `
 
 type GetContestByIDRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
+	ID                     uuid.UUID                       `json:"id"`
+	OrganizationID         uuid.UUID                       `json:"organization_id"`
+	OwnerID                *uuid.UUID                      `json:"owner_id"`
+	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
+	Title                  string                          `json:"title"`
+	Login                  string                          `json:"login"`
+	Description            string                          `json:"description"`
+	ParticipationMode      contestsmodel.ParticipationMode `json:"participation_mode"`
+	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
+	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
+	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
+	SubmissionDetailsScope contestsmodel.ContestScope      `json:"submission_details_scope"`
+	FreezeStatus           contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationMinutes  *int32                          `json:"freeze_duration_minutes"`
+	FreezeStartedAt        *time.Time                      `json:"freeze_started_at"`
+	HideStatements         bool                            `json:"hide_statements"`
+	AllowClarifications    bool                            `json:"allow_clarifications"`
+	EnableDrafts           bool                            `json:"enable_drafts"`
+	EnableUpsolving        bool                            `json:"enable_upsolving"`
+	Languages              []string                        `json:"languages"`
+	StartTime              *time.Time                      `json:"start_time"`
+	EndTime                *time.Time                      `json:"end_time"`
+	CreatedAt              time.Time                       `json:"created_at"`
+	UpdatedAt              time.Time                       `json:"updated_at"`
+	OrgLogin               string                          `json:"org_login"`
+	OrgName                string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error) {
@@ -248,7 +270,19 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 		&i.Title,
 		&i.Login,
 		&i.Description,
-		&i.Settings,
+		&i.ParticipationMode,
+		&i.MonitorScope,
+		&i.SubmissionsListScope,
+		&i.SubmissionsReviewScope,
+		&i.SubmissionDetailsScope,
+		&i.FreezeStatus,
+		&i.FreezeDurationMinutes,
+		&i.FreezeStartedAt,
+		&i.HideStatements,
+		&i.AllowClarifications,
+		&i.EnableDrafts,
+		&i.EnableUpsolving,
+		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
 		&i.CreatedAt,
@@ -260,7 +294,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 }
 
 const getContestByLogin = `-- name: GetContestByLogin :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2)
@@ -272,20 +306,32 @@ type GetContestByLoginParams struct {
 }
 
 type GetContestByLoginRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
+	ID                     uuid.UUID                       `json:"id"`
+	OrganizationID         uuid.UUID                       `json:"organization_id"`
+	OwnerID                *uuid.UUID                      `json:"owner_id"`
+	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
+	Title                  string                          `json:"title"`
+	Login                  string                          `json:"login"`
+	Description            string                          `json:"description"`
+	ParticipationMode      contestsmodel.ParticipationMode `json:"participation_mode"`
+	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
+	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
+	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
+	SubmissionDetailsScope contestsmodel.ContestScope      `json:"submission_details_scope"`
+	FreezeStatus           contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationMinutes  *int32                          `json:"freeze_duration_minutes"`
+	FreezeStartedAt        *time.Time                      `json:"freeze_started_at"`
+	HideStatements         bool                            `json:"hide_statements"`
+	AllowClarifications    bool                            `json:"allow_clarifications"`
+	EnableDrafts           bool                            `json:"enable_drafts"`
+	EnableUpsolving        bool                            `json:"enable_upsolving"`
+	Languages              []string                        `json:"languages"`
+	StartTime              *time.Time                      `json:"start_time"`
+	EndTime                *time.Time                      `json:"end_time"`
+	CreatedAt              time.Time                       `json:"created_at"`
+	UpdatedAt              time.Time                       `json:"updated_at"`
+	OrgLogin               string                          `json:"org_login"`
+	OrgName                string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error) {
@@ -299,7 +345,19 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 		&i.Title,
 		&i.Login,
 		&i.Description,
-		&i.Settings,
+		&i.ParticipationMode,
+		&i.MonitorScope,
+		&i.SubmissionsListScope,
+		&i.SubmissionsReviewScope,
+		&i.SubmissionDetailsScope,
+		&i.FreezeStatus,
+		&i.FreezeDurationMinutes,
+		&i.FreezeStartedAt,
+		&i.HideStatements,
+		&i.AllowClarifications,
+		&i.EnableDrafts,
+		&i.EnableUpsolving,
+		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
 		&i.CreatedAt,
@@ -311,7 +369,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 }
 
 const getContestByOrgLoginAndContestLogin = `-- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2)
@@ -323,20 +381,32 @@ type GetContestByOrgLoginAndContestLoginParams struct {
 }
 
 type GetContestByOrgLoginAndContestLoginRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
+	ID                     uuid.UUID                       `json:"id"`
+	OrganizationID         uuid.UUID                       `json:"organization_id"`
+	OwnerID                *uuid.UUID                      `json:"owner_id"`
+	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
+	Title                  string                          `json:"title"`
+	Login                  string                          `json:"login"`
+	Description            string                          `json:"description"`
+	ParticipationMode      contestsmodel.ParticipationMode `json:"participation_mode"`
+	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
+	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
+	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
+	SubmissionDetailsScope contestsmodel.ContestScope      `json:"submission_details_scope"`
+	FreezeStatus           contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationMinutes  *int32                          `json:"freeze_duration_minutes"`
+	FreezeStartedAt        *time.Time                      `json:"freeze_started_at"`
+	HideStatements         bool                            `json:"hide_statements"`
+	AllowClarifications    bool                            `json:"allow_clarifications"`
+	EnableDrafts           bool                            `json:"enable_drafts"`
+	EnableUpsolving        bool                            `json:"enable_upsolving"`
+	Languages              []string                        `json:"languages"`
+	StartTime              *time.Time                      `json:"start_time"`
+	EndTime                *time.Time                      `json:"end_time"`
+	CreatedAt              time.Time                       `json:"created_at"`
+	UpdatedAt              time.Time                       `json:"updated_at"`
+	OrgLogin               string                          `json:"org_login"`
+	OrgName                string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error) {
@@ -350,7 +420,19 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 		&i.Title,
 		&i.Login,
 		&i.Description,
-		&i.Settings,
+		&i.ParticipationMode,
+		&i.MonitorScope,
+		&i.SubmissionsListScope,
+		&i.SubmissionsReviewScope,
+		&i.SubmissionDetailsScope,
+		&i.FreezeStatus,
+		&i.FreezeDurationMinutes,
+		&i.FreezeStartedAt,
+		&i.HideStatements,
+		&i.AllowClarifications,
+		&i.EnableDrafts,
+		&i.EnableUpsolving,
+		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
 		&i.CreatedAt,
@@ -877,7 +959,6 @@ WHERE ($2::uuid IS NULL OR $2::uuid = '00000000-0000-0000-0000-000000000000'::uu
 AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = $2::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
-    AND COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open') IN ('open', 'by_request', 'invite_only')
 AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS (
     SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
     OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
@@ -1016,25 +1097,48 @@ SET login = COALESCE($2, login),
     title = COALESCE($3, title),
     description = COALESCE($4, description),
     visibility = COALESCE($5, visibility),
-    settings = jsonb_strip_nulls(COALESCE(settings, '{}'::jsonb) || COALESCE($6::jsonb, '{}'::jsonb)),
-    start_time = CASE WHEN $7::boolean THEN $8::timestamptz ELSE start_time END,
-    end_time = CASE WHEN $9::boolean THEN $10::timestamptz ELSE end_time END,
-    owner_id = COALESCE($11, owner_id)
+    participation_mode = COALESCE($6, participation_mode),
+    monitor_scope = COALESCE($7, monitor_scope),
+    submissions_list_scope = COALESCE($8, submissions_list_scope),
+    submissions_review_scope = COALESCE($9, submissions_review_scope),
+    submission_details_scope = COALESCE($10, submission_details_scope),
+    freeze_status = COALESCE($11, freeze_status),
+    freeze_duration_minutes = CASE WHEN $12::boolean THEN $13::integer ELSE freeze_duration_minutes END,
+    hide_statements = COALESCE($14, hide_statements),
+    allow_clarifications = COALESCE($15, allow_clarifications),
+    enable_drafts = COALESCE($16, enable_drafts),
+    enable_upsolving = COALESCE($17, enable_upsolving),
+    languages = COALESCE($18::text[], languages),
+    start_time = CASE WHEN $19::boolean THEN $20::timestamptz ELSE start_time END,
+    end_time = CASE WHEN $21::boolean THEN $22::timestamptz ELSE end_time END,
+    owner_id = COALESCE($23, owner_id)
 WHERE id = $1
 `
 
 type UpdateContestParams struct {
-	ID           uuid.UUID                        `json:"id"`
-	Login        *string                          `json:"login"`
-	Title        *string                          `json:"title"`
-	Description  *string                          `json:"description"`
-	Visibility   *contestsmodel.ContestVisibility `json:"visibility"`
-	Settings     []byte                           `json:"settings"`
-	StartTimeSet bool                             `json:"start_time_set"`
-	StartTime    *time.Time                       `json:"start_time"`
-	EndTimeSet   bool                             `json:"end_time_set"`
-	EndTime      *time.Time                       `json:"end_time"`
-	OwnerID      *uuid.UUID                       `json:"owner_id"`
+	ID                     uuid.UUID                        `json:"id"`
+	Login                  *string                          `json:"login"`
+	Title                  *string                          `json:"title"`
+	Description            *string                          `json:"description"`
+	Visibility             *contestsmodel.ContestVisibility `json:"visibility"`
+	ParticipationMode      *contestsmodel.ParticipationMode `json:"participation_mode"`
+	MonitorScope           *contestsmodel.ContestScope      `json:"monitor_scope"`
+	SubmissionsListScope   *contestsmodel.ContestScope      `json:"submissions_list_scope"`
+	SubmissionsReviewScope *contestsmodel.ContestScope      `json:"submissions_review_scope"`
+	SubmissionDetailsScope *contestsmodel.ContestScope      `json:"submission_details_scope"`
+	FreezeStatus           *contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationSet      bool                             `json:"freeze_duration_set"`
+	FreezeDurationMinutes  *int32                           `json:"freeze_duration_minutes"`
+	HideStatements         *bool                            `json:"hide_statements"`
+	AllowClarifications    *bool                            `json:"allow_clarifications"`
+	EnableDrafts           *bool                            `json:"enable_drafts"`
+	EnableUpsolving        *bool                            `json:"enable_upsolving"`
+	Languages              []string                         `json:"languages"`
+	StartTimeSet           bool                             `json:"start_time_set"`
+	StartTime              *time.Time                       `json:"start_time"`
+	EndTimeSet             bool                             `json:"end_time_set"`
+	EndTime                *time.Time                       `json:"end_time"`
+	OwnerID                *uuid.UUID                       `json:"owner_id"`
 }
 
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
@@ -1044,7 +1148,19 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.Title,
 		arg.Description,
 		arg.Visibility,
-		arg.Settings,
+		arg.ParticipationMode,
+		arg.MonitorScope,
+		arg.SubmissionsListScope,
+		arg.SubmissionsReviewScope,
+		arg.SubmissionDetailsScope,
+		arg.FreezeStatus,
+		arg.FreezeDurationSet,
+		arg.FreezeDurationMinutes,
+		arg.HideStatements,
+		arg.AllowClarifications,
+		arg.EnableDrafts,
+		arg.EnableUpsolving,
+		arg.Languages,
 		arg.StartTimeSet,
 		arg.StartTime,
 		arg.EndTimeSet,

@@ -34,7 +34,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 	if err != nil {
 		return nil, err
 	}
-	if !contest.TypedSettings().AllowsLanguage(params.Language) {
+	if !contest.Settings.AllowsLanguage(params.Language) {
 		return nil, pkg.Invalid(pkg.ErrLanguageNotAllowed, "language configuration is not allowed in this contest", map[string]any{"id": params.Language})
 	}
 

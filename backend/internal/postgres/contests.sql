@@ -1,7 +1,7 @@
 
 -- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: GetContestByID :one
@@ -32,7 +32,18 @@ SET login = COALESCE(sqlc.narg('login'), login),
     title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    settings = jsonb_strip_nulls(COALESCE(settings, '{}'::jsonb) || COALESCE(sqlc.narg('settings')::jsonb, '{}'::jsonb)),
+    participation_mode = COALESCE(sqlc.narg('participation_mode'), participation_mode),
+    monitor_scope = COALESCE(sqlc.narg('monitor_scope'), monitor_scope),
+    submissions_list_scope = COALESCE(sqlc.narg('submissions_list_scope'), submissions_list_scope),
+    submissions_review_scope = COALESCE(sqlc.narg('submissions_review_scope'), submissions_review_scope),
+    submission_details_scope = COALESCE(sqlc.narg('submission_details_scope'), submission_details_scope),
+    freeze_status = COALESCE(sqlc.narg('freeze_status'), freeze_status),
+    freeze_duration_minutes = CASE WHEN sqlc.arg('freeze_duration_set')::boolean THEN sqlc.narg('freeze_duration_minutes')::integer ELSE freeze_duration_minutes END,
+    hide_statements = COALESCE(sqlc.narg('hide_statements'), hide_statements),
+    allow_clarifications = COALESCE(sqlc.narg('allow_clarifications'), allow_clarifications),
+    enable_drafts = COALESCE(sqlc.narg('enable_drafts'), enable_drafts),
+    enable_upsolving = COALESCE(sqlc.narg('enable_upsolving'), enable_upsolving),
+    languages = COALESCE(sqlc.narg('languages')::text[], languages),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END,
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
@@ -159,7 +170,6 @@ WHERE (sqlc.narg('viewer_id')::uuid IS NULL OR sqlc.narg('viewer_id')::uuid = '0
 AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
-    AND COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open') IN ('open', 'by_request', 'invite_only')
 AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS (
     SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
     OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))

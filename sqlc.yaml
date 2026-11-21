@@ -91,6 +91,42 @@ sql:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"
               package: "contestsmodel"
               type: "ContestVisibility"
+          - db_type: "contest_scope"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ContestScope"
+          - db_type: "contest_scope"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ContestScope"
+              pointer: true
+          - db_type: "participation_mode"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ParticipationMode"
+          - db_type: "participation_mode"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ParticipationMode"
+              pointer: true
+          - db_type: "freeze_status"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "FreezeStatus"
+          - db_type: "freeze_status"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "FreezeStatus"
+              pointer: true
           - db_type: "contest_role"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"

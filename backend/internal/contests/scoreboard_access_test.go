@@ -74,7 +74,7 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 			if tc.guest {
 				user = accessmodel.Guest
 			}
-			repo := &scoreboardAccessRepo{contest: contestsmodel.Contest{ID: uuid.New(), Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}}
+			repo := &scoreboardAccessRepo{contest: contestsmodel.Contest{ID: uuid.New(), Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusFrozen}}}
 			if tc.future {
 				start := time.Now().Add(time.Hour)
 				repo.contest.StartTime = &start

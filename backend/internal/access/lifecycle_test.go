@@ -14,23 +14,20 @@ func TestContestLifecycleBoundaries(t *testing.T) {
 	in, _, _, contest := policyFixture()
 	start := in.Now
 	end := start.Add(time.Hour)
-	freeze := end.Add(-15 * time.Minute)
 	contest.StartTime = &start
 	contest.EndTime = &end
 	contest.DirectRole = m.ContestParticipant
-	contest.Settings = map[string]interface{}{"monitor_scope": "public", "freeze_duration_minutes": 15}
+	contest.MonitorScope = "public"
 	for _, tc := range []struct {
-		name                       string
-		now                        time.Time
-		statements, submit, frozen bool
+		name               string
+		now                time.Time
+		statements, submit bool
 	}{
-		{"before start", start.Add(-time.Nanosecond), false, false, false},
-		{"at start", start, true, true, false},
-		{"before freeze", freeze.Add(-time.Nanosecond), true, true, false},
-		{"at freeze", freeze, true, true, true},
-		{"before end", end.Add(-time.Nanosecond), true, true, true},
-		{"at end", end, true, false, false},
-		{"after end", end.Add(time.Nanosecond), true, false, false},
+		{"before start", start.Add(-time.Nanosecond), false, false},
+		{"at start", start, true, true},
+		{"before end", end.Add(-time.Nanosecond), true, true},
+		{"at end", end, true, false},
+		{"after end", end.Add(time.Nanosecond), true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			in.Now = tc.now
@@ -38,8 +35,6 @@ func TestContestLifecycleBoundaries(t *testing.T) {
 			require.NoError(t, ApplyContestLifecycle(in, &c))
 			matrixResult(t, tc.statements, RequireContest(in, c, m.ActionGetContestProblem))
 			matrixResult(t, tc.submit, RequireContest(in, c, m.ActionCreateSubmission))
-			domain := ContestFromFacts(c)
-			require.Equal(t, tc.frozen, domain.IsFrozenAt(in.Now))
 		})
 	}
 	in.Now = start.Add(-time.Nanosecond)
@@ -67,14 +62,4 @@ func TestContestCompositePolicyIsStrictAcrossOrganizations(t *testing.T) {
 	destination.OwnerID = uuid.Nil
 	destination.DirectRole = m.ContestParticipant
 	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.ErrForbidden)
-}
-
-func TestContestSettingsFailClosed(t *testing.T) {
-	for _, setting := range []string{"monitor_scope", "submissions_list_scope", "submissions_review_scope", "submission_details_scope", "hide_statements", "freeze_status", "freeze_duration_minutes"} {
-		t.Run(setting, func(t *testing.T) {
-			in, _, _, c := policyFixture()
-			c.Settings = map[string]interface{}{setting: "unknown"}
-			require.ErrorIs(t, ApplyContestLifecycle(in, &c), pkg.ErrForbidden)
-		})
-	}
 }

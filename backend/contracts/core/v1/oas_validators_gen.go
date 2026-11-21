@@ -235,11 +235,55 @@ func (s *ContestModel) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.MonitorScope.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "monitor_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.SubmissionsListScope.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submissions_list_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.SubmissionsReviewScope.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submissions_review_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.SubmissionDetailsScope.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submission_details_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.FreezeDurationMinutes.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
 					MinSet:        true,
-					Min:           0,
+					Min:           1,
 					MaxSet:        false,
 					Max:           0,
 					MinExclusive:  false,
@@ -274,20 +318,24 @@ func (s *ContestModel) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.ParticipationMode.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
+		if err := s.ParticipationMode.Validate(); err != nil {
+			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "participation_mode",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Languages == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "languages",
 			Error: err,
 		})
 	}
@@ -409,6 +457,19 @@ func (s ContestRoleQuery) Validate() error {
 	case "moderator":
 		return nil
 	case "participant":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ContestScope) Validate() error {
+	switch s {
+	case "public":
+		return nil
+	case "participant":
+		return nil
+	case "moderator":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -3877,11 +3938,83 @@ func (s *UpdateContestRequestModel) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.MonitorScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "monitor_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SubmissionsListScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submissions_list_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SubmissionsReviewScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submissions_review_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SubmissionDetailsScope.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "submission_details_scope",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.FreezeDurationMinutes.Get(); ok {
 			if err := func() error {
 				if err := (validate.Int{
 					MinSet:        true,
-					Min:           0,
+					Min:           1,
 					MaxSet:        false,
 					Max:           0,
 					MinExclusive:  false,

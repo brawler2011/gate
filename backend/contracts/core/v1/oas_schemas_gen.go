@@ -1361,34 +1361,33 @@ func (s *ContestMemberModelRole) UnmarshalText(data []byte) error {
 // Contest data.
 // Ref: #/components/schemas/ContestModel
 type ContestModel struct {
-	Capabilities           []string  `json:"capabilities"`
-	ID                     uuid.UUID `json:"id"`
-	Login                  string    `json:"login"`
-	OrganizationID         uuid.UUID `json:"organization_id"`
-	OrganizationLogin      string    `json:"organization_login"`
-	Title                  string    `json:"title"`
-	Description            string    `json:"description"`
-	Visibility             string    `json:"visibility"`
-	MonitorScope           string    `json:"monitor_scope"`
-	SubmissionsListScope   string    `json:"submissions_list_scope"`
-	SubmissionsReviewScope string    `json:"submissions_review_scope"`
-	SubmissionDetailsScope string    `json:"submission_details_scope"`
+	Capabilities           []string     `json:"capabilities"`
+	ID                     uuid.UUID    `json:"id"`
+	Login                  string       `json:"login"`
+	OrganizationID         uuid.UUID    `json:"organization_id"`
+	OrganizationLogin      string       `json:"organization_login"`
+	Title                  string       `json:"title"`
+	Description            string       `json:"description"`
+	Visibility             string       `json:"visibility"`
+	MonitorScope           ContestScope `json:"monitor_scope"`
+	SubmissionsListScope   ContestScope `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestScope `json:"submissions_review_scope"`
+	SubmissionDetailsScope ContestScope `json:"submission_details_scope"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status.
-	FreezeStatus          ContestModelFreezeStatus         `json:"freeze_status"`
-	CreatedBy             uuid.UUID                        `json:"created_by"`
-	Owner                 OptUserModel                     `json:"owner"`
-	CreatedAt             time.Time                        `json:"created_at"`
-	UpdatedAt             time.Time                        `json:"updated_at"`
-	StartTime             OptNilDateTime                   `json:"start_time"`
-	EndTime               OptNilDateTime                   `json:"end_time"`
-	EnableDrafts          OptBool                          `json:"enable_drafts"`
-	AllowClarifications   OptBool                          `json:"allow_clarifications"`
-	EnableUpsolving       OptBool                          `json:"enable_upsolving"`
-	EnableVirtualContests OptBool                          `json:"enable_virtual_contests"`
-	ParticipationMode     OptContestModelParticipationMode `json:"participation_mode"`
-	HideStatements        OptBool                          `json:"hide_statements"`
+	FreezeStatus        ContestModelFreezeStatus      `json:"freeze_status"`
+	CreatedBy           uuid.UUID                     `json:"created_by"`
+	Owner               OptUserModel                  `json:"owner"`
+	CreatedAt           time.Time                     `json:"created_at"`
+	UpdatedAt           time.Time                     `json:"updated_at"`
+	StartTime           OptNilDateTime                `json:"start_time"`
+	EndTime             OptNilDateTime                `json:"end_time"`
+	EnableDrafts        bool                          `json:"enable_drafts"`
+	AllowClarifications bool                          `json:"allow_clarifications"`
+	EnableUpsolving     bool                          `json:"enable_upsolving"`
+	ParticipationMode   ContestModelParticipationMode `json:"participation_mode"`
+	HideStatements      bool                          `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog.
 	Languages []string `json:"languages"`
 }
@@ -1434,22 +1433,22 @@ func (s *ContestModel) GetVisibility() string {
 }
 
 // GetMonitorScope returns the value of MonitorScope.
-func (s *ContestModel) GetMonitorScope() string {
+func (s *ContestModel) GetMonitorScope() ContestScope {
 	return s.MonitorScope
 }
 
 // GetSubmissionsListScope returns the value of SubmissionsListScope.
-func (s *ContestModel) GetSubmissionsListScope() string {
+func (s *ContestModel) GetSubmissionsListScope() ContestScope {
 	return s.SubmissionsListScope
 }
 
 // GetSubmissionsReviewScope returns the value of SubmissionsReviewScope.
-func (s *ContestModel) GetSubmissionsReviewScope() string {
+func (s *ContestModel) GetSubmissionsReviewScope() ContestScope {
 	return s.SubmissionsReviewScope
 }
 
 // GetSubmissionDetailsScope returns the value of SubmissionDetailsScope.
-func (s *ContestModel) GetSubmissionDetailsScope() string {
+func (s *ContestModel) GetSubmissionDetailsScope() ContestScope {
 	return s.SubmissionDetailsScope
 }
 
@@ -1494,32 +1493,27 @@ func (s *ContestModel) GetEndTime() OptNilDateTime {
 }
 
 // GetEnableDrafts returns the value of EnableDrafts.
-func (s *ContestModel) GetEnableDrafts() OptBool {
+func (s *ContestModel) GetEnableDrafts() bool {
 	return s.EnableDrafts
 }
 
 // GetAllowClarifications returns the value of AllowClarifications.
-func (s *ContestModel) GetAllowClarifications() OptBool {
+func (s *ContestModel) GetAllowClarifications() bool {
 	return s.AllowClarifications
 }
 
 // GetEnableUpsolving returns the value of EnableUpsolving.
-func (s *ContestModel) GetEnableUpsolving() OptBool {
+func (s *ContestModel) GetEnableUpsolving() bool {
 	return s.EnableUpsolving
 }
 
-// GetEnableVirtualContests returns the value of EnableVirtualContests.
-func (s *ContestModel) GetEnableVirtualContests() OptBool {
-	return s.EnableVirtualContests
-}
-
 // GetParticipationMode returns the value of ParticipationMode.
-func (s *ContestModel) GetParticipationMode() OptContestModelParticipationMode {
+func (s *ContestModel) GetParticipationMode() ContestModelParticipationMode {
 	return s.ParticipationMode
 }
 
 // GetHideStatements returns the value of HideStatements.
-func (s *ContestModel) GetHideStatements() OptBool {
+func (s *ContestModel) GetHideStatements() bool {
 	return s.HideStatements
 }
 
@@ -1569,22 +1563,22 @@ func (s *ContestModel) SetVisibility(val string) {
 }
 
 // SetMonitorScope sets the value of MonitorScope.
-func (s *ContestModel) SetMonitorScope(val string) {
+func (s *ContestModel) SetMonitorScope(val ContestScope) {
 	s.MonitorScope = val
 }
 
 // SetSubmissionsListScope sets the value of SubmissionsListScope.
-func (s *ContestModel) SetSubmissionsListScope(val string) {
+func (s *ContestModel) SetSubmissionsListScope(val ContestScope) {
 	s.SubmissionsListScope = val
 }
 
 // SetSubmissionsReviewScope sets the value of SubmissionsReviewScope.
-func (s *ContestModel) SetSubmissionsReviewScope(val string) {
+func (s *ContestModel) SetSubmissionsReviewScope(val ContestScope) {
 	s.SubmissionsReviewScope = val
 }
 
 // SetSubmissionDetailsScope sets the value of SubmissionDetailsScope.
-func (s *ContestModel) SetSubmissionDetailsScope(val string) {
+func (s *ContestModel) SetSubmissionDetailsScope(val ContestScope) {
 	s.SubmissionDetailsScope = val
 }
 
@@ -1629,32 +1623,27 @@ func (s *ContestModel) SetEndTime(val OptNilDateTime) {
 }
 
 // SetEnableDrafts sets the value of EnableDrafts.
-func (s *ContestModel) SetEnableDrafts(val OptBool) {
+func (s *ContestModel) SetEnableDrafts(val bool) {
 	s.EnableDrafts = val
 }
 
 // SetAllowClarifications sets the value of AllowClarifications.
-func (s *ContestModel) SetAllowClarifications(val OptBool) {
+func (s *ContestModel) SetAllowClarifications(val bool) {
 	s.AllowClarifications = val
 }
 
 // SetEnableUpsolving sets the value of EnableUpsolving.
-func (s *ContestModel) SetEnableUpsolving(val OptBool) {
+func (s *ContestModel) SetEnableUpsolving(val bool) {
 	s.EnableUpsolving = val
 }
 
-// SetEnableVirtualContests sets the value of EnableVirtualContests.
-func (s *ContestModel) SetEnableVirtualContests(val OptBool) {
-	s.EnableVirtualContests = val
-}
-
 // SetParticipationMode sets the value of ParticipationMode.
-func (s *ContestModel) SetParticipationMode(val OptContestModelParticipationMode) {
+func (s *ContestModel) SetParticipationMode(val ContestModelParticipationMode) {
 	s.ParticipationMode = val
 }
 
 // SetHideStatements sets the value of HideStatements.
-func (s *ContestModel) SetHideStatements(val OptBool) {
+func (s *ContestModel) SetHideStatements(val bool) {
 	s.HideStatements = val
 }
 
@@ -2131,6 +2120,56 @@ func (s *ContestRoleQuery) UnmarshalText(data []byte) error {
 		return nil
 	case ContestRoleQueryParticipant:
 		*s = ContestRoleQueryParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Lowest audience that may see a contest view.
+// Ref: #/components/schemas/ContestScope
+type ContestScope string
+
+const (
+	ContestScopePublic      ContestScope = "public"
+	ContestScopeParticipant ContestScope = "participant"
+	ContestScopeModerator   ContestScope = "moderator"
+)
+
+// AllValues returns all ContestScope values.
+func (ContestScope) AllValues() []ContestScope {
+	return []ContestScope{
+		ContestScopePublic,
+		ContestScopeParticipant,
+		ContestScopeModerator,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestScope) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestScopePublic:
+		return []byte(s), nil
+	case ContestScopeParticipant:
+		return []byte(s), nil
+	case ContestScopeModerator:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestScope) UnmarshalText(data []byte) error {
+	switch ContestScope(data) {
+	case ContestScopePublic:
+		*s = ContestScopePublic
+		return nil
+	case ContestScopeParticipant:
+		*s = ContestScopeParticipant
+		return nil
+	case ContestScopeModerator:
+		*s = ContestScopeModerator
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -5768,38 +5807,38 @@ func (o OptContestJoinRequestModel) Or(d ContestJoinRequestModel) ContestJoinReq
 	return d
 }
 
-// NewOptContestModelParticipationMode returns new OptContestModelParticipationMode with value set to v.
-func NewOptContestModelParticipationMode(v ContestModelParticipationMode) OptContestModelParticipationMode {
-	return OptContestModelParticipationMode{
+// NewOptContestScope returns new OptContestScope with value set to v.
+func NewOptContestScope(v ContestScope) OptContestScope {
+	return OptContestScope{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptContestModelParticipationMode is optional ContestModelParticipationMode.
-type OptContestModelParticipationMode struct {
-	Value ContestModelParticipationMode
+// OptContestScope is optional ContestScope.
+type OptContestScope struct {
+	Value ContestScope
 	Set   bool
 }
 
-// IsSet returns true if OptContestModelParticipationMode was set.
-func (o OptContestModelParticipationMode) IsSet() bool { return o.Set }
+// IsSet returns true if OptContestScope was set.
+func (o OptContestScope) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptContestModelParticipationMode) Reset() {
-	var v ContestModelParticipationMode
+func (o *OptContestScope) Reset() {
+	var v ContestScope
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptContestModelParticipationMode) SetTo(v ContestModelParticipationMode) {
+func (o *OptContestScope) SetTo(v ContestScope) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptContestModelParticipationMode) Get() (v ContestModelParticipationMode, ok bool) {
+func (o OptContestScope) Get() (v ContestScope, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -5807,7 +5846,7 @@ func (o OptContestModelParticipationMode) Get() (v ContestModelParticipationMode
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptContestModelParticipationMode) Or(d ContestModelParticipationMode) ContestModelParticipationMode {
+func (o OptContestScope) Or(d ContestScope) ContestScope {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12571,26 +12610,25 @@ type UpdateContestOK struct{}
 // Fields for the update contest request.
 // Ref: #/components/schemas/UpdateContestRequestModel
 type UpdateContestRequestModel struct {
-	Login                  OptString `json:"login"`
-	Title                  OptString `json:"title"`
-	Description            OptString `json:"description"`
-	Visibility             OptString `json:"visibility"`
-	MonitorScope           OptString `json:"monitor_scope"`
-	SubmissionsListScope   OptString `json:"submissions_list_scope"`
-	SubmissionsReviewScope OptString `json:"submissions_review_scope"`
-	SubmissionDetailsScope OptString `json:"submission_details_scope"`
+	Login                  OptString       `json:"login"`
+	Title                  OptString       `json:"title"`
+	Description            OptString       `json:"description"`
+	Visibility             OptString       `json:"visibility"`
+	MonitorScope           OptContestScope `json:"monitor_scope"`
+	SubmissionsListScope   OptContestScope `json:"submissions_list_scope"`
+	SubmissionsReviewScope OptContestScope `json:"submissions_review_scope"`
+	SubmissionDetailsScope OptContestScope `json:"submission_details_scope"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status; omitted preserves the current mode.
-	FreezeStatus          OptUpdateContestRequestModelFreezeStatus      `json:"freeze_status"`
-	StartTime             OptNilDateTime                                `json:"start_time"`
-	EndTime               OptNilDateTime                                `json:"end_time"`
-	EnableDrafts          OptBool                                       `json:"enable_drafts"`
-	AllowClarifications   OptBool                                       `json:"allow_clarifications"`
-	EnableUpsolving       OptBool                                       `json:"enable_upsolving"`
-	EnableVirtualContests OptBool                                       `json:"enable_virtual_contests"`
-	ParticipationMode     OptUpdateContestRequestModelParticipationMode `json:"participation_mode"`
-	HideStatements        OptBool                                       `json:"hide_statements"`
+	FreezeStatus        OptUpdateContestRequestModelFreezeStatus      `json:"freeze_status"`
+	StartTime           OptNilDateTime                                `json:"start_time"`
+	EndTime             OptNilDateTime                                `json:"end_time"`
+	EnableDrafts        OptBool                                       `json:"enable_drafts"`
+	AllowClarifications OptBool                                       `json:"allow_clarifications"`
+	EnableUpsolving     OptBool                                       `json:"enable_upsolving"`
+	ParticipationMode   OptUpdateContestRequestModelParticipationMode `json:"participation_mode"`
+	HideStatements      OptBool                                       `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves
 	// the current list.
 	Languages []string `json:"languages"`
@@ -12617,22 +12655,22 @@ func (s *UpdateContestRequestModel) GetVisibility() OptString {
 }
 
 // GetMonitorScope returns the value of MonitorScope.
-func (s *UpdateContestRequestModel) GetMonitorScope() OptString {
+func (s *UpdateContestRequestModel) GetMonitorScope() OptContestScope {
 	return s.MonitorScope
 }
 
 // GetSubmissionsListScope returns the value of SubmissionsListScope.
-func (s *UpdateContestRequestModel) GetSubmissionsListScope() OptString {
+func (s *UpdateContestRequestModel) GetSubmissionsListScope() OptContestScope {
 	return s.SubmissionsListScope
 }
 
 // GetSubmissionsReviewScope returns the value of SubmissionsReviewScope.
-func (s *UpdateContestRequestModel) GetSubmissionsReviewScope() OptString {
+func (s *UpdateContestRequestModel) GetSubmissionsReviewScope() OptContestScope {
 	return s.SubmissionsReviewScope
 }
 
 // GetSubmissionDetailsScope returns the value of SubmissionDetailsScope.
-func (s *UpdateContestRequestModel) GetSubmissionDetailsScope() OptString {
+func (s *UpdateContestRequestModel) GetSubmissionDetailsScope() OptContestScope {
 	return s.SubmissionDetailsScope
 }
 
@@ -12671,11 +12709,6 @@ func (s *UpdateContestRequestModel) GetEnableUpsolving() OptBool {
 	return s.EnableUpsolving
 }
 
-// GetEnableVirtualContests returns the value of EnableVirtualContests.
-func (s *UpdateContestRequestModel) GetEnableVirtualContests() OptBool {
-	return s.EnableVirtualContests
-}
-
 // GetParticipationMode returns the value of ParticipationMode.
 func (s *UpdateContestRequestModel) GetParticipationMode() OptUpdateContestRequestModelParticipationMode {
 	return s.ParticipationMode
@@ -12712,22 +12745,22 @@ func (s *UpdateContestRequestModel) SetVisibility(val OptString) {
 }
 
 // SetMonitorScope sets the value of MonitorScope.
-func (s *UpdateContestRequestModel) SetMonitorScope(val OptString) {
+func (s *UpdateContestRequestModel) SetMonitorScope(val OptContestScope) {
 	s.MonitorScope = val
 }
 
 // SetSubmissionsListScope sets the value of SubmissionsListScope.
-func (s *UpdateContestRequestModel) SetSubmissionsListScope(val OptString) {
+func (s *UpdateContestRequestModel) SetSubmissionsListScope(val OptContestScope) {
 	s.SubmissionsListScope = val
 }
 
 // SetSubmissionsReviewScope sets the value of SubmissionsReviewScope.
-func (s *UpdateContestRequestModel) SetSubmissionsReviewScope(val OptString) {
+func (s *UpdateContestRequestModel) SetSubmissionsReviewScope(val OptContestScope) {
 	s.SubmissionsReviewScope = val
 }
 
 // SetSubmissionDetailsScope sets the value of SubmissionDetailsScope.
-func (s *UpdateContestRequestModel) SetSubmissionDetailsScope(val OptString) {
+func (s *UpdateContestRequestModel) SetSubmissionDetailsScope(val OptContestScope) {
 	s.SubmissionDetailsScope = val
 }
 
@@ -12764,11 +12797,6 @@ func (s *UpdateContestRequestModel) SetAllowClarifications(val OptBool) {
 // SetEnableUpsolving sets the value of EnableUpsolving.
 func (s *UpdateContestRequestModel) SetEnableUpsolving(val OptBool) {
 	s.EnableUpsolving = val
-}
-
-// SetEnableVirtualContests sets the value of EnableVirtualContests.
-func (s *UpdateContestRequestModel) SetEnableVirtualContests(val OptBool) {
-	s.EnableVirtualContests = val
 }
 
 // SetParticipationMode sets the value of ParticipationMode.

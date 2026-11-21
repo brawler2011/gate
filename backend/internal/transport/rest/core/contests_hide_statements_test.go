@@ -63,9 +63,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		OrganizationLogin: "test-org",
 		StartTime:         &startTime,
 		EndTime:           &endTime,
-		Settings: map[string]interface{}{
-			"hide_statements": true,
-		},
+		Settings:          contestsmodel.ContestSettings{HideStatements: true},
 	}
 
 	contestProblem := contestsmodel.ContestProblem{

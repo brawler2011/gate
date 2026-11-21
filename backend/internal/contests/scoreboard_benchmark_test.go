@@ -46,7 +46,7 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 					start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 					end := start.Add(2 * time.Hour)
 					r := &benchmarkScoreboardRepo{scoreboardRepo: &scoreboardRepo{
-						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusAuto, "freeze_duration_minutes": 60}},
+						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60))}},
 						users:   map[uuid.UUID]string{},
 					}}
 					for p := 0; p < 10; p++ {

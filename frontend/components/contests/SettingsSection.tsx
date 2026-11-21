@@ -20,9 +20,9 @@ interface SettingsSectionProps {
 }
 
 const SCOPE_OPTIONS = [
+  {label: "Все", value: "public", color: "green"},
   {label: "Участник", value: "participant", color: "gray"},
   {label: "Модератор", value: "moderator", color: "yellow"},
-  {label: "Создатель", value: "owner", color: "red"},
 ];
 
 const VISIBILITY_OPTIONS = [
@@ -129,10 +129,10 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     title: string;
     description: string;
     visibility: string;
-    monitor_scope: string;
-    submissions_list_scope: string;
-    submissions_review_scope: string;
-    submission_details_scope: string;
+    monitor_scope: corev1.ContestScope;
+    submissions_list_scope: corev1.ContestScope;
+    submissions_review_scope: corev1.ContestScope;
+    submission_details_scope: corev1.ContestScope;
     start_time: string;
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
@@ -140,7 +140,6 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     participation_mode: corev1.UpdateContestRequestModel["participation_mode"];
     enable_drafts: boolean;
     enable_upsolving: boolean;
-    enable_virtual_contests: boolean;
     hide_statements: boolean;
     languages: string[];
   }>({
@@ -149,16 +148,15 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       title: contest.title,
       description: contest.description,
       visibility: contest.visibility,
-      participation_mode: (contest.participation_mode as corev1.UpdateContestRequestModel["participation_mode"]) || "open",
-      enable_drafts: contest.enable_drafts ?? true,
-      enable_upsolving: contest.enable_upsolving ?? true,
-      enable_virtual_contests: contest.enable_virtual_contests ?? false,
-      hide_statements: contest.hide_statements ?? false,
-      languages: contest.languages ?? [],
+      participation_mode: contest.participation_mode,
+      enable_drafts: contest.enable_drafts,
+      enable_upsolving: contest.enable_upsolving,
+      hide_statements: contest.hide_statements,
+      languages: contest.languages,
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
-      submission_details_scope: contest.submission_details_scope || "moderator",
+      submission_details_scope: contest.submission_details_scope,
       start_time: toLocalDatetimeString(contest.start_time),
       end_time: toLocalDatetimeString(contest.end_time),
       freeze_duration_minutes: contest.freeze_duration_minutes ?? "",
@@ -182,8 +180,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
         return null;
       },
       freeze_duration_minutes: (value) =>
-        value !== "" && value !== undefined && value !== null && Number(value) < 0
-          ? "Длительность заморозки не может быть отрицательной"
+        value !== "" && value !== undefined && value !== null && Number(value) < 1
+          ? "Длительность заморозки должна быть не меньше минуты"
           : null,
     },
   });
@@ -208,7 +206,6 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       participation_mode: values.participation_mode as corev1.UpdateContestRequestModel["participation_mode"],
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
-      enable_virtual_contests: values.enable_virtual_contests,
       hide_statements: values.hide_statements,
     };
     const {error} = await api.PATCH(
@@ -304,7 +301,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <NumberInput
             label="Заморозка монитора (минут до окончания)"
-            min={0}
+            min={1}
             clampBehavior="strict"
             {...form.getInputProps("freeze_duration_minutes")}
           />
@@ -359,14 +356,6 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
           </Group>
 
           <Group justify="space-between">
-            <Text size="sm">Разрешить виртуальное участие</Text>
-            <Switch
-              checked={form.values.enable_virtual_contests}
-              onChange={(event) => form.setFieldValue("enable_virtual_contests", event.currentTarget.checked)}
-            />
-          </Group>
-
-          <Group justify="space-between">
             <Stack gap={2}>
               <Text size="sm">Скрыть условия задач</Text>
               <Text size="xs" c="dimmed">
@@ -403,28 +392,28 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
           <CustomSelect
             label="Доступ к монитору"
             value={form.values.monitor_scope}
-            onChange={(value) => form.setFieldValue('monitor_scope', value)}
+            onChange={(value) => form.setFieldValue('monitor_scope', value as corev1.ContestScope)}
             options={SCOPE_OPTIONS}
           />
 
           <CustomSelect
             label="Просмотр списка посылок"
             value={form.values.submissions_list_scope}
-            onChange={(value) => form.setFieldValue('submissions_list_scope', value)}
+            onChange={(value) => form.setFieldValue('submissions_list_scope', value as corev1.ContestScope)}
             options={SCOPE_OPTIONS}
           />
 
           <CustomSelect
             label="Просмотр кода посылок"
             value={form.values.submissions_review_scope}
-            onChange={(value) => form.setFieldValue('submissions_review_scope', value)}
+            onChange={(value) => form.setFieldValue('submissions_review_scope', value as corev1.ContestScope)}
             options={SCOPE_OPTIONS}
           />
 
           <CustomSelect
             label="Просмотр деталей и тестов посылок"
             value={form.values.submission_details_scope}
-            onChange={(value) => form.setFieldValue('submission_details_scope', value)}
+            onChange={(value) => form.setFieldValue('submission_details_scope', value as corev1.ContestScope)}
             options={SCOPE_OPTIONS}
             description="Определяет, кто может видеть подробный протокол тестирования, входные/выходные данные упавшего теста и лог ошибок"
           />
