@@ -132,7 +132,7 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		name, message string
 		change        func(*model.Draft)
 	}{
-		{"library name taken", "duplicate file name", func(d *model.Draft) {
+		{"library name taken", "/library/1/name: duplicate name", func(d *model.Draft) {
 			d.Library = []model.DraftLibraryFile{{Name: "a.h"}, {Name: "a.h"}}
 		}},
 		{"unknown group", "/tests/0/subtask_id: unknown subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
@@ -144,11 +144,11 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 			d.Subtasks[0].DependsOn = []uuid.UUID{g, g}
 		}},
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
-		{"missing generator", "generator is missing", func(d *model.Draft) {
+		{"missing generator", "/tests/0/input/generator: unknown generator", func(d *model.Draft) {
 			name := "gen"
 			d.Tests[0].Input = model.DraftInput{Mode: "generator", Generator: &name}
 		}},
-		{"duplicate test", "/tests/1/id: ID is missing or not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
+		{"duplicate test", "/tests/1/id: ID is not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
