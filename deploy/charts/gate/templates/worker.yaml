@@ -28,7 +28,8 @@ spec:
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
           args: [-config=/etc/gate/config.yaml, -judge-parallelism=/run/judge/parallelism]
           env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
-          resources: {{- toYaml .Values.worker.resources | nindent 12 }}
+          # Detect under go-judge's CPU limits, which the value sizes.
+          resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
           volumeMounts:
             - {name: config, mountPath: /etc/gate, readOnly: true}
             - {name: judge-run, mountPath: /run/judge}
