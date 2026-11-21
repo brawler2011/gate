@@ -109,7 +109,6 @@ home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
 group="$(id -gn "$DEPLOY_USER")"
 install -d -m 700 -o "$DEPLOY_USER" -g "$group" "$home/.kube"
 install -m 600 -o "$DEPLOY_USER" -g "$group" /etc/rancher/k3s/k3s.yaml "$home/.kube/config"
-# Local tasks name this context so they never touch another cluster.
 k3s kubectl --kubeconfig "$home/.kube/config" config rename-context default gate > /dev/null
 
 # Wait for node registration before waiting for readiness.
