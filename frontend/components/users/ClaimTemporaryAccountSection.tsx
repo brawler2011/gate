@@ -54,7 +54,7 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
     if (error) {
       notifications.show({
         title: "Не удалось привязать аккаунт",
-        message: problemMessage(error),
+        message: error.code === "unauthenticated" ? "Неверный логин или пароль временного аккаунта" : problemMessage(error, "Не удалось привязать аккаунт"),
         color: "red",
       });
       return;

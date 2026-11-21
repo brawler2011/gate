@@ -66,6 +66,7 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   invitation_pending: "Приглашение уже отправлено",
   request_resolved: "Заявка уже рассмотрена",
   invite_only: "Вступление только по приглашениям",
+  not_org_member: "Сначала нужно вступить в организацию",
   required: "Обязательное поле",
   length: lengthText,
   format: "Недопустимый формат",

@@ -115,7 +115,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось отправить приглашение"),
         color: "red",
       });
       return;
@@ -144,7 +144,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось отменить приглашение"),
         color: "red",
       });
       return;
@@ -169,7 +169,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось удалить участника"),
         color: "red",
       });
       return;
@@ -201,7 +201,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось одобрить заявку"),
         color: "red",
       });
       return;
@@ -227,7 +227,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось отклонить заявку"),
         color: "red",
       });
       return;

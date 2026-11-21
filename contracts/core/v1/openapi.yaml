@@ -3990,6 +3990,7 @@ components:
         - invitation_pending
         - request_resolved
         - invite_only
+        - not_org_member
         - required
         - length
         - format

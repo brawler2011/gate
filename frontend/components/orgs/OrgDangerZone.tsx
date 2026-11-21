@@ -25,7 +25,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
     });
     setLoading(false);
     if (error) {
-      notifications.show({title: 'Ошибка', message: problemMessage(error), color: 'red'});
+      notifications.show({title: 'Ошибка', message: problemMessage(error, "Не удалось удалить организацию"), color: 'red'});
       return;
     }
     navigate('/orgs');

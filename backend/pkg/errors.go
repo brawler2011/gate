@@ -75,6 +75,7 @@ var (
 	ErrInvitationPending      = NewCode("invitation_pending", CodeConflict)
 	ErrRequestResolved        = NewCode("request_resolved", CodeConflict)
 	ErrInviteOnly             = NewCode("invite_only", CodeForbidden)
+	ErrNotOrgMember           = NewCode("not_org_member", CodeInvalid)
 
 	// Field validation; params carry the violated bounds (min, max).
 	ErrRequired       = NewCode("required", CodeInvalid)

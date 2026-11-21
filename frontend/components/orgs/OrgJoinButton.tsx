@@ -72,7 +72,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось вступить в организацию"),
         color: "red",
       });
       return;
@@ -100,7 +100,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось подать заявку"),
         color: "red",
       });
       return;
@@ -132,7 +132,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error),
+        message: problemMessage(error, "Не удалось отменить заявку"),
         color: "red",
       });
       return;

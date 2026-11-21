@@ -6623,6 +6623,8 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeRequestResolved
 	case ErrorCodeInviteOnly:
 		*s = ErrorCodeInviteOnly
+	case ErrorCodeNotOrgMember:
+		*s = ErrorCodeNotOrgMember
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired
 	case ErrorCodeLength:

@@ -244,7 +244,7 @@ func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmode
 			}
 			_, err = tx.GetMember(ctx, contest.OrganizationID, c.UserId)
 			if err != nil {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "user must be a member of the organization")
+				return pkg.Wrap(pkg.ErrNotOrgMember, nil, "user must be a member of the organization")
 			}
 		}
 
@@ -563,7 +563,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		}
 		if mode == contestsmodel.ParticipationModeOpen {
 			if _, err := tx.GetMember(ctx, contest.OrganizationID, userID); err != nil {
-				return pkg.OnNotFound(err, pkg.ErrInvalid, "user must be a member of the organization")
+				return pkg.OnNotFound(err, pkg.ErrNotOrgMember, "user must be a member of the organization")
 			}
 			if err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest.ID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}); err != nil {
 				return err

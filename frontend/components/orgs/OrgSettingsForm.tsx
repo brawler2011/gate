@@ -68,7 +68,7 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
     });
     setSaving(false);
     if (error) {
-      notifications.show({title: 'Ошибка', message: problemMessage(error), color: 'red'});
+      notifications.show({title: 'Ошибка', message: problemMessage(error, "Не удалось обновить настройки"), color: 'red'});
       return;
     }
     notifications.show({title: 'Готово', message: 'Настройки обновлены', color: 'green'});
