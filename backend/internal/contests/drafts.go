@@ -54,12 +54,8 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 		return uuid.Nil, err
 	}
 	var id uuid.UUID
-	err = uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+	err = access.WithinContest(ctx, uc.transactions, creation.ContestID, accessmodel.ContestView, func(tx DraftTxStore, a access.ContestAccess) error {
 		if err := tx.LockDraftOwner(ctx, creation.ContestID, user.Id); err != nil {
-			return err
-		}
-		a, err := access.Contest(ctx, tx, creation.ContestID, accessmodel.ContestView)
-		if err != nil {
 			return err
 		}
 		end := a.Facts.Contest.EndTime
@@ -87,11 +83,7 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 	if err != nil {
 		return err
 	}
-	return uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		a, err := access.Contest(ctx, tx, contestID, accessmodel.ContestView)
-		if err != nil {
-			return err
-		}
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestView, func(tx DraftTxStore, a access.ContestAccess) error {
 		draft, err := tx.GetDraft(ctx, draftID)
 		if err != nil {
 			return err

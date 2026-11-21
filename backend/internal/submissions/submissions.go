@@ -83,11 +83,7 @@ func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submissio
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
 	var id uuid.UUID
-	err := uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		a, err := access.Contest(ctx, tx, creation.ContestId, accessmodel.ContestSubmit)
-		if err != nil {
-			return err
-		}
+	err := access.WithinContest(ctx, uc.transactor, creation.ContestId, accessmodel.ContestSubmit, func(tx SubmissionTxStore, a access.ContestAccess) error {
 		if creation.UserId != a.Actor.Id {
 			return pkg.ErrForbidden
 		}
@@ -143,10 +139,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 }
 
 func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
-	return uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if _, err := access.Contest(ctx, tx, contestID, accessmodel.ContestManage); err != nil {
-			return err
-		}
+	return access.WithinContest(ctx, uc.transactor, contestID, accessmodel.ContestManage, func(tx SubmissionTxStore, _ access.ContestAccess) error {
 		sub, err := tx.GetSubmission(ctx, submissionID)
 		if err != nil {
 			return err
@@ -247,10 +240,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 	var rejudgedCount int
 	var rejudgedIDs []uuid.UUID
 
-	err := uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if _, err := access.Contest(ctx, tx, filter.ContestID, accessmodel.ContestManage); err != nil {
-			return err
-		}
+	err := access.WithinContest(ctx, uc.transactor, filter.ContestID, accessmodel.ContestManage, func(tx SubmissionTxStore, _ access.ContestAccess) error {
 		if filter.SubmissionID != nil && *filter.SubmissionID != uuid.Nil {
 			sub, err := tx.GetSubmission(ctx, *filter.SubmissionID)
 			if err != nil {

@@ -157,12 +157,12 @@ func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {
 }
 
 func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
-	return transactions[blogs.TxStore]{pool: pool, bind: func(q *sqlc.Queries) blogs.TxStore {
+	return authorizing(pool, func(q *sqlc.Queries) blogs.TxStore {
 		return struct {
 			*BlogsRepo
-			*UsersRepo
-		}{&BlogsRepo{queries: q}, &UsersRepo{queries: q}}
-	}}
+			Access
+		}{&BlogsRepo{queries: q}, commandAccess(q)}
+	})
 }
 
 // retryable marks a race still lost after retries; the client may repeat the request.

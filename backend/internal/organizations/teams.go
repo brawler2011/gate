@@ -26,11 +26,8 @@ func NewTeamsUseCase(repo TeamsRepo, loader access.Loader, transactor TeamTransa
 
 func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error) {
 	var team *organizationsmodel.Team
-	err := uc.transactor.Within(ctx, func(tx TeamTxStore) error {
-		org, err := access.Organization(ctx, tx, input.OrganizationID, accessmodel.OrganizationManage)
-		if err != nil {
-			return err
-		}
+	err := access.WithinOrganization(ctx, uc.transactor, input.OrganizationID, accessmodel.OrganizationManage, func(tx TeamTxStore, org access.OrganizationAccess) error {
+		var err error
 		team, err = tx.CreateTeam(ctx, input)
 		if err != nil {
 			return fmt.Errorf("create team: %w", err)
@@ -75,19 +72,19 @@ func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmode
 }
 
 func (uc *TeamsUseCase) UpdateTeam(ctx context.Context, teamID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error {
-	return uc.withinTeam(ctx, teamID, accessmodel.TeamManage, func(tx TeamTxStore, _ access.TeamAccess) error {
+	return access.WithinTeam(ctx, uc.transactor, teamID, accessmodel.TeamManage, func(tx TeamTxStore, _ access.TeamAccess) error {
 		return tx.UpdateTeam(ctx, teamID, input)
 	})
 }
 
 func (uc *TeamsUseCase) DeleteTeam(ctx context.Context, teamID uuid.UUID) error {
-	return uc.withinTeam(ctx, teamID, accessmodel.TeamDelete, func(tx TeamTxStore, _ access.TeamAccess) error {
+	return access.WithinTeam(ctx, uc.transactor, teamID, accessmodel.TeamDelete, func(tx TeamTxStore, _ access.TeamAccess) error {
 		return tx.DeleteTeam(ctx, teamID)
 	})
 }
 
 func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput) error {
-	return uc.withinTeam(ctx, input.TeamID, accessmodel.TeamManage, func(tx TeamTxStore, a access.TeamAccess) error {
+	return access.WithinTeam(ctx, uc.transactor, input.TeamID, accessmodel.TeamManage, func(tx TeamTxStore, a access.TeamAccess) error {
 		if err := a.ChangeMember(input.UserID, "", input.Role); err != nil {
 			return err
 		}
@@ -123,7 +120,7 @@ func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID uui
 
 // Members may lower or drop their own role without managing the team.
 func (uc *TeamsUseCase) changeMember(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole, write func(TeamTxStore) error) error {
-	return uc.withinTeam(ctx, teamID, accessmodel.TeamView, func(tx TeamTxStore, a access.TeamAccess) error {
+	return access.WithinTeam(ctx, uc.transactor, teamID, accessmodel.TeamView, func(tx TeamTxStore, a access.TeamAccess) error {
 		member, err := tx.GetTeamMember(ctx, teamID, userID)
 		if err != nil {
 			return err
@@ -163,14 +160,4 @@ func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID uuid.UUID, r
 		return nil, err
 	}
 	return &paging.List[problemsmodel.Problem]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
-}
-
-func (uc *TeamsUseCase) withinTeam(ctx context.Context, id uuid.UUID, action accessmodel.TeamAction, fn func(TeamTxStore, access.TeamAccess) error) error {
-	return uc.transactor.Within(ctx, func(tx TeamTxStore) error {
-		a, err := access.Team(ctx, tx, id, action)
-		if err != nil {
-			return err
-		}
-		return fn(tx, a)
-	})
 }

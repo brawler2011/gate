@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -22,7 +23,8 @@ func (r registrationReader) GetOrganizationByLogin(context.Context, string) (*or
 }
 
 type registrationStore struct {
-	OrganizationTxStore
+	unimplementedOrganizationTx
+	accesstest.Loader
 	org     organizationsmodel.Organization
 	member  bool
 	pending bool

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -210,13 +211,8 @@ func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, 
 }
 
 func (uc *BlogsUseCase) withinAdmin(ctx context.Context, fn func(TxStore, accessmodel.User) error) error {
-	actor := accessmodel.UserFromContext(ctx)
-	return uc.transactions.Within(ctx, func(store TxStore) error {
-		user, err := store.GetUserById(ctx, actor.Id)
-		if err != nil {
-			return err
-		}
-		if user.IsExpired() || !user.IsAdmin() {
+	return access.WithinActor(ctx, uc.transactions, func(store TxStore, user accessmodel.User) error {
+		if !user.IsAdmin() {
 			return pkg.ErrForbidden
 		}
 		return fn(store, user)

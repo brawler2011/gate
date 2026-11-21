@@ -33,7 +33,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 	}
 
 	var clarification *contestsmodel.ContestClarification
-	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ContestView, func(tx ContestEventsTxStore, a access.ContestAccess) error {
+	err = access.WithinContest(ctx, uc.transactor, input.ContestID, accessmodel.ContestView, func(tx ContestEventsTxStore, a access.ContestAccess) error {
 		if !a.Facts.Contest.Settings.AllowClarifications {
 			return pkg.Wrap(pkg.ErrClarificationsDisabled, nil, "clarifications are disabled for this contest")
 		}
@@ -81,7 +81,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 		return nil, err
 	}
 	var clarification *contestsmodel.ContestClarification
-	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ContestManage, func(tx ContestEventsTxStore, _ access.ContestAccess) error {
+	err = access.WithinContest(ctx, uc.transactor, input.ContestID, accessmodel.ContestManage, func(tx ContestEventsTxStore, _ access.ContestAccess) error {
 		var err error
 		clarification, err = tx.AnswerClarification(
 			ctx,
