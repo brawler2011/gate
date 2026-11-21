@@ -437,7 +437,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		Blogs:             blogsUC,
 		BlogReads:         blogsRepo,
 		NATS:              natsJS,
-		Capabilities:      access.NewCapabilities(accessLoader),
+		Permissions:       access.NewPermissions(accessLoader),
 	}, cfg.HTTP.SecureCookies).WithLanguages(languages)
 
 	secHandler := middleware.NewSecurityHandler()

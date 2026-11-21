@@ -212,7 +212,7 @@ func (s *IntegrationTestSuite) initApp() {
 		NotificationReads: notificationsRepo,
 		Blogs:             blogsUC,
 		BlogReads:         blogsRepo,
-		Capabilities:      access.NewCapabilities(loader),
+		Permissions:       access.NewPermissions(loader),
 	}, false)
 	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	s.Require().NoError(err)

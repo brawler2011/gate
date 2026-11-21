@@ -3075,12 +3075,8 @@ func (s *ContestMemberModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ContestMemberModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("user_id")
@@ -3113,7 +3109,7 @@ func (s *ContestMemberModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfContestMemberModel = [8]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "user_id",
 	2: "contest_id",
 	3: "username",
@@ -3132,25 +3128,15 @@ func (s *ContestMemberModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "user_id":
 			requiredBitSet[0] |= 1 << 1
@@ -3380,12 +3366,8 @@ func (s *ContestModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ContestModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -3492,7 +3474,7 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfContestModel = [24]string{
-	0:  "capabilities",
+	0:  "permissions",
 	1:  "id",
 	2:  "login",
 	3:  "organization_id",
@@ -3527,25 +3509,15 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -3956,6 +3928,221 @@ func (s *ContestModelParticipationMode) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ContestPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ContestPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("view_problems")
+		e.Bool(s.ViewProblems)
+	}
+	{
+		e.FieldStart("submit")
+		e.Bool(s.Submit)
+	}
+	{
+		e.FieldStart("list_own_submissions")
+		e.Bool(s.ListOwnSubmissions)
+	}
+	{
+		e.FieldStart("list_submissions")
+		e.Bool(s.ListSubmissions)
+	}
+	{
+		e.FieldStart("view_submission_details")
+		e.Bool(s.ViewSubmissionDetails)
+	}
+	{
+		e.FieldStart("view_scoreboard")
+		e.Bool(s.ViewScoreboard)
+	}
+	{
+		e.FieldStart("manage")
+		e.Bool(s.Manage)
+	}
+	{
+		e.FieldStart("delete")
+		e.Bool(s.Delete)
+	}
+}
+
+var jsonFieldsNameOfContestPermissionsModel = [8]string{
+	0: "view_problems",
+	1: "submit",
+	2: "list_own_submissions",
+	3: "list_submissions",
+	4: "view_submission_details",
+	5: "view_scoreboard",
+	6: "manage",
+	7: "delete",
+}
+
+// Decode decodes ContestPermissionsModel from json.
+func (s *ContestPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "view_problems":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.ViewProblems = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"view_problems\"")
+			}
+		case "submit":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Submit = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"submit\"")
+			}
+		case "list_own_submissions":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.ListOwnSubmissions = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_own_submissions\"")
+			}
+		case "list_submissions":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.ListSubmissions = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_submissions\"")
+			}
+		case "view_submission_details":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.ViewSubmissionDetails = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"view_submission_details\"")
+			}
+		case "view_scoreboard":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.ViewScoreboard = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"view_scoreboard\"")
+			}
+		case "manage":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Bool()
+				s.Manage = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage\"")
+			}
+		case "delete":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Bool()
+				s.Delete = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delete\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ContestPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b11111111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfContestPermissionsModel) {
+					name = jsonFieldsNameOfContestPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ContestPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestPermissionsModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *ContestProblemListItemModel) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -3965,12 +4152,8 @@ func (s *ContestProblemListItemModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ContestProblemListItemModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("problem_id")
@@ -4003,7 +4186,7 @@ func (s *ContestProblemListItemModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfContestProblemListItemModel = [8]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "problem_id",
 	2: "position",
 	3: "title",
@@ -4022,25 +4205,15 @@ func (s *ContestProblemListItemModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "problem_id":
 			requiredBitSet[0] |= 1 << 1
@@ -4192,12 +4365,8 @@ func (s *ContestProblemModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ContestProblemModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("problem_id")
@@ -4270,7 +4439,7 @@ func (s *ContestProblemModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfContestProblemModel = [17]string{
-	0:  "capabilities",
+	0:  "permissions",
 	1:  "problem_id",
 	2:  "title",
 	3:  "time_limit",
@@ -4298,25 +4467,15 @@ func (s *ContestProblemModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "problem_id":
 			requiredBitSet[0] |= 1 << 1
@@ -4629,6 +4788,136 @@ func (s *ContestProblemModelAssets) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ContestProblemPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ContestProblemPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("submit")
+		e.Bool(s.Submit)
+	}
+	{
+		e.FieldStart("manage")
+		e.Bool(s.Manage)
+	}
+	{
+		e.FieldStart("edit_problem")
+		e.Bool(s.EditProblem)
+	}
+}
+
+var jsonFieldsNameOfContestProblemPermissionsModel = [3]string{
+	0: "submit",
+	1: "manage",
+	2: "edit_problem",
+}
+
+// Decode decodes ContestProblemPermissionsModel from json.
+func (s *ContestProblemPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestProblemPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "submit":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Submit = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"submit\"")
+			}
+		case "manage":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Manage = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage\"")
+			}
+		case "edit_problem":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.EditProblem = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"edit_problem\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ContestProblemPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfContestProblemPermissionsModel) {
+					name = jsonFieldsNameOfContestProblemPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ContestProblemPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestProblemPermissionsModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *ContestProblemReorderItemModel) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -4793,12 +5082,8 @@ func (s *ContestTeamModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ContestTeamModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("contest_id")
@@ -4827,7 +5112,7 @@ func (s *ContestTeamModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfContestTeamModel = [7]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "contest_id",
 	2: "team_id",
 	3: "team_name",
@@ -4845,25 +5130,15 @@ func (s *ContestTeamModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "contest_id":
 			requiredBitSet[0] |= 1 << 1
@@ -6004,12 +6279,8 @@ func (s *DashboardContestModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *DashboardContestModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -6064,7 +6335,7 @@ func (s *DashboardContestModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfDashboardContestModel = [12]string{
-	0:  "capabilities",
+	0:  "permissions",
 	1:  "id",
 	2:  "login",
 	3:  "title",
@@ -6087,25 +6358,15 @@ func (s *DashboardContestModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -6300,12 +6561,8 @@ func (s *DashboardProblemModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *DashboardProblemModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -6342,7 +6599,7 @@ func (s *DashboardProblemModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfDashboardProblemModel = [9]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "id",
 	2: "title",
 	3: "organization_id",
@@ -6362,25 +6619,15 @@ func (s *DashboardProblemModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -7530,22 +7777,13 @@ func (s *GetMyContestRoleResponseModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *GetMyContestRoleResponseModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
-	}
-	{
 		e.FieldStart("role")
 		e.Str(s.Role)
 	}
 }
 
-var jsonFieldsNameOfGetMyContestRoleResponseModel = [2]string{
-	0: "capabilities",
-	1: "role",
+var jsonFieldsNameOfGetMyContestRoleResponseModel = [1]string{
+	0: "role",
 }
 
 // Decode decodes GetMyContestRoleResponseModel from json.
@@ -7557,28 +7795,8 @@ func (s *GetMyContestRoleResponseModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
-			}
 		case "role":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.Role = string(v)
@@ -7599,7 +7817,7 @@ func (s *GetMyContestRoleResponseModel) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -11121,6 +11339,119 @@ func (s *LoginRequestModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *MemberPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *MemberPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("change_role")
+		e.Bool(s.ChangeRole)
+	}
+	{
+		e.FieldStart("remove")
+		e.Bool(s.Remove)
+	}
+}
+
+var jsonFieldsNameOfMemberPermissionsModel = [2]string{
+	0: "change_role",
+	1: "remove",
+}
+
+// Decode decodes MemberPermissionsModel from json.
+func (s *MemberPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode MemberPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "change_role":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.ChangeRole = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"change_role\"")
+			}
+		case "remove":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Remove = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"remove\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode MemberPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfMemberPermissionsModel) {
+					name = jsonFieldsNameOfMemberPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *MemberPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *MemberPermissionsModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes time.Time as json.
 func (o NilDateTime) Encode(e *jx.Encoder, format func(*jx.Encoder, time.Time)) {
 	if o.Null {
@@ -13679,12 +14010,8 @@ func (s *OrganizationMemberModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *OrganizationMemberModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("user_id")
@@ -13709,7 +14036,7 @@ func (s *OrganizationMemberModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfOrganizationMemberModel = [6]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "user_id",
 	2: "organization_id",
 	3: "username",
@@ -13726,25 +14053,15 @@ func (s *OrganizationMemberModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "user_id":
 			requiredBitSet[0] |= 1 << 1
@@ -13912,12 +14229,8 @@ func (s *OrganizationModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *OrganizationModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -13952,7 +14265,7 @@ func (s *OrganizationModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfOrganizationModel = [8]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "id",
 	2: "login",
 	3: "name",
@@ -13972,25 +14285,15 @@ func (s *OrganizationModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -14166,6 +14469,204 @@ func (s OrganizationModelJoinPolicy) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OrganizationModelJoinPolicy) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *OrganizationPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *OrganizationPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("manage")
+		e.Bool(s.Manage)
+	}
+	{
+		e.FieldStart("manage_members")
+		e.Bool(s.ManageMembers)
+	}
+	{
+		e.FieldStart("delete")
+		e.Bool(s.Delete)
+	}
+	{
+		e.FieldStart("list_members")
+		e.Bool(s.ListMembers)
+	}
+	{
+		e.FieldStart("join")
+		e.Bool(s.Join)
+	}
+	{
+		e.FieldStart("request_join")
+		e.Bool(s.RequestJoin)
+	}
+	{
+		e.FieldStart("leave")
+		e.Bool(s.Leave)
+	}
+}
+
+var jsonFieldsNameOfOrganizationPermissionsModel = [7]string{
+	0: "manage",
+	1: "manage_members",
+	2: "delete",
+	3: "list_members",
+	4: "join",
+	5: "request_join",
+	6: "leave",
+}
+
+// Decode decodes OrganizationPermissionsModel from json.
+func (s *OrganizationPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode OrganizationPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "manage":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Manage = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage\"")
+			}
+		case "manage_members":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.ManageMembers = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage_members\"")
+			}
+		case "delete":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.Delete = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delete\"")
+			}
+		case "list_members":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.ListMembers = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_members\"")
+			}
+		case "join":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.Join = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"join\"")
+			}
+		case "request_join":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.RequestJoin = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"request_join\"")
+			}
+		case "leave":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Bool()
+				s.Leave = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"leave\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode OrganizationPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b01111111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfOrganizationPermissionsModel) {
+					name = jsonFieldsNameOfOrganizationPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *OrganizationPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OrganizationPermissionsModel) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -18857,12 +19358,8 @@ func (s *ProblemMemberModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemMemberModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("problem_id")
@@ -18887,7 +19384,7 @@ func (s *ProblemMemberModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfProblemMemberModel = [6]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "problem_id",
 	2: "user_id",
 	3: "username",
@@ -18904,25 +19401,15 @@ func (s *ProblemMemberModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "problem_id":
 			requiredBitSet[0] |= 1 << 1
@@ -19092,12 +19579,8 @@ func (s *ProblemModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -19148,7 +19631,7 @@ func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfProblemModel = [12]string{
-	0:  "capabilities",
+	0:  "permissions",
 	1:  "id",
 	2:  "organization_id",
 	3:  "organization_login",
@@ -19171,25 +19654,15 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -19618,6 +20091,153 @@ func (s *ProblemParams) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ProblemPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ProblemPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("use")
+		e.Bool(s.Use)
+	}
+	{
+		e.FieldStart("edit")
+		e.Bool(s.Edit)
+	}
+	{
+		e.FieldStart("manage")
+		e.Bool(s.Manage)
+	}
+	{
+		e.FieldStart("delete")
+		e.Bool(s.Delete)
+	}
+}
+
+var jsonFieldsNameOfProblemPermissionsModel = [4]string{
+	0: "use",
+	1: "edit",
+	2: "manage",
+	3: "delete",
+}
+
+// Decode decodes ProblemPermissionsModel from json.
+func (s *ProblemPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "use":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Use = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"use\"")
+			}
+		case "edit":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Edit = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"edit\"")
+			}
+		case "manage":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.Manage = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage\"")
+			}
+		case "delete":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.Delete = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delete\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ProblemPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfProblemPermissionsModel) {
+					name = jsonFieldsNameOfProblemPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ProblemPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemPermissionsModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *ProblemSampleModel) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -19796,12 +20416,8 @@ func (s *ProblemTeamModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemTeamModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("problem_id")
@@ -19830,7 +20446,7 @@ func (s *ProblemTeamModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfProblemTeamModel = [7]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "problem_id",
 	2: "team_id",
 	3: "team_name",
@@ -19848,25 +20464,15 @@ func (s *ProblemTeamModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "problem_id":
 			requiredBitSet[0] |= 1 << 1
@@ -20210,12 +20816,8 @@ func (s *ProblemsListItemModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemsListItemModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -20262,7 +20864,7 @@ func (s *ProblemsListItemModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfProblemsListItemModel = [11]string{
-	0:  "capabilities",
+	0:  "permissions",
 	1:  "id",
 	2:  "organization_id",
 	3:  "organization_login",
@@ -20284,25 +20886,15 @@ func (s *ProblemsListItemModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -23575,12 +24167,8 @@ func (s *TeamMemberModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *TeamMemberModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("user_id")
@@ -23605,7 +24193,7 @@ func (s *TeamMemberModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfTeamMemberModel = [6]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "user_id",
 	2: "team_id",
 	3: "username",
@@ -23622,25 +24210,15 @@ func (s *TeamMemberModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "user_id":
 			requiredBitSet[0] |= 1 << 1
@@ -23806,12 +24384,8 @@ func (s *TeamModel) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *TeamModel) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("capabilities")
-		e.ArrStart()
-		for _, elem := range s.Capabilities {
-			e.Str(elem)
-		}
-		e.ArrEnd()
+		e.FieldStart("permissions")
+		s.Permissions.Encode(e)
 	}
 	{
 		e.FieldStart("id")
@@ -23842,7 +24416,7 @@ func (s *TeamModel) encodeFields(e *jx.Encoder) {
 }
 
 var jsonFieldsNameOfTeamModel = [7]string{
-	0: "capabilities",
+	0: "permissions",
 	1: "id",
 	2: "name",
 	3: "organization_id",
@@ -23860,25 +24434,15 @@ func (s *TeamModel) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "capabilities":
+		case "permissions":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Capabilities = make([]string, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem string
-					v, err := d.Str()
-					elem = string(v)
-					if err != nil {
-						return err
-					}
-					s.Capabilities = append(s.Capabilities, elem)
-					return nil
-				}); err != nil {
+				if err := s.Permissions.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"capabilities\"")
+				return errors.Wrap(err, "decode field \"permissions\"")
 			}
 		case "id":
 			requiredBitSet[0] |= 1 << 1
@@ -24002,6 +24566,136 @@ func (s *TeamModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *TeamModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *TeamPermissionsModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *TeamPermissionsModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("manage")
+		e.Bool(s.Manage)
+	}
+	{
+		e.FieldStart("delete")
+		e.Bool(s.Delete)
+	}
+	{
+		e.FieldStart("leave")
+		e.Bool(s.Leave)
+	}
+}
+
+var jsonFieldsNameOfTeamPermissionsModel = [3]string{
+	0: "manage",
+	1: "delete",
+	2: "leave",
+}
+
+// Decode decodes TeamPermissionsModel from json.
+func (s *TeamPermissionsModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode TeamPermissionsModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "manage":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Manage = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"manage\"")
+			}
+		case "delete":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Delete = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delete\"")
+			}
+		case "leave":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.Leave = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"leave\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode TeamPermissionsModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfTeamPermissionsModel) {
+					name = jsonFieldsNameOfTeamPermissionsModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *TeamPermissionsModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *TeamPermissionsModel) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

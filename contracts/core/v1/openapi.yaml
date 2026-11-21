@@ -4135,12 +4135,124 @@ components:
           example: pass-fail
         is_builtin:
           type: boolean
+    OrganizationPermissionsModel:
+      description: What the caller may do with the organization.
+      type: object
+      required:
+        - manage
+        - manage_members
+        - delete
+        - list_members
+        - join
+        - request_join
+        - leave
+      properties:
+        manage:
+          type: boolean
+        manage_members:
+          type: boolean
+        delete:
+          type: boolean
+        list_members:
+          type: boolean
+        join:
+          type: boolean
+        request_join:
+          type: boolean
+        leave:
+          type: boolean
+    TeamPermissionsModel:
+      description: What the caller may do with the team.
+      type: object
+      required:
+        - manage
+        - delete
+        - leave
+      properties:
+        manage:
+          type: boolean
+        delete:
+          type: boolean
+        leave:
+          type: boolean
+    ProblemPermissionsModel:
+      description: What the caller may do with the problem.
+      type: object
+      required:
+        - use
+        - edit
+        - manage
+        - delete
+      properties:
+        use:
+          type: boolean
+        edit:
+          type: boolean
+        manage:
+          type: boolean
+        delete:
+          type: boolean
+    ContestPermissionsModel:
+      description: What the caller may do in the contest.
+      type: object
+      required:
+        - view_problems
+        - submit
+        - list_own_submissions
+        - list_submissions
+        - view_submission_details
+        - view_scoreboard
+        - manage
+        - delete
+      properties:
+        view_problems:
+          type: boolean
+        submit:
+          type: boolean
+        list_own_submissions:
+          type: boolean
+        list_submissions:
+          type: boolean
+        view_submission_details:
+          type: boolean
+        view_scoreboard:
+          type: boolean
+        manage:
+          type: boolean
+        delete:
+          type: boolean
+    ContestProblemPermissionsModel:
+      description: What the caller may do with the contest problem.
+      type: object
+      required:
+        - submit
+        - manage
+        - edit_problem
+      properties:
+        submit:
+          type: boolean
+        manage:
+          type: boolean
+        edit_problem:
+          description: Whether the caller may edit the source problem.
+          type: boolean
+    MemberPermissionsModel:
+      description: Whether the caller may change or revoke this role grant.
+      type: object
+      required:
+        - change_role
+        - remove
+      properties:
+        change_role:
+          type: boolean
+        remove:
+          type: boolean
     ProblemModel:
       description: >-
         Problem catalog data. The statement, samples and assets belong to the
         draft and to published packages and are read there.
       example:
-        capabilities: [view]
+        permissions: {use: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         organization_login: example
@@ -4153,7 +4265,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - organization_id
         - organization_login
@@ -4165,12 +4277,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ProblemPermissionsModel"
         id:
           type: string
           format: uuid
@@ -4207,7 +4315,7 @@ components:
     ProblemsListItemModel:
       description: "Problems list item data."
       example:
-        capabilities: [view]
+        permissions: {use: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         organization_login: example
@@ -4219,7 +4327,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - organization_id
         - organization_login
@@ -4230,12 +4338,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ProblemPermissionsModel"
         id:
           type: string
           format: uuid
@@ -4266,7 +4370,7 @@ components:
       description: "Paginated collection of problems."
       example:
         problems:
-        - capabilities: [view]
+        - permissions: {use: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           organization_login: example
@@ -4296,7 +4400,7 @@ components:
       description: "Result of get problem."
       example:
         problem:
-          capabilities: [view]
+          permissions: {use: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           organization_login: example
@@ -4326,7 +4430,7 @@ components:
     ContestProblemModel:
       description: "Contest problem data."
       example:
-        capabilities: [view]
+        permissions: {submit: false, manage: false, edit_problem: false}
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         title: Test problem
         time_limit: 1000
@@ -4344,7 +4448,7 @@ components:
           output: '3'
       type: object
       required:
-        - capabilities
+        - permissions
         - problem_id
         - title
         - time_limit
@@ -4362,12 +4466,8 @@ components:
         - samples
         - assets
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ContestProblemPermissionsModel"
         problem_id:
           type: string
           format: uuid
@@ -4420,7 +4520,7 @@ components:
       description: "Result of get contest problem."
       example:
         problem:
-          capabilities: [view]
+          permissions: {submit: false, manage: false, edit_problem: false}
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           title: Test problem
           time_limit: 1000
@@ -4452,7 +4552,7 @@ components:
     ContestModel:
       description: "Contest data."
       example:
-        capabilities: [view]
+        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         login: contest-1
         organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4475,7 +4575,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - login
         - organization_id
@@ -4497,12 +4597,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ContestPermissionsModel"
         id:
           type: string
           format: uuid
@@ -4579,7 +4675,7 @@ components:
       description: "Paginated collection of contests."
       example:
         contests:
-        - capabilities: [view]
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4620,7 +4716,7 @@ components:
       description: "Paginated collection of user contests."
       example:
         contests:
-        - capabilities: [view]
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4660,7 +4756,7 @@ components:
     ContestProblemListItemModel:
       description: "Contest problem list item data."
       example:
-        capabilities: [view]
+        permissions: {submit: false, manage: false, edit_problem: false}
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         position: 1
         title: Test task
@@ -4670,7 +4766,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - problem_id
         - position
         - title
@@ -4679,12 +4775,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ContestProblemPermissionsModel"
         problem_id:
           type: string
           format: uuid
@@ -4712,7 +4804,7 @@ components:
       description: "Result of get contest."
       example:
         contest:
-          capabilities: [view]
+          permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4734,7 +4826,7 @@ components:
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
         problems:
-        - capabilities: [view]
+        - permissions: {submit: false, manage: false, edit_problem: false}
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           position: 1
           title: Test task
@@ -5308,7 +5400,7 @@ components:
     DashboardContestModel:
       description: "Dashboard contest data."
       example:
-        capabilities: [view]
+        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         login: contest-1
         title: A + B
@@ -5319,7 +5411,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - login
         - title
@@ -5329,12 +5421,8 @@ components:
         - user_role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ContestPermissionsModel"
         id:
           type: string
           format: uuid
@@ -5370,7 +5458,7 @@ components:
     DashboardProblemModel:
       description: "Dashboard problem data."
       example:
-        capabilities: [view]
+        permissions: {use: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         title: A + B
         organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -5381,7 +5469,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - title
         - organization_id
@@ -5391,12 +5479,8 @@ components:
         - memory_limit
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/ProblemPermissionsModel"
         id:
           type: string
           format: uuid
@@ -5422,7 +5506,7 @@ components:
       description: "Result of get user dashboard."
       example:
         recent_contests:
-        - capabilities: [view]
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           title: A + B
@@ -5432,7 +5516,7 @@ components:
           user_role: example
           created_at: '2026-01-01T12:00:00Z'
         my_problems:
-        - capabilities: [view]
+        - permissions: {use: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           title: A + B
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -5545,7 +5629,7 @@ components:
       description: "Paginated collection of contest members."
       example:
         members:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           user_id: 123e4567-e89b-42d3-a456-426614174000
           contest_id: 123e4567-e89b-42d3-a456-426614174000
           username: user123
@@ -5588,7 +5672,7 @@ components:
     ContestMemberModel:
       description: "Contest member data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         user_id: 123e4567-e89b-42d3-a456-426614174000
         contest_id: 123e4567-e89b-42d3-a456-426614174000
         username: user123
@@ -5598,7 +5682,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - user_id
         - contest_id
         - username
@@ -5607,12 +5691,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         user_id:
           type: string
           format: uuid
@@ -5637,19 +5717,11 @@ components:
     GetMyContestRoleResponseModel:
       description: "Result of get my contest role."
       example:
-        capabilities: [view]
         role: owner
       type: object
       required:
-        - capabilities
         - role
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
         role:
           type: string
           example: owner
@@ -6088,7 +6160,7 @@ components:
     OrganizationModel:
       description: "Organization data."
       example:
-        capabilities: [view]
+        permissions: {manage: false, manage_members: false, delete: false, list_members: false, join: false, request_join: false, leave: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         login: example
         name: main.cpp
@@ -6097,7 +6169,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - login
         - name
@@ -6105,12 +6177,8 @@ components:
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/OrganizationPermissionsModel"
         id:
           type: string
           format: uuid
@@ -6134,7 +6202,7 @@ components:
       description: "Paginated collection of organizations."
       example:
         organizations:
-        - capabilities: [view]
+        - permissions: {manage: false, manage_members: false, delete: false, list_members: false, join: false, request_join: false, leave: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: example
           name: main.cpp
@@ -6161,7 +6229,7 @@ components:
       description: "Result of get organization."
       example:
         organization:
-          capabilities: [view]
+          permissions: {manage: false, manage_members: false, delete: false, list_members: false, join: false, request_join: false, leave: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: example
           name: main.cpp
@@ -6195,7 +6263,7 @@ components:
     OrganizationMemberModel:
       description: "Organization member data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         user_id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
@@ -6203,19 +6271,15 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - user_id
         - organization_id
         - username
         - role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         user_id:
           type: string
           format: uuid
@@ -6234,7 +6298,7 @@ components:
       description: "Paginated collection of organization members."
       example:
         members:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           user_id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
@@ -6259,7 +6323,7 @@ components:
     TeamModel:
       description: "Team data."
       example:
-        capabilities: [view]
+        permissions: {manage: false, delete: false, leave: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         name: main.cpp
         organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -6267,19 +6331,15 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - id
         - name
         - organization_id
         - created_at
         - updated_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/TeamPermissionsModel"
         id:
           type: string
           format: uuid
@@ -6300,7 +6360,7 @@ components:
       description: "Paginated collection of teams."
       example:
         teams:
-        - capabilities: [view]
+        - permissions: {manage: false, delete: false, leave: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           name: main.cpp
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -6326,7 +6386,7 @@ components:
       description: "Result of get team."
       example:
         team:
-          capabilities: [view]
+          permissions: {manage: false, delete: false, leave: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           name: main.cpp
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -6352,7 +6412,7 @@ components:
     TeamMemberModel:
       description: "Team member data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         user_id: 123e4567-e89b-42d3-a456-426614174000
         team_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
@@ -6360,19 +6420,15 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - user_id
         - team_id
         - username
         - role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         user_id:
           type: string
           format: uuid
@@ -6391,7 +6447,7 @@ components:
       description: "Paginated collection of team members."
       example:
         members:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           user_id: 123e4567-e89b-42d3-a456-426614174000
           team_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
@@ -6416,7 +6472,7 @@ components:
     ContestTeamModel:
       description: "Contest team data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         contest_id: 123e4567-e89b-42d3-a456-426614174000
         team_id: 123e4567-e89b-42d3-a456-426614174000
         team_name: example
@@ -6425,7 +6481,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - contest_id
         - team_id
         - team_name
@@ -6433,12 +6489,8 @@ components:
         - contest_role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         contest_id:
           type: string
           format: uuid
@@ -6459,7 +6511,7 @@ components:
       description: "Paginated collection of contest teams."
       example:
         teams:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           contest_id: 123e4567-e89b-42d3-a456-426614174000
           team_id: 123e4567-e89b-42d3-a456-426614174000
           team_name: example
@@ -6477,7 +6529,7 @@ components:
     ProblemTeamModel:
       description: "Problem team data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         team_id: 123e4567-e89b-42d3-a456-426614174000
         team_name: example
@@ -6486,7 +6538,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - problem_id
         - team_id
         - team_name
@@ -6494,12 +6546,8 @@ components:
         - role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         problem_id:
           type: string
           format: uuid
@@ -6520,7 +6568,7 @@ components:
       description: "Paginated collection of problem teams."
       example:
         teams:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           team_id: 123e4567-e89b-42d3-a456-426614174000
           team_name: example
@@ -6538,7 +6586,7 @@ components:
     ProblemMemberModel:
       description: "Problem member data."
       example:
-        capabilities: [view]
+        permissions: {change_role: false, remove: false}
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
@@ -6546,19 +6594,15 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
-        - capabilities
+        - permissions
         - problem_id
         - user_id
         - username
         - role
         - created_at
       properties:
-        capabilities:
-          type: array
-          readOnly: true
-          uniqueItems: true
-          items:
-            type: string
+        permissions:
+          $ref: "#/components/schemas/MemberPermissionsModel"
         problem_id:
           type: string
           format: uuid
@@ -6577,7 +6621,7 @@ components:
       description: "Paginated collection of problem members."
       example:
         members:
-        - capabilities: [view]
+        - permissions: {change_role: false, remove: false}
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           user_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
@@ -7832,3 +7876,4 @@ components:
             $ref: "#/components/schemas/ContestClarificationModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+

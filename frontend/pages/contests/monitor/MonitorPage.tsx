@@ -3,7 +3,6 @@ import {useLoaderData, Navigate} from "react-router-dom";
 
 import {ContestMonitorTable} from "@/components/contests";
 import {api, unwrap} from "@/lib/api";
-import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -26,10 +25,9 @@ const Page = (): ReactNode => {
   const {slug, contestLogin, contestResponse} = data;
   let isManager = false;
   if (contestResponse?.contest) {
-    const checker = new PermissionChecker();
-    isManager = checker.canManageContest(contestResponse.contest);
+    isManager = contestResponse.contest.permissions.manage;
 
-    if (!checker.canViewMonitor(contestResponse.contest)) {
+    if (!contestResponse.contest.permissions.view_scoreboard) {
       return <Navigate to={`/${slug}/${contestLogin}`} replace />;
     }
   }

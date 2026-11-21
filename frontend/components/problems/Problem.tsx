@@ -14,7 +14,7 @@ import {type AssetUrl, ProblemStatement} from "./ProblemStatement";
 import "./Problem.css";
 
 type ProblemModelProps = {
-  capabilities?: readonly string[];
+  permissions?: {readonly edit_problem?: boolean};
   id?: string;
   problem_id?: string;
   organization_login?: string;
@@ -97,7 +97,7 @@ const ProblemComponent = ({
         memoryLimit={problem.memory_limit}
         inputFile={problem.input_file}
         outputFile={problem.output_file}
-        isManager={Boolean(problem.capabilities?.includes("edit"))}
+        isManager={Boolean(problem.permissions?.edit_problem)}
         problemId={activeProblemId}
         orgLogin={org}
       />

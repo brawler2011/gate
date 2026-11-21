@@ -261,8 +261,8 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
               },
             },
           ]}
-          canEdit={(row) => row.capabilities.includes("change_role")}
-          canDelete={(row) => row.capabilities.includes("remove")}
+          canEdit={(row) => row.permissions.change_role}
+          canDelete={(row) => row.permissions.remove}
           onEdit={handleEditRole}
           onDelete={handleDeleteMember}
           deletingId={deletingId}

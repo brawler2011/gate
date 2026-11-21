@@ -168,7 +168,7 @@ const Task = ({
                 bg="var(--mantine-color-gray-light)"
                 style={{width: "100%"}}
               >
-                <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.capabilities.includes("submit")} />
+                <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.permissions.submit} />
               </Paper>
 
               <RecentSubmissionsTable

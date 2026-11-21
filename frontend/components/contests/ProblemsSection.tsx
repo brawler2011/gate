@@ -414,7 +414,7 @@ export const ProblemsSection = ({
               size="xs"
               leftSection={<IconRefresh size={14} />}
               onClick={handleRecalculatePositions}
-              disabled={problems.length === 0 || !problems.every((problem) => problem.capabilities.includes("reorder"))}
+              disabled={problems.length === 0 || !problems.every((problem) => problem.permissions.manage)}
             >
               Пересчитать позиции
             </Button>
@@ -471,7 +471,7 @@ export const ProblemsSection = ({
               {problems.map((problem, index) => (
                 <Table.Tr
                   key={problem.problem_id}
-                  draggable={problem.capabilities.includes("reorder")}
+                  draggable={problem.permissions.manage}
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
@@ -512,7 +512,7 @@ export const ProblemsSection = ({
                       <Tooltip label="Заменить пакет" withArrow>
                         <ActionIcon
                           aria-label={`Заменить пакет ${problem.title}`}
-                          disabled={!problem.capabilities.includes("relink_package")}
+                          disabled={!problem.permissions.manage}
                           color="blue"
                           variant="subtle"
                           onClick={() =>
@@ -529,7 +529,7 @@ export const ProblemsSection = ({
                         <ActionIcon
                           color="red"
                           variant="subtle"
-                          disabled={!problem.capabilities.includes("remove")}
+                          disabled={!problem.permissions.manage}
                           onClick={() => handleDeleteProblem(problem.problem_id)}
                           loading={deletingId === problem.problem_id}
                         >

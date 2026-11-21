@@ -1179,19 +1179,19 @@ func (s *ContestJoinRequestResponseModel) SetRegistered(val bool) {
 // Contest member data.
 // Ref: #/components/schemas/ContestMemberModel
 type ContestMemberModel struct {
-	Capabilities []string                      `json:"capabilities"`
-	UserID       uuid.UUID                     `json:"user_id"`
-	ContestID    uuid.UUID                     `json:"contest_id"`
-	Username     string                        `json:"username"`
-	Role         ContestMemberModelRole        `json:"role"`
-	ContestRole  ContestMemberModelContestRole `json:"contest_role"`
-	CreatedAt    time.Time                     `json:"created_at"`
-	UpdatedAt    time.Time                     `json:"updated_at"`
+	Permissions MemberPermissionsModel        `json:"permissions"`
+	UserID      uuid.UUID                     `json:"user_id"`
+	ContestID   uuid.UUID                     `json:"contest_id"`
+	Username    string                        `json:"username"`
+	Role        ContestMemberModelRole        `json:"role"`
+	ContestRole ContestMemberModelContestRole `json:"contest_role"`
+	CreatedAt   time.Time                     `json:"created_at"`
+	UpdatedAt   time.Time                     `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ContestMemberModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ContestMemberModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetUserID returns the value of UserID.
@@ -1229,9 +1229,9 @@ func (s *ContestMemberModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ContestMemberModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ContestMemberModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetUserID sets the value of UserID.
@@ -1361,18 +1361,18 @@ func (s *ContestMemberModelRole) UnmarshalText(data []byte) error {
 // Contest data.
 // Ref: #/components/schemas/ContestModel
 type ContestModel struct {
-	Capabilities           []string     `json:"capabilities"`
-	ID                     uuid.UUID    `json:"id"`
-	Login                  string       `json:"login"`
-	OrganizationID         uuid.UUID    `json:"organization_id"`
-	OrganizationLogin      string       `json:"organization_login"`
-	Title                  string       `json:"title"`
-	Description            string       `json:"description"`
-	Visibility             string       `json:"visibility"`
-	MonitorScope           ContestScope `json:"monitor_scope"`
-	SubmissionsListScope   ContestScope `json:"submissions_list_scope"`
-	SubmissionsReviewScope ContestScope `json:"submissions_review_scope"`
-	SubmissionDetailsScope ContestScope `json:"submission_details_scope"`
+	Permissions            ContestPermissionsModel `json:"permissions"`
+	ID                     uuid.UUID               `json:"id"`
+	Login                  string                  `json:"login"`
+	OrganizationID         uuid.UUID               `json:"organization_id"`
+	OrganizationLogin      string                  `json:"organization_login"`
+	Title                  string                  `json:"title"`
+	Description            string                  `json:"description"`
+	Visibility             string                  `json:"visibility"`
+	MonitorScope           ContestScope            `json:"monitor_scope"`
+	SubmissionsListScope   ContestScope            `json:"submissions_list_scope"`
+	SubmissionsReviewScope ContestScope            `json:"submissions_review_scope"`
+	SubmissionDetailsScope ContestScope            `json:"submission_details_scope"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status.
@@ -1390,9 +1390,9 @@ type ContestModel struct {
 	Languages []string `json:"languages"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ContestModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ContestModel) GetPermissions() ContestPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -1510,9 +1510,9 @@ func (s *ContestModel) GetLanguages() []string {
 	return s.Languages
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ContestModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ContestModel) SetPermissions(val ContestPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -1727,22 +1727,115 @@ func (s *ContestModelParticipationMode) UnmarshalText(data []byte) error {
 	}
 }
 
+// What the caller may do in the contest.
+// Ref: #/components/schemas/ContestPermissionsModel
+type ContestPermissionsModel struct {
+	ViewProblems          bool `json:"view_problems"`
+	Submit                bool `json:"submit"`
+	ListOwnSubmissions    bool `json:"list_own_submissions"`
+	ListSubmissions       bool `json:"list_submissions"`
+	ViewSubmissionDetails bool `json:"view_submission_details"`
+	ViewScoreboard        bool `json:"view_scoreboard"`
+	Manage                bool `json:"manage"`
+	Delete                bool `json:"delete"`
+}
+
+// GetViewProblems returns the value of ViewProblems.
+func (s *ContestPermissionsModel) GetViewProblems() bool {
+	return s.ViewProblems
+}
+
+// GetSubmit returns the value of Submit.
+func (s *ContestPermissionsModel) GetSubmit() bool {
+	return s.Submit
+}
+
+// GetListOwnSubmissions returns the value of ListOwnSubmissions.
+func (s *ContestPermissionsModel) GetListOwnSubmissions() bool {
+	return s.ListOwnSubmissions
+}
+
+// GetListSubmissions returns the value of ListSubmissions.
+func (s *ContestPermissionsModel) GetListSubmissions() bool {
+	return s.ListSubmissions
+}
+
+// GetViewSubmissionDetails returns the value of ViewSubmissionDetails.
+func (s *ContestPermissionsModel) GetViewSubmissionDetails() bool {
+	return s.ViewSubmissionDetails
+}
+
+// GetViewScoreboard returns the value of ViewScoreboard.
+func (s *ContestPermissionsModel) GetViewScoreboard() bool {
+	return s.ViewScoreboard
+}
+
+// GetManage returns the value of Manage.
+func (s *ContestPermissionsModel) GetManage() bool {
+	return s.Manage
+}
+
+// GetDelete returns the value of Delete.
+func (s *ContestPermissionsModel) GetDelete() bool {
+	return s.Delete
+}
+
+// SetViewProblems sets the value of ViewProblems.
+func (s *ContestPermissionsModel) SetViewProblems(val bool) {
+	s.ViewProblems = val
+}
+
+// SetSubmit sets the value of Submit.
+func (s *ContestPermissionsModel) SetSubmit(val bool) {
+	s.Submit = val
+}
+
+// SetListOwnSubmissions sets the value of ListOwnSubmissions.
+func (s *ContestPermissionsModel) SetListOwnSubmissions(val bool) {
+	s.ListOwnSubmissions = val
+}
+
+// SetListSubmissions sets the value of ListSubmissions.
+func (s *ContestPermissionsModel) SetListSubmissions(val bool) {
+	s.ListSubmissions = val
+}
+
+// SetViewSubmissionDetails sets the value of ViewSubmissionDetails.
+func (s *ContestPermissionsModel) SetViewSubmissionDetails(val bool) {
+	s.ViewSubmissionDetails = val
+}
+
+// SetViewScoreboard sets the value of ViewScoreboard.
+func (s *ContestPermissionsModel) SetViewScoreboard(val bool) {
+	s.ViewScoreboard = val
+}
+
+// SetManage sets the value of Manage.
+func (s *ContestPermissionsModel) SetManage(val bool) {
+	s.Manage = val
+}
+
+// SetDelete sets the value of Delete.
+func (s *ContestPermissionsModel) SetDelete(val bool) {
+	s.Delete = val
+}
+
 // Contest problem list item data.
 // Ref: #/components/schemas/ContestProblemListItemModel
 type ContestProblemListItemModel struct {
-	Capabilities []string  `json:"capabilities"`
-	ProblemID    uuid.UUID `json:"problem_id"`
-	Position     int32     `json:"position"`
-	Title        string    `json:"title"`
-	MemoryLimit  int32     `json:"memory_limit"`
-	TimeLimit    int32     `json:"time_limit"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	Permissions ContestProblemPermissionsModel `json:"permissions"`
+	ProblemID   uuid.UUID                      `json:"problem_id"`
+	Position    int32                          `json:"position"`
+	Title       string                         `json:"title"`
+	MemoryLimit int32                          `json:"memory_limit"`
+	TimeLimit   int32                          `json:"time_limit"`
+	CreatedAt   time.Time                      `json:"created_at"`
+	UpdatedAt   time.Time                      `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ContestProblemListItemModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ContestProblemListItemModel) GetPermissions() ContestProblemPermissionsModel {
+	return s.Permissions
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -1780,9 +1873,9 @@ func (s *ContestProblemListItemModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ContestProblemListItemModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ContestProblemListItemModel) SetPermissions(val ContestProblemPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetProblemID sets the value of ProblemID.
@@ -1823,11 +1916,11 @@ func (s *ContestProblemListItemModel) SetUpdatedAt(val time.Time) {
 // Contest problem data.
 // Ref: #/components/schemas/ContestProblemModel
 type ContestProblemModel struct {
-	Capabilities []string  `json:"capabilities"`
-	ProblemID    uuid.UUID `json:"problem_id"`
-	Title        string    `json:"title"`
-	TimeLimit    int32     `json:"time_limit"`
-	MemoryLimit  int32     `json:"memory_limit"`
+	Permissions ContestProblemPermissionsModel `json:"permissions"`
+	ProblemID   uuid.UUID                      `json:"problem_id"`
+	Title       string                         `json:"title"`
+	TimeLimit   int32                          `json:"time_limit"`
+	MemoryLimit int32                          `json:"memory_limit"`
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
@@ -1846,9 +1939,9 @@ type ContestProblemModel struct {
 	Assets ContestProblemModelAssets `json:"assets"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ContestProblemModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ContestProblemModel) GetPermissions() ContestProblemPermissionsModel {
+	return s.Permissions
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -1931,9 +2024,9 @@ func (s *ContestProblemModel) GetAssets() ContestProblemModelAssets {
 	return s.Assets
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ContestProblemModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ContestProblemModel) SetPermissions(val ContestProblemPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetProblemID sets the value of ProblemID.
@@ -2027,6 +2120,45 @@ func (s *ContestProblemModelAssets) init() ContestProblemModelAssets {
 		*s = m
 	}
 	return m
+}
+
+// What the caller may do with the contest problem.
+// Ref: #/components/schemas/ContestProblemPermissionsModel
+type ContestProblemPermissionsModel struct {
+	Submit bool `json:"submit"`
+	Manage bool `json:"manage"`
+	// Whether the caller may edit the source problem.
+	EditProblem bool `json:"edit_problem"`
+}
+
+// GetSubmit returns the value of Submit.
+func (s *ContestProblemPermissionsModel) GetSubmit() bool {
+	return s.Submit
+}
+
+// GetManage returns the value of Manage.
+func (s *ContestProblemPermissionsModel) GetManage() bool {
+	return s.Manage
+}
+
+// GetEditProblem returns the value of EditProblem.
+func (s *ContestProblemPermissionsModel) GetEditProblem() bool {
+	return s.EditProblem
+}
+
+// SetSubmit sets the value of Submit.
+func (s *ContestProblemPermissionsModel) SetSubmit(val bool) {
+	s.Submit = val
+}
+
+// SetManage sets the value of Manage.
+func (s *ContestProblemPermissionsModel) SetManage(val bool) {
+	s.Manage = val
+}
+
+// SetEditProblem sets the value of EditProblem.
+func (s *ContestProblemPermissionsModel) SetEditProblem(val bool) {
+	s.EditProblem = val
 }
 
 // Contest problem reorder item data.
@@ -2198,18 +2330,18 @@ func (s *ContestSortOrderQuery) UnmarshalText(data []byte) error {
 // Contest team data.
 // Ref: #/components/schemas/ContestTeamModel
 type ContestTeamModel struct {
-	Capabilities []string                    `json:"capabilities"`
-	ContestID    uuid.UUID                   `json:"contest_id"`
-	TeamID       uuid.UUID                   `json:"team_id"`
-	TeamName     string                      `json:"team_name"`
-	TeamSlug     string                      `json:"team_slug"`
-	ContestRole  ContestTeamModelContestRole `json:"contest_role"`
-	CreatedAt    time.Time                   `json:"created_at"`
+	Permissions MemberPermissionsModel      `json:"permissions"`
+	ContestID   uuid.UUID                   `json:"contest_id"`
+	TeamID      uuid.UUID                   `json:"team_id"`
+	TeamName    string                      `json:"team_name"`
+	TeamSlug    string                      `json:"team_slug"`
+	ContestRole ContestTeamModelContestRole `json:"contest_role"`
+	CreatedAt   time.Time                   `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ContestTeamModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ContestTeamModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetContestID returns the value of ContestID.
@@ -2242,9 +2374,9 @@ func (s *ContestTeamModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ContestTeamModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ContestTeamModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetContestID sets the value of ContestID.
@@ -2865,23 +2997,23 @@ func (s *CreationResponseModel) SetLogin(val OptString) {
 // Dashboard contest data.
 // Ref: #/components/schemas/DashboardContestModel
 type DashboardContestModel struct {
-	Capabilities       []string       `json:"capabilities"`
-	ID                 uuid.UUID      `json:"id"`
-	Login              string         `json:"login"`
-	Title              string         `json:"title"`
-	OrganizationID     uuid.UUID      `json:"organization_id"`
-	OrganizationName   string         `json:"organization_name"`
-	OrganizationLogin  string         `json:"organization_login"`
-	UserRole           string         `json:"user_role"`
-	LastSubmissionTime OptNilDateTime `json:"last_submission_time"`
-	StartTime          OptNilDateTime `json:"start_time"`
-	EndTime            OptNilDateTime `json:"end_time"`
-	CreatedAt          time.Time      `json:"created_at"`
+	Permissions        ContestPermissionsModel `json:"permissions"`
+	ID                 uuid.UUID               `json:"id"`
+	Login              string                  `json:"login"`
+	Title              string                  `json:"title"`
+	OrganizationID     uuid.UUID               `json:"organization_id"`
+	OrganizationName   string                  `json:"organization_name"`
+	OrganizationLogin  string                  `json:"organization_login"`
+	UserRole           string                  `json:"user_role"`
+	LastSubmissionTime OptNilDateTime          `json:"last_submission_time"`
+	StartTime          OptNilDateTime          `json:"start_time"`
+	EndTime            OptNilDateTime          `json:"end_time"`
+	CreatedAt          time.Time               `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *DashboardContestModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *DashboardContestModel) GetPermissions() ContestPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -2939,9 +3071,9 @@ func (s *DashboardContestModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *DashboardContestModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *DashboardContestModel) SetPermissions(val ContestPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -3002,20 +3134,20 @@ func (s *DashboardContestModel) SetCreatedAt(val time.Time) {
 // Dashboard problem data.
 // Ref: #/components/schemas/DashboardProblemModel
 type DashboardProblemModel struct {
-	Capabilities      []string  `json:"capabilities"`
-	ID                uuid.UUID `json:"id"`
-	Title             string    `json:"title"`
-	OrganizationID    uuid.UUID `json:"organization_id"`
-	OrganizationName  string    `json:"organization_name"`
-	OrganizationLogin string    `json:"organization_login"`
-	TimeLimit         int32     `json:"time_limit"`
-	MemoryLimit       int32     `json:"memory_limit"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	Permissions       ProblemPermissionsModel `json:"permissions"`
+	ID                uuid.UUID               `json:"id"`
+	Title             string                  `json:"title"`
+	OrganizationID    uuid.UUID               `json:"organization_id"`
+	OrganizationName  string                  `json:"organization_name"`
+	OrganizationLogin string                  `json:"organization_login"`
+	TimeLimit         int32                   `json:"time_limit"`
+	MemoryLimit       int32                   `json:"memory_limit"`
+	UpdatedAt         time.Time               `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *DashboardProblemModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *DashboardProblemModel) GetPermissions() ProblemPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -3058,9 +3190,9 @@ func (s *DashboardProblemModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *DashboardProblemModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *DashboardProblemModel) SetPermissions(val ProblemPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -3957,23 +4089,12 @@ func (s *GetHealthResponseModel) SetMessage(val string) {
 // Result of get my contest role.
 // Ref: #/components/schemas/GetMyContestRoleResponseModel
 type GetMyContestRoleResponseModel struct {
-	Capabilities []string `json:"capabilities"`
-	Role         string   `json:"role"`
-}
-
-// GetCapabilities returns the value of Capabilities.
-func (s *GetMyContestRoleResponseModel) GetCapabilities() []string {
-	return s.Capabilities
+	Role string `json:"role"`
 }
 
 // GetRole returns the value of Role.
 func (s *GetMyContestRoleResponseModel) GetRole() string {
 	return s.Role
-}
-
-// SetCapabilities sets the value of Capabilities.
-func (s *GetMyContestRoleResponseModel) SetCapabilities(val []string) {
-	s.Capabilities = val
 }
 
 // SetRole sets the value of Role.
@@ -5042,6 +5163,33 @@ type MarkAllNotificationsAsReadOK struct{}
 
 // MarkNotificationAsReadOK is response for MarkNotificationAsRead operation.
 type MarkNotificationAsReadOK struct{}
+
+// Whether the caller may change or revoke this role grant.
+// Ref: #/components/schemas/MemberPermissionsModel
+type MemberPermissionsModel struct {
+	ChangeRole bool `json:"change_role"`
+	Remove     bool `json:"remove"`
+}
+
+// GetChangeRole returns the value of ChangeRole.
+func (s *MemberPermissionsModel) GetChangeRole() bool {
+	return s.ChangeRole
+}
+
+// GetRemove returns the value of Remove.
+func (s *MemberPermissionsModel) GetRemove() bool {
+	return s.Remove
+}
+
+// SetChangeRole sets the value of ChangeRole.
+func (s *MemberPermissionsModel) SetChangeRole(val bool) {
+	s.ChangeRole = val
+}
+
+// SetRemove sets the value of Remove.
+func (s *MemberPermissionsModel) SetRemove(val bool) {
+	s.Remove = val
+}
 
 // NewNilDateTime returns new NilDateTime with value set to v.
 func NewNilDateTime(v time.Time) NilDateTime {
@@ -7885,7 +8033,7 @@ func (s *OrganizationJoinRequestResponseModel) SetJoined(val bool) {
 // Organization member data.
 // Ref: #/components/schemas/OrganizationMemberModel
 type OrganizationMemberModel struct {
-	Capabilities   []string                    `json:"capabilities"`
+	Permissions    MemberPermissionsModel      `json:"permissions"`
 	UserID         uuid.UUID                   `json:"user_id"`
 	OrganizationID uuid.UUID                   `json:"organization_id"`
 	Username       string                      `json:"username"`
@@ -7893,9 +8041,9 @@ type OrganizationMemberModel struct {
 	CreatedAt      time.Time                   `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *OrganizationMemberModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *OrganizationMemberModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetUserID returns the value of UserID.
@@ -7923,9 +8071,9 @@ func (s *OrganizationMemberModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *OrganizationMemberModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *OrganizationMemberModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetUserID sets the value of UserID.
@@ -8004,19 +8152,19 @@ func (s *OrganizationMemberModelRole) UnmarshalText(data []byte) error {
 // Organization data.
 // Ref: #/components/schemas/OrganizationModel
 type OrganizationModel struct {
-	Capabilities []string                    `json:"capabilities"`
-	ID           uuid.UUID                   `json:"id"`
-	Login        string                      `json:"login"`
-	Name         string                      `json:"name"`
-	Description  OptString                   `json:"description"`
-	JoinPolicy   OrganizationModelJoinPolicy `json:"join_policy"`
-	CreatedAt    time.Time                   `json:"created_at"`
-	UpdatedAt    time.Time                   `json:"updated_at"`
+	Permissions OrganizationPermissionsModel `json:"permissions"`
+	ID          uuid.UUID                    `json:"id"`
+	Login       string                       `json:"login"`
+	Name        string                       `json:"name"`
+	Description OptString                    `json:"description"`
+	JoinPolicy  OrganizationModelJoinPolicy  `json:"join_policy"`
+	CreatedAt   time.Time                    `json:"created_at"`
+	UpdatedAt   time.Time                    `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *OrganizationModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *OrganizationModel) GetPermissions() OrganizationPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -8054,9 +8202,9 @@ func (s *OrganizationModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *OrganizationModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *OrganizationModel) SetPermissions(val OrganizationPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -8140,6 +8288,88 @@ func (s *OrganizationModelJoinPolicy) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// What the caller may do with the organization.
+// Ref: #/components/schemas/OrganizationPermissionsModel
+type OrganizationPermissionsModel struct {
+	Manage        bool `json:"manage"`
+	ManageMembers bool `json:"manage_members"`
+	Delete        bool `json:"delete"`
+	ListMembers   bool `json:"list_members"`
+	Join          bool `json:"join"`
+	RequestJoin   bool `json:"request_join"`
+	Leave         bool `json:"leave"`
+}
+
+// GetManage returns the value of Manage.
+func (s *OrganizationPermissionsModel) GetManage() bool {
+	return s.Manage
+}
+
+// GetManageMembers returns the value of ManageMembers.
+func (s *OrganizationPermissionsModel) GetManageMembers() bool {
+	return s.ManageMembers
+}
+
+// GetDelete returns the value of Delete.
+func (s *OrganizationPermissionsModel) GetDelete() bool {
+	return s.Delete
+}
+
+// GetListMembers returns the value of ListMembers.
+func (s *OrganizationPermissionsModel) GetListMembers() bool {
+	return s.ListMembers
+}
+
+// GetJoin returns the value of Join.
+func (s *OrganizationPermissionsModel) GetJoin() bool {
+	return s.Join
+}
+
+// GetRequestJoin returns the value of RequestJoin.
+func (s *OrganizationPermissionsModel) GetRequestJoin() bool {
+	return s.RequestJoin
+}
+
+// GetLeave returns the value of Leave.
+func (s *OrganizationPermissionsModel) GetLeave() bool {
+	return s.Leave
+}
+
+// SetManage sets the value of Manage.
+func (s *OrganizationPermissionsModel) SetManage(val bool) {
+	s.Manage = val
+}
+
+// SetManageMembers sets the value of ManageMembers.
+func (s *OrganizationPermissionsModel) SetManageMembers(val bool) {
+	s.ManageMembers = val
+}
+
+// SetDelete sets the value of Delete.
+func (s *OrganizationPermissionsModel) SetDelete(val bool) {
+	s.Delete = val
+}
+
+// SetListMembers sets the value of ListMembers.
+func (s *OrganizationPermissionsModel) SetListMembers(val bool) {
+	s.ListMembers = val
+}
+
+// SetJoin sets the value of Join.
+func (s *OrganizationPermissionsModel) SetJoin(val bool) {
+	s.Join = val
+}
+
+// SetRequestJoin sets the value of RequestJoin.
+func (s *OrganizationPermissionsModel) SetRequestJoin(val bool) {
+	s.RequestJoin = val
+}
+
+// SetLeave sets the value of Leave.
+func (s *OrganizationPermissionsModel) SetLeave(val bool) {
+	s.Leave = val
 }
 
 type OrganizationRoleQuery string
@@ -10230,17 +10460,17 @@ func (s *ProblemDraftValidatorTest) SetGroup(val string) {
 // Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {
-	Capabilities []string               `json:"capabilities"`
-	ProblemID    uuid.UUID              `json:"problem_id"`
-	UserID       uuid.UUID              `json:"user_id"`
-	Username     string                 `json:"username"`
-	Role         ProblemMemberModelRole `json:"role"`
-	CreatedAt    time.Time              `json:"created_at"`
+	Permissions MemberPermissionsModel `json:"permissions"`
+	ProblemID   uuid.UUID              `json:"problem_id"`
+	UserID      uuid.UUID              `json:"user_id"`
+	Username    string                 `json:"username"`
+	Role        ProblemMemberModelRole `json:"role"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ProblemMemberModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ProblemMemberModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -10268,9 +10498,9 @@ func (s *ProblemMemberModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ProblemMemberModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ProblemMemberModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetProblemID sets the value of ProblemID.
@@ -10357,23 +10587,23 @@ func (s *ProblemMemberModelRole) UnmarshalText(data []byte) error {
 // packages and are read there.
 // Ref: #/components/schemas/ProblemModel
 type ProblemModel struct {
-	Capabilities      []string  `json:"capabilities"`
-	ID                uuid.UUID `json:"id"`
-	OrganizationID    uuid.UUID `json:"organization_id"`
-	OrganizationLogin string    `json:"organization_login"`
-	Visibility        string    `json:"visibility"`
-	Title             string    `json:"title"`
-	TimeLimit         int32     `json:"time_limit"`
-	MemoryLimit       int32     `json:"memory_limit"`
-	IsTemplate        bool      `json:"is_template"`
-	IsPrivate         OptBool   `json:"is_private"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	Permissions       ProblemPermissionsModel `json:"permissions"`
+	ID                uuid.UUID               `json:"id"`
+	OrganizationID    uuid.UUID               `json:"organization_id"`
+	OrganizationLogin string                  `json:"organization_login"`
+	Visibility        string                  `json:"visibility"`
+	Title             string                  `json:"title"`
+	TimeLimit         int32                   `json:"time_limit"`
+	MemoryLimit       int32                   `json:"memory_limit"`
+	IsTemplate        bool                    `json:"is_template"`
+	IsPrivate         OptBool                 `json:"is_private"`
+	CreatedAt         time.Time               `json:"created_at"`
+	UpdatedAt         time.Time               `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ProblemModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ProblemModel) GetPermissions() ProblemPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -10431,9 +10661,9 @@ func (s *ProblemModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ProblemModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ProblemModel) SetPermissions(val ProblemPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -10571,6 +10801,55 @@ func (s *ProblemParams) init() ProblemParams {
 		*s = m
 	}
 	return m
+}
+
+// What the caller may do with the problem.
+// Ref: #/components/schemas/ProblemPermissionsModel
+type ProblemPermissionsModel struct {
+	Use    bool `json:"use"`
+	Edit   bool `json:"edit"`
+	Manage bool `json:"manage"`
+	Delete bool `json:"delete"`
+}
+
+// GetUse returns the value of Use.
+func (s *ProblemPermissionsModel) GetUse() bool {
+	return s.Use
+}
+
+// GetEdit returns the value of Edit.
+func (s *ProblemPermissionsModel) GetEdit() bool {
+	return s.Edit
+}
+
+// GetManage returns the value of Manage.
+func (s *ProblemPermissionsModel) GetManage() bool {
+	return s.Manage
+}
+
+// GetDelete returns the value of Delete.
+func (s *ProblemPermissionsModel) GetDelete() bool {
+	return s.Delete
+}
+
+// SetUse sets the value of Use.
+func (s *ProblemPermissionsModel) SetUse(val bool) {
+	s.Use = val
+}
+
+// SetEdit sets the value of Edit.
+func (s *ProblemPermissionsModel) SetEdit(val bool) {
+	s.Edit = val
+}
+
+// SetManage sets the value of Manage.
+func (s *ProblemPermissionsModel) SetManage(val bool) {
+	s.Manage = val
+}
+
+// SetDelete sets the value of Delete.
+func (s *ProblemPermissionsModel) SetDelete(val bool) {
+	s.Delete = val
 }
 
 type ProblemRoleQuery string
@@ -10793,18 +11072,18 @@ func (s *ProblemStatusCodeWithHeaders) SetResponse(val Problem) {
 // Problem team data.
 // Ref: #/components/schemas/ProblemTeamModel
 type ProblemTeamModel struct {
-	Capabilities []string             `json:"capabilities"`
-	ProblemID    uuid.UUID            `json:"problem_id"`
-	TeamID       uuid.UUID            `json:"team_id"`
-	TeamName     string               `json:"team_name"`
-	TeamSlug     string               `json:"team_slug"`
-	Role         ProblemTeamModelRole `json:"role"`
-	CreatedAt    time.Time            `json:"created_at"`
+	Permissions MemberPermissionsModel `json:"permissions"`
+	ProblemID   uuid.UUID              `json:"problem_id"`
+	TeamID      uuid.UUID              `json:"team_id"`
+	TeamName    string                 `json:"team_name"`
+	TeamSlug    string                 `json:"team_slug"`
+	Role        ProblemTeamModelRole   `json:"role"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ProblemTeamModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ProblemTeamModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -10837,9 +11116,9 @@ func (s *ProblemTeamModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ProblemTeamModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ProblemTeamModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetProblemID sets the value of ProblemID.
@@ -10983,22 +11262,22 @@ func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 // Problems list item data.
 // Ref: #/components/schemas/ProblemsListItemModel
 type ProblemsListItemModel struct {
-	Capabilities      []string  `json:"capabilities"`
-	ID                uuid.UUID `json:"id"`
-	OrganizationID    uuid.UUID `json:"organization_id"`
-	OrganizationLogin string    `json:"organization_login"`
-	Title             string    `json:"title"`
-	Visibility        OptString `json:"visibility"`
-	MemoryLimit       int32     `json:"memory_limit"`
-	TimeLimit         int32     `json:"time_limit"`
-	IsTemplate        bool      `json:"is_template"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	Permissions       ProblemPermissionsModel `json:"permissions"`
+	ID                uuid.UUID               `json:"id"`
+	OrganizationID    uuid.UUID               `json:"organization_id"`
+	OrganizationLogin string                  `json:"organization_login"`
+	Title             string                  `json:"title"`
+	Visibility        OptString               `json:"visibility"`
+	MemoryLimit       int32                   `json:"memory_limit"`
+	TimeLimit         int32                   `json:"time_limit"`
+	IsTemplate        bool                    `json:"is_template"`
+	CreatedAt         time.Time               `json:"created_at"`
+	UpdatedAt         time.Time               `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *ProblemsListItemModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *ProblemsListItemModel) GetPermissions() ProblemPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -11051,9 +11330,9 @@ func (s *ProblemsListItemModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *ProblemsListItemModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *ProblemsListItemModel) SetPermissions(val ProblemPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -12407,17 +12686,17 @@ func (s *SystemLibraryFile) SetContent(val string) {
 // Team member data.
 // Ref: #/components/schemas/TeamMemberModel
 type TeamMemberModel struct {
-	Capabilities []string            `json:"capabilities"`
-	UserID       uuid.UUID           `json:"user_id"`
-	TeamID       uuid.UUID           `json:"team_id"`
-	Username     string              `json:"username"`
-	Role         TeamMemberModelRole `json:"role"`
-	CreatedAt    time.Time           `json:"created_at"`
+	Permissions MemberPermissionsModel `json:"permissions"`
+	UserID      uuid.UUID              `json:"user_id"`
+	TeamID      uuid.UUID              `json:"team_id"`
+	Username    string                 `json:"username"`
+	Role        TeamMemberModelRole    `json:"role"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *TeamMemberModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *TeamMemberModel) GetPermissions() MemberPermissionsModel {
+	return s.Permissions
 }
 
 // GetUserID returns the value of UserID.
@@ -12445,9 +12724,9 @@ func (s *TeamMemberModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *TeamMemberModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *TeamMemberModel) SetPermissions(val MemberPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetUserID sets the value of UserID.
@@ -12519,18 +12798,18 @@ func (s *TeamMemberModelRole) UnmarshalText(data []byte) error {
 // Team data.
 // Ref: #/components/schemas/TeamModel
 type TeamModel struct {
-	Capabilities   []string  `json:"capabilities"`
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Description    OptString `json:"description"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	Permissions    TeamPermissionsModel `json:"permissions"`
+	ID             uuid.UUID            `json:"id"`
+	Name           string               `json:"name"`
+	OrganizationID uuid.UUID            `json:"organization_id"`
+	Description    OptString            `json:"description"`
+	CreatedAt      time.Time            `json:"created_at"`
+	UpdatedAt      time.Time            `json:"updated_at"`
 }
 
-// GetCapabilities returns the value of Capabilities.
-func (s *TeamModel) GetCapabilities() []string {
-	return s.Capabilities
+// GetPermissions returns the value of Permissions.
+func (s *TeamModel) GetPermissions() TeamPermissionsModel {
+	return s.Permissions
 }
 
 // GetID returns the value of ID.
@@ -12563,9 +12842,9 @@ func (s *TeamModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
-// SetCapabilities sets the value of Capabilities.
-func (s *TeamModel) SetCapabilities(val []string) {
-	s.Capabilities = val
+// SetPermissions sets the value of Permissions.
+func (s *TeamModel) SetPermissions(val TeamPermissionsModel) {
+	s.Permissions = val
 }
 
 // SetID sets the value of ID.
@@ -12596,6 +12875,44 @@ func (s *TeamModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *TeamModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
+}
+
+// What the caller may do with the team.
+// Ref: #/components/schemas/TeamPermissionsModel
+type TeamPermissionsModel struct {
+	Manage bool `json:"manage"`
+	Delete bool `json:"delete"`
+	Leave  bool `json:"leave"`
+}
+
+// GetManage returns the value of Manage.
+func (s *TeamPermissionsModel) GetManage() bool {
+	return s.Manage
+}
+
+// GetDelete returns the value of Delete.
+func (s *TeamPermissionsModel) GetDelete() bool {
+	return s.Delete
+}
+
+// GetLeave returns the value of Leave.
+func (s *TeamPermissionsModel) GetLeave() bool {
+	return s.Leave
+}
+
+// SetManage sets the value of Manage.
+func (s *TeamPermissionsModel) SetManage(val bool) {
+	s.Manage = val
+}
+
+// SetDelete sets the value of Delete.
+func (s *TeamPermissionsModel) SetDelete(val bool) {
+	s.Delete = val
+}
+
+// SetLeave sets the value of Leave.
+func (s *TeamPermissionsModel) SetLeave(val bool) {
+	s.Leave = val
 }
 
 type TeamRoleQuery string

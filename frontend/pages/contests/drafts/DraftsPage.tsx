@@ -2,7 +2,6 @@ import {Container} from "@mantine/core";
 import {useLoaderData, redirect} from "react-router-dom";
 
 import {api, unwrap} from "@/lib/api";
-import {PermissionChecker} from "@/lib/permissions";
 
 import {DraftsClient} from "./DraftsClient";
 
@@ -30,12 +29,10 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     throw redirect(`/${slug}/${contestLogin}`);
   }
 
-  const checker = new PermissionChecker();
-
-  const isManager = checker.canManageContest(contestResponse.contest);
+  const isManager = contestResponse.contest.permissions.manage;
 
   const draftsDisabled = !contestResponse.contest.enable_drafts;
-  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && draftsDisabled)) {
+  if (!contestResponse.contest.permissions.view_problems || (!isManager && draftsDisabled)) {
     throw redirect(`/${slug}/${contestLogin}`);
   }
 

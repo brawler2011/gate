@@ -5,7 +5,6 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -77,9 +76,7 @@ const Page = (): ReactNode => {
     contestData,
   } = data;
   if (contestData?.contest) {
-    const checker = new PermissionChecker();
-
-    if (!checker.canViewMySubmissions(contestData.contest)) {
+    if (!contestData.contest.permissions.list_own_submissions) {
       return <Navigate to={`/${slug}/${contestLogin}`} replace />;
     }
   }

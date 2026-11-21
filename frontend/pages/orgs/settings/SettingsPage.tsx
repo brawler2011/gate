@@ -72,7 +72,8 @@ const OrgSettingsPage = (): ReactNode => {
 
             <Box className={classes.contentPanel}>
               {activeSection === SECTIONS.SETTINGS && <OrgSettingsForm org={org} />}
-              {activeSection === SECTIONS.DANGER && org.capabilities.includes("delete") && <OrgDangerZone orgLogin={org.login} orgName={org.name} />}
+              {activeSection === SECTIONS.DANGER && org.permissions.delete
+                && <OrgDangerZone orgLogin={org.login} orgName={org.name} />}
             </Box>
           </Box>
         </Box>

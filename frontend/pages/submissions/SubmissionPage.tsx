@@ -4,7 +4,7 @@ import {useLoaderData} from "react-router-dom";
 import {DefaultLayout} from "@/components/shared";
 import {SubmissionDetailsContent} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {getMyContestRole} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -44,11 +44,7 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
   const {submission, user, contestData} = data;
-  const checker = contestData?.contest
-    ? new PermissionChecker()
-    : null;
-  const canRejudge =
-    contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
+  const canRejudge = contestData?.contest.permissions.manage ?? false;
   return (
     <DefaultLayout headerUser={user}>
       <title>{`Посылка #${submission.id.slice(0, 8)}`}</title>

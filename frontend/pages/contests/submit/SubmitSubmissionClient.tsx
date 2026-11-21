@@ -22,14 +22,14 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
   const navigate = useNavigate();
   const languages = useContestLanguages(contest.languages);
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
-    problems.find((problem) => problem.capabilities.includes("submit"))?.problem_id ?? null,
+    problems.find((problem) => problem.permissions.submit)?.problem_id ?? null,
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const problemOptions = problems.map((problem) => ({
     value: problem.problem_id,
     label: `${numberToLetters(problem.position)}. ${problem.title}`,
-    disabled: !problem.capabilities.includes("submit"),
+    disabled: !problem.permissions.submit,
   }));
 
   const handleSubmit = async (submission: FormData, language: string) => {
@@ -104,7 +104,8 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
           languages={languages}
           onSubmit={handleSubmit}
           large
-          disabled={isSubmitted || !contest.capabilities.includes("submit") || !problems.some((problem) => problem.problem_id === selectedProblemId && problem.capabilities.includes("submit"))}
+          disabled={isSubmitted || !contest.permissions.submit
+            || !problems.some((problem) => problem.problem_id === selectedProblemId && problem.permissions.submit)}
           problemSelect={
             <Select
               placeholder="Выберите задачу"

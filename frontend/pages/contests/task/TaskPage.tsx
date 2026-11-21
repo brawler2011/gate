@@ -6,7 +6,6 @@ import {Task} from "@/components/shared/Task";
 import {useContestData} from "@/hooks/useContestData";
 import {api} from "@/lib/api";
 import {lettersToNumber, numberToLetters} from "@/lib/lib";
-import {PermissionChecker} from "@/lib/permissions";
 import {SUBMISSIONS_PATH, submissionsParams} from "@/lib/submissions";
 
 import type {ReactNode} from "react";
@@ -58,9 +57,8 @@ const Page = (): ReactNode => {
   const {response: contestResponse} = contest.data;
   const problemResponse = problemQuery.data;
   const submissionsResponse = submissionsQuery.data;
-  const checker = new PermissionChecker();
-  const isManager = checker.canManageContest(contestResponse.contest);
-  if (!checker.canViewProblems(contestResponse.contest)) {
+  const isManager = contestResponse.contest.permissions.manage;
+  if (!contestResponse.contest.permissions.view_problems) {
     return <Navigate to={`/${params.slug}/${params.contestLogin}`} replace />;
   }
   if (user && submissionsQuery.isPending) {
