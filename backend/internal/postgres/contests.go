@@ -189,7 +189,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 
 func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
 	if packageID == uuid.Nil && !allowLatest {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrInvalid, nil, "package is required")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrRequired, nil, "package is required")
 	}
 	var row sqlc.ProblemPackage
 	var err error
@@ -199,7 +199,7 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 		row, err = r.queries.GetProblemPackageByID(ctx, packageID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrInvalid, nil, "ready package not found")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrPackageNotReady, nil, "ready package not found")
 	}
 	if err != nil {
 		return access.PackageContext{}, dbError("resolve contest problem package", err)
@@ -939,7 +939,7 @@ func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uu
 		return dbError("update contest join request status", err)
 	}
 	if affected != 1 {
-		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")
+		return pkg.Wrap(pkg.ErrRequestResolved, nil, "request is no longer pending")
 	}
 	return nil
 }

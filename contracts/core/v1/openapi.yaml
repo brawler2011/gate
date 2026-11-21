@@ -3991,12 +3991,36 @@ components:
         - request_resolved
         - invite_only
         - not_org_member
+        - link_invalid
+        - account_expired
+        - temporary_account_unavailable
+        - own_account
+        - no_email
+        - unsupported_image
+        - owner_only
+        - primary_owner_required
+        - owner_role_fixed
+        - own_role
+        - statements_hidden
+        - contest_not_started
+        - contest_ended
+        - clarifications_disabled
+        - scoreboard_frozen
+        - limit_reached
+        - unknown_language
+        - language_not_allowed
+        - package_not_ready
+        - stale_revision
+        - operation_running
+        - build_finished
         - required
         - length
         - format
         - reserved
         - range
         - end_before_start
+        - duplicate
+        - too_large
     CreationResponseModel:
       description: "Result of creation."
       example:

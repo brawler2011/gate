@@ -96,19 +96,19 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 
 	tempUser, err := u.usersRepo.GetUserByUsername(ctx, input.Username)
 	if err != nil {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.OnNotFound(err, pkg.ErrInvalid, "temporary user not found")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.OnNotFound(err, pkg.ErrTemporaryAccountUnavailable, "temporary user not found")
 	}
 
 	if !tempUser.IsTemporary() {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, nil, "target account is not a temporary account")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrTemporaryAccountUnavailable, nil, "target account is not a temporary account")
 	}
 
 	if tempUser.IsClaimed() {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrConflict, nil, "temporary account has already been claimed")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrTemporaryAccountUnavailable, nil, "temporary account has already been claimed")
 	}
 
 	if tempUser.Id == caller.Id {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, nil, "cannot claim own account")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrOwnAccount, nil, "cannot claim own account")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(tempUser.PasswordHash), []byte(input.Password))
@@ -137,7 +137,7 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 			return pkg.ErrUnauthenticated
 		}
 		if currentTemp.IsClaimed() {
-			return pkg.Wrap(pkg.ErrConflict, nil, "temporary account has already been claimed")
+			return pkg.Wrap(pkg.ErrTemporaryAccountUnavailable, nil, "temporary account has already been claimed")
 		}
 
 		now := time.Now()
@@ -183,7 +183,7 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrNotFound, "user not found")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -205,11 +205,11 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrNotFound, "user not found")
 	}
 
 	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email address")
+		return pkg.Wrap(pkg.ErrNoEmail, nil, "user has no email address")
 	}
 
 	token, tokenHash, err := generateSecureToken()
@@ -241,7 +241,7 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrNotFound, "user not found")
 	}
 
 	existing, err := u.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail)
@@ -299,7 +299,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrNotFound, "user not found")
 	}
 
 	if user.IsEmailVerified {
@@ -307,7 +307,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 
 	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email address")
+		return pkg.Wrap(pkg.ErrNoEmail, nil, "user has no email address")
 	}
 
 	token, tokenHash, err := generateSecureToken()

@@ -469,7 +469,7 @@ func (r *OrganizationsRepo) UpdateInvitationStatus(ctx context.Context, id uuid.
 		return dbError("update invitation status", err)
 	}
 	if affected != 1 {
-		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")
+		return pkg.Wrap(pkg.ErrRequestResolved, nil, "request is no longer pending")
 	}
 	return nil
 }
@@ -605,7 +605,7 @@ func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid
 		return dbError("update join request status", err)
 	}
 	if affected != 1 {
-		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")
+		return pkg.Wrap(pkg.ErrRequestResolved, nil, "request is no longer pending")
 	}
 	return nil
 }

@@ -639,6 +639,50 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "not_org_member":
 		return nil
+	case "link_invalid":
+		return nil
+	case "account_expired":
+		return nil
+	case "temporary_account_unavailable":
+		return nil
+	case "own_account":
+		return nil
+	case "no_email":
+		return nil
+	case "unsupported_image":
+		return nil
+	case "owner_only":
+		return nil
+	case "primary_owner_required":
+		return nil
+	case "owner_role_fixed":
+		return nil
+	case "own_role":
+		return nil
+	case "statements_hidden":
+		return nil
+	case "contest_not_started":
+		return nil
+	case "contest_ended":
+		return nil
+	case "clarifications_disabled":
+		return nil
+	case "scoreboard_frozen":
+		return nil
+	case "limit_reached":
+		return nil
+	case "unknown_language":
+		return nil
+	case "language_not_allowed":
+		return nil
+	case "package_not_ready":
+		return nil
+	case "stale_revision":
+		return nil
+	case "operation_running":
+		return nil
+	case "build_finished":
+		return nil
 	case "required":
 		return nil
 	case "length":
@@ -650,6 +694,10 @@ func (s ErrorCode) Validate() error {
 	case "range":
 		return nil
 	case "end_before_start":
+		return nil
+	case "duplicate":
+		return nil
+	case "too_large":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

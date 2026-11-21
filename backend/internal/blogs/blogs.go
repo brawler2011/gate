@@ -184,12 +184,12 @@ func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, 
 	}
 
 	if !allowedExts[ext] {
-		return "", pkg.Wrap(pkg.ErrInvalid, nil, "invalid image file extension")
+		return "", pkg.Wrap(pkg.ErrUnsupportedImage, nil, "invalid image file extension")
 	}
 
 	img, _, err := image.Decode(imageReader)
 	if err != nil {
-		return "", pkg.Wrap(pkg.ErrInvalid, err, "failed to decode image")
+		return "", pkg.Wrap(pkg.ErrUnsupportedImage, err, "failed to decode image")
 	}
 
 	var buf bytes.Buffer

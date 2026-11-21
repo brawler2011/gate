@@ -150,7 +150,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 		return model.MutationResult{}, dbError("finalize upload draft", err)
 	}
 	if revision != expected {
-		return model.MutationResult{}, pkg.ErrConflict
+		return model.MutationResult{}, pkg.ErrStaleRevision
 	}
 	draft, err := readProblemDraft(ctx, q, id)
 	if err != nil {

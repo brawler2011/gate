@@ -121,7 +121,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 		}
 
 		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
-			return pkg.OnNotFound(err, pkg.ErrInvalid, "problem does not belong to contest")
+			return pkg.OnNotFound(err, pkg.ErrNotFound, "problem does not belong to contest")
 		}
 		input := *creation
 		block, err := tx.GetContestUserProblemBlock(ctx, input.ContestId, input.UserId, input.ProblemId)
@@ -185,7 +185,7 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 			return err
 		}
 		if contestID != uuid.Nil && (sub.ContestID == nil || *sub.ContestID != contestID) {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "submission does not belong to specified contest")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
 		}
 		if sub.ContestID != nil && sub.CreatedBy != nil && sub.ProblemID != nil {
 			if err := tx.LockSubmissionTuple(ctx, *sub.ContestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
@@ -256,7 +256,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 			return nil, err
 		}
 		if filter.State != nil && contest.IsFrozenAt(accessmodel.ReadTime(ctx)) && !permissions.ManageContest && !ownOnly {
-			return nil, pkg.Wrap(pkg.ErrInvalid, nil, "state filter is unavailable during freeze")
+			return nil, pkg.Wrap(pkg.ErrScoreboardFrozen, nil, "state filter is unavailable during freeze")
 		}
 	} else if !ownOnly && !user.IsAdmin() {
 		return nil, pkg.ErrForbidden
@@ -282,7 +282,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 
 func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter submissionsmodel.RejudgeFilter) (int, error) {
 	if filter.ContestID == uuid.Nil {
-		return 0, pkg.Wrap(pkg.ErrInvalid, nil, "contest id is required")
+		return 0, pkg.AtField("/contest_id", pkg.Invalid(pkg.ErrRequired, "contest id is required", nil))
 	}
 
 	if err := uc.requireContest(ctx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
@@ -307,7 +307,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 			return 0, err
 		}
 		if sub.ContestID != nil && *sub.ContestID != filter.ContestID {
-			return 0, pkg.Wrap(pkg.ErrInvalid, nil, "submission does not belong to specified contest")
+			return 0, pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
 		}
 	}
 

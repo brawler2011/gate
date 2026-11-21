@@ -25,7 +25,7 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
 		if problem.IsTemplate != nil && *problem.IsTemplate {
 			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
-				return pkg.OnNotFound(err, pkg.ErrInvalid, "template requires a successful package")
+				return pkg.OnNotFound(err, pkg.ErrPackageNotReady, "template requires a successful package")
 			}
 		}
 		return tx.UpdateProblem(ctx, id, problem)

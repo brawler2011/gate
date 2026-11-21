@@ -87,7 +87,7 @@ func (r *ProblemDraftsRepo) reserveOperation(ctx context.Context, tx pgx.Tx, k m
 		return nil, dbError("check operation lease", err)
 	}
 	if active && row.Token != k.Token {
-		return nil, pkg.Wrap(pkg.ErrConflict, nil, "operation is running")
+		return nil, pkg.Wrap(pkg.ErrOperationRunning, nil, "operation is running")
 	}
 	if row.Token != k.Token {
 		if err := q.TakeOverOperation(ctx, sqlc.TakeOverOperationParams{
@@ -156,7 +156,7 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 		return model.MutationResult{}, dbError("save draft", err)
 	}
 	if revision != draft.Revision {
-		return model.MutationResult{}, pkg.ErrConflict
+		return model.MutationResult{}, pkg.ErrStaleRevision
 	}
 	org, err := q.ProblemOrganizationID(ctx, draft.ProblemID)
 	if err != nil {

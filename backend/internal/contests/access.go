@@ -49,7 +49,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 		return nil, err
 	}
 	if !manager && contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
-		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "contest has not started yet")
+		return nil, pkg.Wrap(pkg.ErrContestNotStarted, nil, "contest has not started yet")
 	}
 	if unfrozen {
 		allowed, err := uc.permissions.HasContestPermission(ctx, contestID, userID, accessmodel.ActionManageContest)

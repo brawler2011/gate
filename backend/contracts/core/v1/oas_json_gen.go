@@ -6625,6 +6625,50 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeInviteOnly
 	case ErrorCodeNotOrgMember:
 		*s = ErrorCodeNotOrgMember
+	case ErrorCodeLinkInvalid:
+		*s = ErrorCodeLinkInvalid
+	case ErrorCodeAccountExpired:
+		*s = ErrorCodeAccountExpired
+	case ErrorCodeTemporaryAccountUnavailable:
+		*s = ErrorCodeTemporaryAccountUnavailable
+	case ErrorCodeOwnAccount:
+		*s = ErrorCodeOwnAccount
+	case ErrorCodeNoEmail:
+		*s = ErrorCodeNoEmail
+	case ErrorCodeUnsupportedImage:
+		*s = ErrorCodeUnsupportedImage
+	case ErrorCodeOwnerOnly:
+		*s = ErrorCodeOwnerOnly
+	case ErrorCodePrimaryOwnerRequired:
+		*s = ErrorCodePrimaryOwnerRequired
+	case ErrorCodeOwnerRoleFixed:
+		*s = ErrorCodeOwnerRoleFixed
+	case ErrorCodeOwnRole:
+		*s = ErrorCodeOwnRole
+	case ErrorCodeStatementsHidden:
+		*s = ErrorCodeStatementsHidden
+	case ErrorCodeContestNotStarted:
+		*s = ErrorCodeContestNotStarted
+	case ErrorCodeContestEnded:
+		*s = ErrorCodeContestEnded
+	case ErrorCodeClarificationsDisabled:
+		*s = ErrorCodeClarificationsDisabled
+	case ErrorCodeScoreboardFrozen:
+		*s = ErrorCodeScoreboardFrozen
+	case ErrorCodeLimitReached:
+		*s = ErrorCodeLimitReached
+	case ErrorCodeUnknownLanguage:
+		*s = ErrorCodeUnknownLanguage
+	case ErrorCodeLanguageNotAllowed:
+		*s = ErrorCodeLanguageNotAllowed
+	case ErrorCodePackageNotReady:
+		*s = ErrorCodePackageNotReady
+	case ErrorCodeStaleRevision:
+		*s = ErrorCodeStaleRevision
+	case ErrorCodeOperationRunning:
+		*s = ErrorCodeOperationRunning
+	case ErrorCodeBuildFinished:
+		*s = ErrorCodeBuildFinished
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired
 	case ErrorCodeLength:
@@ -6637,6 +6681,10 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeRange
 	case ErrorCodeEndBeforeStart:
 		*s = ErrorCodeEndBeforeStart
+	case ErrorCodeDuplicate:
+		*s = ErrorCodeDuplicate
+	case ErrorCodeTooLarge:
+		*s = ErrorCodeTooLarge
 	default:
 		*s = ErrorCode(v)
 	}

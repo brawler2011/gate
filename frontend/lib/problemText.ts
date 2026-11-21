@@ -40,6 +40,28 @@ const rangeText = (params: Params): string => {
   return "Значение вне допустимого диапазона";
 };
 
+const sizeText = (bytes: number): string => {
+  if (bytes >= 1024 * 1024) {
+    return `${Math.round(bytes / 1024 / 1024)} МБ`;
+  }
+  return bytes >= 1024 ? `${Math.round(bytes / 1024)} КБ` : `${bytes} байт`;
+};
+
+const tooLargeText = (params: Params): string => {
+  const max = bound(params, "max");
+  return max === undefined ? "Слишком большой размер" : `Размер не должен превышать ${sizeText(max)}`;
+};
+
+const limitText = (params: Params): string => {
+  const limit = bound(params, "limit");
+  return limit === undefined ? "Достигнут лимит" : `Достигнут лимит: ${limit}`;
+};
+
+const languageText = (prefix: string) => (params: Params): string => {
+  const id = params?.id;
+  return typeof id === "string" ? `${prefix}: ${id}` : prefix;
+};
+
 const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   invalid: "Некорректные данные",
   unauthenticated: "Требуется вход в систему",
@@ -67,12 +89,36 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   request_resolved: "Заявка уже рассмотрена",
   invite_only: "Вступление только по приглашениям",
   not_org_member: "Сначала нужно вступить в организацию",
+  link_invalid: "Ссылка недействительна или устарела. Запросите новую",
+  account_expired: "Срок действия аккаунта истёк",
+  temporary_account_unavailable: "Временный аккаунт недоступен: он истёк или уже привязан",
+  own_account: "Нельзя привязать собственный аккаунт",
+  no_email: "У пользователя не указан email",
+  unsupported_image: "Неподдерживаемый формат изображения",
+  owner_only: "Это может сделать только владелец",
+  primary_owner_required: "Сначала назначьте нового основного владельца",
+  owner_role_fixed: "Роль владельца нельзя изменить",
+  own_role: "Нельзя изменить собственную роль",
+  statements_hidden: "Условия задач скрыты",
+  contest_not_started: "Контест ещё не начался",
+  contest_ended: "Контест уже завершён",
+  clarifications_disabled: "Вопросы жюри в этом контесте отключены",
+  scoreboard_frozen: "Фильтр по результатам недоступен во время заморозки",
+  limit_reached: limitText,
+  unknown_language: languageText("Неизвестный язык"),
+  language_not_allowed: languageText("Язык не разрешён в этом контесте"),
+  package_not_ready: "У задачи нет собранного пакета",
+  stale_revision: "Черновик изменился в другом окне. Обновите страницу",
+  operation_running: "Операция ещё выполняется. Подождите",
+  build_finished: "Сборка уже завершена",
   required: "Обязательное поле",
   length: lengthText,
   format: "Недопустимый формат",
   reserved: "Это значение зарезервировано",
   range: rangeText,
   end_before_start: "Окончание должно быть позже начала",
+  duplicate: "Значение повторяется",
+  too_large: tooLargeText,
 };
 
 // Codes that say less than the caller's description of the failed action.
@@ -97,6 +143,9 @@ const fieldLabels: Record<string, string> = {
   "/answer": "Ответ",
   "/count": "Количество",
   "/prefix": "Префикс",
+  "/text": "Текст",
+  "/preview_image": "Обложка",
+  "/submission": "Решение",
 };
 
 const codeText = (code: string, params: Params): string => {
