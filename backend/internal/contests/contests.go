@@ -81,11 +81,7 @@ func (uc *ContestsUseCase) CreateContest(
 		EndTime:        c.EndTime,
 	}
 
-	err := uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		org, err := access.Organization(ctx, tx, c.OrganizationID, accessmodel.OrganizationManage)
-		if err != nil {
-			return err
-		}
+	err := access.WithinOrganization(ctx, uc.transactions, c.OrganizationID, accessmodel.OrganizationManage, func(tx CommandTxStore, org access.OrganizationAccess) error {
 		if err := tx.CreateContest(ctx, params); err != nil {
 			return fmt.Errorf("create contest: %w", err)
 		}
@@ -106,7 +102,7 @@ func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.Co
 		}
 	}
 
-	err := uc.withinContest(ctx, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		if oldContest.ID == uuid.Nil {
 			existing, err := tx.GetContest(ctx, c.ID)
 			if err != nil {
@@ -138,7 +134,7 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 		}
 	}
 
-	err := uc.withinContest(ctx, id, accessmodel.ContestDelete, func(tx CommandTxStore, _ access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, id, accessmodel.ContestDelete, func(tx CommandTxStore, _ access.ContestAccess) error {
 		if oldContest.ID == uuid.Nil {
 			existing, err := tx.GetContest(ctx, id)
 			if err != nil {
@@ -163,7 +159,7 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	return uc.withinContest(ctx, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		var err error
 		if c.PackageId, err = usableProblemPackage(ctx, tx, c.ProblemId, c.PackageId, true); err != nil {
 			return err
@@ -177,7 +173,7 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 
 // Relinking still requires using the source problem, even during a running contest.
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	return uc.withinContest(ctx, contestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		var err error
 		if packageId, err = usableProblemPackage(ctx, tx, problemId, packageId, false); err != nil {
 			return err
@@ -187,7 +183,7 @@ func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, cont
 }
 
 func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
-	return uc.withinContest(ctx, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
 			return err
 		}
@@ -196,7 +192,7 @@ func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsm
 }
 
 func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
-	return uc.withinContest(ctx, contestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockContestProblemOrder(ctx, contestId); err != nil {
 			return err
 		}
@@ -205,7 +201,7 @@ func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId
 }
 
 func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmodel.ParticipantCreation) error {
-	return uc.withinContest(ctx, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := a.ChangeMember(c.UserId, "", accessmodel.ContestParticipant); err != nil {
 			return err
 		}
@@ -226,7 +222,7 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestID, u
 
 // Members may lower or drop their own role without managing the contest.
 func (uc *ContestsUseCase) changeMember(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole, write func(CommandTxStore) error) error {
-	return uc.withinContest(ctx, contestID, accessmodel.ContestView, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestView, func(tx CommandTxStore, a access.ContestAccess) error {
 		member, err := tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contestID, UserId: userID})
 		if err != nil {
 			return err
@@ -363,7 +359,7 @@ func (uc *ContestsUseCase) CreateContestTeam(
 	contestID, teamID uuid.UUID,
 	role accessmodel.ContestRole,
 ) error {
-	return uc.withinContest(ctx, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := a.ChangeTeam("", role); err != nil {
 			return err
 		}
@@ -376,7 +372,7 @@ func (uc *ContestsUseCase) UpdateContestTeamRole(
 	contestID, teamID uuid.UUID,
 	role accessmodel.ContestRole,
 ) error {
-	return uc.withinContest(ctx, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		link, err := tx.GetContestTeam(ctx, contestID, teamID)
 		if err != nil {
 			return err
@@ -392,7 +388,7 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 	ctx context.Context,
 	contestID, teamID uuid.UUID,
 ) error {
-	return uc.withinContest(ctx, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		link, err := tx.GetContestTeam(ctx, contestID, teamID)
 		if err != nil {
 			return err
@@ -406,7 +402,7 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 
 func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error {
 	operatorID := accessmodel.UserFromContext(ctx).Id
-	return uc.withinContest(ctx, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockSubmissionTuple(ctx, contestID, userID, problemID); err != nil {
 			return err
 		}
@@ -431,7 +427,7 @@ func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, u
 }
 
 func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error {
-	return uc.withinContest(ctx, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockSubmissionTuple(ctx, contestID, userID, problemID); err != nil {
 			return err
 		}
@@ -500,13 +496,9 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	var req *contestsmodel.ContestJoinRequest
 	registered := false
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		current, err := access.Contest(ctx, tx, contest.ID, accessmodel.ContestView)
-		if err != nil {
-			return err
-		}
+	err = access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestView, func(tx CommandTxStore, current access.ContestAccess) error {
 		contest = current.Facts.Contest
-		_, err = tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
+		_, err := tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
 		if err == nil {
 			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "already a member of the contest")
 		}
@@ -609,12 +601,7 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 		return err
 	}
 
-	user, err := accessmodel.RequireUser(ctx)
-	if err != nil {
-		return err
-	}
-
-	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+	return access.WithinActor(ctx, uc.transactions, func(tx CommandTxStore, user accessmodel.User) error {
 		req, err := tx.GetPendingContestJoinRequest(ctx, contest.ID, user.Id)
 		if err != nil {
 			return err
@@ -639,7 +626,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinContest(ctx, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	err = access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		req, err := tx.GetContestJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
@@ -715,7 +702,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
-	if err := uc.withinContest(ctx, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	if err := access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		req, err := tx.GetContestJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err

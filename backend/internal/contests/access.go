@@ -42,13 +42,3 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 	}
 	return uc.ProjectScoreboard(ctx, contestID, unfrozen)
 }
-
-func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, action accessmodel.ContestAction, fn func(CommandTxStore, access.ContestAccess) error) error {
-	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		a, err := access.Contest(ctx, tx, id, action)
-		if err != nil {
-			return err
-		}
-		return fn(tx, a)
-	})
-}

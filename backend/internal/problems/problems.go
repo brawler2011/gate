@@ -24,7 +24,7 @@ func NewProblemsUseCase(repo ProblemsRepo, transactions ProblemTransactions, org
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
-	return withinProblem(ctx, uc.transactions, id, accessmodel.ProblemEdit, func(tx ProblemTxStore, _ access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, id, accessmodel.ProblemEdit, func(tx ProblemTxStore, _ access.ProblemAccess) error {
 		if problem.IsTemplate != nil && *problem.IsTemplate {
 			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
 				return pkg.OnNotFound(err, pkg.ErrPackageNotReady, "template requires a successful package")
@@ -35,13 +35,13 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 }
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
-	return withinProblem(ctx, uc.transactions, id, accessmodel.ProblemDelete, func(tx ProblemTxStore, _ access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, id, accessmodel.ProblemDelete, func(tx ProblemTxStore, _ access.ProblemAccess) error {
 		return tx.DeleteProblem(ctx, id)
 	})
 }
 
 func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, role accessmodel.ProblemRole) error {
-	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		if err := a.ChangeTeam("", role); err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID
 }
 
 func (uc *ProblemsUseCase) UpdateProblemTeamRole(ctx context.Context, problemID, teamID uuid.UUID, role accessmodel.ProblemRole) error {
-	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		link, err := tx.GetProblemTeam(ctx, problemID, teamID)
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ func (uc *ProblemsUseCase) UpdateProblemTeamRole(ctx context.Context, problemID,
 }
 
 func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error {
-	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		link, err := tx.GetProblemTeam(ctx, problemID, teamID)
 		if err != nil {
 			return err
@@ -76,7 +76,7 @@ func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, tea
 }
 
 func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error {
-	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		if err := a.ChangeMember(userID, "", role); err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ func (uc *ProblemsUseCase) RemoveProblemMember(ctx context.Context, problemID, u
 
 // Members may lower or drop their own role without managing the problem.
 func (uc *ProblemsUseCase) changeMember(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole, write func(ProblemTxStore) error) error {
-	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemView, func(tx ProblemTxStore, a access.ProblemAccess) error {
+	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemView, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		member, err := tx.GetProblemMember(ctx, problemID, userID)
 		if err != nil {
 			return err
