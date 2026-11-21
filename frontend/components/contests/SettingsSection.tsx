@@ -9,6 +9,7 @@ import {DownloadStatementsButton} from "@/components/contests/DownloadStatements
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {useLanguages} from "@/lib/languages";
+import {problemMessage} from "@/lib/problemText";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
@@ -228,7 +229,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       console.error("Failed to update contest:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось обновить настройки",
+        message: problemMessage(error, "Не удалось обновить настройки"),
         color: "red",
       });
       setStatusMessage({

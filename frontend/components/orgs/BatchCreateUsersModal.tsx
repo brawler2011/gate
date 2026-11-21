@@ -7,6 +7,7 @@ import {IconCheck, IconCopy, IconDownload, IconInfoCircle, IconPrinter, IconUser
 import {useState} from "react";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {BatchCreatedUserItem} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -82,7 +83,7 @@ export const BatchCreateUsersModal = ({
     if (error) {
       notifications.show({
         title: "Ошибка создания пользователей",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось создать пользователей"),
         color: "red",
       });
       return;

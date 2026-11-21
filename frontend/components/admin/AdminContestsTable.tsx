@@ -6,6 +6,7 @@ import {useNavigate} from "react-router-dom";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
@@ -69,7 +70,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось запустить перепроверку контеста",
+          message: problemMessage(err, "Не удалось запустить перепроверку контеста"),
           color: "red",
         });
         return;

@@ -5,6 +5,7 @@ import React, {useState, type ReactNode} from "react";
 import {useRevalidator} from "react-router-dom";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 export type SanctionActionType =
   | "block_submission"
@@ -129,7 +130,7 @@ export const SubmissionSanctionsModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.detail || "Не удалось применить санкцию",
+        message: problemMessage(err, "Не удалось применить санкцию"),
         color: "red",
       });
     } else {

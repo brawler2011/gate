@@ -9,6 +9,7 @@ import {useState} from "react";
 import {RoutePagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {AdminBlogsSearchInput} from "./AdminBlogsSearchInput";
 import {AdminBlogsTable} from "./AdminBlogsTable";
@@ -72,7 +73,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
         if (err) {
           notifications.show({
             title: "Ошибка",
-            message: err.detail || "Не удалось обновить пост",
+            message: problemMessage(err, "Не удалось обновить пост"),
             color: "red",
           });
           return;
@@ -89,7 +90,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
         if (err) {
           notifications.show({
             title: "Ошибка",
-            message: err.detail || "Не удалось создать пост",
+            message: problemMessage(err, "Не удалось создать пост"),
             color: "red",
           });
           return;
@@ -123,10 +124,10 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
       console.error("Error deleting post:", err);
       notifications.show({
         title: "Ошибка",
-        message: err.detail || "Не удалось удалить пост",
+        message: problemMessage(err, "Не удалось удалить пост"),
         color: "red",
       });
-      throw new Error(err.detail);
+      throw new Error(problemMessage(err));
     }
 
     setStatusMessage({

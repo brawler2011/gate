@@ -60,7 +60,7 @@ func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, u
 			return err
 		}
 		if _, err := tx.GetMember(ctx, problem.OrganizationID, userID); err != nil {
-			return pkg.OnNotFound(err, pkg.ErrInvalid, "user must be a member of the organization")
+			return pkg.OnNotFound(err, pkg.ErrNotOrgMember, "user must be a member of the organization")
 		}
 		return tx.CreateProblemMember(ctx, &problemsmodel.CreateProblemMemberParams{ProblemID: problemID, UserID: userID, Role: role})
 	})

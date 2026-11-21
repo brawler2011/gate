@@ -244,7 +244,7 @@ func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmode
 			}
 			_, err = tx.GetMember(ctx, contest.OrganizationID, c.UserId)
 			if err != nil {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "user must be a member of the organization")
+				return pkg.Wrap(pkg.ErrNotOrgMember, nil, "user must be a member of the organization")
 			}
 		}
 
@@ -552,18 +552,18 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		contest = current
 		_, err = tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
 		if err == nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "вы уже являетесь участником этого контеста")
+			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "already a member of the contest")
 		}
 		if !errors.Is(err, pkg.ErrNotFound) {
 			return err
 		}
 		mode := contest.TypedSettings().GetParticipationMode()
 		if mode == contestsmodel.ParticipationModeInviteOnly {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "регистрация на данный контест закрыта (только по приглашениям)")
+			return pkg.Wrap(pkg.ErrInviteOnly, nil, "the contest accepts participants by invitation only")
 		}
 		if mode == contestsmodel.ParticipationModeOpen {
 			if _, err := tx.GetMember(ctx, contest.OrganizationID, userID); err != nil {
-				return pkg.OnNotFound(err, pkg.ErrInvalid, "user must be a member of the organization")
+				return pkg.OnNotFound(err, pkg.ErrNotOrgMember, "user must be a member of the organization")
 			}
 			if err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest.ID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}); err != nil {
 				return err
@@ -576,7 +576,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 			return err
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
+			return pkg.Wrap(pkg.ErrRequestPending, nil, "a join request is already pending")
 		}
 		req, err = tx.CreateContestJoinRequest(ctx, &contestsmodel.CreateContestJoinRequestInput{ContestID: contest.ID, UserID: userID, Message: message})
 		if err != nil {
@@ -699,7 +699,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 
 		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
@@ -772,7 +772,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 
 		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID); err != nil {

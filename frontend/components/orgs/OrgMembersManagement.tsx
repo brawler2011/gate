@@ -11,6 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagement";
 import {usePagedQuery} from "@/hooks/usePagedQuery";
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/schema";
 
@@ -114,7 +115,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось отправить приглашение"),
         color: "red",
       });
       return;
@@ -143,7 +144,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось отменить приглашение"),
         color: "red",
       });
       return;
@@ -168,7 +169,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось удалить участника"),
         color: "red",
       });
       return;
@@ -200,7 +201,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось одобрить заявку"),
         color: "red",
       });
       return;
@@ -226,7 +227,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось отклонить заявку"),
         color: "red",
       });
       return;

@@ -9,6 +9,7 @@ import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
+import {problemMessage} from "@/lib/problemText";
 
 import classes from "./AdminPage.module.css";
 import {DeleteProblemModal} from "./DeleteProblemModal";
@@ -99,10 +100,10 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось удалить задачу",
+          message: problemMessage(err, "Не удалось удалить задачу"),
           color: "red",
         });
-        throw new Error(err.detail);
+        throw new Error(problemMessage(err));
       }
 
       notifications.show({

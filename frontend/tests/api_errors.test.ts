@@ -99,18 +99,18 @@ it("returns network errors for mutations and throws normalized errors in queries
   }
 });
 
-it("unwrap throws the problem as an Error with its detail as message", async () => {
+it("unwrap throws the problem as an Error with its translated text as message", async () => {
   const {api, unwrap} = await import("../lib/api");
   const logged = spyOn(console, "error").mockImplementation(() => {});
   try {
-    const errors = [{pointer: "/title", code: "invalid", detail: "empty title"}];
+    const errors = [{pointer: "/title", code: "length", params: {min: 3, max: 64}, detail: "title too short"}];
     globalThis.fetch = (async () => Response.json(
       {type: "about:blank", title: "Bad Request", status: 400, code: "invalid", detail: "bad draft", request_id: "req-2", errors},
       {status: 400, headers: {"Content-Type": "application/problem+json"}},
     )) as unknown as typeof fetch;
     const thrown = await unwrap(api.GET("/users/me")).catch((e: unknown) => e);
     expect(thrown).toBeInstanceOf(Error);
-    expect(thrown).toMatchObject({message: "bad draft", status: 400, code: "invalid", request_id: "req-2", errors});
+    expect(thrown).toMatchObject({message: "Название: длина должна быть от 3 до 64 символов", status: 400, code: "invalid", request_id: "req-2", errors});
   } finally {
     logged.mockRestore();
   }

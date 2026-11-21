@@ -10,6 +10,7 @@ import {RoutePagination} from "@/components/shared/Pagination";
 import {QueryState} from "@/components/shared/QueryState";
 import {useSubmissions} from "@/hooks/useSubmissions";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {SubmissionsList} from "./SubmissionsList";
 
@@ -101,7 +102,7 @@ export const SubmissionsListClient = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.detail || "Не удалось отправить решения на перетестирование",
+        message: problemMessage(err, "Не удалось отправить решения на перетестирование"),
         color: "red",
       });
     } else {

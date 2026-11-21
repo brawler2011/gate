@@ -72,6 +72,10 @@ var (
 	ErrProblemInContest       = NewCode("problem_in_contest", CodeConflict)
 	ErrEmailNotVerified       = NewCode("email_not_verified", CodeForbidden)
 	ErrWrongPassword          = NewCode("wrong_password", CodeInvalid)
+	ErrInvitationPending      = NewCode("invitation_pending", CodeConflict)
+	ErrRequestResolved        = NewCode("request_resolved", CodeConflict)
+	ErrInviteOnly             = NewCode("invite_only", CodeForbidden)
+	ErrNotOrgMember           = NewCode("not_org_member", CodeInvalid)
 
 	// Field validation; params carry the violated bounds (min, max).
 	ErrRequired       = NewCode("required", CodeInvalid)

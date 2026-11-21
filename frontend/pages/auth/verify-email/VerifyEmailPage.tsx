@@ -7,6 +7,7 @@ import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const VerifyEmailPage = (): ReactNode => {
   return (
@@ -57,7 +58,7 @@ const VerifyEmailContent = () => {
           }
           setSuccess(true);
         } else {
-          setError(err?.detail || "Недействительная или устаревшая ссылка подтверждения.");
+          setError(problemMessage(err, "Недействительная или устаревшая ссылка подтверждения."));
         }
       } catch {
         if (isMounted) {

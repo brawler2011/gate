@@ -9,6 +9,7 @@ import {useState, type ReactNode} from "react";
 import {ClaimTemporaryAccountSection} from "@/components/users/ClaimTemporaryAccountSection";
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {UserModel} from "@/contracts/core/v1/schema";
@@ -66,7 +67,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка смены пароля",
-          message: error.detail || "Неверный текущий пароль",
+          message: problemMessage(error, "Неверный текущий пароль"),
           color: "red",
         });
         return;
@@ -108,7 +109,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка смены email",
-          message: error.detail || "Не удалось запросить смену почты",
+          message: problemMessage(error, "Не удалось запросить смену почты"),
           color: "red",
         });
         return;
@@ -152,7 +153,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось отправить письмо",
+          message: problemMessage(error, "Не удалось отправить письмо"),
           color: "red",
         });
       }

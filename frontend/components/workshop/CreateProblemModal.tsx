@@ -4,6 +4,7 @@ import {useEffect, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/schema";
 import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
@@ -138,7 +139,7 @@ export const CreateProblemModal = ({
         },
       );
       if (createError) {
-        throw new Error(createError.detail);
+        throw new Error(problemMessage(createError));
       }
       if (!createResponse?.id) {
         throw new Error("Не получен ID задачи");

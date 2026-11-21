@@ -6,6 +6,7 @@ import {useState} from 'react';
 import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 
@@ -24,7 +25,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
     });
     setLoading(false);
     if (error) {
-      notifications.show({title: 'Ошибка', message: error.detail, color: 'red'});
+      notifications.show({title: 'Ошибка', message: problemMessage(error, "Не удалось удалить организацию"), color: 'red'});
       return;
     }
     navigate('/orgs');

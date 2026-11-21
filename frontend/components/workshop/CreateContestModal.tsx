@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {OrganizationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -87,7 +88,7 @@ export const CreateContestModal = ({
         },
       );
       if (error || !response) {
-        throw new Error(error?.detail || "Не удалось создать контест");
+        throw new Error(problemMessage(error, "Не удалось создать контест"));
       }
       const orgSlug = selectedOrg.login;
       onClose();

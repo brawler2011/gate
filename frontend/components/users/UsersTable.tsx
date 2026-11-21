@@ -8,6 +8,7 @@ import {useRevalidator, useNavigate} from "react-router-dom";
 import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {PaginationModel as PaginationType, UserModel, UpdateUserRequestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -43,7 +44,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось обновить роль пользователя",
+          message: problemMessage(err, "Не удалось обновить роль пользователя"),
           color: "red",
         });
         return;

@@ -5,6 +5,7 @@ import {CreateOrgButton, OrgCard} from "@/components/orgs";
 import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction} from "react-router-dom";
@@ -18,7 +19,7 @@ export const loader = (async () => {
   const error = orgsErr
     ? {
       status: orgsResponse.status,
-      message: orgsErr.detail || orgsResponse.statusText,
+      message: problemMessage(orgsErr),
     }
     : null;
   return {user, error, data};

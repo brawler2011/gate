@@ -7,6 +7,7 @@ import {IconCheck, IconLink} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ClaimedAccountItem} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -53,7 +54,7 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
     if (error) {
       notifications.show({
         title: "Не удалось привязать аккаунт",
-        message: error.detail,
+        message: error.code === "unauthenticated" ? "Неверный логин или пароль временного аккаунта" : problemMessage(error, "Не удалось привязать аккаунт"),
         color: "red",
       });
       return;

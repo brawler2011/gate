@@ -7,6 +7,7 @@ import {useSearchParams, Link} from "react-router-dom";
 import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const RegistrationPage = (): ReactNode => {
   return (
@@ -47,7 +48,7 @@ const RegistrationPageContent = () => {
       if (!err) {
         setIsSuccess(true);
       } else {
-        setError(err?.detail || "Ошибка при регистрации");
+        setError(problemMessage(err, "Ошибка при регистрации"));
       }
     } catch {
       setError("Не удалось подключиться к серверу");
@@ -72,7 +73,7 @@ const RegistrationPageContent = () => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось отправить письмо",
+          message: problemMessage(err, "Не удалось отправить письмо"),
           color: "red",
         });
       }

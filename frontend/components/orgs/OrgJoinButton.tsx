@@ -8,6 +8,7 @@ import {useRevalidator} from "react-router-dom";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/schema";
 
@@ -71,7 +72,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось вступить в организацию"),
         color: "red",
       });
       return;
@@ -99,7 +100,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось подать заявку"),
         color: "red",
       });
       return;
@@ -131,7 +132,7 @@ export const OrgJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error, "Не удалось отменить заявку"),
         color: "red",
       });
       return;

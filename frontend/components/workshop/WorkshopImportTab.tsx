@@ -6,6 +6,7 @@ import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {draftKey} from "./draft/useDraft";
 
@@ -47,7 +48,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
       if (error || !data) {
         notifications.show({
           title: "Ошибка импорта",
-          message: error?.detail ?? "Не удалось импортировать пакет",
+          message: problemMessage(error, "Не удалось импортировать пакет"),
           color: "red",
         });
         return;

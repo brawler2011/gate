@@ -11,6 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagement";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
 
@@ -126,7 +127,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось добавить команду",
+        message: problemMessage(error, "Не удалось добавить команду"),
         color: "red",
       });
       setStatusMessage({
@@ -162,7 +163,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось удалить команду",
+        message: problemMessage(error, "Не удалось удалить команду"),
         color: "red",
       });
       setStatusMessage({
@@ -212,7 +213,7 @@ export const ContestTeamsManagement = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось изменить роль команды",
+        message: problemMessage(error, "Не удалось изменить роль команды"),
         color: "red",
       });
       setStatusMessage({

@@ -7,6 +7,7 @@ import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
 import {formatPoints} from "./draft/draftOps";
@@ -180,7 +181,7 @@ const CatalogSettings = ({problemId}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail ?? "Не удалось обновить настройки шаблона",
+          message: problemMessage(error, "Не удалось обновить настройки шаблона"),
           color: "red",
         });
         return;

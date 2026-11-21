@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 
@@ -79,7 +80,7 @@ export const CreateAnnouncementModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка публикации",
-        message: err.detail || "Не удалось создать объявление",
+        message: problemMessage(err, "Не удалось создать объявление"),
         color: "red",
       });
       return;

@@ -6,6 +6,7 @@ import {useSearchParams, Link} from "react-router-dom";
 import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const ConfirmEmailChangePage = (): ReactNode => {
   return (
@@ -52,7 +53,7 @@ const ConfirmEmailChangeContent = () => {
         if (!err) {
           setSuccess(true);
         } else {
-          setError(err?.detail || "Недействительная или устаревшая ссылка подтверждения смены email.");
+          setError(problemMessage(err, "Недействительная или устаревшая ссылка подтверждения смены email."));
         }
       } catch {
         if (isMounted) {

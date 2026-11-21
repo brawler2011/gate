@@ -5,6 +5,7 @@ import {OrgContestsTab} from "@/components/orgs/OrgContestsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -45,7 +46,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const contestsError = contestsErr
     ? {
       status: contestsResponse.status,
-      message: contestsErr.detail || contestsResponse.statusText,
+      message: problemMessage(contestsErr),
     }
     : null;
 

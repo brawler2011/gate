@@ -5,29 +5,24 @@ import {useState} from 'react';
 import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
+import {fieldText, problemMessage} from '@/lib/problemText';
 
+import type {FieldProblem} from '@/contracts/core/v1/schema';
 import type {ReactNode} from "react";
 
-const translateApiError = (message: string): string => {
-  if (message.includes('at least one latin letter or digit')) {
-    return 'Название должно содержать хотя бы одну латинскую букву или цифру';
+const fieldError = (field: FieldProblem | undefined): string | null => {
+  if (!field) {
+    return null;
   }
-  if (message.includes('between 3 and 64 characters')) {
-    return 'Название должно быть от 3 до 64 символов';
+  if (field.code === 'format') {
+    return field.pointer === '/name'
+      ? 'Название должно содержать хотя бы одну латинскую букву или цифру'
+      : 'Только строчные латинские буквы, цифры и дефисы, без дефиса в начале и в конце';
   }
-  if (message.includes('between 3 and 32 characters')) {
-    return 'Логин должен быть от 3 до 32 символов';
-  }
-  if (message.includes('cannot start with \'@\'')) {
-    return 'Логин организации не может начинаться с @';
-  }
-  if (message.includes('is reserved')) {
+  if (field.code === 'reserved') {
     return 'Этот логин зарезервирован системой';
   }
-  if (message.includes('failed to create organization')) {
-    return 'Не удалось создать организацию. Попробуйте позже';
-  }
-  return message;
+  return fieldText(field);
 };
 
 const generateSlug = (val: string): string => {
@@ -112,7 +107,16 @@ export const CreateOrgButton = (): ReactNode => {
     setLoading(false);
 
     if (error) {
-      setFormError(translateApiError(error.detail || "Ошибка создания организации"));
+      const fields = error.errors ?? [];
+      const nameFailure = fieldError(fields.find((f) => f.pointer === '/name'));
+      const loginFailure = error.code === 'organization_login_taken'
+        ? problemMessage(error)
+        : fieldError(fields.find((f) => f.pointer === '/login'));
+      setNameError(nameFailure);
+      setLoginError(loginFailure);
+      if (!nameFailure && !loginFailure) {
+        setFormError(problemMessage(error, 'Не удалось создать организацию'));
+      }
       return;
     }
 

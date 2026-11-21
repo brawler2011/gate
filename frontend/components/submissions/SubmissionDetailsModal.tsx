@@ -5,6 +5,7 @@ import React from "react";
 import {Link} from "react-router-dom";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {SubmissionDetailsContent} from "./SubmissionDetailsContent";
 
@@ -38,7 +39,7 @@ export const SubmissionDetailsModal = ({
       },
     );
     if (err) {
-      throw new Error(err.detail || "Не удалось загрузить данные посылки");
+      throw new Error(problemMessage(err, "Не удалось загрузить данные посылки"));
     }
     return res?.submission ?? null;
   }, enabled: Boolean(opened && submissionId ? ["submission-details", submissionId] : null)});

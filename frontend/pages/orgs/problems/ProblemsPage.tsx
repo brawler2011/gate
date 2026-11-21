@@ -5,6 +5,7 @@ import {OrgProblemsTab} from "@/components/orgs/OrgProblemsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -45,7 +46,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const problemsError = problemsErr
     ? {
       status: problemsResponse.status,
-      message: problemsErr.detail || problemsResponse.statusText,
+      message: problemMessage(problemsErr),
     }
     : null;
   return {orgData, problemsError, problemsData, me};
