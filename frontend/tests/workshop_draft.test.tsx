@@ -90,7 +90,7 @@ describe("workshop draft editing", () => {
     await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Original"));
     fireEvent.click(view.getByRole("button", {name: "save"}));
     await waitFor(() => expect(shown).toHaveBeenCalled());
-    expect(shown.mock.calls[0][0].message).toBe("Генератор gen: Неизвестное значение: cobol");
+    expect(shown.mock.calls[0][0].message).toBe("Генератор gen, язык: Неизвестное значение: cobol");
     shown.mockRestore();
   });
 });

@@ -546,10 +546,12 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	if d.Checker != nil {
 		program("/checker", d.Checker.DraftProgram)
-		if _, ok := syslib.LookupChecker(d.Checker.Standard); d.Checker.Standard != "" && !ok {
+		_, ok := syslib.LookupChecker(d.Checker.Standard)
+		switch {
+		case d.Checker.Standard == "":
+		case !ok:
 			v.fail("/checker/standard", pkg.ErrUnknown, value(d.Checker.Standard), "unknown standard checker %q", d.Checker.Standard)
-		}
-		if d.Checker.Standard != "" && d.Checker.Source != "" {
+		case d.Checker.Source != "":
 			v.fail("/checker/standard", pkg.ErrInconsistent, with("/checker/source"), "a standard checker has no source")
 		}
 	}

@@ -343,7 +343,12 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 }
 
 func parsePoints(value float64) (points.Value, error) {
-	return points.Parse(strconv.FormatFloat(value, 'f', -1, 64))
+	text := strconv.FormatFloat(value, 'f', -1, 64)
+	v, err := points.Parse(text)
+	if err != nil {
+		return 0, spec.Fail(pkg.ErrFormat, "problem.xml", text, "invalid points %s: %v", text, err)
+	}
+	return v, nil
 }
 
 func statements(list []Statement) []spec.Statement {

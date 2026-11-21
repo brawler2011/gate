@@ -20,14 +20,62 @@ type DraftError = Error & Partial<Problem>;
 
 const isConflict = (error: unknown): boolean => (error as DraftError | undefined)?.status === 409;
 
+const FIELD_LABELS: Record<string, string> = {
+  title: "название",
+  short_name: "короткое имя",
+  type: "тип задачи",
+  time_limit_ms: "ограничение времени",
+  memory_limit_mb: "ограничение памяти",
+  input_file: "входной файл",
+  output_file: "выходной файл",
+  max_score: "максимальный балл",
+  name: "имя",
+  language: "язык",
+  source: "исходный код",
+  standard: "стандартный чекер",
+  content: "текст",
+  auto_update: "автообновление",
+  object_id: "содержимое",
+  points: "баллы",
+  ordinal: "номер",
+  policy: "политика",
+  depends_on: "зависимости",
+  subtask_id: "подзадача",
+  subtasks: "подзадачи",
+  verdicts: "вердикты",
+  verdict: "вердикт",
+  group: "группа",
+  input: "ввод",
+  output: "вывод",
+  answer: "ответ",
+  mode: "режим",
+  generator: "генератор",
+  solution: "решение",
+  args: "аргументы",
+};
+
+const GENERIC_ENTRY = "Черновик";
+
+// Names the entry and, below it, the field: "Тест 1, генератор".
+const describeField = (draft: ProblemDraft, pointer: string): string => {
+  const parts = pointer.split("/").slice(1);
+  const entry = describePointer(draft, pointer);
+  const field = parts.toReversed().find((part) => !/^\d+$/.test(part));
+  const label = field && parts[0] !== "statements" ? FIELD_LABELS[field] : undefined;
+  if (!label || (field === parts[0] && entry !== GENERIC_ENTRY)) {
+    return entry;
+  }
+  return entry === GENERIC_ENTRY ? label.charAt(0).toUpperCase() + label.slice(1) : `${entry}, ${label}`;
+};
+
 // Resolve error pointers against the draft sent with the request.
 export const errorMessage = (error: unknown, draft?: ProblemDraft): string => {
   const fields = (error as DraftError | undefined)?.errors;
   if (draft && fields && fields.length > 0) {
     return fields.map((field) => {
       const other = field.params?.with;
-      const text = typeof other === "string" ? `${fieldText(field)} (${describePointer(draft, other)})` : fieldText(field);
-      return `${describePointer(draft, field.pointer)}: ${text}`;
+      const text = typeof other === "string" ? `${fieldText(field)} (${describeField(draft, other)})` : fieldText(field);
+      return `${describeField(draft, field.pointer)}: ${text}`;
     }).join("\n");
   }
   return error instanceof Error ? error.message : "Неизвестная ошибка";

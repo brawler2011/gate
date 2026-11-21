@@ -205,9 +205,10 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 	index := map[string]int{}
 	for i, t := range testset.Tests {
 		number := i + 1
-		weight, err := points.Parse(strconv.FormatFloat(t.Points, 'f', -1, 64))
+		text := strconv.FormatFloat(t.Points, 'f', -1, 64)
+		weight, err := points.Parse(text)
 		if err != nil {
-			return nil, err
+			return nil, spec.Fail(pkg.ErrFormat, "problem.xml", text, "test %d has invalid points %s: %v", number, text, err)
 		}
 		test := spec.Test{Input: t.Input, Answer: t.Outcome, Points: weight, Sample: i < samples}
 		if test.Input == "" {

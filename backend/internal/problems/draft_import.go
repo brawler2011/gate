@@ -64,7 +64,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	tree := filepath.Join(root, "tree")
 	if err := ziputil.ExtractZipLimited(z, tree, int64(uc.BuildOptions.Limits.DiskBytes)-archive.spec.Size, uc.BuildOptions.Limits.FileCount); err != nil {
-		return nil, fmt.Errorf("extract import archive: %w", err)
+		return nil, uncoded(err, pkg.ErrZipInvalid, "the archive cannot be extracted")
 	}
 	packageRoot, err := detectImportRoot(tree)
 	if err != nil {
@@ -72,7 +72,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	problem, err := formats.Read(packageRoot)
 	if err != nil {
-		return nil, err
+		return nil, uncoded(err, pkg.ErrPackageLayout, "the package cannot be read")
 	}
 	if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
 		return nil, err
@@ -750,4 +750,13 @@ func (i *draftImport) bind(ids []uuid.UUID) error {
 		return pkg.ErrInvalid
 	}
 	return nil
+}
+
+// uncoded codes an error that has no client code yet; its cause stays private because it may name server paths.
+func uncoded(err error, code *pkg.Error, message string) error {
+	var coded *pkg.Error
+	if errors.As(err, &coded) {
+		return err
+	}
+	return pkg.Wrap(code, err, message)
 }
