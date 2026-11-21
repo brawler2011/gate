@@ -203,7 +203,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 	}
 
 	if err := uc.emailService.SendVerificationEmail(ctx, emailAddr, username, token); err != nil {
-		slog.ErrorContext(ctx, "failed to send verification email", "error", err, "email", emailAddr)
+		slog.ErrorContext(ctx, "failed to send verification email", "error", err, "user_id", targetUserID)
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, targetUserID)
@@ -622,12 +622,12 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 	}
 
 	if err := uc.emailService.SendEmailChangeVerification(ctx, newEmail, user.Username, token); err != nil {
-		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "email", newEmail)
+		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "user_id", userID)
 	}
 
 	if user.Email != nil && *user.Email != "" {
 		if err := uc.emailService.SendEmailChangeAlert(ctx, *user.Email, user.Username, newEmail); err != nil {
-			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "old_email", *user.Email)
+			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "user_id", userID)
 		}
 	}
 
