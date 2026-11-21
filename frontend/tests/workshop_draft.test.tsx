@@ -83,14 +83,14 @@ describe("workshop draft editing", () => {
     const shown = spyOn(notifications, "show").mockReturnValue("test");
     mockApi(({method}) =>
       method === "PUT"
-        ? problemResponse(400, "invalid draft", {errors: [{pointer: "/generators/0/language", code: "invalid", detail: "invalid language"}]})
+        ? problemResponse(400, "invalid draft", {errors: [{pointer: "/generators/0/language", code: "unknown", params: {value: "cobol"}, detail: "invalid language \"cobol\""}]})
         : Response.json(draft(3, "Original")),
     );
     const view = renderWithProviders(<Editor />);
     await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Original"));
     fireEvent.click(view.getByRole("button", {name: "save"}));
     await waitFor(() => expect(shown).toHaveBeenCalled());
-    expect(shown.mock.calls[0][0].message).toBe("Генератор gen: invalid language");
+    expect(shown.mock.calls[0][0].message).toBe("Генератор gen, язык: Неизвестное значение: cobol");
     shown.mockRestore();
   });
 });

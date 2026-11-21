@@ -378,9 +378,54 @@ const maxFieldErrors = 50
 
 type validation struct{ errs pkg.FieldErrors }
 
-func (v *validation) fail(pointer, format string, args ...any) {
+func (v *validation) fail(pointer string, code *pkg.Error, params map[string]any, format string, args ...any) {
 	if len(v.errs) < maxFieldErrors {
-		v.errs = append(v.errs, pkg.FieldError{Pointer: pointer, Message: fmt.Sprintf(format, args...)})
+		v.errs = append(v.errs, pkg.FieldError{Pointer: pointer, Code: code.Code, Params: params, Message: fmt.Sprintf(format, args...)})
+	}
+}
+
+func value(x any) map[string]any { return map[string]any{"value": x} }
+
+// with names the field that the failing one contradicts.
+func with(pointer string) map[string]any { return map[string]any{"with": pointer} }
+
+func maximum(n any) map[string]any { return map[string]any{"max": n} }
+
+func minimum(n any) map[string]any { return map[string]any{"min": n} }
+
+// name reports an invalid or repeated file or program name.
+func (v *validation) name(pointer, name string, valid bool, seen map[string]bool) {
+	switch {
+	case !valid:
+		v.fail(pointer, pkg.ErrFormat, nil, "invalid name %q", name)
+	case seen[name]:
+		v.fail(pointer, pkg.ErrDuplicate, value(name), "duplicate name %q", name)
+	}
+	seen[name] = true
+}
+
+func (v *validation) title(pointer, title string) {
+	if !utf8.ValidString(title) {
+		v.fail(pointer, pkg.ErrNotUTF8, nil, "title must be UTF-8")
+	}
+	if len(title) > 1024 {
+		v.fail(pointer, pkg.ErrLength, maximum(1024), "title exceeds 1024 bytes")
+	}
+}
+
+// identity checks the ID and ordinal of a subtask or test.
+func (v *validation) identity(at string, id uuid.UUID, seenID bool, ordinal int, seenOrdinal bool) {
+	switch {
+	case id == uuid.Nil:
+		v.fail(at+"/id", pkg.ErrRequired, nil, "ID is missing")
+	case seenID:
+		v.fail(at+"/id", pkg.ErrDuplicate, nil, "ID is not unique")
+	}
+	switch {
+	case ordinal <= 0:
+		v.fail(at+"/ordinal", pkg.ErrRange, minimum(1), "ordinal must be positive")
+	case seenOrdinal:
+		v.fail(at+"/ordinal", pkg.ErrDuplicate, value(ordinal), "ordinal is not unique")
 	}
 }
 
@@ -407,51 +452,52 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 	d.validateImages(v, nil)
 	d.eachProgram(func(at string, p DraftProgram) {
 		if _, ok := languages[p.Language]; !ok {
-			v.fail(at+"/language", "language %q is unavailable in the toolchain", p.Language)
+			v.fail(at+"/language", pkg.ErrUnknown, value(p.Language), "language %q is unavailable in the toolchain", p.Language)
 		}
 	})
 	if d.Checker != nil && d.Checker.Standard != "" && !slices.Contains(languages[d.Checker.Language].Extensions, "cpp") {
-		v.fail("/checker/language", "a standard checker compiles as C++")
+		v.fail("/checker/language", pkg.ErrInconsistent, with("/checker/standard"), "a standard checker compiles as C++")
 	}
 	if d.Type != "interactive" && d.Checker == nil {
-		v.fail("/checker", "checker is required")
+		v.fail("/checker", pkg.ErrRequired, nil, "checker is required")
 	}
 	if d.Type == "interactive" && d.Interactor == nil {
-		v.fail("/interactor", "interactor is required")
+		v.fail("/interactor", pkg.ErrRequired, nil, "interactor is required")
 	}
 	if d.Type == "interactive" && d.MainSolution == nil {
-		v.fail("/main_solution", "interactive problem requires a main solution")
+		v.fail("/main_solution", pkg.ErrRequired, nil, "interactive problem requires a main solution")
 	}
 	if strings.TrimSpace(d.Title) == "" {
-		v.fail("/title", "title is required")
+		v.fail("/title", pkg.ErrRequired, nil, "title is required")
 	}
 	if len(d.Tests) == 0 {
-		v.fail("/tests", "at least one test is required")
+		v.fail("/tests", pkg.ErrRequired, nil, "at least one test is required")
 	}
 	return v.err()
 }
 
 func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if d.ProblemID == uuid.Nil {
-		v.fail("/problem_id", "problem ID is required")
+		v.fail("/problem_id", pkg.ErrRequired, nil, "problem ID is required")
 	}
 	if d.Revision < 1 {
-		v.fail("/revision", "revision must be positive")
+		v.fail("/revision", pkg.ErrRange, minimum(1), "revision must be positive")
 	}
-	if !utf8.ValidString(d.Title) || len(d.Title) > 1024 {
-		v.fail("/title", "title must be UTF-8 of at most 1024 bytes")
+	v.title("/title", d.Title)
+	if d.ShortName == "" {
+		v.fail("/short_name", pkg.ErrRequired, nil, "short name is required")
 	}
-	if d.ShortName == "" || len(d.ShortName) > 128 {
-		v.fail("/short_name", "short name must have 1 to 128 bytes")
+	if len(d.ShortName) > 128 {
+		v.fail("/short_name", pkg.ErrLength, maximum(128), "short name exceeds 128 bytes")
 	}
 	if d.Type != "pass-fail" && d.Type != "scoring" && d.Type != "interactive" {
-		v.fail("/type", "invalid problem type %q", d.Type)
+		v.fail("/type", pkg.ErrUnknown, value(d.Type), "invalid problem type %q", d.Type)
 	}
 	if d.TimeLimitMs <= 0 {
-		v.fail("/time_limit_ms", "time limit must be positive")
+		v.fail("/time_limit_ms", pkg.ErrRange, minimum(1), "time limit must be positive")
 	}
 	if d.MemoryLimitMb <= 0 {
-		v.fail("/memory_limit_mb", "memory limit must be positive")
+		v.fail("/memory_limit_mb", pkg.ErrRange, minimum(1), "memory limit must be positive")
 	}
 	programs := len(d.Validators) + len(d.Generators) + len(d.Solutions)
 	if d.Checker != nil {
@@ -461,50 +507,52 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		programs++
 	}
 	if programs > q.Components {
-		v.fail("", "more than %d programs", q.Components)
+		v.fail("", pkg.ErrTooMany, maximum(q.Components), "more than %d programs", q.Components)
 	}
 	if len(d.Library)+len(d.Assets) > q.Files {
-		v.fail("/library", "more than %d library files and assets", q.Files)
+		v.fail("/library", pkg.ErrTooMany, maximum(q.Files), "more than %d library files and assets", q.Files)
 	}
 	if len(d.Tests) > q.Tests {
-		v.fail("/tests", "more than %d tests", q.Tests)
+		v.fail("/tests", pkg.ErrTooMany, maximum(q.Tests), "more than %d tests", q.Tests)
 	}
 	if len(d.Subtasks) > q.Subtasks {
-		v.fail("/subtasks", "more than %d subtasks", q.Subtasks)
+		v.fail("/subtasks", pkg.ErrTooMany, maximum(q.Subtasks), "more than %d subtasks", q.Subtasks)
 	}
 
 	var total int64
-	text := func(pointer, value string) {
-		if !utf8.ValidString(value) {
-			v.fail(pointer, "text must be UTF-8")
+	text := func(pointer, content string) {
+		if !utf8.ValidString(content) {
+			v.fail(pointer, pkg.ErrNotUTF8, nil, "text must be UTF-8")
 		}
-		if int64(len(value)) > int64(q.FileBytes) {
-			v.fail(pointer, "text exceeds %d bytes", int64(q.FileBytes))
+		if int64(len(content)) > int64(q.FileBytes) {
+			v.fail(pointer, pkg.ErrTooLarge, maximum(int64(q.FileBytes)), "text exceeds %d bytes", int64(q.FileBytes))
 		}
-		total += int64(len(value))
+		total += int64(len(content))
 	}
 	library := make(map[string]bool)
 	for i, f := range d.Library {
 		at := fmt.Sprintf("/library/%d", i)
-		if !ValidFileName(f.Name) || library[f.Name] {
-			v.fail(at+"/name", "invalid or duplicate file name %q", f.Name)
-		}
+		v.name(at+"/name", f.Name, ValidFileName(f.Name), library)
 		text(at+"/content", f.Content)
 		if _, ok := syslib.Lookup(f.Name); f.AutoUpdate && (!ok || f.Content != "") {
-			v.fail(at+"/auto_update", "only an empty system library file can be auto-updated")
+			v.fail(at+"/auto_update", pkg.ErrInconsistent, with(at+"/content"), "only an empty system library file can be auto-updated")
 		}
-		library[f.Name] = true
 	}
 	program := func(at string, p DraftProgram) {
 		if !languageKey.MatchString(p.Language) {
-			v.fail(at+"/language", "invalid language %q", p.Language)
+			v.fail(at+"/language", pkg.ErrUnknown, value(p.Language), "invalid language %q", p.Language)
 		}
 		text(at+"/source", p.Source)
 	}
 	if d.Checker != nil {
 		program("/checker", d.Checker.DraftProgram)
-		if _, ok := syslib.LookupChecker(d.Checker.Standard); d.Checker.Standard != "" && (!ok || d.Checker.Source != "") {
-			v.fail("/checker/standard", "unknown standard checker %q or a standard checker with a source", d.Checker.Standard)
+		_, ok := syslib.LookupChecker(d.Checker.Standard)
+		switch {
+		case d.Checker.Standard == "":
+		case !ok:
+			v.fail("/checker/standard", pkg.ErrUnknown, value(d.Checker.Standard), "unknown standard checker %q", d.Checker.Standard)
+		case d.Checker.Source != "":
+			v.fail("/checker/standard", pkg.ErrInconsistent, with("/checker/source"), "a standard checker has no source")
 		}
 	}
 	if d.Interactor != nil {
@@ -517,18 +565,19 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		names := make(map[string]bool)
 		for i, p := range list.programs {
 			at := fmt.Sprintf("/%s/%d", list.role, i)
-			if !ValidFileName(p.Name) || names[p.Name] {
-				v.fail(at+"/name", "invalid or duplicate name %q", p.Name)
-			}
-			names[p.Name] = true
+			v.name(at+"/name", p.Name, ValidFileName(p.Name), names)
 			program(at, p.DraftProgram)
 		}
 	}
 	for i, validator := range d.Validators {
 		seen := make(map[uuid.UUID]bool)
 		for j, id := range validator.Subtasks {
-			if d.Subtask(id) == nil || seen[id] {
-				v.fail(fmt.Sprintf("/validators/%d/subtasks/%d", i, j), "unknown or duplicate subtask")
+			at := fmt.Sprintf("/validators/%d/subtasks/%d", i, j)
+			switch {
+			case d.Subtask(id) == nil:
+				v.fail(at, pkg.ErrUnknown, nil, "unknown subtask")
+			case seen[id]:
+				v.fail(at, pkg.ErrDuplicate, nil, "duplicate subtask")
 			}
 			seen[id] = true
 		}
@@ -537,54 +586,61 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		at := fmt.Sprintf("/solutions/%d", i)
 		seen := make(map[string]bool)
 		for j, verdict := range s.Verdicts {
-			if !slices.Contains(SolutionVerdicts, verdict) || seen[verdict] {
-				v.fail(fmt.Sprintf("%s/verdicts/%d", at, j), "unknown or duplicate verdict %q", verdict)
+			pointer := fmt.Sprintf("%s/verdicts/%d", at, j)
+			switch {
+			case !slices.Contains(SolutionVerdicts, verdict):
+				v.fail(pointer, pkg.ErrUnknown, value(verdict), "unknown verdict %q", verdict)
+			case seen[verdict]:
+				v.fail(pointer, pkg.ErrDuplicate, value(verdict), "duplicate verdict %q", verdict)
 			}
 			seen[verdict] = true
 		}
-		if s.Points != nil && (d.Type != "scoring" || len(s.Verdicts) == 0 || *s.Points < 0 || *s.Points > points.Max) {
-			v.fail(at+"/points", "expected points need a scoring problem, a solution that runs and a valid score")
+		if s.Points != nil {
+			switch {
+			case d.Type != "scoring":
+				v.fail(at+"/points", pkg.ErrInconsistent, with("/type"), "expected points need a scoring problem")
+			case len(s.Verdicts) == 0:
+				v.fail(at+"/points", pkg.ErrInconsistent, with(at+"/verdicts"), "expected points need a solution that runs")
+			case *s.Points < 0 || *s.Points > points.Max:
+				v.fail(at+"/points", pkg.ErrRange, map[string]any{"min": 0, "max": points.Max}, "expected points are out of range")
+			}
 		}
 	}
 	if d.MainSolution != nil && d.Solution(*d.MainSolution) == nil {
-		v.fail("/main_solution", "unknown solution %q", *d.MainSolution)
+		v.fail("/main_solution", pkg.ErrUnknown, value(*d.MainSolution), "unknown solution %q", *d.MainSolution)
 	}
 	for pointer, name := range map[string]string{"/input_file": d.InputFile, "/output_file": d.OutputFile} {
-		if name != "" && (!ValidFileName(name) || !sandbox.ValidSolutionFile(name) || d.Type == "interactive") {
-			v.fail(pointer, "file name %q is invalid or set on an interactive problem", name)
+		switch {
+		case name == "":
+		case !ValidFileName(name) || !sandbox.ValidSolutionFile(name):
+			v.fail(pointer, pkg.ErrFormat, nil, "invalid file name %q", name)
+		case d.Type == "interactive":
+			v.fail(pointer, pkg.ErrInconsistent, with("/type"), "an interactive problem has no file I/O")
 		}
 	}
 	if d.InputFile != "" && d.InputFile == d.OutputFile {
-		v.fail("/output_file", "input and output files must differ")
+		v.fail("/output_file", pkg.ErrInconsistent, with("/input_file"), "input and output files must differ")
 	}
 
 	languages := make(map[string]bool)
 	for i, s := range d.Statements {
 		at := fmt.Sprintf("/statements/%d", i)
-		if !statementLanguage.MatchString(s.Language) || languages[s.Language] {
-			v.fail(at+"/language", "invalid or duplicate language %q", s.Language)
-		}
-		languages[s.Language] = true
-		if !utf8.ValidString(s.Title) || len(s.Title) > 1024 {
-			v.fail(at+"/title", "title must be UTF-8 of at most 1024 bytes")
-		}
+		v.name(at+"/language", s.Language, statementLanguage.MatchString(s.Language), languages)
+		v.title(at+"/title", s.Title)
 		for _, name := range StatementSections {
 			text(at+"/"+name, *s.Section(name))
 		}
 	}
 	if total > int64(q.TextBytes) {
-		v.fail("", "texts exceed %d bytes together", int64(q.TextBytes))
+		v.fail("", pkg.ErrTooLarge, maximum(int64(q.TextBytes)), "texts exceed %d bytes together", int64(q.TextBytes))
 	}
 	assets := make(map[string]bool)
 	for i, a := range d.Assets {
 		at := fmt.Sprintf("/assets/%d", i)
-		if !ValidFileName(a.Name) || assets[a.Name] {
-			v.fail(at+"/name", "invalid or duplicate asset name %q", a.Name)
-		}
+		v.name(at+"/name", a.Name, ValidFileName(a.Name), assets)
 		if a.ObjectID == uuid.Nil {
-			v.fail(at+"/object_id", "asset has no content")
+			v.fail(at+"/object_id", pkg.ErrRequired, nil, "asset has no content")
 		}
-		assets[a.Name] = true
 	}
 
 	d.validateSubtasks(v)
@@ -599,22 +655,18 @@ func (d *Draft) validateSubtasks(v *validation) {
 	totalPoints := points.Value(0)
 	for i, g := range d.Subtasks {
 		at := fmt.Sprintf("/subtasks/%d", i)
-		if _, ok := index[g.ID]; g.ID == uuid.Nil || ok {
-			v.fail(at+"/id", "ID is missing or not unique")
-		}
-		if g.Ordinal <= 0 || orders[g.Ordinal] {
-			v.fail(at+"/ordinal", "ordinal must be positive and unique")
-		}
+		_, seen := index[g.ID]
+		v.identity(at, g.ID, seen, g.Ordinal, orders[g.Ordinal])
 		// Names are gfmt subtask keys and validator --group values, so an export keeps them exact.
 		if names[g.Name] {
-			v.fail(at+"/name", "duplicate subtask name %q", g.Name)
+			v.fail(at+"/name", pkg.ErrDuplicate, value(g.Name), "duplicate subtask name %q", g.Name)
 		}
 		names[g.Name] = true
 		if g.Points < 0 {
-			v.fail(at+"/points", "points must not be negative")
+			v.fail(at+"/points", pkg.ErrRange, minimum(0), "points must not be negative")
 		}
 		if g.Policy != "complete" && g.Policy != "each" {
-			v.fail(at+"/policy", "invalid policy %q", g.Policy)
+			v.fail(at+"/policy", pkg.ErrUnknown, value(g.Policy), "invalid policy %q", g.Policy)
 		}
 		index[g.ID] = i
 		orders[g.Ordinal] = true
@@ -631,11 +683,11 @@ func (d *Draft) validateSubtasks(v *validation) {
 			k, ok := index[dep]
 			switch {
 			case !ok:
-				v.fail(at, "unknown subtask")
+				v.fail(at, pkg.ErrUnknown, nil, "unknown subtask")
 			case seen[dep]:
-				v.fail(at, "duplicate dependency")
+				v.fail(at, pkg.ErrDuplicate, nil, "duplicate dependency")
 			case state[dep] == 1:
-				v.fail(at, "subtask dependencies form a cycle")
+				v.fail(at, pkg.ErrCycle, nil, "subtask dependencies form a cycle")
 				return false
 			case state[dep] == 0 && !visit(k):
 				return false
@@ -651,10 +703,10 @@ func (d *Draft) validateSubtasks(v *validation) {
 		}
 	}
 	if d.Type == "scoring" && (d.MaxScore == nil || *d.MaxScore < 0 || *d.MaxScore != totalPoints) {
-		v.fail("/max_score", "max score must equal subtask points")
+		v.fail("/max_score", pkg.ErrInconsistent, with("/subtasks"), "max score must equal subtask points")
 	}
 	if d.Type != "scoring" && d.MaxScore != nil {
-		v.fail("/max_score", "max score requires scoring type")
+		v.fail("/max_score", pkg.ErrInconsistent, with("/type"), "max score requires scoring type")
 	}
 }
 
@@ -668,16 +720,11 @@ func (d *Draft) validateTests(v *validation) {
 	for n, test := range d.Tests {
 		at := fmt.Sprintf("/tests/%d", n)
 		if test.Points < 0 || test.Points > points.Max {
-			v.fail(at+"/points", "invalid test weight")
+			v.fail(at+"/points", pkg.ErrRange, map[string]any{"min": 0, "max": points.Max}, "invalid test weight")
 		}
-		if test.ID == uuid.Nil || ids[test.ID] {
-			v.fail(at+"/id", "ID is missing or not unique")
-		}
-		if test.Ordinal <= 0 || orders[test.Ordinal] {
-			v.fail(at+"/ordinal", "ordinal must be positive and unique")
-		}
+		v.identity(at, test.ID, ids[test.ID], test.Ordinal, orders[test.Ordinal])
 		if !subtasks[test.SubtaskID] {
-			v.fail(at+"/subtask_id", "unknown subtask")
+			v.fail(at+"/subtask_id", pkg.ErrUnknown, nil, "unknown subtask")
 		}
 		ids[test.ID] = true
 		orders[test.Ordinal] = true
@@ -685,47 +732,53 @@ func (d *Draft) validateTests(v *validation) {
 		switch i.Mode {
 		case "manual":
 			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.Generator != nil || len(i.Args) != 0 {
-				v.fail(at+"/input", "manual input needs content and no generator")
+				v.fail(at+"/input", pkg.ErrInconsistent, with(at+"/input/mode"), "manual input needs content and no generator")
 			}
 		case "generator":
 			if i.ObjectID != nil {
-				v.fail(at+"/input/object_id", "generated input cannot have content")
+				v.fail(at+"/input/object_id", pkg.ErrInconsistent, with(at+"/input/mode"), "generated input cannot have content")
 			}
-			if i.Generator == nil || d.Generator(*i.Generator) == nil {
-				v.fail(at+"/input/generator", "generator is missing")
+			switch {
+			case i.Generator == nil:
+				v.fail(at+"/input/generator", pkg.ErrRequired, nil, "generator is missing")
+			case d.Generator(*i.Generator) == nil:
+				v.fail(at+"/input/generator", pkg.ErrUnknown, value(*i.Generator), "unknown generator %q", *i.Generator)
 			}
 		default:
-			v.fail(at+"/input/mode", "invalid input mode %q", i.Mode)
+			v.fail(at+"/input/mode", pkg.ErrUnknown, value(i.Mode), "invalid input mode %q", i.Mode)
 		}
 		if len(i.Args) > 256 {
-			v.fail(at+"/input/args", "too many generator arguments")
+			v.fail(at+"/input/args", pkg.ErrTooMany, maximum(256), "too many generator arguments")
 		}
 		for j, arg := range i.Args {
 			if len(arg) > 4096 || strings.ContainsRune(arg, 0) || !utf8.ValidString(arg) {
-				v.fail(fmt.Sprintf("%s/input/args/%d", at, j), "invalid generator argument")
+				v.fail(fmt.Sprintf("%s/input/args/%d", at, j), pkg.ErrFormat, nil, "invalid generator argument")
 			}
 		}
 		a := test.Answer
 		if d.Type == "interactive" {
 			if a.Mode != "interactive" || a.ObjectID != nil || a.Solution != nil {
-				v.fail(at+"/answer", "interactive test cannot have an ordinary answer")
+				v.fail(at+"/answer", pkg.ErrInconsistent, with("/type"), "interactive test cannot have an ordinary answer")
 			}
 			continue
 		}
 		switch a.Mode {
 		case "generated":
 			if a.ObjectID != nil {
-				v.fail(at+"/answer/object_id", "generated answer cannot have content")
+				v.fail(at+"/answer/object_id", pkg.ErrInconsistent, with(at+"/answer/mode"), "generated answer cannot have content")
 			}
-			if a.Solution == nil || d.Solution(*a.Solution) == nil {
-				v.fail(at+"/answer/solution", "solution is missing")
+			switch {
+			case a.Solution == nil:
+				v.fail(at+"/answer/solution", pkg.ErrRequired, nil, "solution is missing")
+			case d.Solution(*a.Solution) == nil:
+				v.fail(at+"/answer/solution", pkg.ErrUnknown, value(*a.Solution), "unknown solution %q", *a.Solution)
 			}
 		case "provided":
 			if a.ObjectID == nil || *a.ObjectID == uuid.Nil || a.Solution != nil {
-				v.fail(at+"/answer", "provided answer needs content and no solution")
+				v.fail(at+"/answer", pkg.ErrInconsistent, with(at+"/answer/mode"), "provided answer needs content and no solution")
 			}
 		default:
-			v.fail(at+"/answer/mode", "invalid answer mode %q", a.Mode)
+			v.fail(at+"/answer/mode", pkg.ErrUnknown, value(a.Mode), "invalid answer mode %q", a.Mode)
 		}
 	}
 }
@@ -765,7 +818,7 @@ func (d *Draft) validateImages(v *validation, previous *Draft) {
 			}
 			for _, ref := range ImageReferences(body) {
 				if !assets[ref] {
-					v.fail(fmt.Sprintf("/statements/%d/%s", i, name), "%s section of the %s statement shows missing asset %q", name, s.Language, ref)
+					v.fail(fmt.Sprintf("/statements/%d/%s", i, name), pkg.ErrUnknown, value(ref), "%s section of the %s statement shows missing asset %q", name, s.Language, ref)
 				}
 			}
 		}

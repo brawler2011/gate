@@ -43,32 +43,32 @@ func TestValidateLocatesViolations(t *testing.T) {
 	for name, tc := range map[string]struct {
 		change  func(*Draft)
 		pointer string
-		message string
+		code    pkg.Code
 	}{
-		"test input from a solution": {func(d *Draft) { d.Tests[0].Input.Generator = d.MainSolution }, "/tests/0/input/generator", "generator"},
+		"test input from a solution": {func(d *Draft) { d.Tests[0].Input.Generator = d.MainSolution }, "/tests/0/input/generator", pkg.ErrUnknown.Code},
 		"two generators of one name": {func(d *Draft) {
 			d.Generators = append(d.Generators, DraftNamedProgram{Name: "gen", DraftProgram: DraftProgram{Language: "cpp"}})
-		}, "/generators/1/name", "duplicate name \"gen\""},
+		}, "/generators/1/name", pkg.ErrDuplicate.Code},
 		"two library files of one name": {func(d *Draft) {
 			d.Library = append(d.Library, DraftLibraryFile{Name: "testlib.h"})
-		}, "/library/1/name", "duplicate file name \"testlib.h\""},
-		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", "invalid or duplicate file name"},
+		}, "/library/1/name", pkg.ErrDuplicate.Code},
+		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", pkg.ErrFormat.Code},
 		"subtask cycle": {func(d *Draft) {
 			other := uuid.New()
 			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 			d.Subtasks[0].DependsOn = []uuid.UUID{other}
-		}, "/subtasks/1/depends_on/0", "cycle"},
+		}, "/subtasks/1/depends_on/0", pkg.ErrCycle.Code},
 		"auto-updated file with own text": {func(d *Draft) {
 			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
-		}, "/library/0/auto_update", "only an empty system library file"},
+		}, "/library/0/auto_update", pkg.ErrInconsistent.Code},
 		"two unnamed subtasks": {func(d *Draft) {
 			d.Subtasks[0].Name = ""
 			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each"})
-		}, "/subtasks/1/name", "duplicate subtask name"},
+		}, "/subtasks/1/name", pkg.ErrDuplicate.Code},
 		"validator of an unknown subtask": {func(d *Draft) {
 			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, Subtasks: []uuid.UUID{uuid.New()}}}
-		}, "/validators/0/subtasks/0", "unknown or duplicate subtask"},
-		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See ![tree](tree.png)." }, "/statements/0/notes", "notes section of the en statement shows missing asset \"tree.png\""},
+		}, "/validators/0/subtasks/0", pkg.ErrUnknown.Code},
+		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See ![tree](tree.png)." }, "/statements/0/notes", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {
 			d := validDraft()
@@ -76,7 +76,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 			fields := fieldErrors(t, d.Validate(testQuotas, nil))
 			require.Len(t, fields, 1, "%v", fields)
 			require.Equal(t, tc.pointer, fields[0].Pointer)
-			require.Contains(t, fields[0].Message, tc.message)
+			require.Equal(t, tc.code, fields[0].Code)
 		})
 	}
 }
@@ -88,7 +88,7 @@ func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 	renamed.Assets = []DraftAsset{{Name: "plot.png", ObjectID: saved.Assets[0].ObjectID}}
 	require.NoError(t, renamed.Validate(testQuotas, &saved))
 	fields := fieldErrors(t, renamed.ValidateBuild(testQuotas, map[string]sandbox.Language{"cpp": {}, "python": {}}))
-	require.Equal(t, pkg.FieldErrors{{Pointer: "/statements/0/legend", Message: `legend section of the en statement shows missing asset "graph.png"`}}, fields)
+	require.Equal(t, pkg.FieldErrors{{Pointer: "/statements/0/legend", Code: pkg.ErrUnknown.Code, Params: map[string]any{"value": "graph.png"}, Message: `legend section of the en statement shows missing asset "graph.png"`}}, fields)
 
 	typo := renamed
 	typo.Statements = []DraftStatement{{Language: "en", Legend: "![graph](plott.png)"}}

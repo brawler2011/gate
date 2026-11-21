@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -21,11 +22,11 @@ var sourceDirs = []string{".", "src", "files"}
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
-		return nil, fmt.Errorf("read problem.xml: %w", err)
+		return nil, err
 	}
 	var prob Problem
 	if err := spec.UnmarshalXML(data, &prob); err != nil {
-		return nil, fmt.Errorf("parse PCMS2 problem.xml: %w", err)
+		return nil, spec.Syntax("problem.xml", err)
 	}
 	testset, err := mainTestset(prob.Judging.Testsets)
 	if err != nil {
@@ -70,7 +71,7 @@ func mainTestset(testsets []Testset) (Testset, error) {
 		}
 	}
 	if len(testsets) == 0 {
-		return Testset{}, fmt.Errorf("problem.xml has no testset")
+		return Testset{}, spec.Fail(pkg.ErrPackageLayout, "problem.xml", "", "problem.xml has no testset")
 	}
 	return testsets[0], nil
 }
@@ -118,7 +119,7 @@ func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("source of %s not found", executable)
+	return nil, spec.Fail(pkg.ErrPackageLayout, executable, "", "source of %s not found", executable)
 }
 
 // Programs include headers from their own source folder.
@@ -204,9 +205,10 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 	index := map[string]int{}
 	for i, t := range testset.Tests {
 		number := i + 1
-		weight, err := points.Parse(strconv.FormatFloat(t.Points, 'f', -1, 64))
+		text := strconv.FormatFloat(t.Points, 'f', -1, 64)
+		weight, err := points.Parse(text)
 		if err != nil {
-			return nil, err
+			return nil, spec.Fail(pkg.ErrFormat, "problem.xml", text, "test %d has invalid points %s: %v", number, text, err)
 		}
 		test := spec.Test{Input: t.Input, Answer: t.Outcome, Points: weight, Sample: i < samples}
 		if test.Input == "" {

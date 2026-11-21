@@ -62,6 +62,22 @@ const languageText = (prefix: string) => (params: Params): string => {
   return typeof id === "string" ? `${prefix}: ${id}` : prefix;
 };
 
+const text = (params: Params, key: string): string | undefined => {
+  const value = params?.[key];
+  return typeof value === "string" && value !== "" ? value : undefined;
+};
+
+// Appends the offending value to a message, as in "Неизвестное значение: cpp14".
+const withValue = (message: string) => (params: Params): string => {
+  const value = text(params, "value") ?? (typeof params?.value === "number" ? String(params.value) : undefined);
+  return value ? `${message}: ${value}` : message;
+};
+
+const tooManyText = (params: Params): string => {
+  const max = bound(params, "max");
+  return max === undefined ? "Слишком много элементов" : `Не более ${max} элементов`;
+};
+
 const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   invalid: "Некорректные данные",
   unauthenticated: "Требуется вход в систему",
@@ -117,8 +133,17 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   reserved: "Это значение зарезервировано",
   range: rangeText,
   end_before_start: "Окончание должно быть позже начала",
-  duplicate: "Значение повторяется",
+  duplicate: withValue("Значение повторяется"),
   too_large: tooLargeText,
+  unknown: withValue("Неизвестное значение"),
+  not_utf8: "Текст должен быть в кодировке UTF-8",
+  cycle: "Зависимости образуют цикл",
+  inconsistent: "Не согласуется с другими настройками задачи",
+  too_many: tooManyText,
+  unsupported: withValue("Не поддерживается"),
+  zip_invalid: "Архив повреждён или содержит недопустимые пути",
+  package_layout: "Неверная структура пакета",
+  package_syntax: "Не удалось разобрать файл пакета",
 };
 
 // Codes that say less than the caller's description of the failed action.
@@ -179,5 +204,7 @@ export const problemMessage = (error: unknown, fallback?: string): string => {
   if (fallback && vague.has(problem.code)) {
     return fallback;
   }
-  return codeText(problem.code, problem.params);
+  // Package diagnostics name the file they are about.
+  const path = text(problem.params, "path");
+  return path ? `${path}: ${codeText(problem.code, problem.params)}` : codeText(problem.code, problem.params);
 };

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/formats/icpc"
 	"github.com/brawler2011/gate/backend/pkg/formats/pcms2"
@@ -36,7 +37,7 @@ func detect(fsys fs.FS) (string, error) {
 		return "polygon", nil
 	}
 	if _, err := fs.Stat(fsys, "problem.yaml"); err != nil {
-		return "", fmt.Errorf("unknown problem format: no problem.xml or problem.yaml found")
+		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "unknown problem format: no problem.xml or problem.yaml found")
 	}
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
@@ -44,10 +45,10 @@ func detect(fsys fs.FS) (string, error) {
 	}
 	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return "", fmt.Errorf("invalid problem.yaml: %w", err)
+		return "", spec.Syntax("problem.yaml", err)
 	}
 	if config == nil {
-		return "", fmt.Errorf("problem.yaml must contain a mapping")
+		return "", spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
 	if _, ok := config["format_version"]; ok {
 		return "gfmt", nil

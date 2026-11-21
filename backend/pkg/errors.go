@@ -109,6 +109,17 @@ var (
 	ErrRange          = NewCode("range", CodeInvalid)
 	ErrEndBeforeStart = NewCode("end_before_start", CodeInvalid)
 	ErrDuplicate      = NewCode("duplicate", CodeInvalid)
+	ErrUnsupported    = NewCode("unsupported", CodeInvalid)
+	ErrZipInvalid     = NewCode("zip_invalid", CodeInvalid)
+	ErrPackageLayout  = NewCode("package_layout", CodeInvalid)
+	ErrPackageSyntax  = NewCode("package_syntax", CodeInvalid)
+	ErrUnknown        = NewCode("unknown", CodeInvalid)
+	ErrNotUTF8        = NewCode("not_utf8", CodeInvalid)
+	ErrCycle          = NewCode("cycle", CodeInvalid)
+	// Params: with, the pointer of the field this one contradicts.
+	ErrInconsistent = NewCode("inconsistent", CodeInvalid)
+	// Params: max.
+	ErrTooMany = NewCode("too_many", CodeInvalid)
 	// Params: max, in bytes.
 	ErrTooLarge = NewCode("too_large", CodeInvalid)
 )

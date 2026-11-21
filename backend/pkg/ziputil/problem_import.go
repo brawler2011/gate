@@ -20,7 +20,7 @@ func ExtractZip(r *zip.Reader, destDir string) error {
 	for _, f := range r.File {
 		path := filepath.Join(cleanDest, filepath.Clean(f.Name))
 		if !strings.HasPrefix(path, cleanDest+string(os.PathSeparator)) && path != cleanDest {
-			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid file path in zip: %s", f.Name))
+			return pkg.Invalid(pkg.ErrZipInvalid, fmt.Sprintf("invalid file path in zip: %s", f.Name), map[string]any{"path": f.Name})
 		}
 
 		if f.FileInfo().IsDir() {
@@ -94,7 +94,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 	for _, entry := range r.File {
 		name := strings.TrimSuffix(entry.Name, "/")
 		if !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\\x00") || entry.Mode()&os.ModeSymlink != 0 {
-			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid ZIP path %q", entry.Name))
+			return pkg.Invalid(pkg.ErrZipInvalid, fmt.Sprintf("invalid ZIP path %q", entry.Name), map[string]any{"path": entry.Name})
 		}
 		if entry.FileInfo().IsDir() {
 			if err := makeDir(name); err != nil {
@@ -103,7 +103,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 			continue
 		}
 		if !entry.Mode().IsRegular() || seen[name] {
-			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid ZIP entry %q", name))
+			return pkg.Invalid(pkg.ErrZipInvalid, fmt.Sprintf("invalid ZIP entry %q", name), map[string]any{"path": name})
 		}
 		if entry.UncompressedSize64 > uint64(remaining) {
 			return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("ZIP entry %q exceeds the size quota", name))
@@ -124,7 +124,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 		src, err := entry.Open()
 		if err != nil {
 			_ = file.Close()
-			return pkg.Wrap(pkg.ErrInvalid, err, fmt.Sprintf("unsupported ZIP entry %q", name))
+			return pkg.Invalid(pkg.ErrZipInvalid, fmt.Sprintf("unsupported ZIP entry %q: %v", name, err), map[string]any{"path": name})
 		}
 		n, copyErr := io.Copy(file, io.LimitReader(zipEntryReader{src, name}, remaining+1))
 		closeErr := errors.Join(src.Close(), file.Close())
@@ -148,7 +148,7 @@ type zipEntryReader struct {
 func (r zipEntryReader) Read(p []byte) (int, error) {
 	n, err := r.Reader.Read(p)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return n, pkg.Wrap(pkg.ErrInvalid, err, fmt.Sprintf("corrupt ZIP entry %q", r.name))
+		return n, pkg.Invalid(pkg.ErrZipInvalid, fmt.Sprintf("corrupt ZIP entry %q", r.name), map[string]any{"path": r.name})
 	}
 	return n, err //nolint:wrapcheck // io.EOF must stay unwrapped for io.Copy.
 }

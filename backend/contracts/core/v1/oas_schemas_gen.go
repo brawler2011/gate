@@ -3113,6 +3113,15 @@ const (
 	ErrorCodeEndBeforeStart              ErrorCode = "end_before_start"
 	ErrorCodeDuplicate                   ErrorCode = "duplicate"
 	ErrorCodeTooLarge                    ErrorCode = "too_large"
+	ErrorCodeUnknown                     ErrorCode = "unknown"
+	ErrorCodeNotUTF8                     ErrorCode = "not_utf8"
+	ErrorCodeCycle                       ErrorCode = "cycle"
+	ErrorCodeInconsistent                ErrorCode = "inconsistent"
+	ErrorCodeTooMany                     ErrorCode = "too_many"
+	ErrorCodeUnsupported                 ErrorCode = "unsupported"
+	ErrorCodeZipInvalid                  ErrorCode = "zip_invalid"
+	ErrorCodePackageLayout               ErrorCode = "package_layout"
+	ErrorCodePackageSyntax               ErrorCode = "package_syntax"
 )
 
 // AllValues returns all ErrorCode values.
@@ -3174,6 +3183,15 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeEndBeforeStart,
 		ErrorCodeDuplicate,
 		ErrorCodeTooLarge,
+		ErrorCodeUnknown,
+		ErrorCodeNotUTF8,
+		ErrorCodeCycle,
+		ErrorCodeInconsistent,
+		ErrorCodeTooMany,
+		ErrorCodeUnsupported,
+		ErrorCodeZipInvalid,
+		ErrorCodePackageLayout,
+		ErrorCodePackageSyntax,
 	}
 }
 
@@ -3291,6 +3309,24 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeDuplicate:
 		return []byte(s), nil
 	case ErrorCodeTooLarge:
+		return []byte(s), nil
+	case ErrorCodeUnknown:
+		return []byte(s), nil
+	case ErrorCodeNotUTF8:
+		return []byte(s), nil
+	case ErrorCodeCycle:
+		return []byte(s), nil
+	case ErrorCodeInconsistent:
+		return []byte(s), nil
+	case ErrorCodeTooMany:
+		return []byte(s), nil
+	case ErrorCodeUnsupported:
+		return []byte(s), nil
+	case ErrorCodeZipInvalid:
+		return []byte(s), nil
+	case ErrorCodePackageLayout:
+		return []byte(s), nil
+	case ErrorCodePackageSyntax:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3467,6 +3503,33 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeTooLarge:
 		*s = ErrorCodeTooLarge
+		return nil
+	case ErrorCodeUnknown:
+		*s = ErrorCodeUnknown
+		return nil
+	case ErrorCodeNotUTF8:
+		*s = ErrorCodeNotUTF8
+		return nil
+	case ErrorCodeCycle:
+		*s = ErrorCodeCycle
+		return nil
+	case ErrorCodeInconsistent:
+		*s = ErrorCodeInconsistent
+		return nil
+	case ErrorCodeTooMany:
+		*s = ErrorCodeTooMany
+		return nil
+	case ErrorCodeUnsupported:
+		*s = ErrorCodeUnsupported
+		return nil
+	case ErrorCodeZipInvalid:
+		*s = ErrorCodeZipInvalid
+		return nil
+	case ErrorCodePackageLayout:
+		*s = ErrorCodePackageLayout
+		return nil
+	case ErrorCodePackageSyntax:
+		*s = ErrorCodePackageSyntax
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

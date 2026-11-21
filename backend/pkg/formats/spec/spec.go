@@ -2,13 +2,36 @@
 package spec
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
+
+// Syntax reports a metadata file that does not parse, keeping coded errors of custom decoders.
+func Syntax(path string, err error) error {
+	var coded *pkg.Error
+	if errors.As(err, &coded) {
+		return err
+	}
+	return Fail(pkg.ErrPackageSyntax, path, "", "parse %s: %v", path, err)
+}
+
+// Fail reports a package defect at path; value names the offending entry. Either may be empty.
+func Fail(code *pkg.Error, path, value, format string, args ...any) error {
+	params := map[string]any{}
+	if path != "" {
+		params["path"] = path
+	}
+	if value != "" {
+		params["value"] = value
+	}
+	return pkg.Invalid(code, fmt.Sprintf(format, args...), params)
+}
 
 // Paths are slash-separated relative to the package root; names may repeat.
 type Problem struct {
@@ -111,6 +134,9 @@ const MaxMetadataBytes = 4 << 20
 
 func ReadFile(fsys fs.FS, name string) ([]byte, error) {
 	f, err := fsys.Open(name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, Fail(pkg.ErrPackageLayout, name, "", "%s is missing", name)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", name, err)
 	}
@@ -120,7 +146,7 @@ func ReadFile(fsys fs.FS, name string) ([]byte, error) {
 		return nil, fmt.Errorf("read %s: %w", name, err)
 	}
 	if len(data) > MaxMetadataBytes {
-		return nil, fmt.Errorf("%s is larger than %d bytes", name, MaxMetadataBytes)
+		return nil, pkg.Invalid(pkg.ErrTooLarge, fmt.Sprintf("%s is larger than %d bytes", name, MaxMetadataBytes), map[string]any{"path": name, "max": MaxMetadataBytes})
 	}
 	return data, nil
 }
@@ -178,20 +204,20 @@ func ParseCommand(command string) ([]string, error) {
 			}
 			continue
 		case strings.ContainsRune("|;&><`$\n\r", r):
-			return nil, fmt.Errorf("shell syntax is not supported in generator command %q", command)
+			return nil, Fail(pkg.ErrUnsupported, "", command, "shell syntax is not supported in generator command %q", command)
 		default:
 			current.WriteRune(r)
 		}
 		started = true
 	}
 	if quote != 0 || escaped {
-		return nil, fmt.Errorf("unterminated argument in generator command %q", command)
+		return nil, Fail(pkg.ErrPackageSyntax, "", command, "unterminated argument in generator command %q", command)
 	}
 	if started {
 		args = append(args, current.String())
 	}
 	if len(args) == 0 {
-		return nil, fmt.Errorf("empty generator command")
+		return nil, Fail(pkg.ErrRequired, "", "", "empty generator command")
 	}
 	return args, nil
 }

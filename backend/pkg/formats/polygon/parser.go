@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -16,11 +17,11 @@ import (
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
-		return nil, fmt.Errorf("read problem.xml: %w", err)
+		return nil, err
 	}
 	var prob Problem
 	if err := spec.UnmarshalXML(data, &prob); err != nil {
-		return nil, fmt.Errorf("parse Polygon problem.xml: %w", err)
+		return nil, spec.Syntax("problem.xml", err)
 	}
 	testset, err := mainTestset(prob.Judging.Testsets)
 	if err != nil {
@@ -75,7 +76,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 		verdicts, ok := tagVerdicts[strings.ToLower(s.Tag)]
 		if !ok {
-			return nil, fmt.Errorf("solution %s has unknown tag %q", s.Source.Path, s.Tag)
+			return nil, spec.Fail(pkg.ErrUnknown, s.Source.Path, s.Tag, "solution %s has unknown tag %q", s.Source.Path, s.Tag)
 		}
 		solution.Verdicts = verdicts
 		p.Solutions = append(p.Solutions, *solution)
@@ -128,7 +129,7 @@ func mainTestset(testsets []Testset) (Testset, error) {
 		}
 	}
 	if len(testsets) == 0 {
-		return Testset{}, fmt.Errorf("problem.xml has no testset")
+		return Testset{}, spec.Fail(pkg.ErrPackageLayout, "problem.xml", "", "problem.xml has no testset")
 	}
 	return testsets[0], nil
 }
@@ -148,7 +149,7 @@ func title(prob Problem) string {
 func program(s Source) (*spec.Program, error) {
 	language, err := Language(s.Type)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Path, err)
+		return nil, spec.Fail(pkg.ErrUnsupported, s.Path, s.Type, "%s: unsupported Polygon source type %q", s.Path, s.Type)
 	}
 	return &spec.Program{File: spec.File{Name: path.Base(s.Path), Path: s.Path}, Language: language}, nil
 }
@@ -183,7 +184,7 @@ func Language(sourceType string) (string, error) {
 	case sourceType == "js.node" || sourceType == "javascript.node":
 		return "node", nil
 	}
-	return "", fmt.Errorf("unsupported Polygon source type %q", sourceType)
+	return "", spec.Fail(pkg.ErrUnsupported, "", sourceType, "unsupported Polygon source type %q", sourceType)
 }
 
 var tagVerdicts = map[string][]string{
@@ -207,7 +208,7 @@ func checkerTests(ts ProgramTestset) ([]spec.CheckerTest, error) {
 	for i, t := range ts.Tests {
 		verdict, ok := checkerVerdicts[strings.ToLower(t.Verdict)]
 		if !ok {
-			return nil, fmt.Errorf("checker test %d has unknown verdict %q", i+1, t.Verdict)
+			return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", t.Verdict, "checker test %d has unknown verdict %q", i+1, t.Verdict)
 		}
 		tests[i] = spec.CheckerTest{Input: fmt.Sprintf(ts.InputPathPattern, i+1), Output: fmt.Sprintf(ts.OutputPathPattern, i+1), Answer: fmt.Sprintf(ts.AnswerPathPattern, i+1), Verdict: verdict}
 	}
@@ -219,7 +220,7 @@ func validatorTests(ts ProgramTestset) ([]spec.ValidatorTest, error) {
 	for i, t := range ts.Tests {
 		verdict := strings.ToLower(t.Verdict)
 		if verdict != "valid" && verdict != "invalid" {
-			return nil, fmt.Errorf("test %d has unknown verdict %q", i+1, t.Verdict)
+			return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", t.Verdict, "test %d has unknown verdict %q", i+1, t.Verdict)
 		}
 		tests[i] = spec.ValidatorTest{Input: fmt.Sprintf(ts.InputPathPattern, i+1), Valid: verdict == "valid", Group: t.Group}
 	}
@@ -289,7 +290,7 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 		}
 		for _, dep := range g.DependsOn {
 			if _, ok := index[dep]; !ok {
-				return nil, fmt.Errorf("group %s depends on unknown group %s", g.Name, dep)
+				return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", dep, "group %s depends on unknown group %s", g.Name, dep)
 			}
 		}
 	}
@@ -329,7 +330,7 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 		}
 		name, ok := generators[argv[0]]
 		if !ok {
-			return test, fmt.Errorf("test %d: generator %s not found", number, argv[0])
+			return test, spec.Fail(pkg.ErrUnknown, "problem.xml", argv[0], "test %d: generator %s not found", number, argv[0])
 		}
 		test.Generator, test.Args = name, argv[1:]
 		return test, nil
@@ -342,7 +343,12 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 }
 
 func parsePoints(value float64) (points.Value, error) {
-	return points.Parse(strconv.FormatFloat(value, 'f', -1, 64))
+	text := strconv.FormatFloat(value, 'f', -1, 64)
+	v, err := points.Parse(text)
+	if err != nil {
+		return 0, spec.Fail(pkg.ErrFormat, "problem.xml", text, "invalid points %s: %v", text, err)
+	}
+	return v, nil
 }
 
 func statements(list []Statement) []spec.Statement {

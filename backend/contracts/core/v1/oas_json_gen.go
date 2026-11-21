@@ -6685,6 +6685,24 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeDuplicate
 	case ErrorCodeTooLarge:
 		*s = ErrorCodeTooLarge
+	case ErrorCodeUnknown:
+		*s = ErrorCodeUnknown
+	case ErrorCodeNotUTF8:
+		*s = ErrorCodeNotUTF8
+	case ErrorCodeCycle:
+		*s = ErrorCodeCycle
+	case ErrorCodeInconsistent:
+		*s = ErrorCodeInconsistent
+	case ErrorCodeTooMany:
+		*s = ErrorCodeTooMany
+	case ErrorCodeUnsupported:
+		*s = ErrorCodeUnsupported
+	case ErrorCodeZipInvalid:
+		*s = ErrorCodeZipInvalid
+	case ErrorCodePackageLayout:
+		*s = ErrorCodePackageLayout
+	case ErrorCodePackageSyntax:
+		*s = ErrorCodePackageSyntax
 	default:
 		*s = ErrorCode(v)
 	}

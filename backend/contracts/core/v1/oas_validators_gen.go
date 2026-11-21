@@ -699,6 +699,24 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "too_large":
 		return nil
+	case "unknown":
+		return nil
+	case "not_utf8":
+		return nil
+	case "cycle":
+		return nil
+	case "inconsistent":
+		return nil
+	case "too_many":
+		return nil
+	case "unsupported":
+		return nil
+	case "zip_invalid":
+		return nil
+	case "package_layout":
+		return nil
+	case "package_syntax":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

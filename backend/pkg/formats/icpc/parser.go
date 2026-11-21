@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"gopkg.in/yaml.v3"
@@ -18,18 +19,18 @@ import (
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
-		return nil, fmt.Errorf("read problem.yaml: %w", err)
+		return nil, err
 	}
 	var prob *Problem
 	if err := yaml.Unmarshal(data, &prob); err != nil {
-		return nil, fmt.Errorf("parse ICPC problem.yaml: %w", err)
+		return nil, spec.Syntax("problem.yaml", err)
 	}
 	if prob == nil {
-		return nil, fmt.Errorf("problem.yaml must contain a mapping")
+		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
 	// ICPC group aggregation cannot be represented by per-test points without changing scores.
 	if prob.Type == "scoring" {
-		return nil, fmt.Errorf("ICPC scoring problems are not supported")
+		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "scoring", "ICPC scoring problems are not supported")
 	}
 	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
 	interactive := slices.Contains(strings.Fields(prob.Validation), "interactive")
@@ -54,7 +55,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	if len(output) > 1 {
-		return nil, fmt.Errorf("package has %d output validators; Gate supports one", len(output))
+		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "package has %d output validators; Gate supports one", len(output))
 	}
 	if len(output) == 1 {
 		// The output validator of an interactive problem is its interactor.
@@ -107,7 +108,7 @@ func programs(fsys fs.FS, folder string) ([]spec.Program, []spec.File, error) {
 		}
 		sources, headers := split(dir, files)
 		if len(sources) != 1 {
-			return nil, nil, fmt.Errorf("%s must hold one source file, found %d", dir, len(sources))
+			return nil, nil, spec.Fail(pkg.ErrPackageLayout, dir, "", "%s must hold one source file, found %d", dir, len(sources))
 		}
 		result = append(result, program(sources[0], headers))
 		library = append(library, headers...)
