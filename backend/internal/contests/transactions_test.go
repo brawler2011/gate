@@ -3,24 +3,17 @@ package contests
 import (
 	"context"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
 )
 
 type contestEventsTestStore struct {
-	Contest contestsmodel.Contest
+	*accesstest.Loader
 	AnnouncementsRepo
 	ClarificationsRepo
 	OutboxRepo
-}
-
-func (contestEventsTestStore) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
-}
-func (s contestEventsTestStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
-	return s.Contest, nil
 }
 
 type AnnouncementsRepo interface {

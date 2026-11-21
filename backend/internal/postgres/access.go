@@ -5,98 +5,79 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type authorization struct{ permissions *access.PermissionsUseCase }
+// Access loads authorization facts through whatever connection its queries are bound to.
+type Access struct{ q *sqlc.Queries }
 
-func bindAuthorization(q *sqlc.Queries) *authorization {
-	return &authorization{permissions: access.NewPermissionsUseCase(
-		authorizationContests{&ContestsRepo{queries: q}},
-		authorizationUsers{q},
-		authorizationProblems{&ProblemsRepo{queries: q}},
-		authorizationTeams{&TeamsRepo{q: q}},
-		authorizationOrganizations{&OrganizationsRepo{q: q}},
-	)}
-}
+var _ access.Loader = Access{}
 
-func (a *authorization) CanContest(ctx context.Context, contest uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	return a.permissions.CanContest(ctx, contest, action)
-}
-func (a *authorization) CanOrganization(ctx context.Context, org uuid.UUID, action accessmodel.OrgAction) (bool, error) {
-	return a.permissions.CanOrganization(ctx, org, action)
-}
-func (a *authorization) CanProblem(ctx context.Context, problem uuid.UUID, action accessmodel.ProblemAction) (bool, error) {
-	return a.permissions.CanProblem(ctx, problem, action)
-}
+func NewAccess(pool *pgxpool.Pool) Access { return Access{sqlc.New(pool)} }
 
-// Authorization reads hold mutable account privileges until the command commits.
-type authorizationUsers struct{ queries *sqlc.Queries }
-
-func (r authorizationUsers) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
-	user, err := r.queries.GetAuthorizationUser(ctx, id)
+func (a Access) Actor(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
+	row, err := a.q.GetAccessActor(ctx, id)
 	if err != nil {
-		return accessmodel.User{}, dbError("get user by id", err)
+		return accessmodel.User{}, dbError("get access actor", err)
 	}
-	return accessmodel.User{Id: user.ID, Username: user.Username, Role: user.Role, ExpiresAt: user.ExpiresAt}, nil
+	return accessmodel.User{Id: row.ID, Role: row.Role, ExpiresAt: row.ExpiresAt}, nil
 }
 
-// Transactional authorization locks only memberships used for access; pool reads take no locks.
-type authorizationOrganizations struct{ *OrganizationsRepo }
-
-func (r authorizationOrganizations) GetMember(ctx context.Context, org, user uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
-	row, err := r.q.GetAuthorizationOrganizationMember(ctx, sqlc.GetAuthorizationOrganizationMemberParams{OrganizationID: org, UserID: user})
+func (a Access) OrganizationFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.OrganizationFacts, error) {
+	rows, err := a.q.LoadOrganizationAccess(ctx, sqlc.LoadOrganizationAccessParams{UserID: actor, Ids: ids})
 	if err != nil {
-		return nil, dbError("get member", err)
+		return nil, dbError("load organization access", err)
 	}
-	return mapOrganizationMember(row), nil
+	facts := make(map[uuid.UUID]access.OrganizationFacts, len(rows))
+	for _, r := range rows {
+		facts[r.ID] = access.OrganizationFacts{ID: r.ID, Role: accessmodel.OrganizationRole(r.Role), JoinPolicy: r.JoinPolicy}
+	}
+	return facts, nil
 }
 
-type authorizationContests struct{ *ContestsRepo }
-
-func (r authorizationContests) GetContestMember(ctx context.Context, c *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
-	row, err := r.queries.GetAuthorizationContestMember(ctx, sqlc.GetAuthorizationContestMemberParams{ContestID: c.ContestId, UserID: c.UserId})
+func (a Access) TeamFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.TeamFacts, error) {
+	rows, err := a.q.LoadTeamAccess(ctx, sqlc.LoadTeamAccessParams{UserID: actor, Ids: ids})
 	if err != nil {
-		return contestsmodel.ContestMember{}, dbError("get contest member", err)
+		return nil, dbError("load team access", err)
 	}
-	return mapContestMember(sqlc.GetContestMemberRow(row)), nil
+	facts := make(map[uuid.UUID]access.TeamFacts, len(rows))
+	for _, r := range rows {
+		facts[r.ID] = access.TeamFacts{ID: r.ID, OrganizationID: r.OrganizationID, Role: accessmodel.TeamRole(r.Role), Member: r.Member,
+			Secret: organizationsmodel.TeamPrivacy(r.Privacy) == organizationsmodel.TeamPrivacySecret}
+	}
+	return facts, nil
 }
 
-type authorizationProblems struct{ *ProblemsRepo }
-
-func (r authorizationProblems) GetProblemMember(ctx context.Context, problem, user uuid.UUID) (problemsmodel.ProblemMember, error) {
-	row, err := r.queries.GetAuthorizationProblemMember(ctx, sqlc.GetAuthorizationProblemMemberParams{ProblemID: problem, UserID: user})
+func (a Access) ProblemFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ProblemFacts, error) {
+	rows, err := a.q.LoadProblemAccess(ctx, sqlc.LoadProblemAccessParams{UserID: actor, Ids: ids})
 	if err != nil {
-		return problemsmodel.ProblemMember{}, dbError("get problem member", err)
+		return nil, dbError("load problem access", err)
 	}
-	return mapProblemMember(row), nil
+	facts := make(map[uuid.UUID]access.ProblemFacts, len(rows))
+	for _, r := range rows {
+		facts[r.ID] = access.ProblemFacts{ID: r.ID, OrganizationID: r.OrganizationID, Role: accessmodel.ProblemRole(r.Role),
+			Public: r.Visibility == problemsmodel.ProblemVisibilityPublic}
+	}
+	return facts, nil
 }
 
-type authorizationTeams struct{ *TeamsRepo }
-
-func (r authorizationTeams) GetUserTeamsByOrganization(ctx context.Context, user, org uuid.UUID) ([]organizationsmodel.Team, error) {
-	rows, err := r.q.GetAuthorizationUserTeamsByOrganization(ctx, sqlc.GetAuthorizationUserTeamsByOrganizationParams{UserID: user, OrganizationID: org})
+func (a Access) ContestFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+	rows, err := a.q.LoadContestAccess(ctx, sqlc.LoadContestAccessParams{UserID: actor, Ids: ids})
 	if err != nil {
-		return nil, dbError("get user teams by organization", err)
+		return nil, dbError("load contest access", err)
 	}
-	return mapTeams(rows), nil
+	facts := make(map[uuid.UUID]access.ContestFacts, len(rows))
+	for _, r := range rows {
+		facts[r.Contest.ID] = access.ContestFacts{Contest: mapContest(r.Contest, r.OrgLogin), Role: accessmodel.ContestRole(r.Role), Now: r.Now, Blocked: r.Blocked}
+	}
+	return facts, nil
 }
 
-func (r authorizationTeams) GetTeamMember(ctx context.Context, team, user uuid.UUID) (*organizationsmodel.TeamMember, error) {
-	row, err := r.q.GetAuthorizationTeamMember(ctx, sqlc.GetAuthorizationTeamMemberParams{TeamID: team, UserID: user})
-	if err != nil {
-		return nil, dbError("get team member", err)
-	}
-	return &organizationsmodel.TeamMember{TeamID: row.TeamID, UserID: row.UserID, Role: organizationsmodel.TeamRole(row.Role), CreatedAt: row.CreatedAt}, nil
-}
-
-// Hold creator privileges stable without serializing unrelated creations by the same administrator.
-type organizationUsers struct{ *UsersRepo }
-
-func (r organizationUsers) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
-	return (authorizationUsers{r.queries}).GetUserById(ctx, id)
+// visibility returns the list parameters for the caller's grants.
+func (a Access) visibility(ctx context.Context) (uuid.UUID, bool, error) {
+	return access.Visibility(ctx, a)
 }

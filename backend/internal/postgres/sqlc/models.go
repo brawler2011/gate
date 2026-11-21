@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	events "github.com/brawler2011/gate/backend/internal/events"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
@@ -64,9 +63,9 @@ func (ns NullAuthTokenType) Value() (driver.Value, error) {
 type ContestRole string
 
 const (
-	ContestRoleOwner       ContestRole = "owner"
-	ContestRoleModerator   ContestRole = "moderator"
 	ContestRoleParticipant ContestRole = "participant"
+	ContestRoleModerator   ContestRole = "moderator"
+	ContestRoleOwner       ContestRole = "owner"
 )
 
 func (e *ContestRole) Scan(src interface{}) error {
@@ -150,9 +149,8 @@ func (ns NullContestScope) Value() (driver.Value, error) {
 type ContestVisibility string
 
 const (
-	ContestVisibilityPrivate  ContestVisibility = "private"
-	ContestVisibilityPublic   ContestVisibility = "public"
-	ContestVisibilityUnlisted ContestVisibility = "unlisted"
+	ContestVisibilityPrivate ContestVisibility = "private"
+	ContestVisibilityPublic  ContestVisibility = "public"
 )
 
 func (e *ContestVisibility) Scan(src interface{}) error {
@@ -233,12 +231,55 @@ func (ns NullFreezeStatus) Value() (driver.Value, error) {
 	return string(ns.FreezeStatus), nil
 }
 
+type JoinPolicy string
+
+const (
+	JoinPolicyOpen       JoinPolicy = "open"
+	JoinPolicyByRequest  JoinPolicy = "by_request"
+	JoinPolicyInviteOnly JoinPolicy = "invite_only"
+)
+
+func (e *JoinPolicy) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = JoinPolicy(s)
+	case string:
+		*e = JoinPolicy(s)
+	default:
+		return fmt.Errorf("unsupported scan type for JoinPolicy: %T", src)
+	}
+	return nil
+}
+
+type NullJoinPolicy struct {
+	JoinPolicy JoinPolicy `json:"join_policy"`
+	Valid      bool       `json:"valid"` // Valid is true if JoinPolicy is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullJoinPolicy) Scan(value interface{}) error {
+	if value == nil {
+		ns.JoinPolicy, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.JoinPolicy.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullJoinPolicy) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.JoinPolicy), nil
+}
+
 type OrganizationRole string
 
 const (
-	OrganizationRoleOwner  OrganizationRole = "owner"
-	OrganizationRoleAdmin  OrganizationRole = "admin"
 	OrganizationRoleMember OrganizationRole = "member"
+	OrganizationRoleAdmin  OrganizationRole = "admin"
+	OrganizationRoleOwner  OrganizationRole = "owner"
 )
 
 func (e *OrganizationRole) Scan(src interface{}) error {
@@ -407,55 +448,13 @@ func (ns NullParticipationMode) Value() (driver.Value, error) {
 	return string(ns.ParticipationMode), nil
 }
 
-type ProblemPermission string
-
-const (
-	ProblemPermissionAdmin ProblemPermission = "admin"
-	ProblemPermissionWrite ProblemPermission = "write"
-	ProblemPermissionRead  ProblemPermission = "read"
-)
-
-func (e *ProblemPermission) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ProblemPermission(s)
-	case string:
-		*e = ProblemPermission(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ProblemPermission: %T", src)
-	}
-	return nil
-}
-
-type NullProblemPermission struct {
-	ProblemPermission ProblemPermission `json:"problem_permission"`
-	Valid             bool              `json:"valid"` // Valid is true if ProblemPermission is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullProblemPermission) Scan(value interface{}) error {
-	if value == nil {
-		ns.ProblemPermission, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ProblemPermission.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullProblemPermission) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ProblemPermission), nil
-}
-
 type ProblemRole string
 
 const (
-	ProblemRoleOwner     ProblemRole = "owner"
-	ProblemRoleModerator ProblemRole = "moderator"
-	ProblemRoleViewer    ProblemRole = "viewer"
+	ProblemRoleViewer ProblemRole = "viewer"
+	ProblemRoleEditor ProblemRole = "editor"
+	ProblemRoleAdmin  ProblemRole = "admin"
+	ProblemRoleOwner  ProblemRole = "owner"
 )
 
 func (e *ProblemRole) Scan(src interface{}) error {
@@ -496,9 +495,8 @@ func (ns NullProblemRole) Value() (driver.Value, error) {
 type ProblemVisibility string
 
 const (
-	ProblemVisibilityPrivate  ProblemVisibility = "private"
-	ProblemVisibilityPublic   ProblemVisibility = "public"
-	ProblemVisibilityUnlisted ProblemVisibility = "unlisted"
+	ProblemVisibilityPrivate ProblemVisibility = "private"
+	ProblemVisibilityPublic  ProblemVisibility = "public"
 )
 
 func (e *ProblemVisibility) Scan(src interface{}) error {
@@ -539,8 +537,9 @@ func (ns NullProblemVisibility) Value() (driver.Value, error) {
 type TeamRole string
 
 const (
-	TeamRoleMaintainer TeamRole = "maintainer"
 	TeamRoleMember     TeamRole = "member"
+	TeamRoleMaintainer TeamRole = "maintainer"
+	TeamRoleManager    TeamRole = "manager"
 )
 
 func (e *TeamRole) Scan(src interface{}) error {
@@ -620,11 +619,6 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
-type AccessRevision struct {
-	Singleton bool  `json:"singleton"`
-	Revision  int64 `json:"revision"`
-}
-
 type AuthToken struct {
 	ID        uuid.UUID     `json:"id"`
 	UserID    uuid.UUID     `json:"user_id"`
@@ -638,7 +632,6 @@ type AuthToken struct {
 type Contest struct {
 	ID                     uuid.UUID                       `json:"id"`
 	OrganizationID         uuid.UUID                       `json:"organization_id"`
-	OwnerID                *uuid.UUID                      `json:"owner_id"`
 	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
 	Title                  string                          `json:"title"`
 	Login                  string                          `json:"login"`
@@ -660,6 +653,12 @@ type Contest struct {
 	EndTime                *time.Time                      `json:"end_time"`
 	CreatedAt              time.Time                       `json:"created_at"`
 	UpdatedAt              time.Time                       `json:"updated_at"`
+}
+
+type ContestAccess struct {
+	ContestID uuid.UUID   `json:"contest_id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	Role      interface{} `json:"role"`
 }
 
 type ContestAnnouncement struct {
@@ -708,10 +707,10 @@ type ContestJoinRequest struct {
 }
 
 type ContestMember struct {
-	ContestID uuid.UUID                 `json:"contest_id"`
-	UserID    uuid.UUID                 `json:"user_id"`
-	Role      contestsmodel.ContestRole `json:"role"`
-	CreatedAt time.Time                 `json:"created_at"`
+	ContestID uuid.UUID               `json:"contest_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	Role      accessmodel.ContestRole `json:"role"`
+	CreatedAt time.Time               `json:"created_at"`
 }
 
 type ContestProblem struct {
@@ -734,10 +733,11 @@ type ContestProblemResult struct {
 }
 
 type ContestTeam struct {
-	ContestID uuid.UUID                 `json:"contest_id"`
-	TeamID    uuid.UUID                 `json:"team_id"`
-	Role      contestsmodel.ContestRole `json:"role"`
-	CreatedAt time.Time                 `json:"created_at"`
+	ContestID      uuid.UUID               `json:"contest_id"`
+	TeamID         uuid.UUID               `json:"team_id"`
+	OrganizationID uuid.UUID               `json:"organization_id"`
+	Role           accessmodel.ContestRole `json:"role"`
+	CreatedAt      time.Time               `json:"created_at"`
 }
 
 type ContestUserProblemBlock struct {
@@ -787,14 +787,14 @@ type Notification struct {
 }
 
 type Organization struct {
-	ID          uuid.UUID `json:"id"`
-	Login       string    `json:"login"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	AvatarUrl   *string   `json:"avatar_url"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	JoinPolicy  string    `json:"join_policy"`
+	ID          uuid.UUID              `json:"id"`
+	Login       string                 `json:"login"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	AvatarUrl   *string                `json:"avatar_url"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	JoinPolicy  accessmodel.JoinPolicy `json:"join_policy"`
 }
 
 type OrganizationInvitation struct {
@@ -820,10 +820,10 @@ type OrganizationJoinRequest struct {
 }
 
 type OrganizationMember struct {
-	OrganizationID uuid.UUID                           `json:"organization_id"`
-	UserID         uuid.UUID                           `json:"user_id"`
-	Role           organizationsmodel.OrganizationRole `json:"role"`
-	CreatedAt      time.Time                           `json:"created_at"`
+	OrganizationID uuid.UUID                    `json:"organization_id"`
+	UserID         uuid.UUID                    `json:"user_id"`
+	Role           accessmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                    `json:"created_at"`
 }
 
 type OutboxEvent struct {
@@ -857,13 +857,18 @@ type Post struct {
 }
 
 type Problem struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Visibility     string     `json:"visibility"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	IsTemplate     bool       `json:"is_template"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Visibility     string    `json:"visibility"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	IsTemplate     bool      `json:"is_template"`
+}
+
+type ProblemAccess struct {
+	ProblemID uuid.UUID   `json:"problem_id"`
+	UserID    uuid.UUID   `json:"user_id"`
+	Role      interface{} `json:"role"`
 }
 
 type ProblemBuild struct {
@@ -892,17 +897,16 @@ type ProblemBuildInput struct {
 }
 
 type ProblemCatalog struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Visibility     string     `json:"visibility"`
-	IsTemplate     bool       `json:"is_template"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Visibility     string    `json:"visibility"`
+	IsTemplate     bool      `json:"is_template"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Title          string    `json:"title"`
+	ShortName      string    `json:"short_name"`
+	TimeLimitMs    int32     `json:"time_limit_ms"`
+	MemoryLimitMb  int32     `json:"memory_limit_mb"`
 }
 
 type ProblemDraft struct {
@@ -926,10 +930,10 @@ type ProblemDraftObject struct {
 }
 
 type ProblemMember struct {
-	ProblemID uuid.UUID                 `json:"problem_id"`
-	UserID    uuid.UUID                 `json:"user_id"`
-	Role      problemsmodel.ProblemRole `json:"role"`
-	CreatedAt time.Time                 `json:"created_at"`
+	ProblemID uuid.UUID               `json:"problem_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
+	CreatedAt time.Time               `json:"created_at"`
 }
 
 type ProblemPackage struct {
@@ -960,10 +964,11 @@ type ProblemPackageAsset struct {
 }
 
 type ProblemTeam struct {
-	ProblemID  uuid.UUID                       `json:"problem_id"`
-	TeamID     uuid.UUID                       `json:"team_id"`
-	Permission problemsmodel.ProblemPermission `json:"permission"`
-	CreatedAt  time.Time                       `json:"created_at"`
+	ProblemID      uuid.UUID               `json:"problem_id"`
+	TeamID         uuid.UUID               `json:"team_id"`
+	OrganizationID uuid.UUID               `json:"organization_id"`
+	Role           accessmodel.ProblemRole `json:"role"`
+	CreatedAt      time.Time               `json:"created_at"`
 }
 
 type RequestIdempotency struct {
@@ -1033,11 +1038,17 @@ type Team struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type TeamAccess struct {
+	TeamID uuid.UUID   `json:"team_id"`
+	UserID uuid.UUID   `json:"user_id"`
+	Role   interface{} `json:"role"`
+}
+
 type TeamMember struct {
-	TeamID    uuid.UUID                   `json:"team_id"`
-	UserID    uuid.UUID                   `json:"user_id"`
-	Role      organizationsmodel.TeamRole `json:"role"`
-	CreatedAt time.Time                   `json:"created_at"`
+	TeamID    uuid.UUID            `json:"team_id"`
+	UserID    uuid.UUID            `json:"user_id"`
+	Role      accessmodel.TeamRole `json:"role"`
+	CreatedAt time.Time            `json:"created_at"`
 }
 
 type User struct {

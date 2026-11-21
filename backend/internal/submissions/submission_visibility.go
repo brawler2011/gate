@@ -3,8 +3,8 @@ package submissions
 import (
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
@@ -15,10 +15,19 @@ type SubmissionVisibility struct {
 	Details bool
 }
 
-func SubmissionView(contest *contestsmodel.Contest, author *uuid.UUID, createdAt time.Time, viewer uuid.UUID, permissions *accessmodel.ContestPermissions, now time.Time) SubmissionVisibility {
-	own := author != nil && *author == viewer
-	view := SubmissionVisibility{Source: own || permissions.GetOtherUserSubmission, Details: permissions.GetSubmissionDetails && (own || permissions.GetOtherUserSubmission)}
-	if !own && !permissions.ManageContest && contest.IsFrozenAt(now) {
+// SubmissionView hides what the viewer may not see; results after the freeze stay hidden from other non-managers.
+func SubmissionView(a access.ContestAccess, author *uuid.UUID, createdAt time.Time) SubmissionVisibility {
+	var owner uuid.UUID
+	if author != nil {
+		owner = *author
+	}
+	own := author != nil && owner == a.Actor.Id
+	view := SubmissionVisibility{
+		Source:  a.CanSubmission(owner, accessmodel.SubmissionView),
+		Details: a.CanSubmission(owner, accessmodel.SubmissionViewDetails),
+	}
+	contest := a.Facts.Contest
+	if !own && !a.Can(accessmodel.ContestManage) && contest.IsFrozenAt(a.Facts.Now) {
 		boundary := contest.GetFreezeTime()
 		view.Frozen = boundary == nil || !createdAt.Before(*boundary)
 	}

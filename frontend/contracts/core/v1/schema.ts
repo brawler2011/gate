@@ -2062,7 +2062,7 @@ export interface components {
             detail?: string;
         };
         /** @enum {string} */
-        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_only" | "primary_owner_required" | "owner_role_fixed" | "own_role" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "operation_running" | "build_finished" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_required" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "operation_running" | "build_finished" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
         /**
          * @description Result of creation.
          * @example {
@@ -2160,7 +2160,6 @@ export interface components {
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_login": "example",
-         *       "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *       "visibility": "example",
          *       "title": "Test problem",
          *       "time_limit": 1000,
@@ -2177,8 +2176,6 @@ export interface components {
             /** Format: uuid */
             organization_id: string;
             organization_login: string;
-            /** Format: uuid */
-            created_by: string;
             visibility: string;
             /** @example Test problem */
             title: string;
@@ -2278,7 +2275,6 @@ export interface components {
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_login": "example",
-         *         "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *         "visibility": "example",
          *         "title": "Test problem",
          *         "time_limit": 1000,
@@ -2429,7 +2425,6 @@ export interface components {
          *       "enable_drafts": true,
          *       "enable_upsolving": true,
          *       "languages": [],
-         *       "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z"
          *     }
@@ -2461,9 +2456,6 @@ export interface components {
              * @enum {string}
              */
             freeze_status: "auto" | "frozen" | "unfrozen";
-            /** Format: uuid */
-            created_by: string;
-            owner?: components["schemas"]["UserModel"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2507,7 +2499,6 @@ export interface components {
          *           "enable_drafts": true,
          *           "enable_upsolving": true,
          *           "languages": [],
-         *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *           "created_at": "2026-01-01T12:00:00Z",
          *           "updated_at": "2026-01-01T12:00:00Z"
          *         }
@@ -2550,7 +2541,6 @@ export interface components {
          *           "enable_drafts": true,
          *           "enable_upsolving": true,
          *           "languages": [],
-         *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *           "created_at": "2026-01-01T12:00:00Z",
          *           "updated_at": "2026-01-01T12:00:00Z"
          *         }
@@ -2630,7 +2620,6 @@ export interface components {
          *         "enable_drafts": true,
          *         "enable_upsolving": true,
          *         "languages": [],
-         *         "created_by": "123e4567-e89b-42d3-a456-426614174000",
          *         "created_at": "2026-01-01T12:00:00Z",
          *         "updated_at": "2026-01-01T12:00:00Z"
          *       },
@@ -4077,7 +4066,7 @@ export interface components {
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_name": "example",
          *       "team_slug": "example",
-         *       "permission": "read",
+         *       "role": "viewer",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -4090,7 +4079,7 @@ export interface components {
             team_name: string;
             team_slug: string;
             /** @enum {string} */
-            permission: "admin" | "write" | "read";
+            role: "admin" | "editor" | "viewer";
             /** Format: date-time */
             created_at: string;
         };
@@ -4106,7 +4095,7 @@ export interface components {
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_name": "example",
          *           "team_slug": "example",
-         *           "permission": "read",
+         *           "role": "viewer",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ]
@@ -4136,7 +4125,7 @@ export interface components {
             user_id: string;
             username: string;
             /** @enum {string} */
-            role: "owner" | "moderator" | "viewer";
+            role: "owner" | "admin" | "editor" | "viewer";
             /** Format: date-time */
             created_at: string;
         };
@@ -5219,7 +5208,7 @@ export interface components {
         /** @description Role to assign to the team member. */
         TeamRoleQuery: "maintainer" | "member";
         /** @description Role to assign to the problem member. */
-        ProblemRoleQuery: "owner" | "moderator" | "viewer";
+        ProblemRoleQuery: "owner" | "admin" | "editor" | "viewer";
         /** @description Role to assign to the contest member. */
         ContestRoleQuery: "owner" | "moderator" | "participant";
         /** @description Role to assign to the contest team. */
@@ -8105,8 +8094,8 @@ export interface operations {
             query: {
                 /** @description UUID of the team. */
                 team_id: components["parameters"]["TeamIDQuery"];
-                /** @description Permission level to grant. */
-                permission?: string;
+                /** @description Role the team grants its members. */
+                role?: "admin" | "editor" | "viewer";
             };
             header?: never;
             path: {
@@ -8157,8 +8146,8 @@ export interface operations {
             query: {
                 /** @description UUID of the team. */
                 team_id: components["parameters"]["TeamIDQuery"];
-                /** @description Permission level to grant. */
-                permission: string;
+                /** @description Role the team grants its members. */
+                role: "admin" | "editor" | "viewer";
             };
             header?: never;
             path: {
@@ -8214,7 +8203,7 @@ export interface operations {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
                 /** @description Role to assign to the member. */
-                role?: string;
+                role?: "owner" | "admin" | "editor" | "viewer";
             };
             header?: never;
             path: {

@@ -7,39 +7,21 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 const scopeContests = `-- name: ScopeContests :many
-WITH actor AS (
-  SELECT u.id, u.role FROM users u
-  WHERE u.id = $3::uuid
-    AND u.role IN ('user', 'admin')
-    AND (u.expires_at IS NULL OR u.expires_at > $4::timestamptz)
-), visible AS (
-  SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login, o.name AS org_name FROM contests c JOIN organizations o ON o.id = c.organization_id
-  WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = $3::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = $3::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = $3::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
-    AND (c.visibility = 'public' OR EXISTS (
-    SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
-    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
-    OR EXISTS (SELECT 1 FROM contest_members m WHERE m.contest_id = c.id AND m.user_id = a.id AND m.role IN ('participant', 'moderator', 'owner'))
-    OR EXISTS (SELECT 1 FROM contest_teams ct
-      JOIN teams t ON t.id = ct.team_id JOIN team_members tm ON tm.team_id = t.id
-      WHERE ct.contest_id = c.id AND tm.user_id = a.id
-        AND t.organization_id = c.organization_id AND tm.role IN ('member', 'maintainer')
-        AND ct.role IN ('participant', 'moderator'))))
-    AND ($3::uuid IS NULL OR $3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+WITH visible AS (
+  SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login FROM contests c JOIN organizations o ON o.id = c.organization_id
+  LEFT JOIN contest_access a ON a.contest_id = c.id AND a.user_id = $3::uuid
+  WHERE (c.visibility = 'public' OR a.role IS NOT NULL OR $4::boolean)
     AND ($5::uuid IS NULL OR c.organization_id = $5::uuid)
     AND ($6::text = '' OR c.title ILIKE '%' || $6::text || '%')
-    AND c.visibility IN ('public', 'private')
     AND ($7::text = '' OR c.visibility::text = $7::text)
     AND ($8::uuid IS NULL OR EXISTS (SELECT 1 FROM contest_teams link WHERE link.contest_id = c.id AND link.team_id = $8::uuid))
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
-  SELECT id, organization_id, owner_id, visibility, title, login, description, participation_mode, monitor_scope, submissions_list_scope, submissions_review_scope, submission_details_scope, freeze_status, freeze_duration_minutes, freeze_started_at, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, languages, start_time, end_time, created_at, updated_at, org_login, org_name FROM visible c ORDER BY CASE WHEN $1::text IN ('', 'created_at') AND $2::text = 'asc' THEN c.created_at END ASC,
+  SELECT id, organization_id, visibility, title, login, description, participation_mode, monitor_scope, submissions_list_scope, submissions_review_scope, submission_details_scope, freeze_status, freeze_duration_minutes, freeze_started_at, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, languages, start_time, end_time, created_at, updated_at, org_login FROM visible c ORDER BY CASE WHEN $1::text IN ('', 'created_at') AND $2::text = 'asc' THEN c.created_at END ASC,
     CASE WHEN $1::text IN ('', 'created_at') AND $2::text <> 'asc' THEN c.created_at END DESC,
     CASE WHEN $1::text = 'updated_at' AND $2::text = 'asc' THEN c.updated_at END ASC,
     CASE WHEN $1::text = 'updated_at' AND $2::text <> 'asc' THEN c.updated_at END DESC,
@@ -60,8 +42,8 @@ ORDER BY CASE WHEN $1::text IN ('', 'created_at') AND $2::text = 'asc' THEN page
 type ScopeContestsParams struct {
 	SortBy         string     `json:"sort_by"`
 	SortOrder      string     `json:"sort_order"`
-	ViewerID       *uuid.UUID `json:"viewer_id"`
-	Now            time.Time  `json:"now"`
+	ViewerID       uuid.UUID  `json:"viewer_id"`
+	All            bool       `json:"all"`
 	OrganizationID *uuid.UUID `json:"organization_id"`
 	Search         string     `json:"search"`
 	Visibility     string     `json:"visibility"`
@@ -80,7 +62,7 @@ func (q *Queries) ScopeContests(ctx context.Context, arg ScopeContestsParams) ([
 		arg.SortBy,
 		arg.SortOrder,
 		arg.ViewerID,
-		arg.Now,
+		arg.All,
 		arg.OrganizationID,
 		arg.Search,
 		arg.Visibility,
@@ -108,35 +90,18 @@ func (q *Queries) ScopeContests(ctx context.Context, arg ScopeContestsParams) ([
 
 const scopeProblems = `-- name: ScopeProblems :many
 
-WITH actor AS (
-  SELECT u.id, u.role FROM users u
-  WHERE u.id = $2::uuid
-    AND u.role IN ('user', 'admin')
-    AND (u.expires_at IS NULL OR u.expires_at > $3::timestamptz)
-), visible AS (
-  SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.is_template, p.created_at, p.updated_at, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, o.login AS org_login, o.name AS org_name FROM problem_catalog p JOIN organizations o ON o.id = p.organization_id
-  WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM problem_members invalid WHERE invalid.problem_id = p.id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('viewer', 'moderator', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.problem_id = p.id AND tm.user_id = $2::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.permission::text NOT IN ('read', 'write', 'admin')))
-    AND (p.visibility = 'public' OR EXISTS (
-    SELECT 1 FROM actor a WHERE a.role = 'admin' OR p.owner_id = a.id
-    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = p.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
-    OR EXISTS (SELECT 1 FROM problem_members m WHERE m.problem_id = p.id AND m.user_id = a.id AND m.role IN ('viewer', 'moderator', 'owner'))
-    OR EXISTS (SELECT 1 FROM problem_teams pt
-      JOIN teams t ON t.id = pt.team_id JOIN team_members tm ON tm.team_id = t.id
-      WHERE pt.problem_id = p.id AND tm.user_id = a.id
-        AND t.organization_id = p.organization_id AND tm.role IN ('member', 'maintainer')
-        AND pt.permission IN ('read', 'write', 'admin'))))
-    AND ($2::uuid IS NULL OR $2::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+WITH visible AS (
+  SELECT p.id, p.organization_id, p.visibility, p.is_template, p.created_at, p.updated_at, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, o.login AS org_login, o.name AS org_name FROM problem_catalog p JOIN organizations o ON o.id = p.organization_id
+  LEFT JOIN problem_access a ON a.problem_id = p.id AND a.user_id = $2::uuid
+  WHERE (p.visibility = 'public' OR a.role IS NOT NULL OR $3::boolean)
     AND ($4::uuid IS NULL OR p.organization_id = $4::uuid)
     AND ($5::text = '' OR p.title ILIKE '%' || $5::text || '%')
-    AND p.visibility IN ('public', 'private')
     AND ($6::text = '' OR p.visibility::text = $6::text)
     AND ($7::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_teams link WHERE link.problem_id = p.id AND link.team_id = $7::uuid))
-    AND ($8::uuid IS NULL OR p.owner_id = $8::uuid)
+    AND ($8::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = $8::uuid AND own.role = 'owner'))
     AND ($9::boolean IS NULL OR p.is_template = $9::boolean)
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
-  SELECT id, organization_id, owner_id, visibility, is_template, created_at, updated_at, title, short_name, time_limit_ms, memory_limit_mb, org_login, org_name FROM visible p ORDER BY CASE WHEN $1::boolean THEN p.created_at END DESC,
+  SELECT id, organization_id, visibility, is_template, created_at, updated_at, title, short_name, time_limit_ms, memory_limit_mb, org_login, org_name FROM visible p ORDER BY CASE WHEN $1::boolean THEN p.created_at END DESC,
     CASE WHEN NOT $1::boolean THEN p.created_at END ASC,
     CASE WHEN $1::boolean THEN p.id END DESC,
     CASE WHEN NOT $1::boolean THEN p.id END ASC
@@ -152,8 +117,8 @@ ORDER BY CASE WHEN $1::boolean THEN page.created_at END DESC,
 
 type ScopeProblemsParams struct {
 	Descending     bool       `json:"descending"`
-	ViewerID       *uuid.UUID `json:"viewer_id"`
-	Now            time.Time  `json:"now"`
+	ViewerID       uuid.UUID  `json:"viewer_id"`
+	All            bool       `json:"all"`
 	OrganizationID *uuid.UUID `json:"organization_id"`
 	Search         string     `json:"search"`
 	Visibility     string     `json:"visibility"`
@@ -169,12 +134,12 @@ type ScopeProblemsRow struct {
 	Resource   []byte `json:"resource"`
 }
 
-// EXISTS grants prevent duplicate resources; the null empty-page sentinel preserves totals.
+// Visible means public or granted (see access.ProblemAllows and friends); the null empty-page sentinel preserves totals.
 func (q *Queries) ScopeProblems(ctx context.Context, arg ScopeProblemsParams) ([]ScopeProblemsRow, error) {
 	rows, err := q.db.Query(ctx, scopeProblems,
 		arg.Descending,
 		arg.ViewerID,
-		arg.Now,
+		arg.All,
 		arg.OrganizationID,
 		arg.Search,
 		arg.Visibility,
@@ -203,21 +168,10 @@ func (q *Queries) ScopeProblems(ctx context.Context, arg ScopeProblemsParams) ([
 }
 
 const scopeTeams = `-- name: ScopeTeams :many
-WITH actor AS (
-  SELECT u.id, u.role FROM users u
-  WHERE u.id = $1::uuid
-    AND u.role IN ('user', 'admin')
-    AND (u.expires_at IS NULL OR u.expires_at > $2::timestamptz)
-), visible AS (
+WITH visible AS (
   SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.parent_team_id, t.created_at, t.updated_at FROM teams t
-  WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = t.organization_id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
-    AND t.privacy IN ('closed', 'secret')
-    AND NOT EXISTS (SELECT 1 FROM team_members invalid WHERE invalid.team_id = t.id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('member', 'maintainer'))
-    AND EXISTS (SELECT 1 FROM actor a WHERE t.privacy = 'closed'
-    OR a.role = 'admin'
-    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = t.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
-    OR EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = a.id AND tm.role IN ('member', 'maintainer')))
-    AND ($1::uuid IS NULL OR $1::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+  LEFT JOIN team_access a ON a.team_id = t.id AND a.user_id = $1::uuid
+  WHERE ($1::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (t.privacy = 'closed' OR a.role IS NOT NULL) OR $2::boolean)
     AND ($3::uuid IS NULL OR t.organization_id = $3::uuid)
     AND ($4::text = '' OR t.name ILIKE '%' || $4::text || '%')
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
@@ -230,8 +184,8 @@ ORDER BY page.created_at DESC, page.id DESC
 `
 
 type ScopeTeamsParams struct {
-	ViewerID       *uuid.UUID `json:"viewer_id"`
-	Now            time.Time  `json:"now"`
+	ViewerID       uuid.UUID  `json:"viewer_id"`
+	All            bool       `json:"all"`
 	OrganizationID *uuid.UUID `json:"organization_id"`
 	Search         string     `json:"search"`
 	PageOffset     int64      `json:"page_offset"`
@@ -246,7 +200,7 @@ type ScopeTeamsRow struct {
 func (q *Queries) ScopeTeams(ctx context.Context, arg ScopeTeamsParams) ([]ScopeTeamsRow, error) {
 	rows, err := q.db.Query(ctx, scopeTeams,
 		arg.ViewerID,
-		arg.Now,
+		arg.All,
 		arg.OrganizationID,
 		arg.Search,
 		arg.PageOffset,

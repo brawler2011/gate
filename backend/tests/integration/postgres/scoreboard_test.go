@@ -34,18 +34,19 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			}
 			suffix := uuid.NewString()
 			org := helperCreateOrg(t, ctx, pool, "scoreboard_"+suffix, "Scoreboard")
+			owner := helperOrgOwner(t, ctx, pool, org)
 			repo := postgres.NewContestsRepo(pool)
 			start := time.Date(2020, 1, 1, 10, 0, 0, 0, time.UTC)
 			end := start.Add(2 * time.Hour)
 			contest, otherContest := uuid.New(), uuid.New()
 			for _, id := range []uuid.UUID{contest, otherContest} {
-				require.NoError(t, repo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: id, OrganizationID: org, Title: "Scoreboard", Login: id.String(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
+				require.NoError(t, dbfixtures.CreateContest(ctx, pool, contestsmodel.CreateContestParams{ID: id, OrganizationID: org, Title: "Scoreboard", Login: id.String(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}, owner))
 				require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{FreezeDurationMinutes: new(int32(60)), FreezeDurationSet: true}}))
 			}
 			var problems []uuid.UUID
 			for i := 0; i < size+1; i++ {
 				problem := uuid.New()
-				require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org, Title: "Problem", ShortName: fmt.Sprint(i)}))
+				require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org, Owner: owner, Title: "Problem", ShortName: fmt.Sprint(i)}))
 				problems = append(problems, problem)
 				// The final problem is deliberately absent from the contest.
 				if i < size {
@@ -59,9 +60,9 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 				user := uuid.New()
 				users = append(users, user)
 				exec(`INSERT INTO users(id,username,password_hash) VALUES ($1,$2,'unused')`, user, fmt.Sprintf("scoreboard_%s_%d", suffix, i))
-				role := contestsmodel.ContestRoleParticipant
+				role := accessmodel.ContestParticipant
 				if i == size+1 {
-					role = contestsmodel.ContestRoleModerator
+					role = accessmodel.ContestModerator
 				}
 				require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user, Role: role}))
 			}
@@ -148,7 +149,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	for _, user := range users {
 		_, err = f.pool.Exec(f.ctx, `INSERT INTO users(id,username,password_hash) VALUES($1,$2,'unused')`, user, user.String())
 		require.NoError(t, err)
-		require.NoError(t, f.repo.CreateContestMember(f.ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: contestsmodel.ContestRoleParticipant}))
+		require.NoError(t, f.repo.CreateContestMember(f.ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: accessmodel.ContestParticipant}))
 	}
 	add := func(user uuid.UUID, created, observed time.Time, before, after submissionsmodel.State) {
 		t.Helper()

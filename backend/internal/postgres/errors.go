@@ -38,6 +38,7 @@ var constraintErrors = map[string]struct {
 	"contest_problems_contest_id_ordinal_key":       {pkg.ErrDuplicate, "problem positions must be distinct"},
 	"contest_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
 	"problem_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
+	"owner_required":                                {pkg.ErrOwnerRequired, "keep at least one permanent owner"},
 	"contest_user_problem_blocks_user_id_fkey":      {pkg.ErrNotFound, "user not found"},
 	"contest_user_problem_blocks_problem_id_fkey":   {pkg.ErrNotFound, "problem not found"},
 }

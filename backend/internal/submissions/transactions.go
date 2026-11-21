@@ -3,6 +3,7 @@ package submissions
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -14,7 +15,7 @@ import (
 )
 
 type SubmissionTxStore interface {
-	ContestAccess
+	access.Loader
 	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 	contests.ScoreboardStore
@@ -29,6 +30,5 @@ type SubmissionTxStore interface {
 }
 
 type SubmissionTransactions interface {
-	Prepare(context.Context) (context.Context, error)
 	Within(context.Context, func(SubmissionTxStore) error) error
 }

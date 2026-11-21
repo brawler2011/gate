@@ -3,15 +3,10 @@ package organizationsmodel
 import (
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"
-)
-
-type TeamRole string
-
-const (
-	TeamRoleMaintainer TeamRole = "maintainer"
-	TeamRoleMember     TeamRole = "member"
 )
 
 type TeamPrivacy string
@@ -36,7 +31,7 @@ type Team struct {
 type TeamMember struct {
 	TeamID    uuid.UUID
 	UserID    uuid.UUID
-	Role      TeamRole
+	Role      accessmodel.TeamRole
 	Username  string
 	Email     string
 	CreatedAt time.Time
@@ -60,7 +55,7 @@ type UpdateTeamInput struct {
 type AddTeamMemberInput struct {
 	TeamID uuid.UUID
 	UserID uuid.UUID
-	Role   TeamRole
+	Role   accessmodel.TeamRole
 }
 
 type TeamsFilter struct {

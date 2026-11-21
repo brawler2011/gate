@@ -85,13 +85,6 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     }
   };
 
-  const handleAuthorClick = (e: React.MouseEvent, authorUsername?: string) => {
-    e.stopPropagation();
-    if (authorUsername) {
-      navigate(`/@${authorUsername}`);
-    }
-  };
-
   const handleDeleteClick = (e: React.MouseEvent, contest: ContestModel) => {
     e.stopPropagation();
     setContestToDelete(contest);
@@ -121,7 +114,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
               <Table.Th style={{width: "25%"}}>Название</Table.Th>
               <Table.Th style={{width: "12%"}}>ID</Table.Th>
               <Table.Th style={{width: "12%"}}>Видимость</Table.Th>
-              <Table.Th style={{width: "15%"}}>Автор</Table.Th>
+              <Table.Th style={{width: "15%"}}>Организация</Table.Th>
               <Table.Th style={{width: "15%"}}>Дата создания</Table.Th>
               <Table.Th style={{width: "21%"}}>Действия</Table.Th>
             </Table.Tr>
@@ -154,15 +147,8 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
                     </Badge>
                   </Table.Td>
                   <Table.Td>
-                    <Badge
-                      variant="light"
-                      color="blue"
-                      tt="none"
-                      size="sm"
-                      className={classes.authorBadge}
-                      onClick={(e) => handleAuthorClick(e, contest.owner?.username)}
-                    >
-                      {contest.owner?.username || contest.created_by.slice(0, 8)}
+                    <Badge variant="light" color="blue" tt="none" size="sm">
+                      {contest.organization_login}
                     </Badge>
                   </Table.Td>
                   <Table.Td>

@@ -10,7 +10,6 @@ import (
 
 	m "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/pkg"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -36,7 +35,6 @@ type Subscriber struct {
 }
 
 type Hub struct {
-	revisions                RevisionReader
 	contests                 ContestReader
 	scoreboard               Scoreboard
 	scoreboardMu             sync.Mutex
@@ -55,14 +53,11 @@ func safeUint64(v int) uint64 {
 	return uint64(v)
 }
 
-func NewHub(ringSize int, contests ContestReader, scoreboard Scoreboard, revisions ...RevisionReader) *Hub {
+func NewHub(ringSize int, contests ContestReader, scoreboard Scoreboard) *Hub {
 	h := &Hub{
 		contests: contests, scoreboard: scoreboard, finalSnapshots: make(map[uuid.UUID]finalSnapshot), scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
-	}
-	if len(revisions) > 0 {
-		h.revisions = revisions[0]
 	}
 	return h
 }
@@ -77,14 +72,6 @@ func parseEvent[T any](payload []byte) (*T, error) {
 
 func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) error {
 	ctx = m.WithReadTime(ctx, time.Now().UTC())
-	var revision int64
-	if h.revisions != nil {
-		var err error
-		revision, err = h.revisions.AccessRevision(ctx)
-		if err != nil {
-			return err
-		}
-	}
 	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
 	if !ok {
 		slog.ErrorContext(ctx, "missing message_stream_sequence")
@@ -138,15 +125,6 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	}
 	if err := h.projectTopics(ctx, wrapped); err != nil {
 		return err
-	}
-	if h.revisions != nil {
-		current, err := h.revisions.AccessRevision(ctx)
-		if err != nil {
-			return err
-		}
-		if current != revision {
-			return pkg.ErrConflict
-		}
 	}
 	h.broadcast(wrapped)
 

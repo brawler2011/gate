@@ -3,6 +3,7 @@ package organizations
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -13,17 +14,16 @@ import (
 )
 
 type TeamTxStore interface {
-	GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error)
-	CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error)
+	access.Loader
 	GetTeamByID(context.Context, uuid.UUID) (*organizationsmodel.Team, error)
 	GetTeamMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.TeamMember, error)
 	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)
 	UpdateTeam(context.Context, uuid.UUID, *organizationsmodel.UpdateTeamInput) error
 	DeleteTeam(context.Context, uuid.UUID) error
-	UpdateTeamMemberRole(context.Context, uuid.UUID, uuid.UUID, organizationsmodel.TeamRole) error
+	UpdateTeamMemberRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.TeamRole) error
 	RemoveTeamMember(context.Context, uuid.UUID, uuid.UUID) error
 	CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error)
-	AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
+	AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error
 }
 
 type TeamTransactions interface {
@@ -31,14 +31,14 @@ type TeamTransactions interface {
 }
 
 type OrganizationTxStore interface {
-	CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error)
+	access.Loader
 	GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error)
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	GetPendingInvitation(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationInvitation, error)
 	GetPendingJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationJoinRequest, error)
 	UpdateOrganization(context.Context, uuid.UUID, *organizationsmodel.UpdateOrganizationInput) error
 	DeleteOrganization(context.Context, uuid.UUID) error
-	UpdateMemberRole(context.Context, uuid.UUID, uuid.UUID, organizationsmodel.OrganizationRole) error
+	UpdateMemberRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrganizationRole) error
 	RemoveMember(context.Context, uuid.UUID, uuid.UUID) error
 	CreateInvitation(context.Context, *organizationsmodel.CreateOrganizationInvitationInput) (*organizationsmodel.OrganizationInvitation, error)
 	CreateJoinRequest(context.Context, *organizationsmodel.CreateOrganizationJoinRequestInput) (*organizationsmodel.OrganizationJoinRequest, error)
@@ -46,7 +46,7 @@ type OrganizationTxStore interface {
 
 	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
 	CreateOrganization(ctx context.Context, input *organizationsmodel.CreateOrganizationInput) (*organizationsmodel.Organization, error)
-	AddMember(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error
+	AddMember(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error
 	CreateUser(ctx context.Context, params identitymodel.CreateUserParams) error
 	UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status organizationsmodel.RequestStatus) error
 	UpdateJoinRequestStatus(ctx context.Context, id uuid.UUID, status organizationsmodel.RequestStatus, reviewedBy *uuid.UUID) error

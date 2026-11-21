@@ -93,10 +93,6 @@ WHERE om.user_id = $1 AND om.organization_id = $2
 LIMIT 1;
 
 
--- name: GetAuthorizationOrganizationMember :one
-SELECT * FROM organization_members
-WHERE organization_id = $1 AND user_id = $2
-FOR SHARE;
 
 -- name: LockOrganizationMember :one
 SELECT user_id FROM organization_members WHERE organization_id = $1 AND user_id = $2 FOR UPDATE;

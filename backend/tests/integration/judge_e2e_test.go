@@ -23,7 +23,6 @@ import (
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -83,12 +82,14 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	userID := uuid.New()
 	email := "test@example.com"
 	require.NoError(t, usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{Id: userID, Username: "testuser", Email: &email, PasswordHash: "hashed_password", Role: accessmodel.UserRoleUser}))
-	org, err := orgsRepo.CreateOrganization(ctx, &organizationsmodel.CreateOrganizationInput{Login: "test-org", Name: "Test Org"})
+	orgID := uuid.New()
+	require.NoError(t, dbfixtures.InsertOrganization(ctx, dbPool, orgID, "test-org", "Test Org", userID))
+	org, err := orgsRepo.GetOrganizationByID(ctx, orgID)
 	require.NoError(t, err)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
 	problemID := uuid.New()
-	require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &userID, Visibility: "public", Title: "Sum of Two Numbers", ShortName: "sum-problem"}))
+	require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, Owner: userID, Visibility: "public", Title: "Sum of Two Numbers", ShortName: "sum-problem"}))
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	generator, solution, group := "gen", "main", uuid.New()
@@ -151,9 +152,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	contestID := uuid.New()
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	require.NoError(t, contestsRepo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
+	require.NoError(t, dbfixtures.CreateContest(ctx, dbPool, contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}, contestOwner(t, ctx, dbPool)))
 	require.NoError(t, contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
-	require.NoError(t, contestsRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}))
+	require.NoError(t, contestsRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: userID, Role: accessmodel.ContestParticipant}))
 
 	judge := func(t *testing.T, problem uuid.UUID, language string, source string) submissionsmodel.Submission {
 		t.Helper()
@@ -215,7 +216,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	t.Run("UnreadablePackageIsInternalError", func(t *testing.T) {
 		// A Package whose archive object was never uploaded cannot be loaded.
 		brokenProblem := uuid.New()
-		require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: brokenProblem, OrganizationID: org.ID, OwnerID: &userID, Visibility: "public", Title: "Broken", ShortName: "broken-problem"}))
+		require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: brokenProblem, OrganizationID: org.ID, Owner: userID, Visibility: "public", Title: "Broken", ShortName: "broken-problem"}))
 		brokenPackage, err := dbfixtures.InsertPackage(ctx, dbPool, brokenProblem, org.ID, time.Time{})
 		require.NoError(t, err)
 		require.NoError(t, contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: brokenProblem, PackageId: brokenPackage}))
@@ -280,9 +281,10 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 
 	email := "test@example.com"
 	require.NoError(t, usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{Id: h.userID, Username: "testuser", Email: &email, PasswordHash: "hashed_password", Role: accessmodel.UserRoleUser}))
-	org, err := orgsRepo.CreateOrganization(ctx, &organizationsmodel.CreateOrganizationInput{Login: "test-org", Name: "Test Org"})
+	h.orgID = uuid.New()
+	require.NoError(t, dbfixtures.InsertOrganization(ctx, dbPool, h.orgID, "test-org", "Test Org", h.userID))
+	org, err := orgsRepo.GetOrganizationByID(ctx, h.orgID)
 	require.NoError(t, err)
-	h.orgID = org.ID
 	h.ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: h.userID, Role: accessmodel.UserRoleUser})
 
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
@@ -298,8 +300,8 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 		executor, judgeworker.NewEventPublisher(js))
 
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	require.NoError(t, h.contests.CreateContest(h.ctx, &contestsmodel.CreateContestParams{ID: h.contestID, OrganizationID: org.ID, OwnerID: &h.userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
-	require.NoError(t, h.contests.CreateContestMember(h.ctx, &contestsmodel.CreateContestMemberParams{ContestId: h.contestID, UserId: h.userID, Role: contestsmodel.ContestRoleParticipant}))
+	require.NoError(t, dbfixtures.CreateContest(h.ctx, h.pool, contestsmodel.CreateContestParams{ID: h.contestID, OrganizationID: org.ID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}, contestOwner(t, h.ctx, h.pool)))
+	require.NoError(t, h.contests.CreateContestMember(h.ctx, &contestsmodel.CreateContestMemberParams{ContestId: h.contestID, UserId: h.userID, Role: accessmodel.ContestParticipant}))
 	return h
 }
 
@@ -307,7 +309,7 @@ func (h *judgeHarness) build(t *testing.T, shortName string, edit func(*problems
 	t.Helper()
 	ctx := h.ctx
 	problemID = uuid.New()
-	require.NoError(t, dbfixtures.InsertProblem(ctx, h.pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: h.orgID, OwnerID: &h.userID, Visibility: "public", Title: shortName, ShortName: shortName}))
+	require.NoError(t, dbfixtures.InsertProblem(ctx, h.pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: h.orgID, Owner: h.userID, Visibility: "public", Title: shortName, ShortName: shortName}))
 	d, err := h.drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	edit(&d)
@@ -438,4 +440,12 @@ func mutationKey(org uuid.UUID, operation string, body any) problemsmodel.Mutati
 	data, _ := json.Marshal(body)
 	sum := sha256.Sum256(data)
 	return problemsmodel.MutationKey{OrganizationID: org, Operation: operation, Key: uuid.NewString(), Fingerprint: hex.EncodeToString(sum[:]), Token: uuid.New()}
+}
+
+// contestOwner keeps the judged user a plain participant.
+func contestOwner(t *testing.T, ctx context.Context, db dbfixtures.Execer) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	require.NoError(t, dbfixtures.InsertUser(ctx, db, id))
+	return id
 }

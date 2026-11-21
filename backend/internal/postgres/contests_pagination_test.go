@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -55,8 +54,8 @@ func TestPublicContestsPagination(t *testing.T) {
 			require.Len(t, db.args, 10)
 			require.Equal(t, "title", db.args[0])
 			require.Equal(t, "asc", db.args[1])
-			require.Equal(t, &uuid.Nil, db.args[2])
-			require.IsType(t, time.Time{}, db.args[3])
+			require.Equal(t, uuid.Nil, db.args[2])
+			require.Equal(t, false, db.args[3])
 			require.Equal(t, []any{(*uuid.UUID)(nil), "search", string(contestsmodel.ContestVisibilityPublic), (*uuid.UUID)(nil), int64(tc.wantOffset), tc.wantSize}, db.args[4:])
 		})
 	}

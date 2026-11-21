@@ -19,15 +19,14 @@ func (s *IntegrationTestSuite) TestListContests() {
 	org := s.createOrganization("test-org", "Test Organization", user.Id)
 
 	contestID := uuid.New()
-	err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+	err := s.createContest(contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: org.ID,
-		OwnerID:        &user.Id,
 		Title:          "Test Contest",
 		Login:          "test-contest",
 		Description:    "A test contest",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-	})
+	}, user.Id)
 	s.Require().NoError(err)
 
 	visibility := contestsmodel.ContestVisibilityPublic
@@ -56,15 +55,14 @@ func (s *IntegrationTestSuite) TestListPublicContestsPagination() {
 	prefix := "page-pub-" + uuid.NewString()[:6]
 	for i := range 3 {
 		id := uuid.New()
-		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+		err := s.createContest(contestsmodel.CreateContestParams{
 			ID:             id,
 			OrganizationID: org.ID,
-			OwnerID:        &user.Id,
 			Title:          fmt.Sprintf("%s-%d", prefix, i),
 			Login:          fmt.Sprintf("%s-%d", prefix, i),
 			Description:    "Public contest pagination test",
 			Visibility:     contestsmodel.ContestVisibilityPublic,
-		})
+		}, user.Id)
 		s.Require().NoError(err)
 	}
 
@@ -95,20 +93,19 @@ func (s *IntegrationTestSuite) TestClarificationsLifecycle() {
 
 	contestID := uuid.New()
 	login := "clar-contest-" + uuid.NewString()[:6]
-	err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+	err := s.createContest(contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: org.ID,
-		OwnerID:        &owner.Id,
 		Title:          "Clar Contest",
 		Login:          login,
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-	})
+	}, owner.Id)
 	s.Require().NoError(err)
 
 	err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID,
 		UserId:    participant.Id,
-		Role:      contestsmodel.ContestRoleParticipant,
+		Role:      accessmodel.ContestParticipant,
 	})
 	s.Require().NoError(err)
 

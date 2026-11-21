@@ -3985,7 +3985,7 @@ type CreateProblemMemberParams struct {
 	// UUID of the user.
 	UserID uuid.UUID
 	// Role to assign to the member.
-	Role OptString `json:",omitempty,omitzero"`
+	Role OptCreateProblemMemberRole `json:",omitempty,omitzero"`
 }
 
 func unpackCreateProblemMemberParams(packed middleware.Parameters) (params CreateProblemMemberParams) {
@@ -4009,7 +4009,7 @@ func unpackCreateProblemMemberParams(packed middleware.Parameters) (params Creat
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Role = v.(OptString)
+			params.Role = v.(OptCreateProblemMemberRole)
 		}
 	}
 	return params
@@ -4100,7 +4100,7 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 	}
 	// Set default value for query: role.
 	{
-		val := string("viewer")
+		val := CreateProblemMemberRole("viewer")
 		params.Role.SetTo(val)
 	}
 	// Decode query: role.
@@ -4113,7 +4113,7 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotRoleVal string
+				var paramsDotRoleVal CreateProblemMemberRole
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -4125,7 +4125,7 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 						return err
 					}
 
-					paramsDotRoleVal = c
+					paramsDotRoleVal = CreateProblemMemberRole(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -4133,6 +4133,21 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 				params.Role.SetTo(paramsDotRoleVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Role.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
@@ -4153,8 +4168,8 @@ type CreateProblemTeamParams struct {
 	ID uuid.UUID
 	// UUID of the team.
 	TeamID uuid.UUID
-	// Permission level to grant.
-	Permission OptString `json:",omitempty,omitzero"`
+	// Role the team grants its members.
+	Role OptCreateProblemTeamRole `json:",omitempty,omitzero"`
 }
 
 func unpackCreateProblemTeamParams(packed middleware.Parameters) (params CreateProblemTeamParams) {
@@ -4174,11 +4189,11 @@ func unpackCreateProblemTeamParams(packed middleware.Parameters) (params CreateP
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "permission",
+			Name: "role",
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Permission = v.(OptString)
+			params.Role = v.(OptCreateProblemTeamRole)
 		}
 	}
 	return params
@@ -4267,22 +4282,22 @@ func decodeCreateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 			Err:  err,
 		}
 	}
-	// Set default value for query: permission.
+	// Set default value for query: role.
 	{
-		val := string("read")
-		params.Permission.SetTo(val)
+		val := CreateProblemTeamRole("viewer")
+		params.Role.SetTo(val)
 	}
-	// Decode query: permission.
+	// Decode query: role.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "permission",
+			Name:    "role",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPermissionVal string
+				var paramsDotRoleVal CreateProblemTeamRole
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -4294,21 +4309,36 @@ func decodeCreateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 						return err
 					}
 
-					paramsDotPermissionVal = c
+					paramsDotRoleVal = CreateProblemTeamRole(c)
 					return nil
 				}(); err != nil {
 					return err
 				}
-				params.Permission.SetTo(paramsDotPermissionVal)
+				params.Role.SetTo(paramsDotRoleVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Role.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "permission",
+			Name: "role",
 			In:   "query",
 			Err:  err,
 		}
@@ -20000,8 +20030,8 @@ type UpdateProblemTeamParams struct {
 	ID uuid.UUID
 	// UUID of the team.
 	TeamID uuid.UUID
-	// Permission level to grant.
-	Permission string
+	// Role the team grants its members.
+	Role UpdateProblemTeamRole
 }
 
 func unpackUpdateProblemTeamParams(packed middleware.Parameters) (params UpdateProblemTeamParams) {
@@ -20021,10 +20051,10 @@ func unpackUpdateProblemTeamParams(packed middleware.Parameters) (params UpdateP
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "permission",
+			Name: "role",
 			In:   "query",
 		}
-		params.Permission = packed[key].(string)
+		params.Role = packed[key].(UpdateProblemTeamRole)
 	}
 	return params
 }
@@ -20112,10 +20142,10 @@ func decodeUpdateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 			Err:  err,
 		}
 	}
-	// Decode query: permission.
+	// Decode query: role.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "permission",
+			Name:    "role",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
@@ -20132,9 +20162,17 @@ func decodeUpdateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				params.Permission = c
+				params.Role = UpdateProblemTeamRole(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
@@ -20143,7 +20181,7 @@ func decodeUpdateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "permission",
+			Name: "role",
 			In:   "query",
 			Err:  err,
 		}

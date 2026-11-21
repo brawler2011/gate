@@ -9,28 +9,51 @@ import (
 	"context"
 	"time"
 
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
 
 const addContestTeam = `-- name: AddContestTeam :exec
-INSERT INTO contest_teams (contest_id, team_id, role)
-VALUES ($1, $2, $3)
+INSERT INTO contest_teams (contest_id, team_id, organization_id, role)
+SELECT c.id, $1::uuid, c.organization_id, $2::contest_role
+FROM contests c WHERE c.id = $3::uuid
 `
 
 type AddContestTeamParams struct {
-	ContestID uuid.UUID                 `json:"contest_id"`
-	TeamID    uuid.UUID                 `json:"team_id"`
-	Role      contestsmodel.ContestRole `json:"role"`
+	TeamID    uuid.UUID               `json:"team_id"`
+	Role      accessmodel.ContestRole `json:"role"`
+	ContestID uuid.UUID               `json:"contest_id"`
 }
 
 func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) error {
-	_, err := q.db.Exec(ctx, addContestTeam, arg.ContestID, arg.TeamID, arg.Role)
+	_, err := q.db.Exec(ctx, addContestTeam, arg.TeamID, arg.Role, arg.ContestID)
 	return err
 }
 
+const getContestTeam = `-- name: GetContestTeam :one
+SELECT contest_id, team_id, organization_id, role, created_at FROM contest_teams WHERE contest_id = $1 AND team_id = $2
+`
+
+type GetContestTeamParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	TeamID    uuid.UUID `json:"team_id"`
+}
+
+func (q *Queries) GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error) {
+	row := q.db.QueryRow(ctx, getContestTeam, arg.ContestID, arg.TeamID)
+	var i ContestTeam
+	err := row.Scan(
+		&i.ContestID,
+		&i.TeamID,
+		&i.OrganizationID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listContestTeams = `-- name: ListContestTeams :many
-SELECT ct.contest_id, ct.team_id, ct.role, ct.created_at, t.name as team_name, t.slug as team_slug
+SELECT ct.contest_id, ct.team_id, ct.organization_id, ct.role, ct.created_at, t.name as team_name, t.slug as team_slug
 FROM contest_teams ct
 JOIN teams t ON ct.team_id = t.id
 WHERE ct.contest_id = $1
@@ -38,12 +61,13 @@ ORDER BY ct.created_at
 `
 
 type ListContestTeamsRow struct {
-	ContestID uuid.UUID                 `json:"contest_id"`
-	TeamID    uuid.UUID                 `json:"team_id"`
-	Role      contestsmodel.ContestRole `json:"role"`
-	CreatedAt time.Time                 `json:"created_at"`
-	TeamName  string                    `json:"team_name"`
-	TeamSlug  string                    `json:"team_slug"`
+	ContestID      uuid.UUID               `json:"contest_id"`
+	TeamID         uuid.UUID               `json:"team_id"`
+	OrganizationID uuid.UUID               `json:"organization_id"`
+	Role           accessmodel.ContestRole `json:"role"`
+	CreatedAt      time.Time               `json:"created_at"`
+	TeamName       string                  `json:"team_name"`
+	TeamSlug       string                  `json:"team_slug"`
 }
 
 func (q *Queries) ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]ListContestTeamsRow, error) {
@@ -58,6 +82,7 @@ func (q *Queries) ListContestTeams(ctx context.Context, contestID uuid.UUID) ([]
 		if err := rows.Scan(
 			&i.ContestID,
 			&i.TeamID,
+			&i.OrganizationID,
 			&i.Role,
 			&i.CreatedAt,
 			&i.TeamName,
@@ -95,9 +120,9 @@ WHERE contest_id = $1 AND team_id = $2
 `
 
 type UpdateContestTeamRoleParams struct {
-	ContestID uuid.UUID                 `json:"contest_id"`
-	TeamID    uuid.UUID                 `json:"team_id"`
-	Role      contestsmodel.ContestRole `json:"role"`
+	ContestID uuid.UUID               `json:"contest_id"`
+	TeamID    uuid.UUID               `json:"team_id"`
+	Role      accessmodel.ContestRole `json:"role"`
 }
 
 func (q *Queries) UpdateContestTeamRole(ctx context.Context, arg UpdateContestTeamRoleParams) error {

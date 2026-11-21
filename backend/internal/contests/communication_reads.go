@@ -23,7 +23,7 @@ func (uc *AnnouncementsUseCase) ListAnnouncements(ctx context.Context, contest u
 	if err := paging.Validate(page, size); err != nil {
 		return nil, err
 	}
-	if err := access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetContest); err != nil {
+	if _, err := access.Contest(ctx, uc.access, contest, accessmodel.ContestView); err != nil {
 		return nil, err
 	}
 	return uc.reads.ListAnnouncements(ctx, contest, page, size)
@@ -37,14 +37,11 @@ func (uc *ClarificationsUseCase) ListClarifications(ctx context.Context, contest
 	if err := paging.Validate(filter.Page, filter.PageSize); err != nil {
 		return nil, err
 	}
-	if err := access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetContest); err != nil {
-		return nil, err
-	}
-	moderator, err := uc.permissions.CanContest(ctx, contest, accessmodel.ActionManageContest)
+	a, err := access.Contest(ctx, uc.access, contest, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
 	}
-	if moderator {
+	if a.Can(accessmodel.ContestManage) {
 		return uc.reads.ListClarificationsForModerator(ctx, contest, filter)
 	}
 	return uc.reads.ListClarificationsForUser(ctx, contest, user.Id, filter.Page, filter.PageSize)

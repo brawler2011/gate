@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -17,7 +18,11 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.Mutation
 	if err := draft.Validate(r.quotas, nil); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid template")
 	}
-	tx, err := beginReadCommitted(ctx, r.pool)
+	return authorizedMutation(func() (model.MutationResult, error) { return r.finalizeCreate(ctx, k, user, draft, objects) })
+}
+
+func (r *ProblemDraftsRepo) finalizeCreate(ctx context.Context, k model.MutationKey, user uuid.UUID, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
+	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
@@ -30,18 +35,14 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.Mutation
 		return *replay, nil
 	}
 	q := sqlc.New(tx)
-	allowed, err := bindAuthorization(q).CanOrganization(ctx, k.OrganizationID, accessmodel.ActionCreateProblem)
-	if err != nil {
+	if _, err := access.Organization(ctx, Access{q}, k.OrganizationID, accessmodel.OrganizationManage); err != nil {
 		return model.MutationResult{}, err
-	}
-	if !allowed {
-		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	repo := &ProblemsRepo{queries: q}
-	if err := repo.CreateProblem(ctx, &model.CreateProblemParams{ID: draft.ProblemID, OrganizationID: k.OrganizationID, OwnerID: &user, Title: draft.Title, ShortName: draft.ShortName, Visibility: model.ProblemVisibilityPrivate}); err != nil {
+	if err := repo.CreateProblem(ctx, &model.CreateProblemParams{ID: draft.ProblemID, OrganizationID: k.OrganizationID, Title: draft.Title, ShortName: draft.ShortName, Visibility: model.ProblemVisibilityPrivate}); err != nil {
 		return model.MutationResult{}, err
 	}
-	if err := repo.CreateProblemMember(ctx, &model.CreateProblemMemberParams{ProblemID: draft.ProblemID, UserID: user, Role: model.ProblemRoleOwner}); err != nil {
+	if err := repo.CreateProblemMember(ctx, &model.CreateProblemMemberParams{ProblemID: draft.ProblemID, UserID: user, Role: accessmodel.ProblemOwner}); err != nil {
 		return model.MutationResult{}, err
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {

@@ -15,16 +15,16 @@ CREATE TYPE contest_scope AS ENUM (
     'moderator'
 );
 
+-- Role enums ascend so max(role) picks the strongest grant.
 CREATE TYPE contest_role AS ENUM (
-    'owner',
+    'participant',
     'moderator',
-    'participant'
+    'owner'
 );
 
 CREATE TYPE contest_visibility AS ENUM (
     'private',
-    'public',
-    'unlisted'
+    'public'
 );
 
 CREATE TYPE freeze_status AS ENUM (
@@ -33,10 +33,16 @@ CREATE TYPE freeze_status AS ENUM (
     'unfrozen'
 );
 
+CREATE TYPE join_policy AS ENUM (
+    'open',
+    'by_request',
+    'invite_only'
+);
+
 CREATE TYPE organization_role AS ENUM (
-    'owner',
+    'member',
     'admin',
-    'member'
+    'owner'
 );
 
 CREATE TYPE outbox_event_status AS ENUM (
@@ -59,27 +65,23 @@ CREATE TYPE package_status AS ENUM (
     'failed'
 );
 
-CREATE TYPE problem_permission AS ENUM (
-    'admin',
-    'write',
-    'read'
-);
-
 CREATE TYPE problem_role AS ENUM (
-    'owner',
-    'moderator',
-    'viewer'
+    'viewer',
+    'editor',
+    'admin',
+    'owner'
 );
 
 CREATE TYPE problem_visibility AS ENUM (
     'private',
-    'public',
-    'unlisted'
+    'public'
 );
 
+-- manager is only derived from organization admins; nobody holds it directly.
 CREATE TYPE team_role AS ENUM (
+    'member',
     'maintainer',
-    'member'
+    'manager'
 );
 
 CREATE TYPE user_role AS ENUM (
@@ -159,7 +161,7 @@ CREATE TABLE organizations (
     avatar_url text,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
-    join_policy varchar(32) DEFAULT 'by_request'::varchar NOT NULL,
+    join_policy join_policy DEFAULT 'by_request'::join_policy NOT NULL,
     CONSTRAINT organizations_login_check CHECK ((length(login) > 0)),
     CONSTRAINT organizations_name_check CHECK ((length(name) > 0)),
     CONSTRAINT organizations_pkey PRIMARY KEY (id)
@@ -232,6 +234,7 @@ CREATE TABLE teams (
     CONSTRAINT teams_privacy_check CHECK ((privacy = ANY (ARRAY['secret'::text, 'closed'::text]))),
     CONSTRAINT teams_slug_check CHECK ((length(slug) > 0)),
     CONSTRAINT teams_organization_id_slug_key UNIQUE (organization_id, slug),
+    CONSTRAINT teams_id_organization_unique UNIQUE (id, organization_id),
     CONSTRAINT teams_pkey PRIMARY KEY (id),
     CONSTRAINT teams_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT teams_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES teams(id) ON DELETE SET NULL
@@ -246,6 +249,7 @@ CREATE TABLE team_members (
     user_id uuid NOT NULL,
     role team_role DEFAULT 'member'::team_role NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT team_members_role_check CHECK ((role <> 'manager'::team_role)),
     CONSTRAINT team_members_pkey PRIMARY KEY (team_id, user_id),
     CONSTRAINT team_members_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -306,19 +310,16 @@ CREATE TRIGGER stored_object_guard BEFORE UPDATE ON stored_objects FOR EACH ROW 
 CREATE TABLE problems (
     id uuid DEFAULT uuidv7() NOT NULL,
     organization_id uuid NOT NULL,
-    owner_id uuid,
     visibility problem_visibility DEFAULT 'private'::problem_visibility NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     is_template boolean DEFAULT false NOT NULL,
     CONSTRAINT problems_id_organization_unique UNIQUE (id, organization_id),
     CONSTRAINT problems_pkey PRIMARY KEY (id),
-    CONSTRAINT problems_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    CONSTRAINT problems_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT problems_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 CREATE INDEX problems_created_at_idx ON problems USING btree (created_at DESC);
 CREATE INDEX problems_organization_id_idx ON problems USING btree (organization_id);
-CREATE INDEX problems_owner_id_idx ON problems USING btree (owner_id);
 CREATE INDEX problems_visibility_idx ON problems USING btree (visibility);
 
 CREATE TABLE problem_members (
@@ -333,14 +334,17 @@ CREATE TABLE problem_members (
 CREATE INDEX problem_members_problem_id_idx ON problem_members USING btree (problem_id);
 CREATE INDEX problem_members_user_id_idx ON problem_members USING btree (user_id);
 
+-- A team grants access only to resources of its own organization.
 CREATE TABLE problem_teams (
     problem_id uuid NOT NULL,
     team_id uuid NOT NULL,
-    permission problem_permission DEFAULT 'read'::problem_permission NOT NULL,
+    organization_id uuid NOT NULL,
+    role problem_role DEFAULT 'viewer'::problem_role NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT problem_teams_role_check CHECK ((role <> 'owner'::problem_role)),
     CONSTRAINT problem_teams_pkey PRIMARY KEY (problem_id, team_id),
-    CONSTRAINT problem_teams_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
-    CONSTRAINT problem_teams_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    CONSTRAINT problem_teams_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE CASCADE,
+    CONSTRAINT problem_teams_team_id_fkey FOREIGN KEY (team_id, organization_id) REFERENCES teams(id, organization_id) ON DELETE CASCADE
 );
 CREATE INDEX problem_teams_problem_id_idx ON problem_teams USING btree (problem_id);
 CREATE INDEX problem_teams_team_id_idx ON problem_teams USING btree (team_id);
@@ -391,7 +395,6 @@ CREATE INDEX problem_draft_objects_object ON problem_draft_objects USING btree (
 CREATE VIEW problem_catalog AS
  SELECT p.id,
     p.organization_id,
-    p.owner_id,
     p.visibility,
     p.is_template,
     p.created_at,
@@ -627,7 +630,6 @@ CREATE CONSTRAINT TRIGGER package_publication AFTER INSERT ON problem_packages D
 CREATE TABLE contests (
     id uuid DEFAULT uuidv7() NOT NULL,
     organization_id uuid NOT NULL,
-    owner_id uuid,
     visibility contest_visibility DEFAULT 'private'::contest_visibility NOT NULL,
     title text NOT NULL,
     login varchar(64) NOT NULL,
@@ -654,13 +656,12 @@ CREATE TABLE contests (
     CONSTRAINT contests_freeze_started_check CHECK (((freeze_status = 'frozen'::freeze_status) = (freeze_started_at IS NOT NULL))),
     CONSTRAINT contests_login_check CHECK (((length((login)::text) >= 3) AND (length((login)::text) <= 64))),
     CONSTRAINT contests_pkey PRIMARY KEY (id),
-    CONSTRAINT contests_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    CONSTRAINT contests_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT contests_id_organization_unique UNIQUE (id, organization_id),
+    CONSTRAINT contests_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 CREATE INDEX contests_created_at_idx ON contests USING btree (created_at DESC);
 CREATE UNIQUE INDEX contests_org_id_login_lower_idx ON contests USING btree (organization_id, lower((login)::text));
 CREATE INDEX contests_organization_id_idx ON contests USING btree (organization_id);
-CREATE INDEX contests_owner_id_idx ON contests USING btree (owner_id);
 CREATE INDEX contests_start_time_idx ON contests USING btree (start_time);
 CREATE INDEX contests_title_trgm_idx ON contests USING gin (title gin_trgm_ops);
 CREATE INDEX contests_visibility_idx ON contests USING btree (visibility);
@@ -680,11 +681,13 @@ CREATE INDEX contest_members_user_id_idx ON contest_members USING btree (user_id
 CREATE TABLE contest_teams (
     contest_id uuid NOT NULL,
     team_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     role contest_role DEFAULT 'participant'::contest_role NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT contest_teams_role_check CHECK ((role <> 'owner'::contest_role)),
     CONSTRAINT contest_teams_pkey PRIMARY KEY (contest_id, team_id),
-    CONSTRAINT contest_teams_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
-    CONSTRAINT contest_teams_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    CONSTRAINT contest_teams_contest_id_fkey FOREIGN KEY (contest_id, organization_id) REFERENCES contests(id, organization_id) ON DELETE CASCADE,
+    CONSTRAINT contest_teams_team_id_fkey FOREIGN KEY (team_id, organization_id) REFERENCES teams(id, organization_id) ON DELETE CASCADE
 );
 CREATE INDEX contest_teams_contest_id_idx ON contest_teams USING btree (contest_id);
 CREATE INDEX contest_teams_team_id_idx ON contest_teams USING btree (team_id);
@@ -999,40 +1002,76 @@ CREATE INDEX idx_posts_created_at ON posts USING btree (created_at DESC);
 
 CREATE TRIGGER posts_updated_at_trigger BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- Access changes invalidate cached authorization through one revision counter.
-
-CREATE TABLE access_revision (
-    singleton boolean DEFAULT true NOT NULL,
-    revision bigint DEFAULT 1 NOT NULL,
-    CONSTRAINT access_revision_singleton_check CHECK (singleton),
-    CONSTRAINT access_revision_pkey PRIMARY KEY (singleton)
-);
-
-INSERT INTO access_revision DEFAULT VALUES;
-
+-- Organizations, problems and contests always keep at least one permanent owner.
+-- Arguments: resource table, member table, member column referencing the resource.
 -- +goose StatementBegin
-CREATE FUNCTION bump_access_revision() RETURNS trigger
+CREATE FUNCTION check_owners() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    row_data record := CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+    resource uuid;
+    missing boolean;
 BEGIN
-    UPDATE access_revision SET revision=revision+1;
+    IF TG_TABLE_NAME = TG_ARGV[0] THEN
+        resource := row_data.id;
+    ELSE
+        EXECUTE format('SELECT ($1).%I', TG_ARGV[2]) INTO resource USING row_data;
+    END IF;
+    EXECUTE format(
+        'SELECT EXISTS (SELECT 1 FROM %I WHERE id = $1) AND NOT EXISTS (
+            SELECT 1 FROM %I m JOIN users u ON u.id = m.user_id
+            WHERE m.%I = $1 AND m.role = ''owner'' AND u.expires_at IS NULL)',
+        TG_ARGV[0], TG_ARGV[1], TG_ARGV[2]) INTO missing USING resource;
+    IF missing THEN
+        RAISE EXCEPTION '% % needs a permanent owner', TG_ARGV[0], resource
+            USING ERRCODE = 'check_violation', CONSTRAINT = 'owner_required';
+    END IF;
     RETURN NULL;
 END;
 $$;
 -- +goose StatementEnd
 
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON users FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON organizations FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON organization_members FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON teams FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON team_members FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON problems FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON problem_members FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON problem_teams FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON problem_packages FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contests FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_members FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_teams FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_problems FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
-CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_user_problem_blocks FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT ON organizations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('organizations', 'organization_members', 'organization_id');
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT OR UPDATE OR DELETE ON organization_members DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('organizations', 'organization_members', 'organization_id');
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT ON problems DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('problems', 'problem_members', 'problem_id');
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT OR UPDATE OR DELETE ON problem_members DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('problems', 'problem_members', 'problem_id');
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT ON contests DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('contests', 'contest_members', 'contest_id');
+CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT OR UPDATE OR DELETE ON contest_members DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_owners('contests', 'contest_members', 'contest_id');
+
+-- Effective roles: the strongest of a direct grant, a team grant and the organization role.
+-- Site administrators and guests are handled in Go.
+CREATE VIEW team_access AS
+SELECT team_id, user_id, max(role) AS role FROM (
+    SELECT team_id, user_id, role FROM team_members
+    UNION ALL
+    SELECT t.id, om.user_id, 'manager'::team_role
+    FROM teams t JOIN organization_members om ON om.organization_id = t.organization_id
+    WHERE om.role IN ('admin', 'owner')
+) grants GROUP BY team_id, user_id;
+
+CREATE VIEW problem_access AS
+SELECT problem_id, user_id, max(role) AS role FROM (
+    SELECT problem_id, user_id, role FROM problem_members
+    UNION ALL
+    SELECT link.problem_id, tm.user_id, link.role
+    FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id
+    UNION ALL
+    SELECT p.id, om.user_id, CASE om.role WHEN 'owner' THEN 'owner'::problem_role ELSE 'admin'::problem_role END
+    FROM problems p JOIN organization_members om ON om.organization_id = p.organization_id
+    WHERE om.role IN ('admin', 'owner')
+) grants GROUP BY problem_id, user_id;
+
+CREATE VIEW contest_access AS
+SELECT contest_id, user_id, max(role) AS role FROM (
+    SELECT contest_id, user_id, role FROM contest_members
+    UNION ALL
+    SELECT link.contest_id, tm.user_id, link.role
+    FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id
+    UNION ALL
+    SELECT c.id, om.user_id, CASE om.role WHEN 'owner' THEN 'owner'::contest_role ELSE 'moderator'::contest_role END
+    FROM contests c JOIN organization_members om ON om.organization_id = c.organization_id
+    WHERE om.role IN ('admin', 'owner')
+) grants GROUP BY contest_id, user_id;
+
 

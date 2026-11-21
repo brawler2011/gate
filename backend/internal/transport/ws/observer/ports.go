@@ -20,7 +20,3 @@ type Scoreboard interface {
 	ProjectScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 	GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 }
-
-type PermissionsUC interface {
-	GetContestPermissions(ctx context.Context, contestID uuid.UUID) (*accessmodel.ContestPermissions, error)
-}

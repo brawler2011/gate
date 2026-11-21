@@ -9,223 +9,80 @@ import (
 	"github.com/google/uuid"
 )
 
-// Role is the target's current role, not the caller's effective role.
+// CapabilityRequest names a resource, or a row of it (Kind problem, member or link) with the row's current Role.
 type CapabilityRequest struct {
-	Scope          string
-	ID             uuid.UUID
-	Kind           string // empty for resource; problem, member or link for relationships
-	Target         uuid.UUID
-	Role           string
-	OrganizationID uuid.UUID
+	Scope  string
+	ID     uuid.UUID
+	Kind   string
+	Target uuid.UUID
+	Role   string
 }
-type CapabilityFacts interface {
-	PolicyFacts
-	LoadOrganizationFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]m.OrganizationContext, error)
-	LoadCapabilityUsers(context.Context, []uuid.UUID) (map[uuid.UUID]m.User, error)
+
+type Capabilities struct{ l Loader }
+
+func NewCapabilities(l Loader) *Capabilities { return &Capabilities{l: l} }
+
+type named[A any] struct {
+	name   string
+	action A
 }
-type Capabilities struct{ facts CapabilityFacts }
 
-func NewCapabilities(facts CapabilityFacts) *Capabilities { return &Capabilities{facts: facts} }
-
-// Capabilities are advisory; failed fact reads abort projection, and writes authorize independently.
-func (uc *Capabilities) Project(ctx context.Context, requests []CapabilityRequest) ([][]string, error) {
-	in := m.PolicyInput{Actor: m.UserFromContext(ctx), Now: m.ReadTime(ctx)}
-	if err := validateInput(in); err != nil {
+// Project lists what the caller may do; it is advisory and every command authorizes again.
+func (c *Capabilities) Project(ctx context.Context, requests []CapabilityRequest) ([][]string, error) {
+	actor, err := Actor(ctx, c.l)
+	if err != nil {
 		return nil, err
 	}
 	ids := map[string][]uuid.UUID{}
-	var targets []uuid.UUID
 	for _, r := range requests {
 		if !slices.Contains(ids[r.Scope], r.ID) {
 			ids[r.Scope] = append(ids[r.Scope], r.ID)
 		}
-		if r.Kind == "member" {
-			targets = append(targets, r.Target)
-		}
-		if r.Kind == "link" && !slices.Contains(ids["team"], r.Target) {
-			ids["team"] = append(ids["team"], r.Target)
-		}
 	}
-	orgs, err := uc.facts.LoadOrganizationFacts(ctx, in.Actor.Id, ids["organization"])
+	orgs, err := c.l.OrganizationFacts(ctx, actor.Id, ids["organization"])
 	if err != nil {
 		return nil, err
 	}
-	teams, err := uc.facts.LoadTeamFacts(ctx, in.Actor.Id, ids["team"])
+	teams, err := c.l.TeamFacts(ctx, actor.Id, ids["team"])
 	if err != nil {
 		return nil, err
 	}
-	problems, err := uc.facts.LoadProblemFacts(ctx, in.Actor.Id, ids["problem"])
+	problems, err := c.l.ProblemFacts(ctx, actor.Id, ids["problem"])
 	if err != nil {
 		return nil, err
 	}
-	contests, err := uc.facts.LoadContestFacts(ctx, in.Actor.Id, ids["contest"])
-	if err != nil {
-		return nil, err
-	}
-	users, err := uc.facts.LoadCapabilityUsers(ctx, targets)
+	contests, err := c.l.ContestFacts(ctx, actor.Id, ids["contest"])
 	if err != nil {
 		return nil, err
 	}
 	result := make([][]string, len(requests))
 	for i, r := range requests {
-		if r.Kind == "link" {
-			team, ok := teams[r.Target]
-			if !ok {
-				return nil, pkg.ErrNotFound
-			}
-			r.OrganizationID = team.Organization.ID
-		}
-		caps := []string{}
-		add := func(name string, err error) {
-			if err == nil {
-				caps = append(caps, name)
-			}
-		}
+		var caps []string
+		var ok bool
 		switch r.Scope {
 		case "organization":
-			c, ok := orgs[r.ID]
-			if !ok {
-				return nil, pkg.ErrNotFound
-			}
-			if r.Kind == "member" {
-				u, ok := users[r.Target]
-				if !ok {
-					return nil, pkg.ErrNotFound
-				}
-				caps = orgMemberCapabilities(in, c, r, u)
-			} else {
-				for _, a := range []struct {
-					name   string
-					action m.OrgAction
-				}{{"view", m.ActionViewOrganization}, {"manage", m.ActionManageOrganization}, {"delete", m.ActionDeleteOrganization}, {"manage_members", m.ActionManageOrganizationMembers}, {"list_members", m.ActionListOrganizationMembers}, {"create_team", m.ActionCreateTeam}, {"create_problem", m.ActionCreateProblem}, {"create_contest", m.ActionCreateContest}, {"join", m.ActionJoinOrganization}, {"request_join", m.ActionRequestOrganizationMembership}} {
-					add(a.name, RequireOrganization(in, c, a.action))
-				}
-				state := ownerState(c.Owners, uuid.Nil)
-				add("leave", RequireLeaveOrganization(in, c, state, afterRemoval(state, in.Actor.Id)))
-				if containsOwner(state, in.Actor.Id) && RequireOwnerState(in, state) == nil {
-					add("transfer_owner", RequireOrganization(in, c, m.ActionTransferOrganizationOwner))
-				}
+			var f OrganizationFacts
+			if f, ok = orgs[r.ID]; ok {
+				caps = organizationCapabilities(OrganizationAccess{actor, f}, r)
 			}
 		case "team":
-			c, ok := teams[r.ID]
-			if !ok {
-				return nil, pkg.ErrNotFound
-			}
-			if r.Kind == "member" {
-				u, ok := users[r.Target]
-				if !ok {
-					return nil, pkg.ErrNotFound
-				}
-				for _, role := range []m.TeamRole{m.TeamMember, m.TeamMaintainer} {
-					if string(role) == r.Role {
-						continue
-					}
-					if RequireGrantTeamRole(in, c, m.RoleChange[m.TeamRole]{Target: u, Old: m.TeamRole(r.Role), New: role}) == nil {
-						caps = append(caps, "change_role")
-						break
-					}
-				}
-				add("remove", RequireGrantTeamRole(in, c, m.RoleChange[m.TeamRole]{Target: u, Old: m.TeamRole(r.Role)}))
-			} else {
-				for _, a := range []struct {
-					name   string
-					action m.TeamAction
-				}{{"view", m.ActionViewTeam}, {"edit", m.ActionUpdateTeam}, {"delete", m.ActionDeleteTeam}, {"manage_members", m.ActionManageTeamMembers}, {"list_members", m.ActionListTeamMembers}, {"list_resources", m.ActionListTeamResources}, {"leave", m.ActionLeaveTeam}} {
-					add(a.name, RequireTeam(in, c, a.action))
-				}
+			var f TeamFacts
+			if f, ok = teams[r.ID]; ok {
+				caps = teamCapabilities(TeamAccess{actor, f}, r)
 			}
 		case "problem":
-			c, ok := problems[r.ID]
-			if !ok {
-				return nil, pkg.ErrNotFound
-			}
-			switch r.Kind {
-			case "member":
-				u, ok := users[r.Target]
-				if !ok {
-					return nil, pkg.ErrNotFound
-				}
-				caps = problemMemberCapabilities(in, c, r, u)
-			case "link":
-				for _, role := range []m.ProblemTeamRole{m.ProblemTeamRead, m.ProblemTeamWrite, m.ProblemTeamAdmin} {
-					if string(role) == r.Role {
-						continue
-					}
-					if RequireGrantProblemTeam(in, c, r.OrganizationID, m.ProblemTeamRole(r.Role), role) == nil {
-						caps = append(caps, "change_role")
-						break
-					}
-				}
-				add("remove", RequireGrantProblemTeam(in, c, r.OrganizationID, m.ProblemTeamRole(r.Role), ""))
-			default:
-				for _, a := range []struct {
-					name   string
-					action m.ProblemAction
-				}{{"view", m.ActionViewProblem}, {"use", m.ActionUseProblem}, {"edit", m.ActionEditProblem}, {"manage", m.ActionAdminProblem}, {"delete", m.ActionDeleteProblem}, {"manage_members", m.ActionManageProblemMembers}, {"list_members", m.ActionListProblemMembers}} {
-					add(a.name, RequireProblem(in, c, a.action))
-				}
-				state := ownerState(c.Owners, c.OwnerID)
-				if containsOwner(state, in.Actor.Id) && RequireOwnerState(in, state) == nil {
-					add("transfer_owner", RequireProblem(in, c, m.ActionTransferProblemOwner))
-				}
+			var f ProblemFacts
+			if f, ok = problems[r.ID]; ok {
+				caps = problemCapabilities(ProblemAccess{actor, f}, r)
 			}
 		case "contest":
-			c, ok := contests[r.ID]
-			if !ok {
-				return nil, pkg.ErrNotFound
+			var f ContestFacts
+			if f, ok = contests[r.ID]; ok {
+				caps = contestCapabilities(ContestAccess{actor, f}, r)
 			}
-			if err := ApplyContestLifecycle(in, &c); err != nil {
-				return nil, err
-			}
-			switch r.Kind {
-			case "problem":
-				add("view_statements", RequireContest(in, c, m.ActionGetContestProblem))
-				if !slices.Contains(c.BlockedProblems, r.Target) {
-					add("submit", RequireContest(in, c, m.ActionCreateSubmission))
-				}
-				for _, name := range []string{"relink_package", "remove", "reorder"} {
-					add(name, RequireContest(in, c, m.ActionManageContest))
-				}
-			case "member":
-				u, ok := users[r.Target]
-				if !ok {
-					return nil, pkg.ErrNotFound
-				}
-				caps = contestMemberCapabilities(in, c, r, u)
-			case "link":
-				for _, role := range []m.ContestTeamRole{m.ContestTeamParticipant, m.ContestTeamModerator} {
-					if string(role) == r.Role {
-						continue
-					}
-					if RequireGrantContestTeam(in, c, r.OrganizationID, m.ContestTeamRole(r.Role), role) == nil {
-						caps = append(caps, "change_role")
-						break
-					}
-				}
-				add("remove", RequireGrantContestTeam(in, c, r.OrganizationID, m.ContestTeamRole(r.Role), ""))
-			default:
-				for _, a := range []struct {
-					name   string
-					action m.ContestAction
-				}{{"view", m.ActionGetContest}, {"view_statements", m.ActionGetContestProblem}, {"edit", m.ActionUpdateContest}, {"manage", m.ActionManageContest}, {"manage_members", m.ActionAdminContest}, {"list_members", m.ActionListContestMembers}, {"delete", m.ActionDeleteContest}, {"view_scoreboard", m.ActionGetMonitor}, {"view_live_scoreboard", m.ActionViewLiveScoreboard}, {"list_submissions", m.ActionListUsersSubmissions}, {"list_own_submissions", m.ActionListOwnSubmissions}, {"submit", m.ActionCreateSubmission}} {
-					add(a.name, RequireContest(in, c, a.action))
-				}
-				state := ownerState(c.Owners, c.OwnerID)
-				if containsOwner(state, in.Actor.Id) && RequireOwnerState(in, state) == nil {
-					add("transfer_owner", RequireContest(in, c, m.ActionTransferContestOwner))
-				}
-				c.Submission = m.SubmissionContext{ContestID: c.ID, OwnerID: uuid.New()}
-				add("view_other_submission", RequireContest(in, c, m.ActionGetOtherUserSubmission))
-				otherDetails := RequireContest(in, c, m.ActionGetSubmissionDetails)
-				c.Submission.OwnerID = in.Actor.Id
-				add("view_own_submission", RequireContest(in, c, m.ActionGetOwnSubmission))
-				ownDetails := RequireContest(in, c, m.ActionGetSubmissionDetails)
-				if otherDetails == nil || ownDetails == nil {
-					caps = append(caps, "view_submission_details")
-				}
-			}
-		default:
-			return nil, pkg.ErrForbidden
+		}
+		if !ok {
+			return nil, pkg.ErrNotFound
 		}
 		slices.Sort(caps)
 		result[i] = caps
@@ -233,64 +90,99 @@ func (uc *Capabilities) Project(ctx context.Context, requests []CapabilityReques
 	return result, nil
 }
 
-func ownerState(owners []m.User, primary uuid.UUID) m.OwnerState {
-	return m.OwnerState{Owners: owners, PrimaryID: primary}
-}
-func afterRemoval(before m.OwnerState, target uuid.UUID) m.OwnerState {
-	after := m.OwnerState{PrimaryID: before.PrimaryID}
-	for _, u := range before.Owners {
-		if u.Id != target {
-			after.Owners = append(after.Owners, u)
+func allowed[A any](can func(A) bool, actions ...named[A]) []string {
+	caps := []string{}
+	for _, a := range actions {
+		if can(a.action) {
+			caps = append(caps, a.name)
 		}
 	}
-	return after
+	return caps
 }
 
-// Relationship controls validate specific transitions against the complete final owner set.
-func memberCapabilities[R ~string](r CapabilityRequest, u m.User, before m.OwnerState, roles []R, grant func(m.RoleChange[R]) error, transfer func() error) []string {
+// memberCapabilities offers change_role when any other role is grantable and remove when revoking is.
+func memberCapabilities[R m.Role](change func(R, R) error, current R) []string {
 	caps := []string{}
-	for _, role := range roles {
-		if string(role) == r.Role {
-			continue
-		}
-		after := before
-		if r.Role == "owner" {
-			after = afterRemoval(before, u.Id)
-		}
-		if grant(m.RoleChange[R]{Target: u, Old: R(r.Role), New: role, BeforeOwners: before, AfterOwners: after}) == nil {
+	var zero R
+	for _, role := range zero.Ladder() {
+		if R(role) != current && change(current, R(role)) == nil {
 			caps = append(caps, "change_role")
 			break
 		}
 	}
-	if grant(m.RoleChange[R]{Target: u, Old: R(r.Role), BeforeOwners: before, AfterOwners: afterRemoval(before, u.Id)}) == nil {
+	if change(current, "") == nil {
 		caps = append(caps, "remove")
 	}
-	if transfer() != nil {
+	return caps
+}
+
+func organizationCapabilities(a OrganizationAccess, r CapabilityRequest) []string {
+	if r.Kind == "member" {
+		return memberCapabilities(func(from, to m.OrganizationRole) error { return a.ChangeMember(r.Target, from, to) }, m.OrganizationRole(r.Role))
+	}
+	return allowed(a.Can,
+		named[m.OrganizationAction]{"view", m.OrganizationView}, named[m.OrganizationAction]{"manage", m.OrganizationManage},
+		named[m.OrganizationAction]{"delete", m.OrganizationDelete}, named[m.OrganizationAction]{"manage_members", m.OrganizationManageMembers},
+		named[m.OrganizationAction]{"list_members", m.OrganizationListMembers}, named[m.OrganizationAction]{"create_team", m.OrganizationManage},
+		named[m.OrganizationAction]{"create_problem", m.OrganizationManage}, named[m.OrganizationAction]{"create_contest", m.OrganizationManage},
+		named[m.OrganizationAction]{"join", m.OrganizationJoin}, named[m.OrganizationAction]{"request_join", m.OrganizationRequestJoin},
+		named[m.OrganizationAction]{"leave", m.OrganizationLeave})
+}
+
+func teamCapabilities(a TeamAccess, r CapabilityRequest) []string {
+	if r.Kind == "member" {
+		return memberCapabilities(func(from, to m.TeamRole) error { return a.ChangeMember(r.Target, from, to) }, m.TeamRole(r.Role))
+	}
+	return allowed(a.Can,
+		named[m.TeamAction]{"view", m.TeamView}, named[m.TeamAction]{"edit", m.TeamManage}, named[m.TeamAction]{"delete", m.TeamDelete},
+		named[m.TeamAction]{"manage_members", m.TeamManage}, named[m.TeamAction]{"list_members", m.TeamView},
+		named[m.TeamAction]{"list_resources", m.TeamView}, named[m.TeamAction]{"leave", m.TeamLeave})
+}
+
+func problemCapabilities(a ProblemAccess, r CapabilityRequest) []string {
+	switch r.Kind {
+	case "member":
+		return memberCapabilities(func(from, to m.ProblemRole) error { return a.ChangeMember(r.Target, from, to) }, m.ProblemRole(r.Role))
+	case "link":
+		return memberCapabilities(a.ChangeTeam, m.ProblemRole(r.Role))
+	}
+	return allowed(a.Can,
+		named[m.ProblemAction]{"view", m.ProblemView}, named[m.ProblemAction]{"use", m.ProblemUse}, named[m.ProblemAction]{"edit", m.ProblemEdit},
+		named[m.ProblemAction]{"manage", m.ProblemManage}, named[m.ProblemAction]{"delete", m.ProblemDelete},
+		named[m.ProblemAction]{"manage_members", m.ProblemManage}, named[m.ProblemAction]{"list_members", m.ProblemManage})
+}
+
+func contestCapabilities(a ContestAccess, r CapabilityRequest) []string {
+	switch r.Kind {
+	case "member":
+		return memberCapabilities(func(from, to m.ContestRole) error { return a.ChangeMember(r.Target, from, to) }, m.ContestRole(r.Role))
+	case "link":
+		return memberCapabilities(a.ChangeTeam, m.ContestRole(r.Role))
+	case "problem":
+		caps := allowed(a.Can,
+			named[m.ContestAction]{"view_statements", m.ContestViewProblems}, named[m.ContestAction]{"relink_package", m.ContestManage},
+			named[m.ContestAction]{"remove", m.ContestManage}, named[m.ContestAction]{"reorder", m.ContestManage})
+		if a.Can(m.ContestSubmit) && !slices.Contains(a.Facts.Blocked, r.Target) {
+			caps = append(caps, "submit")
+		}
 		return caps
 	}
-	return append(caps, "transfer_owner")
-}
-func orgMemberCapabilities(in m.PolicyInput, c m.OrganizationContext, r CapabilityRequest, u m.User) []string {
-	before := ownerState(c.Owners, uuid.Nil)
-	return memberCapabilities(r, u, before, []m.OrganizationRole{m.OrganizationMember, m.OrganizationAdmin}, func(change m.RoleChange[m.OrganizationRole]) error { return RequireGrantOrgRole(in, c, change) }, func() error { _, err := PlanOrganizationOwnerTransfer(in, c, before, u, in.Actor.Id); return err })
-}
-func problemMemberCapabilities(in m.PolicyInput, c m.ProblemContext, r CapabilityRequest, u m.User) []string {
-	before := ownerState(c.Owners, c.OwnerID)
-	return memberCapabilities(r, u, before, []m.ProblemRole{m.ProblemViewer, m.ProblemModerator}, func(change m.RoleChange[m.ProblemRole]) error { return RequireGrantProblemRole(in, c, change) }, func() error {
-		if c.OwnerID != in.Actor.Id && c.DirectRole != m.ProblemOwner {
-			return pkg.ErrForbidden
-		}
-		_, err := PlanProblemOwnerTransfer(in, c, before, u, in.Actor.Id)
-		return err
-	})
-}
-func contestMemberCapabilities(in m.PolicyInput, c m.ContestContext, r CapabilityRequest, u m.User) []string {
-	before := ownerState(c.Owners, c.OwnerID)
-	return memberCapabilities(r, u, before, []m.ContestRole{m.ContestParticipant, m.ContestModerator}, func(change m.RoleChange[m.ContestRole]) error { return RequireGrantContestRole(in, c, change) }, func() error {
-		if c.OwnerID != in.Actor.Id && c.DirectRole != m.ContestOwner {
-			return pkg.ErrForbidden
-		}
-		_, err := PlanContestOwnerTransfer(in, c, before, u, in.Actor.Id)
-		return err
-	})
+	caps := allowed(a.Can,
+		named[m.ContestAction]{"view", m.ContestView}, named[m.ContestAction]{"view_statements", m.ContestViewProblems},
+		named[m.ContestAction]{"edit", m.ContestManage}, named[m.ContestAction]{"manage", m.ContestManage},
+		named[m.ContestAction]{"manage_members", m.ContestManage}, named[m.ContestAction]{"list_members", m.ContestManage},
+		named[m.ContestAction]{"delete", m.ContestDelete}, named[m.ContestAction]{"view_scoreboard", m.ContestViewScoreboard},
+		named[m.ContestAction]{"view_live_scoreboard", m.ContestManage}, named[m.ContestAction]{"list_submissions", m.ContestListSubmissions},
+		named[m.ContestAction]{"list_own_submissions", m.ContestListOwnSubmissions}, named[m.ContestAction]{"submit", m.ContestSubmit})
+	other := uuid.New()
+	if a.CanSubmission(other, m.SubmissionView) {
+		caps = append(caps, "view_other_submission")
+	}
+	if a.CanSubmission(a.Actor.Id, m.SubmissionView) {
+		caps = append(caps, "view_own_submission")
+	}
+	if a.CanSubmission(other, m.SubmissionViewDetails) || a.CanSubmission(a.Actor.Id, m.SubmissionViewDetails) {
+		caps = append(caps, "view_submission_details")
+	}
+	return caps
 }

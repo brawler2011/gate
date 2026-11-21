@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 
-	m "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/jackc/pgx/v5"
 
@@ -21,12 +20,26 @@ import (
 type transactions[T any] struct {
 	pool *pgxpool.Pool
 	bind func(*sqlc.Queries) T
+	// Authorizing commands run serializable, so a revocation racing with them commits after them or aborts them.
+	serializable bool
 }
 
+const serializationAttempts = 3
+
+// Within reruns fn after a lost serialization race, so fn must have no effects outside the transaction.
 func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
-	decision, guarded := m.DecisionFromContext(ctx)
+	var err error
+	for range serializationAttempts {
+		if err = p.once(ctx, fn); !p.serializable || !isRetryable(err) {
+			break
+		}
+	}
+	return retryable(err)
+}
+
+func (p transactions[T]) once(ctx context.Context, fn func(T) error) error {
 	options := pgx.TxOptions{}
-	if guarded {
+	if p.serializable {
 		options.IsoLevel = pgx.Serializable
 	}
 	tx, err := p.pool.BeginTx(ctx, options)
@@ -34,53 +47,35 @@ func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
 		return dbError("begin", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
-	if guarded {
-		revision, err := sqlc.New(tx).GetAccessRevision(ctx)
-		if err != nil {
-			return dbError("get access revision", err)
-		}
-		if revision != decision.Revision {
-			return pkg.Wrap(pkg.ErrConcurrentUpdate, nil, "access changed during the command")
-		}
-	}
 	if err := fn(p.bind(sqlc.New(tx))); err != nil {
-		return retryable(err)
+		return err
 	}
-	if guarded && decision.ValidUntil != nil {
-		now, err := sqlc.New(tx).GetCommandTime(ctx)
-		if err != nil {
-			return dbError("get command time", err)
-		}
-		if !now.Before(*decision.ValidUntil) {
-			return pkg.ErrForbidden
-		}
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return retryable(dbError("commit", err))
-	}
-	return nil
+	return dbError("commit", tx.Commit(ctx))
+}
+
+func authorizing[T any](pool *pgxpool.Pool, bind func(*sqlc.Queries) T) transactions[T] {
+	return transactions[T]{pool: pool, bind: bind, serializable: true}
 }
 
 func NewTeamTransactions(pool *pgxpool.Pool) organizations.TeamTransactions {
-	return transactions[organizations.TeamTxStore]{pool: pool, bind: func(q *sqlc.Queries) organizations.TeamTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) organizations.TeamTxStore {
 		return struct {
-			authorizationTeams
-			authorizationOrganizations
-			*authorization
-		}{authorizationTeams{&TeamsRepo{q: q}}, authorizationOrganizations{&OrganizationsRepo{q: q}}, bindAuthorization(q)}
-	}}
+			*TeamsRepo
+			*OrganizationsRepo
+			Access
+		}{&TeamsRepo{q: q}, &OrganizationsRepo{q: q}, Access{q}}
+	})
 }
 
 func NewProblemTransactions(pool *pgxpool.Pool) problems.ProblemTransactions {
-	return transactions[problems.ProblemTxStore]{pool: pool, bind: func(q *sqlc.Queries) problems.ProblemTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) problems.ProblemTxStore {
 		return struct {
 			*ProblemsRepo
-			authorizationOrganizations
-			*authorization
+			*OrganizationsRepo
 			*PackagesRepo
-			authorizationUsers
-		}{&ProblemsRepo{queries: q}, authorizationOrganizations{&OrganizationsRepo{q: q}}, bindAuthorization(q), &PackagesRepo{queries: q}, authorizationUsers{q}}
-	}}
+			Access
+		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, &PackagesRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewIdentityTransactions(pool *pgxpool.Pool) identity.IdentityTransactions {
@@ -94,38 +89,37 @@ func NewIdentityTransactions(pool *pgxpool.Pool) identity.IdentityTransactions {
 }
 
 func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationTransactions {
-	return transactions[organizations.OrganizationTxStore]{pool: pool, bind: func(q *sqlc.Queries) organizations.OrganizationTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) organizations.OrganizationTxStore {
 		return struct {
-			authorizationOrganizations
-			organizationUsers
+			*OrganizationsRepo
+			*UsersRepo
 			*NotificationsRepo
-			*authorization
-		}{authorizationOrganizations{&OrganizationsRepo{q: q}}, organizationUsers{&UsersRepo{queries: q}}, &NotificationsRepo{queries: q}, bindAuthorization(q)}
-	}}
+			Access
+		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransactions {
-	return newGuardedTransactions(pool, transactions[submissions.SubmissionTxStore]{pool: pool, bind: func(q *sqlc.Queries) submissions.SubmissionTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) submissions.SubmissionTxStore {
 		return struct {
 			*SubmissionsRepo
 			*OutboxRepo
 			*JudgeJobs
 			*ContestsRepo
-			*authorization
-		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
-	}})
+			Access
+		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewContestEventsTransactions(pool *pgxpool.Pool) contests.ContestEventsTransactions {
-	return transactions[contests.ContestEventsTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.ContestEventsTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) contests.ContestEventsTxStore {
 		return struct {
 			*AnnouncementsRepo
 			*ClarificationsRepo
 			*OutboxRepo
-			*ContestsRepo
-			*authorization
-		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
-	}}
+			Access
+		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewJudgeTransactions(pool *pgxpool.Pool) judging.JudgeTransactions {
@@ -140,39 +134,38 @@ func NewJudgeTransactions(pool *pgxpool.Pool) judging.JudgeTransactions {
 }
 
 func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransactions {
-	return newGuardedTransactions(pool, transactions[contests.CommandTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.CommandTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) contests.CommandTxStore {
 		return struct {
 			*ContestsRepo
 			*SubmissionsRepo
 			*JudgeJobs
 			*OutboxRepo
-			*authorization
-			authorizationOrganizations
+			*OrganizationsRepo
 			*NotificationsRepo
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), authorizationOrganizations{&OrganizationsRepo{q: q}}, &NotificationsRepo{queries: q}}
-	}})
+			Access
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {
-	return transactions[contests.DraftTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.DraftTxStore {
+	return authorizing(pool, func(q *sqlc.Queries) contests.DraftTxStore {
 		return struct {
 			*DraftsRepo
-			*ContestsRepo
-			*authorization
-		}{&DraftsRepo{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
-	}}
+			Access
+		}{&DraftsRepo{queries: q}, Access{q}}
+	})
 }
 
 func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
 	return transactions[blogs.TxStore]{pool: pool, bind: func(q *sqlc.Queries) blogs.TxStore {
 		return struct {
 			*BlogsRepo
-			authorizationUsers
-		}{&BlogsRepo{queries: q}, authorizationUsers{q}}
+			*UsersRepo
+		}{&BlogsRepo{queries: q}, &UsersRepo{queries: q}}
 	}}
 }
 
-// retryable marks a lost serialization race so callers can rerun the command with a fresh precheck.
+// retryable marks a race still lost after retries; the client may repeat the request.
 func retryable(err error) error {
 	if isRetryable(err) {
 		return pkg.Wrap(pkg.ErrConcurrentUpdate, err, "concurrent update, retry")

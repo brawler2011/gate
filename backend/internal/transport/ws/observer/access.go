@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
@@ -50,8 +51,9 @@ func (s *Observer) sessionActor(ctx context.Context) (accessmodel.User, error) {
 	}
 	return user, nil
 }
-func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (accessmodel.User, *accessmodel.ContestPermissions, error) {
-	ctx = accessmodel.WithReadTime(ctx, time.Now().UTC())
+
+// currentAccess is nil for the admin-only feed without a contest.
+func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (accessmodel.User, *access.ContestAccess, error) {
 	user, err := s.sessionActor(ctx)
 	if err != nil {
 		return user, nil, err
@@ -65,15 +67,16 @@ func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter)
 		}
 		return user, nil, nil
 	}
-	permissions, err := s.permissions.GetContestPermissions(ctx, *filter.ContestId)
-	return user, permissions, err
+	a, err := access.Contest(ctx, s.access, *filter.ContestId, accessmodel.ContestView)
+	return user, &a, err
 }
 
-func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPermissions, filter *SubmissionsFilter) bool {
-	if filter.ContestId == nil {
+func submissionAccess(user accessmodel.User, a *access.ContestAccess, filter *SubmissionsFilter) bool {
+	if a == nil {
 		return user.IsAdmin()
 	}
-	return permissions.ListUsersSubmissions || permissions.GetMonitor || (permissions.ListOwnSubmissions && (filter.UserId == nil || *filter.UserId == user.Id))
+	own := filter.UserId == nil || *filter.UserId == user.Id
+	return a.Can(accessmodel.ContestListSubmissions) || a.Can(accessmodel.ContestViewScoreboard) || a.Can(accessmodel.ContestListOwnSubmissions) && own
 }
 
 func closeVerification(conn eventConnection, err error) error {
@@ -109,7 +112,6 @@ func eventMeta(event *WrappedEvent) *submissionsmodel.SubmissionEventMeta {
 }
 
 func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
-	ctx = accessmodel.WithReadTime(ctx, time.Now().UTC())
 	if !filter.Matches(event) {
 		return nil
 	}
@@ -123,24 +125,14 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 		if err != nil {
 			return closeVerification(conn, err)
 		}
-		if !user.IsAdmin() {
-			return closeVerification(conn, pkg.ErrForbidden)
-		}
 		if meta.ContestId == nil {
 			return writeEvent(conn, event.DTOPayload)
 		}
-		p, err := s.permissions.GetContestPermissions(ctx, *meta.ContestId)
+		a, err := access.Contest(ctx, s.access, *meta.ContestId, accessmodel.ContestManage)
 		if err != nil {
 			return closeVerification(conn, err)
 		}
-		if !p.ManageContest {
-			return closeVerification(conn, pkg.ErrForbidden)
-		}
-		c, err := s.contests.GetContest(ctx, *meta.ContestId)
-		if err != nil {
-			return closeVerification(conn, err)
-		}
-		audience, viewer, configuration = "managers", user.Id, topicConfiguration(c)
+		audience, viewer, configuration = "managers", user.Id, topicConfiguration(a.Facts.Contest)
 	}
 	if meta.ContestId == nil || event.configuration != configuration {
 		return closeVerification(conn, pkg.ErrConflict)

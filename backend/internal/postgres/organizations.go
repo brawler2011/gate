@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -27,7 +29,7 @@ func NewOrganizationsRepo(db *pgxpool.Pool) *OrganizationsRepo {
 func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *organizationsmodel.CreateOrganizationInput) (*organizationsmodel.Organization, error) {
 	joinPolicy := string(input.JoinPolicy)
 	if joinPolicy == "" {
-		joinPolicy = string(organizationsmodel.OrgJoinPolicyByRequest)
+		joinPolicy = string(accessmodel.JoinByRequest)
 	}
 
 	org, err := r.q.CreateOrganization(ctx, sqlc.CreateOrganizationParams{
@@ -48,7 +50,7 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *organ
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
-		JoinPolicy:  organizationsmodel.OrganizationJoinPolicy(org.JoinPolicy),
+		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -69,7 +71,7 @@ func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUI
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
-		JoinPolicy:  organizationsmodel.OrganizationJoinPolicy(org.JoinPolicy),
+		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -90,7 +92,7 @@ func (r *OrganizationsRepo) GetOrganizationByLogin(ctx context.Context, login st
 		Name:        org.Name,
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
-		JoinPolicy:  organizationsmodel.OrganizationJoinPolicy(org.JoinPolicy),
+		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -124,7 +126,7 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *organ
 			Name:        org.Name,
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
-			JoinPolicy:  organizationsmodel.OrganizationJoinPolicy(org.JoinPolicy),
+			JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}
@@ -151,8 +153,7 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 		params.AvatarUrl = input.AvatarURL
 	}
 	if input.JoinPolicy != nil {
-		jp := string(*input.JoinPolicy)
-		params.JoinPolicy = &jp
+		params.JoinPolicy = input.JoinPolicy
 	}
 
 	if err := r.q.UpdateOrganization(ctx, params); err != nil {
@@ -169,7 +170,7 @@ func (r *OrganizationsRepo) DeleteOrganization(ctx context.Context, id uuid.UUID
 	return nil
 }
 
-func (r *OrganizationsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error {
+func (r *OrganizationsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error {
 	if err := r.q.AddOrganizationMember(ctx, sqlc.AddOrganizationMemberParams{
 		OrganizationID: orgID,
 		UserID:         userID,
@@ -199,7 +200,7 @@ func mapOrganizationMember(member sqlc.OrganizationMember) *organizationsmodel.O
 	return &organizationsmodel.OrganizationMember{
 		OrganizationID: member.OrganizationID,
 		UserID:         member.UserID,
-		Role:           organizationsmodel.OrganizationRole(member.Role),
+		Role:           accessmodel.OrganizationRole(member.Role),
 		CreatedAt:      member.CreatedAt,
 	}
 }
@@ -249,14 +250,14 @@ func mapListedOrganizationMember(m sqlc.ListOrganizationMembersRow) organization
 	return organizationsmodel.OrganizationMember{
 		OrganizationID: m.OrganizationID,
 		UserID:         m.UserID,
-		Role:           organizationsmodel.OrganizationRole(m.Role),
+		Role:           accessmodel.OrganizationRole(m.Role),
 		Username:       m.Username,
 		Email:          email,
 		CreatedAt:      m.CreatedAt,
 	}
 }
 
-func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error {
+func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error {
 	if err := r.q.UpdateOrganizationMemberRole(ctx, sqlc.UpdateOrganizationMemberRoleParams{
 		OrganizationID: orgID,
 		UserID:         userID,
@@ -305,7 +306,7 @@ func (r *OrganizationsRepo) GetUserOrganizations(ctx context.Context, userID uui
 			Name:        org.Name,
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
-			JoinPolicy:  organizationsmodel.OrganizationJoinPolicy(org.JoinPolicy),
+			JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}
@@ -377,7 +378,7 @@ func (r *OrganizationsRepo) GetInvitationByID(ctx context.Context, id uuid.UUID)
 		Email:             email,
 		InviterID:         row.InviterID,
 		InviterUsername:   row.InviterUsername,
-		Role:              organizationsmodel.OrganizationRole(row.Role),
+		Role:              accessmodel.OrganizationRole(row.Role),
 		Status:            organizationsmodel.RequestStatus(row.Status),
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -422,7 +423,7 @@ func (r *OrganizationsRepo) ListInvitations(ctx context.Context, orgID uuid.UUID
 			Email:           email,
 			InviterID:       row.InviterID,
 			InviterUsername: row.InviterUsername,
-			Role:            organizationsmodel.OrganizationRole(row.Role),
+			Role:            accessmodel.OrganizationRole(row.Role),
 			Status:          organizationsmodel.RequestStatus(row.Status),
 			CreatedAt:       row.CreatedAt,
 			UpdatedAt:       row.UpdatedAt,
@@ -451,7 +452,7 @@ func (r *OrganizationsRepo) ListUserInvitations(ctx context.Context, userID uuid
 			UserID:                row.UserID,
 			InviterID:             row.InviterID,
 			InviterUsername:       row.InviterUsername,
-			Role:                  organizationsmodel.OrganizationRole(row.Role),
+			Role:                  accessmodel.OrganizationRole(row.Role),
 			Status:                organizationsmodel.RequestStatus(row.Status),
 			CreatedAt:             row.CreatedAt,
 			UpdatedAt:             row.UpdatedAt,

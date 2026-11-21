@@ -6,10 +6,11 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -33,10 +34,10 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		if id == otherContestID {
 			visibility = contestsmodel.ContestVisibilityPrivate
 		}
-		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-			ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: login, Login: login,
+		s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
+			ID: id, OrganizationID: org.ID, Title: login, Login: login,
 			Visibility: visibility,
-		}))
+		}, owner.Id))
 	}
 	path := "/organizations/" + org.Login + "/contests/ann-public/announcements"
 	get := func(path string, userID uuid.UUID, status int) map[string]json.RawMessage {
@@ -79,7 +80,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 			id, title = uuid.Nil, ""
 		}
 		ownerID := owner.Id
-		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org.ID, OwnerID: &ownerID,
+		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org.ID, Owner: ownerID,
 			Visibility: problemsmodel.ProblemVisibilityPrivate, Title: title, ShortName: fmt.Sprintf("ann-problem-%d", i)})
 		s.Require().NoError(err)
 		if i < 3 {

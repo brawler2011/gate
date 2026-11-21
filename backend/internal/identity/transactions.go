@@ -3,8 +3,9 @@ package identity
 import (
 	"bytes"
 	"context"
-	"github.com/brawler2011/gate/backend/pkg"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -24,7 +25,7 @@ type IdentityTxStore interface {
 	UpdateUserEmail(ctx context.Context, id uuid.UUID, email string, isVerified bool) error
 	ClaimTemporaryUser(ctx context.Context, id, claimedByUserID uuid.UUID, claimedAt time.Time) error
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]contestsmodel.UserContestMembership, error)
-	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error
+	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error
 	CreateSession(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID, expiresAt time.Time) error
 	GetSession(ctx context.Context, sessionID uuid.UUID) (identitymodel.Session, error)
 	DeleteSession(ctx context.Context, sessionID uuid.UUID) error

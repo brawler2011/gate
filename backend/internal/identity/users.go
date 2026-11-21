@@ -8,7 +8,6 @@ import (
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
@@ -152,7 +151,7 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 		}
 
 		for _, m := range memberships {
-			err = tx.AddContestMemberIfNotExists(ctx, m.ContestID, caller.Id, string(contestsmodel.ContestRoleParticipant))
+			err = tx.AddContestMemberIfNotExists(ctx, m.ContestID, caller.Id, accessmodel.ContestParticipant)
 			if err != nil {
 				return err
 			}

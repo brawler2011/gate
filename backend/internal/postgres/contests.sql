@@ -1,23 +1,23 @@
 
 -- name: CreateContest :one
-INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, start_time, end_time)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO contests (id, organization_id, visibility, title, login, description, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: GetContestByID :one
-SELECT c.*, o.login as org_login, o.name as org_name
+SELECT sqlc.embed(c), o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1;
 
 -- name: GetContestByLogin :one
-SELECT c.*, o.login as org_login, o.name as org_name
+SELECT sqlc.embed(c), o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2);
 
 -- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.*, o.login as org_login, o.name as org_name
+SELECT sqlc.embed(c), o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2);
@@ -45,8 +45,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     enable_upsolving = COALESCE(sqlc.narg('enable_upsolving'), enable_upsolving),
     languages = COALESCE(sqlc.narg('languages')::text[], languages),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
-    end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END,
-    owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
+    end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END
 WHERE id = $1;
 
 -- name: DeleteContest :exec
@@ -56,6 +55,9 @@ DELETE FROM contests WHERE id = $1;
 -- name: AddContestMember :exec
 INSERT INTO contest_members (contest_id, user_id, role)
 VALUES ($1, $2, $3);
+
+-- name: ListContestOwners :many
+SELECT user_id FROM contest_members WHERE contest_id = $1 AND role = 'owner' ORDER BY user_id;
 
 -- name: GetContestMember :one
 SELECT cm.*, u.username
@@ -134,13 +136,7 @@ WHERE contest_id = $1 AND problem_id = $2;
 
 
 -- name: ListDashboardContests :many
-WITH actor AS (
-  SELECT u.id, u.role FROM users u
-  WHERE u.id = sqlc.narg('viewer_id')::uuid
-    AND u.role IN ('user', 'admin')
-    AND (u.expires_at IS NULL OR u.expires_at > sqlc.arg('now')::timestamptz)
-)
-SELECT 
+SELECT
     c.id as contest_id,
     c.login as contest_login,
     c.title as contest_title,
@@ -150,35 +146,18 @@ SELECT
     o.id as org_id,
     o.name as org_name,
     o.login as org_login,
-    COALESCE(
-        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = sqlc.arg('user_id')::uuid),
-        CASE WHEN EXISTS(
-            SELECT 1 FROM organization_members om 
-            WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('user_id')::uuid AND om.role IN ('owner', 'admin')
-        ) THEN 'moderator' ELSE 'participant' END
-    )::text as user_role,
+    COALESCE(a.role, 'participant')::contest_role as user_role,
     sub.last_sub_time
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
+LEFT JOIN contest_access a ON a.contest_id = c.id AND a.user_id = sqlc.arg('viewer_id')::uuid
 LEFT JOIN (
     SELECT submissions.contest_id, MAX(submissions.created_at) as last_sub_time
     FROM submissions
-    WHERE submissions.owner_id = sqlc.arg('user_id')::uuid
+    WHERE submissions.owner_id = sqlc.arg('viewer_id')::uuid
     GROUP BY submissions.contest_id
 ) sub ON c.id = sub.contest_id
-WHERE (sqlc.narg('viewer_id')::uuid IS NULL OR sqlc.narg('viewer_id')::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
-AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
-AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS (
-    SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
-    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
-    OR EXISTS (SELECT 1 FROM contest_members m WHERE m.contest_id = c.id AND m.user_id = a.id AND m.role IN ('participant', 'moderator', 'owner'))
-    OR EXISTS (SELECT 1 FROM contest_teams ct
-      JOIN teams t ON t.id = ct.team_id JOIN team_members tm ON tm.team_id = t.id
-      WHERE ct.contest_id = c.id AND tm.user_id = a.id
-        AND t.organization_id = c.organization_id AND tm.role IN ('member', 'maintainer')
-        AND ct.role IN ('participant', 'moderator'))))
+WHERE (c.visibility = 'public' OR a.role IS NOT NULL OR sqlc.arg('all')::boolean)
 ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC, c.id DESC
 LIMIT sqlc.arg('page_size')::int;
 
@@ -265,9 +244,3 @@ WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.
 
 
 
--- name: GetAuthorizationContestMember :one
-SELECT cm.*, u.username
-FROM contest_members cm
-JOIN users u ON u.id = cm.user_id
-WHERE cm.contest_id = $1 AND cm.user_id = $2
-FOR SHARE OF cm;

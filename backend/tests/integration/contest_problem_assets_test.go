@@ -89,10 +89,10 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 
 	ownerID := owner.Id
 	contestID := uuid.New()
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-		ID: contestID, OrganizationID: org.ID, OwnerID: &ownerID, Visibility: contestsmodel.ContestVisibilityPrivate,
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
+		ID: contestID, OrganizationID: org.ID, Visibility: contestsmodel.ContestVisibilityPrivate,
 		Title: "Asset contest", Login: "asset-contest",
-	}))
+	}, ownerID))
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
 
 	problem := func() corev1.ContestProblemModel {

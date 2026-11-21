@@ -9,7 +9,7 @@ import (
 	"context"
 	"time"
 
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
 
@@ -19,9 +19,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddProblemMemberParams struct {
-	ProblemID uuid.UUID                 `json:"problem_id"`
-	UserID    uuid.UUID                 `json:"user_id"`
-	Role      problemsmodel.ProblemRole `json:"role"`
+	ProblemID uuid.UUID               `json:"problem_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
 }
 
 func (q *Queries) AddProblemMember(ctx context.Context, arg AddProblemMemberParams) error {
@@ -44,30 +44,23 @@ func (q *Queries) CountProblemMembers(ctx context.Context, problemID uuid.UUID) 
 }
 
 const createProblem = `-- name: CreateProblem :one
-INSERT INTO problems (id, organization_id, owner_id, visibility)
-VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, owner_id, visibility, created_at, updated_at, is_template
+INSERT INTO problems (id, organization_id, visibility)
+VALUES ($1, $2, $3)
+RETURNING id, organization_id, visibility, created_at, updated_at, is_template
 `
 
 type CreateProblemParams struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Visibility     string     `json:"visibility"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Visibility     string    `json:"visibility"`
 }
 
 func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (Problem, error) {
-	row := q.db.QueryRow(ctx, createProblem,
-		arg.ID,
-		arg.OrganizationID,
-		arg.OwnerID,
-		arg.Visibility,
-	)
+	row := q.db.QueryRow(ctx, createProblem, arg.ID, arg.OrganizationID, arg.Visibility)
 	var i Problem
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
-		&i.OwnerID,
 		&i.Visibility,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -85,50 +78,26 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getAuthorizationProblemMember = `-- name: GetAuthorizationProblemMember :one
-SELECT problem_id, user_id, role, created_at FROM problem_members
-WHERE problem_id = $1 AND user_id = $2
-FOR SHARE
-`
-
-type GetAuthorizationProblemMemberParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	UserID    uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) GetAuthorizationProblemMember(ctx context.Context, arg GetAuthorizationProblemMemberParams) (ProblemMember, error) {
-	row := q.db.QueryRow(ctx, getAuthorizationProblemMember, arg.ProblemID, arg.UserID)
-	var i ProblemMember
-	err := row.Scan(
-		&i.ProblemID,
-		&i.UserID,
-		&i.Role,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getProblemByID = `-- name: GetProblemByID :one
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
+SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
 FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
 WHERE p.id = $1
 `
 
 type GetProblemByIDRow struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	OrgLogin       string     `json:"org_login"`
-	OrgName        string     `json:"org_name"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Visibility     string     `json:"visibility"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
-	IsTemplate     bool       `json:"is_template"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	OrgLogin       string    `json:"org_login"`
+	OrgName        string    `json:"org_name"`
+	Visibility     string    `json:"visibility"`
+	Title          string    `json:"title"`
+	ShortName      string    `json:"short_name"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	TimeLimitMs    int32     `json:"time_limit_ms"`
+	MemoryLimitMb  int32     `json:"memory_limit_mb"`
+	IsTemplate     bool      `json:"is_template"`
 }
 
 func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error) {
@@ -139,7 +108,6 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemB
 		&i.OrganizationID,
 		&i.OrgLogin,
 		&i.OrgName,
-		&i.OwnerID,
 		&i.Visibility,
 		&i.Title,
 		&i.ShortName,
@@ -175,13 +143,7 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 }
 
 const listDashboardProblems = `-- name: ListDashboardProblems :many
-WITH actor AS (
-  SELECT u.id, u.role FROM users u
-  WHERE u.id = $1::uuid
-    AND u.role IN ('user', 'admin')
-    AND (u.expires_at IS NULL OR u.expires_at > $3::timestamptz)
-)
-SELECT 
+SELECT
     p.id as problem_id,
     p.title as problem_title,
     p.time_limit_ms,
@@ -192,27 +154,16 @@ SELECT
     o.login as org_login
 FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
-WHERE ($1::uuid IS NULL OR $1::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
-AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM problem_members invalid WHERE invalid.problem_id = p.id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('viewer', 'moderator', 'owner'))
-    AND NOT EXISTS (SELECT 1 FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.problem_id = p.id AND tm.user_id = $1::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.permission::text NOT IN ('read', 'write', 'admin')))
-AND p.visibility IN ('public', 'private') AND (p.visibility = 'public' OR EXISTS (
-    SELECT 1 FROM actor a WHERE a.role = 'admin' OR p.owner_id = a.id
-    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = p.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
-    OR EXISTS (SELECT 1 FROM problem_members m WHERE m.problem_id = p.id AND m.user_id = a.id AND m.role IN ('viewer', 'moderator', 'owner'))
-    OR EXISTS (SELECT 1 FROM problem_teams pt
-      JOIN teams t ON t.id = pt.team_id JOIN team_members tm ON tm.team_id = t.id
-      WHERE pt.problem_id = p.id AND tm.user_id = a.id
-        AND t.organization_id = p.organization_id AND tm.role IN ('member', 'maintainer')
-        AND pt.permission IN ('read', 'write', 'admin'))))
+LEFT JOIN problem_access a ON a.problem_id = p.id AND a.user_id = $1::uuid
+WHERE p.visibility = 'public' OR a.role IS NOT NULL OR $2::boolean
 ORDER BY p.updated_at DESC, p.id DESC
-LIMIT $2::int
+LIMIT $3::int
 `
 
 type ListDashboardProblemsParams struct {
-	ViewerID *uuid.UUID `json:"viewer_id"`
-	PageSize int32      `json:"page_size"`
-	Now      time.Time  `json:"now"`
+	ViewerID uuid.UUID `json:"viewer_id"`
+	All      bool      `json:"all"`
+	PageSize int32     `json:"page_size"`
 }
 
 type ListDashboardProblemsRow struct {
@@ -227,7 +178,7 @@ type ListDashboardProblemsRow struct {
 }
 
 func (q *Queries) ListDashboardProblems(ctx context.Context, arg ListDashboardProblemsParams) ([]ListDashboardProblemsRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardProblems, arg.ViewerID, arg.PageSize, arg.Now)
+	rows, err := q.db.Query(ctx, listDashboardProblems, arg.ViewerID, arg.All, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -271,12 +222,12 @@ type ListProblemMembersParams struct {
 }
 
 type ListProblemMembersRow struct {
-	ProblemID uuid.UUID                 `json:"problem_id"`
-	UserID    uuid.UUID                 `json:"user_id"`
-	Role      problemsmodel.ProblemRole `json:"role"`
-	CreatedAt time.Time                 `json:"created_at"`
-	Username  string                    `json:"username"`
-	Email     *string                   `json:"email"`
+	ProblemID uuid.UUID               `json:"problem_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
+	CreatedAt time.Time               `json:"created_at"`
+	Username  string                  `json:"username"`
+	Email     *string                 `json:"email"`
 }
 
 func (q *Queries) ListProblemMembers(ctx context.Context, arg ListProblemMembersParams) ([]ListProblemMembersRow, error) {
@@ -324,25 +275,18 @@ func (q *Queries) RemoveProblemMember(ctx context.Context, arg RemoveProblemMemb
 const updateProblem = `-- name: UpdateProblem :exec
 UPDATE problems
 SET visibility = COALESCE($2, visibility),
-    owner_id = COALESCE($3, owner_id),
-    is_template = COALESCE($4, is_template)
+    is_template = COALESCE($3, is_template)
 WHERE id = $1
 `
 
 type UpdateProblemParams struct {
-	ID         uuid.UUID  `json:"id"`
-	Visibility *string    `json:"visibility"`
-	OwnerID    *uuid.UUID `json:"owner_id"`
-	IsTemplate *bool      `json:"is_template"`
+	ID         uuid.UUID `json:"id"`
+	Visibility *string   `json:"visibility"`
+	IsTemplate *bool     `json:"is_template"`
 }
 
 func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) error {
-	_, err := q.db.Exec(ctx, updateProblem,
-		arg.ID,
-		arg.Visibility,
-		arg.OwnerID,
-		arg.IsTemplate,
-	)
+	_, err := q.db.Exec(ctx, updateProblem, arg.ID, arg.Visibility, arg.IsTemplate)
 	return err
 }
 
@@ -353,9 +297,9 @@ WHERE problem_id = $1 AND user_id = $2
 `
 
 type UpdateProblemMemberRoleParams struct {
-	ProblemID uuid.UUID                 `json:"problem_id"`
-	UserID    uuid.UUID                 `json:"user_id"`
-	Role      problemsmodel.ProblemRole `json:"role"`
+	ProblemID uuid.UUID               `json:"problem_id"`
+	UserID    uuid.UUID               `json:"user_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
 }
 
 func (q *Queries) UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error {

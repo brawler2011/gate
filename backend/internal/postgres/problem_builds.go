@@ -19,7 +19,11 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 	if options.MaxAttempts < 1 || options.Duration <= 0 || options.Lease <= 0 {
 		return model.MutationResult{}, pkg.ErrInvalid
 	}
-	tx, err := beginReadCommitted(ctx, r.pool)
+	return authorizedMutation(func() (model.MutationResult, error) { return r.enqueueBuild(ctx, k, id, expected, options) })
+}
+
+func (r *ProblemDraftsRepo) enqueueBuild(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, options ProblemBuildOptions) (model.MutationResult, error) {
+	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
@@ -32,6 +36,9 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return *replay, nil
 	}
 	q := sqlc.New(tx)
+	if err := authorizeEdit(ctx, q, id); err != nil {
+		return model.MutationResult{}, err
+	}
 	revision, err := q.LockProblemDraft(ctx, id)
 	if err != nil {
 		return model.MutationResult{}, dbError("enqueue build", err)
@@ -268,7 +275,11 @@ func (r *ProblemDraftsRepo) recoverBuild(ctx context.Context, id uuid.UUID) erro
 }
 
 func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey, id uuid.UUID) (model.MutationResult, error) {
-	tx, err := beginReadCommitted(ctx, r.pool)
+	return authorizedMutation(func() (model.MutationResult, error) { return r.cancelBuild(ctx, k, id) })
+}
+
+func (r *ProblemDraftsRepo) cancelBuild(ctx context.Context, k model.MutationKey, id uuid.UUID) (model.MutationResult, error) {
+	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
@@ -287,6 +298,9 @@ func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey
 	}
 	if b.OrganizationID != k.OrganizationID {
 		return model.MutationResult{}, pkg.ErrForbidden
+	}
+	if err := authorizeEdit(ctx, q, b.ProblemID); err != nil {
+		return model.MutationResult{}, err
 	}
 	if b.State != "queued" && b.State != "running" {
 		return model.MutationResult{}, pkg.ErrBuildFinished

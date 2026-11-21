@@ -23,28 +23,12 @@ import (
 
 type SubmissionsUseCase struct {
 	submissionsRepo SubmissionsRepo
-	contestsUC      ContestsUC
-	problemsUC      ProblemsUC
-
-	transactor  SubmissionTransactions
-	permissions Permissions
+	transactor      SubmissionTransactions
+	access          access.Loader
 }
 
-func NewSubmissionsUseCase(
-	submissionsRepo SubmissionsRepo,
-	contestsUC ContestsUC,
-	problemsUC ProblemsUC,
-	transactor SubmissionTransactions,
-	permissions Permissions,
-) *SubmissionsUseCase {
-	return &SubmissionsUseCase{
-		submissionsRepo: submissionsRepo,
-		contestsUC:      contestsUC,
-		problemsUC:      problemsUC,
-
-		transactor:  transactor,
-		permissions: permissions,
-	}
+func NewSubmissionsUseCase(submissionsRepo SubmissionsRepo, transactor SubmissionTransactions, loader access.Loader) *SubmissionsUseCase {
+	return &SubmissionsUseCase{submissionsRepo: submissionsRepo, transactor: transactor, access: loader}
 }
 
 func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error) {
@@ -55,67 +39,58 @@ func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (
 	if err != nil {
 		return sub, err
 	}
-	return uc.submissionView(ctx, sub, true)
+	views := contestViews{uc: uc}
+	return views.apply(ctx, sub, true)
 }
 
-func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submissionsmodel.Submission, requireReadPermission bool) (submissionsmodel.Submission, error) {
-	user := accessmodel.UserFromContext(ctx)
-	own := sub.CreatedBy != nil && *sub.CreatedBy == user.Id
+// contestViews loads each contest's access once while projecting a page of submissions.
+type contestViews struct {
+	uc     *SubmissionsUseCase
+	access map[uuid.UUID]access.ContestAccess
+}
+
+func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submission, requireRead bool) (submissionsmodel.Submission, error) {
 	if sub.ContestID == nil {
-		if !own && !user.IsAdmin() {
+		actor, err := access.Actor(ctx, v.uc.access)
+		if err != nil {
+			return submissionsmodel.Submission{}, err
+		}
+		if (sub.CreatedBy == nil || *sub.CreatedBy != actor.Id) && !actor.IsAdmin() {
 			return submissionsmodel.Submission{}, pkg.ErrForbidden
 		}
 		return sub, nil
 	}
-	permissions, err := uc.permissions.GetContestPermissions(ctx, *sub.ContestID)
-	if err != nil {
-		return submissionsmodel.Submission{}, err
+	a, ok := v.access[*sub.ContestID]
+	if !ok {
+		var err error
+		if a, err = access.Contest(ctx, v.uc.access, *sub.ContestID, accessmodel.ContestView); err != nil {
+			return submissionsmodel.Submission{}, err
+		}
+		if v.access == nil {
+			v.access = map[uuid.UUID]access.ContestAccess{}
+		}
+		v.access[*sub.ContestID] = a
 	}
-	if requireReadPermission && (own && !permissions.GetOwnSubmission || !own && !permissions.GetOtherUserSubmission) {
+	var author uuid.UUID
+	if sub.CreatedBy != nil {
+		author = *sub.CreatedBy
+	}
+	if requireRead && !a.CanSubmission(author, accessmodel.SubmissionView) {
 		return submissionsmodel.Submission{}, pkg.ErrForbidden
 	}
-	contest, err := uc.contestsUC.GetContest(ctx, *sub.ContestID)
-	if err != nil {
-		return submissionsmodel.Submission{}, err
-	}
-	return SubmissionView(&contest, sub.CreatedBy, sub.CreatedAt, user.Id, permissions, accessmodel.ReadTime(ctx)).Apply(sub), nil
+	return SubmissionView(a, sub.CreatedBy, sub.CreatedAt).Apply(sub), nil
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
 	var id uuid.UUID
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		id, err = uc.createSubmission(ctx, creation)
-		if !errors.Is(err, pkg.ErrConcurrentUpdate) {
-			return id, err
+	err := uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		a, err := access.Contest(ctx, tx, creation.ContestId, accessmodel.ContestSubmit)
+		if err != nil {
+			return err
 		}
-	}
-	return uuid.Nil, err
-}
-
-func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
-	var err error
-	ctx, err = uc.transactor.Prepare(ctx)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if err := access.Contest(ctx, uc.permissions, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
-		return uuid.Nil, err
-	}
-
-	if creation.UserId != accessmodel.UserFromContext(ctx).Id {
-		return uuid.Nil, pkg.ErrForbidden
-	}
-
-	contest, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	ctx = accessmodel.WithDecisionDeadline(ctx, contest.EndTime)
-	var id uuid.UUID
-
-	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		if creation.UserId != a.Actor.Id {
+			return pkg.ErrForbidden
+		}
 		if err := tx.LockSubmissionTuple(ctx, creation.ContestId, creation.UserId, creation.ProblemId); err != nil {
 			return err
 		}
@@ -157,15 +132,8 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 		if err != nil {
 			return err
 		}
-		eventParams := newOutboxEventParams(submission, job, nil)
-
-		if err := tx.Record(ctx, eventParams); err != nil {
-			return err
-		}
-
-		return nil
+		return tx.Record(ctx, newOutboxEventParams(submission, job, nil))
 	})
-
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -175,29 +143,22 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 }
 
 func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
-	if err := access.Contest(ctx, uc.permissions, contestID, accessmodel.ActionManageContest); err != nil {
-		return err
-	}
-
 	return uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		if _, err := access.Contest(ctx, tx, contestID, accessmodel.ContestManage); err != nil {
+			return err
+		}
 		sub, err := tx.GetSubmission(ctx, submissionID)
 		if err != nil {
 			return err
 		}
-		if contestID != uuid.Nil && (sub.ContestID == nil || *sub.ContestID != contestID) {
+		if sub.ContestID == nil || *sub.ContestID != contestID {
 			return pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
 		}
-		if sub.ContestID != nil && sub.CreatedBy != nil && sub.ProblemID != nil {
-			if err := tx.LockSubmissionTuple(ctx, *sub.ContestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
+		if sub.CreatedBy != nil && sub.ProblemID != nil {
+			if err := tx.LockSubmissionTuple(ctx, contestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
 				return err
 			}
 		}
-		if sub.ContestID != nil {
-			if err := access.Contest(ctx, tx, *sub.ContestID, accessmodel.ActionManageContest); err != nil {
-				return err
-			}
-		}
-
 		sub, err = tx.GetSubmission(ctx, submissionID)
 		if err != nil {
 			return err
@@ -239,25 +200,23 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 		return nil, err
 	}
 	ownOnly := filter.UserId != nil && *filter.UserId == user.Id
+	views := contestViews{uc: uc}
 	if filter.ContestId != nil {
-		permissions, err := uc.permissions.GetContestPermissions(ctx, *filter.ContestId)
+		a, err := access.Contest(ctx, uc.access, *filter.ContestId, accessmodel.ContestView)
 		if err != nil {
 			return nil, err
 		}
-		canList := permissions.ListUsersSubmissions
+		action := accessmodel.ContestListSubmissions
 		if ownOnly {
-			canList = permissions.ListOwnSubmissions
+			action = accessmodel.ContestListOwnSubmissions
 		}
-		if !canList {
+		if !a.Can(action) {
 			return nil, pkg.ErrForbidden
 		}
-		contest, err := uc.contestsUC.GetContest(ctx, *filter.ContestId)
-		if err != nil {
-			return nil, err
-		}
-		if filter.State != nil && contest.IsFrozenAt(accessmodel.ReadTime(ctx)) && !permissions.ManageContest && !ownOnly {
+		if filter.State != nil && a.Facts.Contest.IsFrozenAt(a.Facts.Now) && !a.Can(accessmodel.ContestManage) && !ownOnly {
 			return nil, pkg.Wrap(pkg.ErrScoreboardFrozen, nil, "state filter is unavailable during freeze")
 		}
+		views.access = map[uuid.UUID]access.ContestAccess{*filter.ContestId: a}
 	} else if !ownOnly && !user.IsAdmin() {
 		return nil, pkg.ErrForbidden
 	}
@@ -267,7 +226,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 		return nil, err
 	}
 	for i, sub := range submissions {
-		visible, err := uc.submissionView(ctx, sub, false)
+		visible, err := views.apply(ctx, sub, false)
 		if err != nil {
 			return nil, err
 		}
@@ -285,38 +244,21 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 		return 0, pkg.AtField("/contest_id", pkg.Invalid(pkg.ErrRequired, "contest id is required", nil))
 	}
 
-	if err := access.Contest(ctx, uc.permissions, filter.ContestID, accessmodel.ActionManageContest); err != nil {
-		return 0, err
-	}
-
-	_, err := uc.contestsUC.GetContest(ctx, filter.ContestID)
-	if err != nil {
-		return 0, err
-	}
-
-	if filter.ProblemID != nil && *filter.ProblemID != uuid.Nil {
-		_, err = uc.problemsUC.GetProblemById(ctx, *filter.ProblemID)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	if filter.SubmissionID != nil && *filter.SubmissionID != uuid.Nil {
-		sub, err := uc.submissionsRepo.GetSubmission(ctx, *filter.SubmissionID)
-		if err != nil {
-			return 0, err
-		}
-		if sub.ContestID != nil && *sub.ContestID != filter.ContestID {
-			return 0, pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
-		}
-	}
-
 	var rejudgedCount int
 	var rejudgedIDs []uuid.UUID
 
-	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if err := access.Contest(ctx, tx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
+	err := uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		if _, err := access.Contest(ctx, tx, filter.ContestID, accessmodel.ContestManage); err != nil {
 			return err
+		}
+		if filter.SubmissionID != nil && *filter.SubmissionID != uuid.Nil {
+			sub, err := tx.GetSubmission(ctx, *filter.SubmissionID)
+			if err != nil {
+				return err
+			}
+			if sub.ContestID == nil || *sub.ContestID != filter.ContestID {
+				return pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
+			}
 		}
 
 		txSubRepo := tx

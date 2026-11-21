@@ -1,8 +1,9 @@
 package submissionsmodel
 
 import (
-	"github.com/brawler2011/gate/backend/pkg/points"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/points"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"

@@ -7,11 +7,10 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -22,14 +21,14 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 	member := s.createUser("org_read_member", accessmodel.UserRoleUser)
 	admin := s.createUser("org_read_admin", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("org-reads", "Reads", owner.Id)
-	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, member.Id, organizationsmodel.OrgRoleMember))
+	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, member.Id, accessmodel.OrganizationMember))
 	publicIDs := []uuid.UUID{uuid.MustParse("00000000-0000-0000-0000-000000000001"), uuid.MustParse("00000000-0000-0000-0000-000000000002")}
 	for i, id := range append(publicIDs, uuid.New()) {
 		visibility := contestsmodel.ContestVisibilityPublic
 		if i == 2 {
 			visibility = contestsmodel.ContestVisibilityPrivate
 		}
-		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: id, OrganizationID: org.ID, Title: "Matching contest", Login: id.String(), Visibility: visibility}))
+		s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: id, OrganizationID: org.ID, Title: "Matching contest", Login: id.String(), Visibility: visibility}, owner.Id))
 	}
 	_, err := s.dbPool.Exec(s.ctx, "UPDATE contests SET created_at=$1 WHERE organization_id=$2", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), org.ID)
 	s.Require().NoError(err)
@@ -72,10 +71,9 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 	ids := make([]uuid.UUID, 3)
 	for i, title := range []string{"Needle B", "Other", "Needle A"} {
 		ids[i] = uuid.New()
-		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: ids[i], OrganizationID: org.ID, OwnerID: &owner.Id, Title: title, Login: ids[i].String(), Visibility: contestsmodel.ContestVisibilityPublic}))
+		s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: ids[i], OrganizationID: org.ID, Title: title, Login: ids[i].String(), Visibility: contestsmodel.ContestVisibilityPublic}, owner.Id))
 	}
-	permissions := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
-	reader := contests.NewContestsUseCase(s.contestsRepo, nil, nil, permissions)
+	reader := contests.NewContestsUseCase(s.contestsRepo, nil, nil, pgstore.NewAccess(s.dbPool))
 	ctx := accessmodel.WithUser(s.ctx, owner)
 	for _, orgID := range []*uuid.UUID{nil, &org.ID} {
 		list, err := reader.ListWorkshopContests(ctx, contestsmodel.WorkshopContestsFilter{UserId: owner.Id, Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 2, PageSize: 1, OrganizationID: orgID})
@@ -98,9 +96,8 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 	s.ErrorIs(err, pkg.ErrForbidden)
 	_, err = reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: other.Id})
 	s.ErrorIs(err, pkg.ErrForbidden)
-	for _, user := range []accessmodel.User{owner, other} {
-		s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: ids[0], UserId: user.Id, Role: "participant"}))
-	}
+	// The owner is already a member of every contest it created.
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: ids[0], UserId: other.Id, Role: accessmodel.ContestParticipant}))
 	first, err := reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{ContestId: ids[0], Page: 1, PageSize: 1})
 	s.Require().NoError(err)
 	second, err := reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{ContestId: ids[0], Page: 2, PageSize: 1})

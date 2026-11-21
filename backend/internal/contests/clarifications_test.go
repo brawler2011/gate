@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -75,10 +77,14 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	outboxRepo := &mockOutboxRepo{}
 
 	contestID := uuid.New()
-	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo, Contest: contestsmodel.Contest{ID: contestID, Settings: contestsmodel.ContestSettings{AllowClarifications: true}}}}, nil, nil)
-
 	participantID := uuid.New()
 	juryID := uuid.New()
+	contest := contestsmodel.Contest{ID: contestID, Visibility: contestsmodel.ContestVisibilityPrivate, Settings: contestsmodel.ContestSettings{AllowClarifications: true}}
+	loader := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contest, Now: time.Now()}}}
+	loader.Grant(contestID, participantID, string(accessmodel.ContestParticipant))
+	loader.Grant(contestID, juryID, string(accessmodel.ContestModerator))
+	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo}}, nil, nil)
+
 	probID := uuid.New()
 
 	clar, err := uc.CreateClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: participantID, Role: accessmodel.UserRoleUser}), &contestsmodel.CreateContestClarificationInput{

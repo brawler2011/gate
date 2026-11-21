@@ -14,15 +14,15 @@ import {problemMessage} from "@/lib/problemText";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
 
-const PROBLEM_PERMISSION_OPTIONS = [
-  {label: "Чтение (read)", value: "read", color: "gray"},
-  {label: "Запись (write)", value: "write", color: "yellow"},
-  {label: "Админ (admin)", value: "admin", color: "red"},
+const PROBLEM_TEAM_ROLE_OPTIONS = [
+  {label: "Просмотр", value: "viewer", color: "gray"},
+  {label: "Редактор", value: "editor", color: "yellow"},
+  {label: "Администратор", value: "admin", color: "red"},
 ];
 
-const getPermissionDisplay = (perm: string) => {
-  const found = PROBLEM_PERMISSION_OPTIONS.find((r) => r.value === perm);
-  return found || {label: perm, color: "gray"};
+const getRoleDisplay = (role: string) => {
+  const found = PROBLEM_TEAM_ROLE_OPTIONS.find((r) => r.value === role);
+  return found || {label: role, color: "gray"};
 };
 
 export interface ProblemTeamsManagementProps {
@@ -39,7 +39,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
   const [editingTeam, setEditingTeam] = useState<{
     teamName: string;
     teamId: string;
-    currentPermission: string;
+    currentRole: string;
   } | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
@@ -114,7 +114,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     const {error} = await api.POST("/problems/{id}/teams", {
       params: {
         path: {id: problemId},
-        query: {team_id: selectedTeamId, permission: "read"},
+        query: {team_id: selectedTeamId, role: "viewer"},
       },
     });
     setAdding(false);
@@ -176,7 +176,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     setEditingTeam({
       teamName: team.team_name,
       teamId: team.team_id,
-      currentPermission: team.permission,
+      currentRole: team.role,
     });
     setModalOpened(true);
   };
@@ -189,7 +189,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     const {error} = await api.PATCH("/problems/{id}/teams", {
       params: {
         path: {id: problemId},
-        query: {team_id: editingTeam.teamId, permission: newRole},
+        query: {team_id: editingTeam.teamId, role: newRole as corev1.ProblemTeamModel["role"]},
       },
     });
 
@@ -271,7 +271,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
               header: "Права",
               align: "center",
               render: (t) => {
-                const perm = getPermissionDisplay(t.permission);
+                const perm = getRoleDisplay(t.role);
                 return (
                   <Badge variant="filled" color={perm.color} tt="none" size="md">
                     {perm.label}
@@ -296,8 +296,8 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
             username: editingTeam.teamName,
             userId: editingTeam.teamId,
           }}
-          currentRole={editingTeam.currentPermission}
-          roleOptions={PROBLEM_PERMISSION_OPTIONS}
+          currentRole={editingTeam.currentRole}
+          roleOptions={PROBLEM_TEAM_ROLE_OPTIONS}
           title="Изменить права"
           selectLabel="Новые права"
           onSubmit={handleChangeRole}

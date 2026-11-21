@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/access"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/nats-io/nats.go/jetstream"
@@ -20,12 +21,12 @@ type Services struct {
 	Organizations OrganizationsUC
 	Teams         TeamsUC
 
-	Contests           ContestsUC
-	ContestPermissions PermissionsUC
-	ContestDetails     ContestDetails
-	Drafts             DraftsUC
-	Announcements      AnnouncementsUC
-	Clarifications     ClarificationsUC
+	Contests       ContestsUC
+	Access         access.Loader
+	ContestDetails ContestDetails
+	Drafts         DraftsUC
+	Announcements  AnnouncementsUC
+	Clarifications ClarificationsUC
 
 	Problems      ProblemsUC
 	ProblemDrafts ProblemDraftUC

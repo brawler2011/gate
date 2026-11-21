@@ -23,8 +23,8 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 	outsider := s.createUser("list_outsider_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("list-org-"+suffix, "Team list organization", owner.Id)
 	otherOrg := s.createOrganization("list-other-"+suffix, "Other organization", owner.Id)
-	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, member.Id, organizationsmodel.OrgRoleMember))
-	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgAdmin.Id, organizationsmodel.OrgRoleAdmin))
+	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, member.Id, accessmodel.OrganizationMember))
+	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgAdmin.Id, accessmodel.OrganizationAdmin))
 
 	createdAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	create := func(orgID uuid.UUID, name string, secret bool) organizationsmodel.Team {
@@ -51,11 +51,11 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 	secretHidden := create(org.ID, "Скрытая Команда", true)
 	other := create(otherOrg.ID, "Другая Команда", true)
 	for _, team := range append(append([]organizationsmodel.Team{}, closed...), secretMember, other) {
-		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, member.Id, organizationsmodel.TeamRoleMember))
+		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, member.Id, accessmodel.TeamMember))
 	}
 	// Multiple members must not duplicate list rows or inflate COUNT.
 	for _, team := range closed {
-		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, owner.Id, organizationsmodel.TeamRoleMaintainer))
+		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, owner.Id, accessmodel.TeamMaintainer))
 	}
 	// Exercise created_at precedence as well as the id tie-breaker.
 	closed[3].CreatedAt = createdAt.Add(-time.Hour)

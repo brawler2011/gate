@@ -6,7 +6,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -44,7 +43,6 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 	_, err := r.queries.CreateContest(ctx, sqlc.CreateContestParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
-		OwnerID:        params.OwnerID,
 		Visibility:     params.Visibility,
 		Title:          params.Title,
 		Login:          params.Login,
@@ -58,12 +56,20 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 	return nil
 }
 
+func (r *ContestsRepo) ListContestOwners(ctx context.Context, contestID uuid.UUID) ([]uuid.UUID, error) {
+	owners, err := r.queries.ListContestOwners(ctx, contestID)
+	if err != nil {
+		return nil, dbError("list contest owners", err)
+	}
+	return owners, nil
+}
+
 func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
 	contest, err := r.queries.GetContestByID(ctx, id)
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest", err)
 	}
-	return mapGetContestByIDRow(contest), nil
+	return mapContest(contest.Contest, contest.OrgLogin), nil
 }
 
 func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (contestsmodel.Contest, error) {
@@ -74,7 +80,7 @@ func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, l
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by login", err)
 	}
-	return mapGetContestByLoginRow(contest), nil
+	return mapContest(contest.Contest, contest.OrgLogin), nil
 }
 
 func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
@@ -85,7 +91,7 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by org login and contest login", err)
 	}
-	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
+	return mapContest(contest.Contest, contest.OrgLogin), nil
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
@@ -113,7 +119,6 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		StartTimeSet:           c.StartTimeSet,
 		EndTime:                c.EndTime,
 		EndTimeSet:             c.EndTimeSet,
-		OwnerID:                c.OwnerID,
 	})
 	if err != nil {
 		return dbError("update contest", err)
@@ -157,8 +162,10 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmo
 	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{Search: filter.Search, Visibility: string(contestsmodel.ContestVisibilityPublic), SortBy: filter.SortBy, SortOrder: filter.SortOrder}, page, size)
 }
 func (r *ContestsRepo) listScopedContests(ctx context.Context, params sqlc.ScopeContestsParams, page, size int32) (*contestsmodel.ContestsList, error) {
-	viewer := accessmodel.UserFromContext(ctx)
-	params.ViewerID, params.Now = &viewer.Id, accessmodel.ReadTime(ctx)
+	var err error
+	if params.ViewerID, params.All, err = (Access{r.queries}).visibility(ctx); err != nil {
+		return nil, err
+	}
 	params.PageSize, params.PageOffset = size, (int64(page)-1)*int64(size)
 	items, total, err := scopeContests(ctx, r.queries, params)
 	if err != nil {
@@ -168,20 +175,15 @@ func (r *ContestsRepo) listScopedContests(ctx context.Context, params sqlc.Scope
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	packageId, err := r.contestProblemPackage(ctx, c.ProblemId, c.PackageId, true)
-	if err != nil {
-		return err
-	}
-
-	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
-		ContestID: c.ContestId, ProblemID: c.ProblemId, PackageID: packageId,
+	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
+		ContestID: c.ContestId, ProblemID: c.ProblemId, PackageID: c.PackageId,
 	})
 	return dbError("create contest problem", err)
 }
 
-func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
+func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (contestsmodel.PackageRef, error) {
 	if packageID == uuid.Nil && !allowLatest {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrRequired, nil, "package is required")
+		return contestsmodel.PackageRef{}, pkg.Wrap(pkg.ErrRequired, nil, "package is required")
 	}
 	var row sqlc.ProblemPackage
 	var err error
@@ -191,23 +193,12 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 		row, err = r.queries.GetProblemPackageByID(ctx, packageID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrPackageNotReady, nil, "ready package not found")
+		return contestsmodel.PackageRef{}, pkg.Wrap(pkg.ErrPackageNotReady, nil, "ready package not found")
 	}
 	if err != nil {
-		return access.PackageContext{}, dbError("resolve contest problem package", err)
+		return contestsmodel.PackageRef{}, dbError("resolve contest problem package", err)
 	}
-	return access.PackageContext{ID: row.ID, ProblemID: row.ProblemID}, nil
-}
-
-func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {
-	pack, err := r.ResolveContestProblemPackage(ctx, problemID, packageID, allowLatest)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if err := access.RequireReadyPackage(problemID, pack); err != nil {
-		return uuid.Nil, err
-	}
-	return pack.ID, nil
+	return contestsmodel.PackageRef{ID: row.ID, ProblemID: row.ProblemID}, nil
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
@@ -287,12 +278,7 @@ func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UU
 }
 
 func (r *ContestsRepo) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	packageId, err := r.contestProblemPackage(ctx, problemId, packageId, false)
-	if err != nil {
-		return err
-	}
-
-	err = r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
+	err := r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
 		ContestID: contestId,
 		ProblemID: problemId,
 		PackageID: packageId,
@@ -321,7 +307,7 @@ func (r *ContestsRepo) CreateContestTeam(
 	ctx context.Context,
 	contestID uuid.UUID,
 	teamID uuid.UUID,
-	role contestsmodel.ContestRole,
+	role accessmodel.ContestRole,
 ) error {
 	err := r.queries.AddContestTeam(ctx, sqlc.AddContestTeamParams{
 		ContestID: contestID,
@@ -339,7 +325,7 @@ func (r *ContestsRepo) UpdateContestTeamRole(
 	ctx context.Context,
 	contestID uuid.UUID,
 	teamID uuid.UUID,
-	role contestsmodel.ContestRole,
+	role accessmodel.ContestRole,
 ) error {
 	err := r.queries.UpdateContestTeamRole(ctx, sqlc.UpdateContestTeamRoleParams{
 		ContestID: contestID,
@@ -431,7 +417,7 @@ func (r *ContestsRepo) DeleteContestMember(ctx context.Context, userId uuid.UUID
 	return nil
 }
 
-func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role contestsmodel.ContestRole) error {
+func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role accessmodel.ContestRole) error {
 	err := r.queries.UpdateContestMemberRole(ctx, sqlc.UpdateContestMemberRoleParams{
 		ContestID: contestId,
 		UserID:    userId,
@@ -460,7 +446,7 @@ func (r *ContestsRepo) ListUserContestMemberships(ctx context.Context, userID uu
 	return memberships, nil
 }
 
-func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error {
+func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error {
 	err := r.queries.AddContestMemberIfNotExists(ctx, sqlc.AddContestMemberIfNotExistsParams{
 		ContestID: contestID,
 		UserID:    userID,
@@ -472,12 +458,11 @@ func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestI
 	return nil
 }
 
-func mapGetContestByIDRow(c sqlc.GetContestByIDRow) contestsmodel.Contest {
+func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 	return contestsmodel.Contest{
 		ID:                c.ID,
 		OrganizationID:    c.OrganizationID,
-		OrganizationLogin: c.OrgLogin,
-		OwnerID:           c.OwnerID,
+		OrganizationLogin: orgLogin,
 		Visibility:        c.Visibility,
 		Title:             c.Title,
 		Login:             c.Login,
@@ -502,14 +487,6 @@ func mapGetContestByIDRow(c sqlc.GetContestByIDRow) contestsmodel.Contest {
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
 	}
-}
-
-func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) contestsmodel.Contest {
-	return mapGetContestByIDRow(sqlc.GetContestByIDRow(c))
-}
-
-func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) contestsmodel.Contest {
-	return mapGetContestByIDRow(sqlc.GetContestByIDRow(c))
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestProblem {
@@ -545,7 +522,7 @@ func mapContestMember(c sqlc.GetContestMemberRow) contestsmodel.ContestMember {
 		Username:    c.Username,
 		UserID:      c.UserID,
 		ContestID:   c.ContestID,
-		ContestRole: contestsmodel.ContestRole(c.Role),
+		ContestRole: accessmodel.ContestRole(c.Role),
 	}
 }
 
@@ -562,7 +539,7 @@ func mapContestTeam(c sqlc.ListContestTeamsRow) contestsmodel.ContestTeam {
 
 func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error) {
 	rows, err := r.queries.ListDashboardContests(ctx, sqlc.ListDashboardContestsParams{
-		UserID: userID, ViewerID: readViewerID(ctx), Now: accessmodel.ReadTime(ctx), PageSize: limit,
+		ViewerID: userID, PageSize: limit,
 	})
 	if err != nil {
 		return nil, dbError("list dashboard contests", err)
@@ -948,4 +925,12 @@ func mapDashboardContest(row sqlc.ListDashboardContestsRow) contestsmodel.Dashbo
 		UserRole:           row.UserRole,
 		LastSubmissionTime: lastSubTime,
 	}
+}
+
+func (r *ContestsRepo) GetContestTeam(ctx context.Context, contestID, teamID uuid.UUID) (contestsmodel.ContestTeam, error) {
+	row, err := r.queries.GetContestTeam(ctx, sqlc.GetContestTeamParams{ContestID: contestID, TeamID: teamID})
+	if err != nil {
+		return contestsmodel.ContestTeam{}, dbError("get contest team", err)
+	}
+	return contestsmodel.ContestTeam{ContestID: row.ContestID, TeamID: row.TeamID, Role: row.Role, CreatedAt: row.CreatedAt}, nil
 }

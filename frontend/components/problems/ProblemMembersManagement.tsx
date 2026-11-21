@@ -17,7 +17,8 @@ import type * as corev1 from "@/contracts/core/v1/schema";
 
 const PROBLEM_ROLE_OPTIONS = [
   {label: "Просмотр", value: "viewer", color: "gray"},
-  {label: "Редактор", value: "moderator", color: "yellow"},
+  {label: "Редактор", value: "editor", color: "yellow"},
+  {label: "Администратор", value: "admin", color: "orange"},
   {label: "Владелец", value: "owner", color: "red"},
 ];
 
@@ -168,7 +169,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
         path: {id: problemId},
         query: {
           user_id: editingMember.userId,
-          role: newRole as "owner" | "moderator" | "viewer",
+          role: newRole as corev1.ProblemMemberModel["role"],
         },
       },
     });

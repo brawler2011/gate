@@ -3442,16 +3442,6 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 		s.FreezeStatus.Encode(e)
 	}
 	{
-		e.FieldStart("created_by")
-		json.EncodeUUID(e, s.CreatedBy)
-	}
-	{
-		if s.Owner.Set {
-			e.FieldStart("owner")
-			s.Owner.Encode(e)
-		}
-	}
-	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
@@ -3501,7 +3491,7 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfContestModel = [26]string{
+var jsonFieldsNameOfContestModel = [24]string{
 	0:  "capabilities",
 	1:  "id",
 	2:  "login",
@@ -3516,18 +3506,16 @@ var jsonFieldsNameOfContestModel = [26]string{
 	11: "submission_details_scope",
 	12: "freeze_duration_minutes",
 	13: "freeze_status",
-	14: "created_by",
-	15: "owner",
-	16: "created_at",
-	17: "updated_at",
-	18: "start_time",
-	19: "end_time",
-	20: "enable_drafts",
-	21: "allow_clarifications",
-	22: "enable_upsolving",
-	23: "participation_mode",
-	24: "hide_statements",
-	25: "languages",
+	14: "created_at",
+	15: "updated_at",
+	16: "start_time",
+	17: "end_time",
+	18: "enable_drafts",
+	19: "allow_clarifications",
+	20: "enable_upsolving",
+	21: "participation_mode",
+	22: "hide_statements",
+	23: "languages",
 }
 
 // Decode decodes ContestModel from json.
@@ -3535,7 +3523,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ContestModel to nil")
 	}
-	var requiredBitSet [4]uint8
+	var requiredBitSet [3]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -3703,30 +3691,8 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"freeze_status\"")
 			}
-		case "created_by":
-			requiredBitSet[1] |= 1 << 6
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.CreatedBy = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"created_by\"")
-			}
-		case "owner":
-			if err := func() error {
-				s.Owner.Reset()
-				if err := s.Owner.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"owner\"")
-			}
 		case "created_at":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -3738,7 +3704,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -3770,7 +3736,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"end_time\"")
 			}
 		case "enable_drafts":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := d.Bool()
 				s.EnableDrafts = bool(v)
@@ -3782,7 +3748,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"enable_drafts\"")
 			}
 		case "allow_clarifications":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				v, err := d.Bool()
 				s.AllowClarifications = bool(v)
@@ -3794,7 +3760,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"allow_clarifications\"")
 			}
 		case "enable_upsolving":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.EnableUpsolving = bool(v)
@@ -3806,7 +3772,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"enable_upsolving\"")
 			}
 		case "participation_mode":
-			requiredBitSet[2] |= 1 << 7
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				if err := s.ParticipationMode.Decode(d); err != nil {
 					return err
@@ -3816,7 +3782,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"participation_mode\"")
 			}
 		case "hide_statements":
-			requiredBitSet[3] |= 1 << 0
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				v, err := d.Bool()
 				s.HideStatements = bool(v)
@@ -3828,7 +3794,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
 			}
 		case "languages":
-			requiredBitSet[3] |= 1 << 1
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				s.Languages = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -3856,11 +3822,10 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [4]uint8{
+	for i, mask := range [3]uint8{
 		0b11111111,
-		0b01101111,
-		0b11110011,
-		0b00000011,
+		0b11101111,
+		0b11111100,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -6650,14 +6615,8 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeNoEmail
 	case ErrorCodeUnsupportedImage:
 		*s = ErrorCodeUnsupportedImage
-	case ErrorCodeOwnerOnly:
-		*s = ErrorCodeOwnerOnly
-	case ErrorCodePrimaryOwnerRequired:
-		*s = ErrorCodePrimaryOwnerRequired
-	case ErrorCodeOwnerRoleFixed:
-		*s = ErrorCodeOwnerRoleFixed
-	case ErrorCodeOwnRole:
-		*s = ErrorCodeOwnRole
+	case ErrorCodeOwnerRequired:
+		*s = ErrorCodeOwnerRequired
 	case ErrorCodeStatementsHidden:
 		*s = ErrorCodeStatementsHidden
 	case ErrorCodeContestNotStarted:
@@ -12932,39 +12891,6 @@ func (s *OptUpdateUserRequestModelRole) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes UserModel as json.
-func (o OptUserModel) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes UserModel from json.
-func (o *OptUserModel) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptUserModel to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptUserModel) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptUserModel) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode implements json.Marshaler.
 func (s *OrganizationInvitationModel) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -19130,8 +19056,10 @@ func (s *ProblemMemberModelRole) Decode(d *jx.Decoder) error {
 	switch ProblemMemberModelRole(v) {
 	case ProblemMemberModelRoleOwner:
 		*s = ProblemMemberModelRoleOwner
-	case ProblemMemberModelRoleModerator:
-		*s = ProblemMemberModelRoleModerator
+	case ProblemMemberModelRoleAdmin:
+		*s = ProblemMemberModelRoleAdmin
+	case ProblemMemberModelRoleEditor:
+		*s = ProblemMemberModelRoleEditor
 	case ProblemMemberModelRoleViewer:
 		*s = ProblemMemberModelRoleViewer
 	default:
@@ -19184,10 +19112,6 @@ func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 		e.Str(s.OrganizationLogin)
 	}
 	{
-		e.FieldStart("created_by")
-		json.EncodeUUID(e, s.CreatedBy)
-	}
-	{
 		e.FieldStart("visibility")
 		e.Str(s.Visibility)
 	}
@@ -19223,20 +19147,19 @@ func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemModel = [13]string{
+var jsonFieldsNameOfProblemModel = [12]string{
 	0:  "capabilities",
 	1:  "id",
 	2:  "organization_id",
 	3:  "organization_login",
-	4:  "created_by",
-	5:  "visibility",
-	6:  "title",
-	7:  "time_limit",
-	8:  "memory_limit",
-	9:  "is_template",
-	10: "is_private",
-	11: "created_at",
-	12: "updated_at",
+	4:  "visibility",
+	5:  "title",
+	6:  "time_limit",
+	7:  "memory_limit",
+	8:  "is_template",
+	9:  "is_private",
+	10: "created_at",
+	11: "updated_at",
 }
 
 // Decode decodes ProblemModel from json.
@@ -19304,20 +19227,8 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"organization_login\"")
 			}
-		case "created_by":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.CreatedBy = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"created_by\"")
-			}
 		case "visibility":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Visibility = string(v)
@@ -19329,7 +19240,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"visibility\"")
 			}
 		case "title":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.Title = string(v)
@@ -19341,7 +19252,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"title\"")
 			}
 		case "time_limit":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Int32()
 				s.TimeLimit = int32(v)
@@ -19353,7 +19264,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"time_limit\"")
 			}
 		case "memory_limit":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Int32()
 				s.MemoryLimit = int32(v)
@@ -19365,7 +19276,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"memory_limit\"")
 			}
 		case "is_template":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Bool()
 				s.IsTemplate = bool(v)
@@ -19387,7 +19298,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_private\"")
 			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -19399,7 +19310,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -19421,7 +19332,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11111111,
-		0b00011011,
+		0b00001101,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -19909,8 +19820,8 @@ func (s *ProblemTeamModel) encodeFields(e *jx.Encoder) {
 		e.Str(s.TeamSlug)
 	}
 	{
-		e.FieldStart("permission")
-		s.Permission.Encode(e)
+		e.FieldStart("role")
+		s.Role.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -19924,7 +19835,7 @@ var jsonFieldsNameOfProblemTeamModel = [7]string{
 	2: "team_id",
 	3: "team_name",
 	4: "team_slug",
-	5: "permission",
+	5: "role",
 	6: "created_at",
 }
 
@@ -20005,15 +19916,15 @@ func (s *ProblemTeamModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"team_slug\"")
 			}
-		case "permission":
+		case "role":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				if err := s.Permission.Decode(d); err != nil {
+				if err := s.Role.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"permission\"")
+				return errors.Wrap(err, "decode field \"role\"")
 			}
 		case "created_at":
 			requiredBitSet[0] |= 1 << 6
@@ -20083,44 +19994,44 @@ func (s *ProblemTeamModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ProblemTeamModelPermission as json.
-func (s ProblemTeamModelPermission) Encode(e *jx.Encoder) {
+// Encode encodes ProblemTeamModelRole as json.
+func (s ProblemTeamModelRole) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes ProblemTeamModelPermission from json.
-func (s *ProblemTeamModelPermission) Decode(d *jx.Decoder) error {
+// Decode decodes ProblemTeamModelRole from json.
+func (s *ProblemTeamModelRole) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode ProblemTeamModelPermission to nil")
+		return errors.New("invalid: unable to decode ProblemTeamModelRole to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch ProblemTeamModelPermission(v) {
-	case ProblemTeamModelPermissionAdmin:
-		*s = ProblemTeamModelPermissionAdmin
-	case ProblemTeamModelPermissionWrite:
-		*s = ProblemTeamModelPermissionWrite
-	case ProblemTeamModelPermissionRead:
-		*s = ProblemTeamModelPermissionRead
+	switch ProblemTeamModelRole(v) {
+	case ProblemTeamModelRoleAdmin:
+		*s = ProblemTeamModelRoleAdmin
+	case ProblemTeamModelRoleEditor:
+		*s = ProblemTeamModelRoleEditor
+	case ProblemTeamModelRoleViewer:
+		*s = ProblemTeamModelRoleViewer
 	default:
-		*s = ProblemTeamModelPermission(v)
+		*s = ProblemTeamModelRole(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s ProblemTeamModelPermission) MarshalJSON() ([]byte, error) {
+func (s ProblemTeamModelRole) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ProblemTeamModelPermission) UnmarshalJSON(data []byte) error {
+func (s *ProblemTeamModelRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

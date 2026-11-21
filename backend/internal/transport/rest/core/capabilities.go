@@ -122,7 +122,7 @@ func capabilitySlots(response any, parent ...uuid.UUID) []capabilitySlot {
 	case *corev1.ListProblemTeamsResponseModel:
 		for i := range r.Teams {
 			v := &r.Teams[i]
-			row("problem", "link", v.ProblemID, v.TeamID, string(v.Permission), &v.Capabilities)
+			row("problem", "link", v.ProblemID, v.TeamID, string(v.Role), &v.Capabilities)
 		}
 	case *corev1.ListContestTeamsResponseModel:
 		for i := range r.Teams {

@@ -2,12 +2,12 @@ package contests
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"testing"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -28,6 +28,7 @@ type registrationStore struct {
 	contest           contestsmodel.Contest
 	joined, requested bool
 	member, pending   bool
+	owners, notified  []uuid.UUID
 }
 
 func (r *registrationStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
@@ -40,7 +41,7 @@ func (r *registrationStore) GetContestMember(context.Context, *contestsmodel.Con
 	return contestsmodel.ContestMember{}, pkg.ErrNotFound
 }
 func (*registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
-	return &organizationsmodel.OrganizationMember{Role: organizationsmodel.OrgRoleMember}, nil
+	return &organizationsmodel.OrganizationMember{Role: accessmodel.OrganizationMember}, nil
 }
 func (r *registrationStore) CreateContestMember(context.Context, *contestsmodel.CreateContestMemberParams) error {
 	r.joined = true
@@ -57,11 +58,19 @@ func (r *registrationStore) CreateContestJoinRequest(_ context.Context, input *c
 	return &contestsmodel.ContestJoinRequest{ID: uuid.New(), ContestID: input.ContestID, UserID: input.UserID}, nil
 }
 
+func (r *registrationStore) ListContestOwners(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return r.owners, nil
+}
+func (r *registrationStore) CreateNotification(_ context.Context, input *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
+	r.notified = append(r.notified, input.UserID)
+	return &notificationsmodel.Notification{UserID: input.UserID}, nil
+}
+
 func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 	for _, mode := range []contestsmodel.ParticipationMode{contestsmodel.ParticipationModeOpen, contestsmodel.ParticipationModeByRequest, contestsmodel.ParticipationModeInviteOnly} {
 		t.Run(string(mode), func(t *testing.T) {
 			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: contestsmodel.ContestSettings{ParticipationMode: mode}}
-			store := &registrationStore{contest: contest}
+			store := &registrationStore{contest: contest, owners: []uuid.UUID{uuid.New(), uuid.New()}}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
@@ -76,6 +85,7 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 				require.False(t, joined)
 				require.True(t, store.requested)
 				require.NotNil(t, request)
+				require.Equal(t, store.owners, store.notified, "every owner hears about the request")
 			case contestsmodel.ParticipationModeInviteOnly:
 				require.ErrorIs(t, err, pkg.ErrInviteOnly)
 				require.False(t, store.joined)
@@ -106,71 +116,5 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 			require.False(t, store.joined)
 			require.False(t, store.requested)
 		})
-	}
-}
-
-type joinRequestsLookup struct {
-	registrationLookup
-	listed bool
-}
-
-func (r *joinRequestsLookup) ListContestJoinRequests(_ context.Context, id uuid.UUID, status *string) ([]contestsmodel.ContestJoinRequest, error) {
-	r.listed = true
-	return []contestsmodel.ContestJoinRequest{{ContestID: id}}, nil
-}
-
-type joinRequestsPermissions struct{ *rosterPermissions }
-
-func (joinRequestsPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
-	panic("unexpected problem authorization")
-}
-
-func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
-	failure := errors.New("authorization unavailable")
-	for _, tc := range []struct {
-		name                string
-		allow               accessmodel.ContestAction
-		permissionErr, want error
-		actions             []accessmodel.ContestAction
-	}{
-		{name: "manager", allow: accessmodel.ActionManageContest, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest}},
-		{name: "participant", allow: accessmodel.ActionGetContest, want: pkg.ErrForbidden, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest, accessmodel.ActionGetContest}},
-		{name: "permission error", permissionErr: failure, want: failure, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			lookup := &joinRequestsLookup{registrationLookup: registrationLookup{contest: contestsmodel.Contest{ID: uuid.New()}}}
-			permissions := &rosterPermissions{allow: tc.allow, err: tc.permissionErr}
-			uc := NewContestsUseCase(lookup, nil, nil, joinRequestsPermissions{permissions})
-			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			_, err := uc.ListJoinRequests(accessmodel.WithUser(context.Background(), actor), "org", "contest")
-			require.ErrorIs(t, err, tc.want)
-			require.Equal(t, tc.want == nil, lookup.listed)
-			require.Equal(t, tc.actions, permissions.actions)
-		})
-	}
-}
-
-type deniedContestCommands struct{ CommandPermissions }
-
-func (deniedContestCommands) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return false, nil
-}
-
-func TestContestRosterMutationsAuthorizeWithoutHTTP(t *testing.T) {
-	contest, target := uuid.New(), uuid.New()
-	uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{}, deniedContestCommands{})
-	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
-		ctx := accessmodel.WithUser(context.Background(), caller)
-		// deniedContestCommands hides the contest, so a signed-in caller cannot learn it exists.
-		want := pkg.ErrNotFound
-		if caller.IsGuest() {
-			want = pkg.ErrUnauthenticated
-		}
-		require.ErrorIs(t, uc.CreateParticipant(ctx, contestsmodel.ParticipantCreation{ContestId: contest, UserId: target}), want)
-		require.ErrorIs(t, uc.UpdateContestMember(ctx, contest, target, "participant"), want)
-		require.ErrorIs(t, uc.DeleteParticipant(ctx, contestsmodel.ParticipantDeletion{ContestId: contest, UserId: target}), want)
-		require.ErrorIs(t, uc.CreateContestTeam(ctx, contest, target, contestsmodel.ContestRoleParticipant), want)
-		require.ErrorIs(t, uc.UpdateContestTeamRole(ctx, contest, target, contestsmodel.ContestRoleParticipant), want)
-		require.ErrorIs(t, uc.DeleteContestTeam(ctx, contest, target), want)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -97,8 +98,6 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		return nil, err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-
 	org, err := h.Organizations.GetOrganizationByLogin(ctx, params.OrgLogin)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
@@ -117,7 +116,6 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 
 	contestCreation := &contestsmodel.CreateContestInput{
 		OrganizationID: org.ID,
-		OwnerID:        &user.Id,
 		Title:          params.Title,
 		Login:          login,
 		Description:    "",
@@ -150,7 +148,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 	if err != nil {
 		return nil, err
 	}
-	return projectResponse(h, ctx, GetContestResponseDTO(details.Contest, details.Problems, details.Owner))
+	return projectResponse(h, ctx, GetContestResponseDTO(details.Contest, details.Problems))
 }
 
 func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContestRequestModel, params corev1.UpdateContestParams) error {
@@ -244,7 +242,6 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		StartTimeSet: req.StartTime.IsSet(),
 		EndTime:      endTime,
 		EndTimeSet:   req.EndTime.IsSet(),
-		OwnerID:      nil,
 	})
 	if err != nil {
 		return err
@@ -547,23 +544,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 		return err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-
-	if params.UserID == user.Id {
-		return pkg.Wrap(pkg.ErrOwnRole, nil, "cannot update own role")
-	}
-
-	roleStr := string(params.Role)
-	if roleStr != contestsmodel.ContestRoleOwner && roleStr != contestsmodel.ContestRoleModerator && roleStr != contestsmodel.ContestRoleParticipant {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role value")
-	}
-
-	err = h.Contests.UpdateContestMember(ctx, contest.ID, params.UserID, roleStr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Contests.UpdateContestMember(ctx, contest.ID, params.UserID, accessmodel.ContestRole(params.Role))
 }
 
 func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListContestMembersParams) (*corev1.ListContestMembersResponseModel, error) {
@@ -610,20 +591,11 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyCo
 		return nil, err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-
-	contestRole, err := h.ContestPermissions.GetEffectiveContestRole(ctx, contest.ID, user.Id)
+	a, err := access.Contest(ctx, h.Access, contest.ID, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
 	}
-
-	if contestRole == nil {
-		return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{}, contest.ID)
-	}
-
-	return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{
-		Role: *contestRole,
-	}, contest.ID)
+	return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{Role: string(a.Role())}, contest.ID)
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.ListContestSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
@@ -746,9 +718,9 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.Create
 		return err
 	}
 
-	role := contestsmodel.ContestRoleParticipant
+	role := accessmodel.ContestParticipant
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = contestsmodel.ContestRole(params.Role.Value)
+		role = accessmodel.ContestRole(params.Role.Value)
 	}
 
 	err = h.Contests.CreateContestTeam(ctx, contest.ID, params.TeamID, role)
@@ -765,7 +737,7 @@ func (h *CoreServer) UpdateContestTeam(ctx context.Context, params corev1.Update
 		return err
 	}
 
-	err = h.Contests.UpdateContestTeamRole(ctx, contest.ID, params.TeamID, contestsmodel.ContestRole(params.Role))
+	err = h.Contests.UpdateContestTeamRole(ctx, contest.ID, params.TeamID, accessmodel.ContestRole(params.Role))
 	if err != nil {
 		return err
 	}

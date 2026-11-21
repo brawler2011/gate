@@ -114,10 +114,11 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 	f.orgs.members[f.orgID.String()+":"+adminUser.Id.String()] = organizationsmodel.OrganizationMember{
 		OrganizationID: f.orgID,
 		UserID:         adminUser.Id,
-		Role:           organizationsmodel.OrgRoleOwner,
+		Role:           accessmodel.OrganizationOwner,
 	}
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
+	f.loader.Grant(f.orgID, adminUser.Id, string(accessmodel.OrganizationOwner))
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.loader, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{Loader: f.loader, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
 
 	ttl := int32(30)
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
@@ -160,7 +161,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 	f.orgs.members[f.orgID.String()+":"+adminUser.Id.String()] = organizationsmodel.OrganizationMember{
 		OrganizationID: f.orgID,
 		UserID:         adminUser.Id,
-		Role:           organizationsmodel.OrgRoleOwner,
+		Role:           accessmodel.OrganizationOwner,
 	}
 
 	_ = usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{
@@ -170,7 +171,8 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		PasswordHash: "dummy",
 	})
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
+	f.loader.Grant(f.orgID, adminUser.Id, string(accessmodel.OrganizationOwner))
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.loader, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{Loader: f.loader, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
 
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
 		OrgLogin: "test-org",
@@ -216,9 +218,9 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 
 	contestID := uuid.New()
 	contestsRepo.members[contestID.String()+":"+tempUserID.String()] = contestsmodel.ContestMember{
-		ContestID: contestID,
-		UserID:    tempUserID,
-		Role:      contestsmodel.ContestRoleParticipant,
+		ContestID:   contestID,
+		UserID:      tempUserID,
+		ContestRole: accessmodel.ContestParticipant,
 	}
 
 	res, err := usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{

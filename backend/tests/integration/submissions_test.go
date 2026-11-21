@@ -8,7 +8,6 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -37,15 +36,14 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	packageID := s.createDummyProblemPackage(problemID, problemOrg.ID)
 
 	contestID := uuid.New()
-	err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+	err = s.createContest(contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: contestOrg.ID,
-		OwnerID:        &admin.Id,
 		Title:          "Submission Contest",
 		Login:          "submission-contest",
 		Description:    "A test contest for submissions",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-	})
+	}, admin.Id)
 	s.Require().NoError(err)
 
 	startTime := time.Now().Add(-1 * time.Hour)
@@ -69,7 +67,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID,
 		UserId:    user.Id,
-		Role:      contestsmodel.ContestRoleParticipant,
+		Role:      accessmodel.ContestParticipant,
 	})
 	s.Require().NoError(err)
 
@@ -151,7 +149,7 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
 	actor, err := s.usersRepo.GetUserById(s.ctx, userID)
 	s.Require().NoError(err)
 	ctx := accessmodel.WithUser(s.ctx, actor)
-	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool)))
+	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), pgstore.NewAccess(s.dbPool))
 	s.Require().NoError(uc.BlockProblemForUser(ctx, contestID, userID, problemID, nil))
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	before, err := repo.GetSubmission(s.ctx, sub)

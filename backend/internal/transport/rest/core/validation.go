@@ -6,8 +6,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -189,9 +190,9 @@ func validateUpdateOrganizationRequest(params *corev1.UpdateOrganizationRequestM
 }
 
 func validateOrganizationRole(role string) bool {
-	return role == string(organizationsmodel.OrgRoleOwner) ||
-		role == string(organizationsmodel.OrgRoleAdmin) ||
-		role == string(organizationsmodel.OrgRoleMember)
+	return role == string(accessmodel.OrganizationOwner) ||
+		role == string(accessmodel.OrganizationAdmin) ||
+		role == string(accessmodel.OrganizationMember)
 }
 
 func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {

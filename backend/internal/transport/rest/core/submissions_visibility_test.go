@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	"github.com/brawler2011/gate/backend/internal/submissions"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -20,13 +22,10 @@ import (
 
 type visibilityStub struct {
 	ContestsUC
-	PermissionsUC
 	SubmissionsUC
-	contest       contestsmodel.Contest
-	permissions   accessmodel.ContestPermissions
-	submission    submissionsmodel.Submission
-	permissionErr error
-	listed        bool
+	contest    contestsmodel.Contest
+	submission submissionsmodel.Submission
+	listed     bool
 }
 
 func (m *visibilityStub) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
@@ -35,10 +34,6 @@ func (m *visibilityStub) GetContest(context.Context, uuid.UUID) (contestsmodel.C
 
 func (m *visibilityStub) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
 	return m.contest, nil
-}
-
-func (m *visibilityStub) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &m.permissions, m.permissionErr
 }
 
 func (m *visibilityStub) GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error) {
@@ -52,9 +47,15 @@ func (m *visibilityStub) ListSubmissions(context.Context, submissionsmodel.Submi
 
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
-	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
-	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, stub, nil, nil, stub)
-	h := NewCoreServer(Services{Contests: stub, ContestPermissions: stub, Submissions: application}, false)
+	public := contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, SubmissionsReviewScope: contestsmodel.ScopePublic, SubmissionDetailsScope: contestsmodel.ScopePublic}
+	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Visibility: contestsmodel.ContestVisibilityPublic, Settings: public}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
+	loader := &accesstest.Loader{}
+	setContest := func() {
+		loader.Contests = map[uuid.UUID]access.ContestFacts{contestID: {Contest: stub.contest, Now: time.Now()}}
+	}
+	setContest()
+	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, nil, loader)
+	h := NewCoreServer(Services{Contests: stub, Submissions: application}, false)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser})
 	for _, own := range []bool{false, true} {
 		t.Run(map[bool]string{true: "own", false: "other"}[own], func(t *testing.T) {
@@ -91,18 +92,19 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	require.False(t, stub.listed)
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200), UserId: corev1.NewOptUUID(viewer)})
 	require.NoError(t, err)
-	stub.permissions.ManageContest = true
+	loader.Grant(contestID, viewer, string(accessmodel.ContestModerator))
 	get, err := h.GetSubmission(ctx, corev1.GetSubmissionParams{SubmissionID: stub.submission.ID})
 	require.NoError(t, err)
 	require.Equal(t, int32(200), get.Submission.State.Value)
 	require.True(t, get.Submission.Submission.IsSet())
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
-	stub.permissions.ManageContest = false
-	stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+	loader.Grant(contestID, viewer, "")
+	stub.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusUnfrozen
+	setContest()
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
-	stub.permissionErr = errors.New("db")
+	loader.Err = errors.New("db")
 	_, err = h.GetSubmission(ctx, corev1.GetSubmissionParams{SubmissionID: stub.submission.ID})
 	require.Error(t, err)
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -48,6 +50,32 @@ func beginReadCommitted(ctx context.Context, pool *pgxpool.Pool) (pgx.Tx, error)
 		return nil, dbError("begin transaction", err)
 	}
 	return tx, nil
+}
+
+func beginSerializable(ctx context.Context, pool *pgxpool.Pool) (pgx.Tx, error) {
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return nil, dbError("begin transaction", err)
+	}
+	return tx, nil
+}
+
+// authorizedMutation reruns a draft mutation that authorizes inside its serializable transaction after a lost race;
+// operation keys make the rerun idempotent.
+func authorizedMutation(run func() (model.MutationResult, error)) (model.MutationResult, error) {
+	var result model.MutationResult
+	var err error
+	for range serializationAttempts {
+		if result, err = run(); !isRetryable(err) {
+			break
+		}
+	}
+	return result, retryable(err)
+}
+
+func authorizeEdit(ctx context.Context, q *sqlc.Queries, problemID uuid.UUID) error {
+	_, err := access.Problem(ctx, Access{q}, problemID, accessmodel.ProblemEdit)
+	return err
 }
 
 func commitTx(ctx context.Context, tx pgx.Tx) error {
@@ -138,7 +166,11 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
-	tx, err := beginReadCommitted(ctx, r.pool)
+	return authorizedMutation(func() (model.MutationResult, error) { return r.saveDraft(ctx, k, draft) })
+}
+
+func (r *ProblemDraftsRepo) saveDraft(ctx context.Context, k model.MutationKey, draft model.Draft) (model.MutationResult, error) {
+	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
@@ -151,6 +183,9 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 		return *replay, nil
 	}
 	q := sqlc.New(tx)
+	if err := authorizeEdit(ctx, q, draft.ProblemID); err != nil {
+		return model.MutationResult{}, err
+	}
 	revision, err := q.LockProblemDraft(ctx, draft.ProblemID)
 	if err != nil {
 		return model.MutationResult{}, dbError("save draft", err)

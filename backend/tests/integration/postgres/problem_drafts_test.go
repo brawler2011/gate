@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
@@ -29,8 +30,10 @@ func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.Probl
 	ctx := context.Background()
 	pool := getTestPool(t)
 	org := helperCreateOrg(t, ctx, pool, "draft-"+uuid.NewString(), "Drafts")
-	id := uuid.New()
-	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Title: "Initial", ShortName: "draft"}))
+	id, owner := uuid.New(), helperOrgOwner(t, ctx, pool, org)
+	// Draft writes authorize the caller, so the fixture acts as the problem owner.
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
+	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Owner: owner, Title: "Initial", ShortName: "draft"}))
 	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
 	d, err := repo.GetDraft(ctx, id)
 	require.NoError(t, err)

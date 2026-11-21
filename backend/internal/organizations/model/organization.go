@@ -3,24 +3,10 @@ package organizationsmodel
 import (
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"
-)
-
-type OrganizationRole string
-
-const (
-	OrgRoleOwner  OrganizationRole = "owner"
-	OrgRoleAdmin  OrganizationRole = "admin"
-	OrgRoleMember OrganizationRole = "member"
-)
-
-type OrganizationJoinPolicy string
-
-const (
-	OrgJoinPolicyOpen       OrganizationJoinPolicy = "open"
-	OrgJoinPolicyByRequest  OrganizationJoinPolicy = "by_request"
-	OrgJoinPolicyInviteOnly OrganizationJoinPolicy = "invite_only"
 )
 
 type RequestStatus string
@@ -40,7 +26,7 @@ type Organization struct {
 	Name        string
 	Description string
 	AvatarURL   *string
-	JoinPolicy  OrganizationJoinPolicy
+	JoinPolicy  accessmodel.JoinPolicy
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -48,7 +34,7 @@ type Organization struct {
 type OrganizationMember struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           OrganizationRole
+	Role           accessmodel.OrganizationRole
 	Username       string
 	Email          string
 	CreatedAt      time.Time
@@ -65,7 +51,7 @@ type OrganizationInvitation struct {
 	Email                 string
 	InviterID             uuid.UUID
 	InviterUsername       string
-	Role                  OrganizationRole
+	Role                  accessmodel.OrganizationRole
 	Status                RequestStatus
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
@@ -92,7 +78,7 @@ type CreateOrganizationInput struct {
 	Name        string
 	Description string
 	AvatarURL   *string
-	JoinPolicy  OrganizationJoinPolicy
+	JoinPolicy  accessmodel.JoinPolicy
 }
 
 type UpdateOrganizationInput struct {
@@ -100,7 +86,7 @@ type UpdateOrganizationInput struct {
 	Name        *string
 	Description *string
 	AvatarURL   *string
-	JoinPolicy  *OrganizationJoinPolicy
+	JoinPolicy  *accessmodel.JoinPolicy
 }
 
 type OrganizationFilter struct {
@@ -117,14 +103,14 @@ type OrganizationList struct {
 type AddOrganizationMemberInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           OrganizationRole
+	Role           accessmodel.OrganizationRole
 }
 
 type CreateOrganizationInvitationInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
 	InviterID      uuid.UUID
-	Role           OrganizationRole
+	Role           accessmodel.OrganizationRole
 }
 
 type CreateOrganizationJoinRequestInput struct {

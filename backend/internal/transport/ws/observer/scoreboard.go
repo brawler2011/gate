@@ -11,7 +11,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
-	m "github.com/brawler2011/gate/backend/internal/access/model"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
@@ -89,7 +89,7 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 		return err
 	}
 	event.projectionContest = &contest
-	configuration := scoreboardConfigurationAt(contest, m.ReadTime(ctx))
+	configuration := scoreboardConfigurationAt(contest, accessmodel.ReadTime(ctx))
 	replace := configuration != previous
 	var public *contestsmodel.ScoreboardResponse
 	if replace {
@@ -145,12 +145,12 @@ type finalSnapshot struct {
 }
 
 func (s *Observer) sendFinalSnapshot(ctx context.Context, filter *SubmissionsFilter, conn eventConnection, cause error) {
-	ctx = m.WithReadTime(ctx, time.Now().UTC())
+	ctx = accessmodel.WithReadTime(ctx, time.Now().UTC())
 	if !errors.Is(cause, pkg.ErrConflict) || filter.ContestId == nil || s.hub.scoreboard == nil {
 		return
 	}
-	_, p, err := s.currentAccess(ctx, filter)
-	if err != nil || !p.GetMonitor {
+	_, a, err := s.currentAccess(ctx, filter)
+	if err != nil || a == nil || !a.Can(accessmodel.ContestViewScoreboard) {
 		return
 	}
 	c, err := s.contests.GetContest(ctx, *filter.ContestId)

@@ -25,7 +25,7 @@ type scoreboardRepo struct {
 	contest     contestsmodel.Contest
 	problems    []contestsmodel.ContestProblem
 	users       map[uuid.UUID]string
-	roles       map[uuid.UUID]contestsmodel.ContestRole
+	roles       map[uuid.UUID]accessmodel.ContestRole
 	submissions map[uuid.UUID]submissionsmodel.Submission
 	results     map[scoreboardKey]contestsmodel.ContestProblemResult
 	blocks      map[scoreboardKey]contestsmodel.ContestUserProblemBlock
@@ -129,7 +129,7 @@ func newScoreboardFixture(names ...string) *scoreboardFixture {
 	end := start.Add(2 * time.Hour)
 	r := &scoreboardRepo{
 		contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusUnfrozen, FreezeDurationMinutes: new(int32(60))}},
-		users:   map[uuid.UUID]string{}, roles: map[uuid.UUID]contestsmodel.ContestRole{}, submissions: map[uuid.UUID]submissionsmodel.Submission{},
+		users:   map[uuid.UUID]string{}, roles: map[uuid.UUID]accessmodel.ContestRole{}, submissions: map[uuid.UUID]submissionsmodel.Submission{},
 		results: map[scoreboardKey]contestsmodel.ContestProblemResult{}, blocks: map[scoreboardKey]contestsmodel.ContestUserProblemBlock{},
 	}
 	for i, name := range []string{"A", "B"} {
@@ -140,7 +140,7 @@ func newScoreboardFixture(names ...string) *scoreboardFixture {
 		id := uuid.New()
 		f.users[name] = id
 		r.users[id] = name
-		r.roles[id] = contestsmodel.ContestRoleParticipant
+		r.roles[id] = accessmodel.ContestParticipant
 	}
 	return f
 }

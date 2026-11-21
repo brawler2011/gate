@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -61,8 +63,29 @@ func (m *mockContestRepoForCache) GetContest(_ context.Context, id uuid.UUID) (c
 	return contestsmodel.Contest{}, pkg.ErrNotFound
 }
 
+// unimplementedCommands sits deeper than the loader so the loader's methods win.
+type unimplementedCommands struct{ commandTxStore }
+type commandTxStore struct{ CommandTxStore }
+
+// cacheLoader serves facts for whatever contests the mock repo holds.
+type cacheLoader struct {
+	accesstest.Loader
+	repo *mockContestRepoForCache
+}
+
+func (l *cacheLoader) ContestFacts(ctx context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+	facts := map[uuid.UUID]access.ContestFacts{}
+	for _, id := range ids {
+		if c, err := l.repo.GetContest(ctx, id); err == nil {
+			facts[id] = access.ContestFacts{Contest: c, Now: time.Now()}
+		}
+	}
+	return facts, nil
+}
+
 type mockTxStoreForCache struct {
-	CommandTxStore
+	unimplementedCommands
+	*cacheLoader
 	repo *mockContestRepoForCache
 }
 
@@ -104,23 +127,11 @@ func (s *mockTxStoreForCache) DeleteContest(_ context.Context, id uuid.UUID) err
 	return pkg.ErrNotFound
 }
 
-type allowAllPermissions struct{}
-
-func (allowAllPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
-}
-
-func (allowAllPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
-	return true, nil
-}
-
 func setupCacheTestFixture() (*ContestsUseCase, *mockContestRepoForCache, context.Context) {
 	repo := newMockContestRepoForCache()
-	txStore := &mockTxStoreForCache{repo: repo}
+	txStore := &mockTxStoreForCache{cacheLoader: &cacheLoader{repo: repo}, repo: repo}
 	tx := testTransactions[CommandTxStore]{store: txStore}
-	perms := allowAllPermissions{}
-
-	uc := NewContestsUseCase(repo, nil, tx, perms)
+	uc := NewContestsUseCase(repo, nil, tx, txStore)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{
 		Id:   uuid.New(),
 		Role: accessmodel.UserRoleAdmin,

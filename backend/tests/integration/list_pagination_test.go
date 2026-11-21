@@ -4,13 +4,13 @@ package integration
 
 import (
 	"fmt"
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"net/http"
 	"time"
 
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
 )
 
@@ -23,19 +23,21 @@ func (s *IntegrationTestSuite) TestListPaginationAndPackageHistory() {
 	teamID, problemID := uuid.New(), uuid.New()
 	_, err := s.dbPool.Exec(s.ctx, `INSERT INTO teams(id, organization_id, name, slug) VALUES ($1,$2,'Pagination','pagination')`, teamID, org.ID)
 	s.Require().NoError(err)
-	err = dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Pagination", ShortName: "pagination"})
+	err = dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, Owner: owner.Id, Title: "Pagination", ShortName: "pagination"})
 	s.Require().NoError(err)
 	for i := range 3 {
 		user := owner
 		if i > 0 {
 			user = s.createUser(fmt.Sprintf("pagination_member_%d", i), accessmodel.UserRoleUser)
 			userIDs = append(userIDs, user.Id)
-			s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, organizationsmodel.OrgRoleMember))
+			s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, accessmodel.OrganizationMember))
 		}
 		_, err = s.dbPool.Exec(s.ctx, `INSERT INTO team_members(team_id,user_id,role,created_at) VALUES ($1,$2,'member','2026-01-01')`, teamID, user.Id)
 		s.Require().NoError(err)
-		_, err = s.dbPool.Exec(s.ctx, `INSERT INTO problem_members(problem_id,user_id,role,created_at) VALUES ($1,$2,'viewer','2026-01-01')`, problemID, user.Id)
-		s.Require().NoError(err)
+		if i > 0 {
+			_, err = s.dbPool.Exec(s.ctx, `INSERT INTO problem_members(problem_id,user_id,role,created_at) VALUES ($1,$2,'viewer','2026-01-01')`, problemID, user.Id)
+			s.Require().NoError(err)
+		}
 	}
 	type listPage struct {
 		ids        []uuid.UUID
@@ -114,7 +116,7 @@ func (s *IntegrationTestSuite) TestListPaginationAndPackageHistory() {
 	}
 	s.Run("empty history", func() {
 		emptyProblem := uuid.New()
-		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: emptyProblem, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Empty", ShortName: "empty-history"})
+		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: emptyProblem, OrganizationID: org.ID, Owner: owner.Id, Title: "Empty", ShortName: "empty-history"})
 		s.Require().NoError(err)
 		result, err := s.client.ListProblemPackages(ctx, corev1.ListProblemPackagesParams{ID: emptyProblem})
 		s.Require().NoError(err)

@@ -1377,8 +1377,6 @@ type ContestModel struct {
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status.
 	FreezeStatus        ContestModelFreezeStatus      `json:"freeze_status"`
-	CreatedBy           uuid.UUID                     `json:"created_by"`
-	Owner               OptUserModel                  `json:"owner"`
 	CreatedAt           time.Time                     `json:"created_at"`
 	UpdatedAt           time.Time                     `json:"updated_at"`
 	StartTime           OptNilDateTime                `json:"start_time"`
@@ -1460,16 +1458,6 @@ func (s *ContestModel) GetFreezeDurationMinutes() OptNilInt32 {
 // GetFreezeStatus returns the value of FreezeStatus.
 func (s *ContestModel) GetFreezeStatus() ContestModelFreezeStatus {
 	return s.FreezeStatus
-}
-
-// GetCreatedBy returns the value of CreatedBy.
-func (s *ContestModel) GetCreatedBy() uuid.UUID {
-	return s.CreatedBy
-}
-
-// GetOwner returns the value of Owner.
-func (s *ContestModel) GetOwner() OptUserModel {
-	return s.Owner
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -1590,16 +1578,6 @@ func (s *ContestModel) SetFreezeDurationMinutes(val OptNilInt32) {
 // SetFreezeStatus sets the value of FreezeStatus.
 func (s *ContestModel) SetFreezeStatus(val ContestModelFreezeStatus) {
 	s.FreezeStatus = val
-}
-
-// SetCreatedBy sets the value of CreatedBy.
-func (s *ContestModel) SetCreatedBy(val uuid.UUID) {
-	s.CreatedBy = val
-}
-
-// SetOwner sets the value of Owner.
-func (s *ContestModel) SetOwner(val OptUserModel) {
-	s.Owner = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -2694,8 +2672,111 @@ func (s *CreatePostReq) SetPreviewImage(val ht.MultipartFile) {
 // CreateProblemMemberOK is response for CreateProblemMember operation.
 type CreateProblemMemberOK struct{}
 
+type CreateProblemMemberRole string
+
+const (
+	CreateProblemMemberRoleOwner  CreateProblemMemberRole = "owner"
+	CreateProblemMemberRoleAdmin  CreateProblemMemberRole = "admin"
+	CreateProblemMemberRoleEditor CreateProblemMemberRole = "editor"
+	CreateProblemMemberRoleViewer CreateProblemMemberRole = "viewer"
+)
+
+// AllValues returns all CreateProblemMemberRole values.
+func (CreateProblemMemberRole) AllValues() []CreateProblemMemberRole {
+	return []CreateProblemMemberRole{
+		CreateProblemMemberRoleOwner,
+		CreateProblemMemberRoleAdmin,
+		CreateProblemMemberRoleEditor,
+		CreateProblemMemberRoleViewer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateProblemMemberRole) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateProblemMemberRoleOwner:
+		return []byte(s), nil
+	case CreateProblemMemberRoleAdmin:
+		return []byte(s), nil
+	case CreateProblemMemberRoleEditor:
+		return []byte(s), nil
+	case CreateProblemMemberRoleViewer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateProblemMemberRole) UnmarshalText(data []byte) error {
+	switch CreateProblemMemberRole(data) {
+	case CreateProblemMemberRoleOwner:
+		*s = CreateProblemMemberRoleOwner
+		return nil
+	case CreateProblemMemberRoleAdmin:
+		*s = CreateProblemMemberRoleAdmin
+		return nil
+	case CreateProblemMemberRoleEditor:
+		*s = CreateProblemMemberRoleEditor
+		return nil
+	case CreateProblemMemberRoleViewer:
+		*s = CreateProblemMemberRoleViewer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // CreateProblemTeamOK is response for CreateProblemTeam operation.
 type CreateProblemTeamOK struct{}
+
+type CreateProblemTeamRole string
+
+const (
+	CreateProblemTeamRoleAdmin  CreateProblemTeamRole = "admin"
+	CreateProblemTeamRoleEditor CreateProblemTeamRole = "editor"
+	CreateProblemTeamRoleViewer CreateProblemTeamRole = "viewer"
+)
+
+// AllValues returns all CreateProblemTeamRole values.
+func (CreateProblemTeamRole) AllValues() []CreateProblemTeamRole {
+	return []CreateProblemTeamRole{
+		CreateProblemTeamRoleAdmin,
+		CreateProblemTeamRoleEditor,
+		CreateProblemTeamRoleViewer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateProblemTeamRole) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateProblemTeamRoleAdmin:
+		return []byte(s), nil
+	case CreateProblemTeamRoleEditor:
+		return []byte(s), nil
+	case CreateProblemTeamRoleViewer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateProblemTeamRole) UnmarshalText(data []byte) error {
+	switch CreateProblemTeamRole(data) {
+	case CreateProblemTeamRoleAdmin:
+		*s = CreateProblemTeamRoleAdmin
+		return nil
+	case CreateProblemTeamRoleEditor:
+		*s = CreateProblemTeamRoleEditor
+		return nil
+	case CreateProblemTeamRoleViewer:
+		*s = CreateProblemTeamRoleViewer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Fields for the create submission request.
 // Ref: #/components/schemas/CreateSubmissionRequestModel
@@ -3128,10 +3209,7 @@ const (
 	ErrorCodeOwnAccount                  ErrorCode = "own_account"
 	ErrorCodeNoEmail                     ErrorCode = "no_email"
 	ErrorCodeUnsupportedImage            ErrorCode = "unsupported_image"
-	ErrorCodeOwnerOnly                   ErrorCode = "owner_only"
-	ErrorCodePrimaryOwnerRequired        ErrorCode = "primary_owner_required"
-	ErrorCodeOwnerRoleFixed              ErrorCode = "owner_role_fixed"
-	ErrorCodeOwnRole                     ErrorCode = "own_role"
+	ErrorCodeOwnerRequired               ErrorCode = "owner_required"
 	ErrorCodeStatementsHidden            ErrorCode = "statements_hidden"
 	ErrorCodeContestNotStarted           ErrorCode = "contest_not_started"
 	ErrorCodeContestEnded                ErrorCode = "contest_ended"
@@ -3198,10 +3276,7 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeOwnAccount,
 		ErrorCodeNoEmail,
 		ErrorCodeUnsupportedImage,
-		ErrorCodeOwnerOnly,
-		ErrorCodePrimaryOwnerRequired,
-		ErrorCodeOwnerRoleFixed,
-		ErrorCodeOwnRole,
+		ErrorCodeOwnerRequired,
 		ErrorCodeStatementsHidden,
 		ErrorCodeContestNotStarted,
 		ErrorCodeContestEnded,
@@ -3301,13 +3376,7 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorCodeUnsupportedImage:
 		return []byte(s), nil
-	case ErrorCodeOwnerOnly:
-		return []byte(s), nil
-	case ErrorCodePrimaryOwnerRequired:
-		return []byte(s), nil
-	case ErrorCodeOwnerRoleFixed:
-		return []byte(s), nil
-	case ErrorCodeOwnRole:
+	case ErrorCodeOwnerRequired:
 		return []byte(s), nil
 	case ErrorCodeStatementsHidden:
 		return []byte(s), nil
@@ -3471,17 +3540,8 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 	case ErrorCodeUnsupportedImage:
 		*s = ErrorCodeUnsupportedImage
 		return nil
-	case ErrorCodeOwnerOnly:
-		*s = ErrorCodeOwnerOnly
-		return nil
-	case ErrorCodePrimaryOwnerRequired:
-		*s = ErrorCodePrimaryOwnerRequired
-		return nil
-	case ErrorCodeOwnerRoleFixed:
-		*s = ErrorCodeOwnerRoleFixed
-		return nil
-	case ErrorCodeOwnRole:
-		*s = ErrorCodeOwnRole
+	case ErrorCodeOwnerRequired:
+		*s = ErrorCodeOwnerRequired
 		return nil
 	case ErrorCodeStatementsHidden:
 		*s = ErrorCodeStatementsHidden
@@ -6083,6 +6143,98 @@ func (o OptCreateOrganizationJoinRequestModel) Or(d CreateOrganizationJoinReques
 	return d
 }
 
+// NewOptCreateProblemMemberRole returns new OptCreateProblemMemberRole with value set to v.
+func NewOptCreateProblemMemberRole(v CreateProblemMemberRole) OptCreateProblemMemberRole {
+	return OptCreateProblemMemberRole{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateProblemMemberRole is optional CreateProblemMemberRole.
+type OptCreateProblemMemberRole struct {
+	Value CreateProblemMemberRole
+	Set   bool
+}
+
+// IsSet returns true if OptCreateProblemMemberRole was set.
+func (o OptCreateProblemMemberRole) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateProblemMemberRole) Reset() {
+	var v CreateProblemMemberRole
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateProblemMemberRole) SetTo(v CreateProblemMemberRole) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateProblemMemberRole) Get() (v CreateProblemMemberRole, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateProblemMemberRole) Or(d CreateProblemMemberRole) CreateProblemMemberRole {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateProblemTeamRole returns new OptCreateProblemTeamRole with value set to v.
+func NewOptCreateProblemTeamRole(v CreateProblemTeamRole) OptCreateProblemTeamRole {
+	return OptCreateProblemTeamRole{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateProblemTeamRole is optional CreateProblemTeamRole.
+type OptCreateProblemTeamRole struct {
+	Value CreateProblemTeamRole
+	Set   bool
+}
+
+// IsSet returns true if OptCreateProblemTeamRole was set.
+func (o OptCreateProblemTeamRole) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateProblemTeamRole) Reset() {
+	var v CreateProblemTeamRole
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateProblemTeamRole) SetTo(v CreateProblemTeamRole) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateProblemTeamRole) Get() (v CreateProblemTeamRole, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateProblemTeamRole) Or(d CreateProblemTeamRole) CreateProblemTeamRole {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptDateTime returns new OptDateTime with value set to v.
 func NewOptDateTime(v time.Time) OptDateTime {
 	return OptDateTime{
@@ -7385,52 +7537,6 @@ func (o OptUpdateUserRequestModelRole) Get() (v UpdateUserRequestModelRole, ok b
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateUserRequestModelRole) Or(d UpdateUserRequestModelRole) UpdateUserRequestModelRole {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptUserModel returns new OptUserModel with value set to v.
-func NewOptUserModel(v UserModel) OptUserModel {
-	return OptUserModel{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptUserModel is optional UserModel.
-type OptUserModel struct {
-	Value UserModel
-	Set   bool
-}
-
-// IsSet returns true if OptUserModel was set.
-func (o OptUserModel) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptUserModel) Reset() {
-	var v UserModel
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptUserModel) SetTo(v UserModel) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptUserModel) Get() (v UserModel, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptUserModel) Or(d UserModel) UserModel {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -10195,16 +10301,18 @@ func (s *ProblemMemberModel) SetCreatedAt(val time.Time) {
 type ProblemMemberModelRole string
 
 const (
-	ProblemMemberModelRoleOwner     ProblemMemberModelRole = "owner"
-	ProblemMemberModelRoleModerator ProblemMemberModelRole = "moderator"
-	ProblemMemberModelRoleViewer    ProblemMemberModelRole = "viewer"
+	ProblemMemberModelRoleOwner  ProblemMemberModelRole = "owner"
+	ProblemMemberModelRoleAdmin  ProblemMemberModelRole = "admin"
+	ProblemMemberModelRoleEditor ProblemMemberModelRole = "editor"
+	ProblemMemberModelRoleViewer ProblemMemberModelRole = "viewer"
 )
 
 // AllValues returns all ProblemMemberModelRole values.
 func (ProblemMemberModelRole) AllValues() []ProblemMemberModelRole {
 	return []ProblemMemberModelRole{
 		ProblemMemberModelRoleOwner,
-		ProblemMemberModelRoleModerator,
+		ProblemMemberModelRoleAdmin,
+		ProblemMemberModelRoleEditor,
 		ProblemMemberModelRoleViewer,
 	}
 }
@@ -10214,7 +10322,9 @@ func (s ProblemMemberModelRole) MarshalText() ([]byte, error) {
 	switch s {
 	case ProblemMemberModelRoleOwner:
 		return []byte(s), nil
-	case ProblemMemberModelRoleModerator:
+	case ProblemMemberModelRoleAdmin:
+		return []byte(s), nil
+	case ProblemMemberModelRoleEditor:
 		return []byte(s), nil
 	case ProblemMemberModelRoleViewer:
 		return []byte(s), nil
@@ -10229,8 +10339,11 @@ func (s *ProblemMemberModelRole) UnmarshalText(data []byte) error {
 	case ProblemMemberModelRoleOwner:
 		*s = ProblemMemberModelRoleOwner
 		return nil
-	case ProblemMemberModelRoleModerator:
-		*s = ProblemMemberModelRoleModerator
+	case ProblemMemberModelRoleAdmin:
+		*s = ProblemMemberModelRoleAdmin
+		return nil
+	case ProblemMemberModelRoleEditor:
+		*s = ProblemMemberModelRoleEditor
 		return nil
 	case ProblemMemberModelRoleViewer:
 		*s = ProblemMemberModelRoleViewer
@@ -10248,7 +10361,6 @@ type ProblemModel struct {
 	ID                uuid.UUID `json:"id"`
 	OrganizationID    uuid.UUID `json:"organization_id"`
 	OrganizationLogin string    `json:"organization_login"`
-	CreatedBy         uuid.UUID `json:"created_by"`
 	Visibility        string    `json:"visibility"`
 	Title             string    `json:"title"`
 	TimeLimit         int32     `json:"time_limit"`
@@ -10277,11 +10389,6 @@ func (s *ProblemModel) GetOrganizationID() uuid.UUID {
 // GetOrganizationLogin returns the value of OrganizationLogin.
 func (s *ProblemModel) GetOrganizationLogin() string {
 	return s.OrganizationLogin
-}
-
-// GetCreatedBy returns the value of CreatedBy.
-func (s *ProblemModel) GetCreatedBy() uuid.UUID {
-	return s.CreatedBy
 }
 
 // GetVisibility returns the value of Visibility.
@@ -10342,11 +10449,6 @@ func (s *ProblemModel) SetOrganizationID(val uuid.UUID) {
 // SetOrganizationLogin sets the value of OrganizationLogin.
 func (s *ProblemModel) SetOrganizationLogin(val string) {
 	s.OrganizationLogin = val
-}
-
-// SetCreatedBy sets the value of CreatedBy.
-func (s *ProblemModel) SetCreatedBy(val uuid.UUID) {
-	s.CreatedBy = val
 }
 
 // SetVisibility sets the value of Visibility.
@@ -10474,16 +10576,18 @@ func (s *ProblemParams) init() ProblemParams {
 type ProblemRoleQuery string
 
 const (
-	ProblemRoleQueryOwner     ProblemRoleQuery = "owner"
-	ProblemRoleQueryModerator ProblemRoleQuery = "moderator"
-	ProblemRoleQueryViewer    ProblemRoleQuery = "viewer"
+	ProblemRoleQueryOwner  ProblemRoleQuery = "owner"
+	ProblemRoleQueryAdmin  ProblemRoleQuery = "admin"
+	ProblemRoleQueryEditor ProblemRoleQuery = "editor"
+	ProblemRoleQueryViewer ProblemRoleQuery = "viewer"
 )
 
 // AllValues returns all ProblemRoleQuery values.
 func (ProblemRoleQuery) AllValues() []ProblemRoleQuery {
 	return []ProblemRoleQuery{
 		ProblemRoleQueryOwner,
-		ProblemRoleQueryModerator,
+		ProblemRoleQueryAdmin,
+		ProblemRoleQueryEditor,
 		ProblemRoleQueryViewer,
 	}
 }
@@ -10493,7 +10597,9 @@ func (s ProblemRoleQuery) MarshalText() ([]byte, error) {
 	switch s {
 	case ProblemRoleQueryOwner:
 		return []byte(s), nil
-	case ProblemRoleQueryModerator:
+	case ProblemRoleQueryAdmin:
+		return []byte(s), nil
+	case ProblemRoleQueryEditor:
 		return []byte(s), nil
 	case ProblemRoleQueryViewer:
 		return []byte(s), nil
@@ -10508,8 +10614,11 @@ func (s *ProblemRoleQuery) UnmarshalText(data []byte) error {
 	case ProblemRoleQueryOwner:
 		*s = ProblemRoleQueryOwner
 		return nil
-	case ProblemRoleQueryModerator:
-		*s = ProblemRoleQueryModerator
+	case ProblemRoleQueryAdmin:
+		*s = ProblemRoleQueryAdmin
+		return nil
+	case ProblemRoleQueryEditor:
+		*s = ProblemRoleQueryEditor
 		return nil
 	case ProblemRoleQueryViewer:
 		*s = ProblemRoleQueryViewer
@@ -10684,13 +10793,13 @@ func (s *ProblemStatusCodeWithHeaders) SetResponse(val Problem) {
 // Problem team data.
 // Ref: #/components/schemas/ProblemTeamModel
 type ProblemTeamModel struct {
-	Capabilities []string                   `json:"capabilities"`
-	ProblemID    uuid.UUID                  `json:"problem_id"`
-	TeamID       uuid.UUID                  `json:"team_id"`
-	TeamName     string                     `json:"team_name"`
-	TeamSlug     string                     `json:"team_slug"`
-	Permission   ProblemTeamModelPermission `json:"permission"`
-	CreatedAt    time.Time                  `json:"created_at"`
+	Capabilities []string             `json:"capabilities"`
+	ProblemID    uuid.UUID            `json:"problem_id"`
+	TeamID       uuid.UUID            `json:"team_id"`
+	TeamName     string               `json:"team_name"`
+	TeamSlug     string               `json:"team_slug"`
+	Role         ProblemTeamModelRole `json:"role"`
+	CreatedAt    time.Time            `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -10718,9 +10827,9 @@ func (s *ProblemTeamModel) GetTeamSlug() string {
 	return s.TeamSlug
 }
 
-// GetPermission returns the value of Permission.
-func (s *ProblemTeamModel) GetPermission() ProblemTeamModelPermission {
-	return s.Permission
+// GetRole returns the value of Role.
+func (s *ProblemTeamModel) GetRole() ProblemTeamModelRole {
+	return s.Role
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -10753,9 +10862,9 @@ func (s *ProblemTeamModel) SetTeamSlug(val string) {
 	s.TeamSlug = val
 }
 
-// SetPermission sets the value of Permission.
-func (s *ProblemTeamModel) SetPermission(val ProblemTeamModelPermission) {
-	s.Permission = val
+// SetRole sets the value of Role.
+func (s *ProblemTeamModel) SetRole(val ProblemTeamModelRole) {
+	s.Role = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -10763,31 +10872,31 @@ func (s *ProblemTeamModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
-type ProblemTeamModelPermission string
+type ProblemTeamModelRole string
 
 const (
-	ProblemTeamModelPermissionAdmin ProblemTeamModelPermission = "admin"
-	ProblemTeamModelPermissionWrite ProblemTeamModelPermission = "write"
-	ProblemTeamModelPermissionRead  ProblemTeamModelPermission = "read"
+	ProblemTeamModelRoleAdmin  ProblemTeamModelRole = "admin"
+	ProblemTeamModelRoleEditor ProblemTeamModelRole = "editor"
+	ProblemTeamModelRoleViewer ProblemTeamModelRole = "viewer"
 )
 
-// AllValues returns all ProblemTeamModelPermission values.
-func (ProblemTeamModelPermission) AllValues() []ProblemTeamModelPermission {
-	return []ProblemTeamModelPermission{
-		ProblemTeamModelPermissionAdmin,
-		ProblemTeamModelPermissionWrite,
-		ProblemTeamModelPermissionRead,
+// AllValues returns all ProblemTeamModelRole values.
+func (ProblemTeamModelRole) AllValues() []ProblemTeamModelRole {
+	return []ProblemTeamModelRole{
+		ProblemTeamModelRoleAdmin,
+		ProblemTeamModelRoleEditor,
+		ProblemTeamModelRoleViewer,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s ProblemTeamModelPermission) MarshalText() ([]byte, error) {
+func (s ProblemTeamModelRole) MarshalText() ([]byte, error) {
 	switch s {
-	case ProblemTeamModelPermissionAdmin:
+	case ProblemTeamModelRoleAdmin:
 		return []byte(s), nil
-	case ProblemTeamModelPermissionWrite:
+	case ProblemTeamModelRoleEditor:
 		return []byte(s), nil
-	case ProblemTeamModelPermissionRead:
+	case ProblemTeamModelRoleViewer:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -10795,16 +10904,16 @@ func (s ProblemTeamModelPermission) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemTeamModelPermission) UnmarshalText(data []byte) error {
-	switch ProblemTeamModelPermission(data) {
-	case ProblemTeamModelPermissionAdmin:
-		*s = ProblemTeamModelPermissionAdmin
+func (s *ProblemTeamModelRole) UnmarshalText(data []byte) error {
+	switch ProblemTeamModelRole(data) {
+	case ProblemTeamModelRoleAdmin:
+		*s = ProblemTeamModelRoleAdmin
 		return nil
-	case ProblemTeamModelPermissionWrite:
-		*s = ProblemTeamModelPermissionWrite
+	case ProblemTeamModelRoleEditor:
+		*s = ProblemTeamModelRoleEditor
 		return nil
-	case ProblemTeamModelPermissionRead:
-		*s = ProblemTeamModelPermissionRead
+	case ProblemTeamModelRoleViewer:
+		*s = ProblemTeamModelRoleViewer
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -13051,6 +13160,54 @@ func (s *UpdateProblemRequestModel) SetIsTemplate(val OptBool) {
 
 // UpdateProblemTeamOK is response for UpdateProblemTeam operation.
 type UpdateProblemTeamOK struct{}
+
+type UpdateProblemTeamRole string
+
+const (
+	UpdateProblemTeamRoleAdmin  UpdateProblemTeamRole = "admin"
+	UpdateProblemTeamRoleEditor UpdateProblemTeamRole = "editor"
+	UpdateProblemTeamRoleViewer UpdateProblemTeamRole = "viewer"
+)
+
+// AllValues returns all UpdateProblemTeamRole values.
+func (UpdateProblemTeamRole) AllValues() []UpdateProblemTeamRole {
+	return []UpdateProblemTeamRole{
+		UpdateProblemTeamRoleAdmin,
+		UpdateProblemTeamRoleEditor,
+		UpdateProblemTeamRoleViewer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateProblemTeamRole) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateProblemTeamRoleAdmin:
+		return []byte(s), nil
+	case UpdateProblemTeamRoleEditor:
+		return []byte(s), nil
+	case UpdateProblemTeamRoleViewer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateProblemTeamRole) UnmarshalText(data []byte) error {
+	switch UpdateProblemTeamRole(data) {
+	case UpdateProblemTeamRoleAdmin:
+		*s = UpdateProblemTeamRoleAdmin
+		return nil
+	case UpdateProblemTeamRoleEditor:
+		*s = UpdateProblemTeamRoleEditor
+		return nil
+	case UpdateProblemTeamRoleViewer:
+		*s = UpdateProblemTeamRoleViewer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // UpdateTeamMemberRoleOK is response for UpdateTeamMemberRole operation.
 type UpdateTeamMemberRoleOK struct{}

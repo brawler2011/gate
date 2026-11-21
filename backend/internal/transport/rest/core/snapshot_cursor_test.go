@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
@@ -32,20 +31,11 @@ func (s snapshotJS) Stream(context.Context, string) (jetstream.Stream, error) { 
 type snapshotUC struct {
 	ContestsUC
 	SubmissionsUC
-	PermissionsUC
 	stream *snapshotStream
 }
 
 func (s snapshotUC) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
 	return contestsmodel.Contest{ID: uuid.New()}, nil
-}
-
-func (s snapshotUC) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &accessmodel.ContestPermissions{ManageContest: true}, nil
-}
-
-func (s snapshotUC) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
 }
 
 func (s snapshotUC) ListSubmissions(context.Context, submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error) {
@@ -64,7 +54,7 @@ func TestSnapshotCursorDoesNotDiscardConcurrentEvent(t *testing.T) {
 		t.Run(map[bool]string{false: "submissions", true: "scoreboard"}[scoreboard], func(t *testing.T) {
 			stream := &snapshotStream{sequence: 7}
 			uc := snapshotUC{stream: stream}
-			server := &CoreServer{Services: Services{Contests: uc, ContestPermissions: uc, Submissions: uc, NATS: snapshotJS{stream: stream}}}
+			server := &CoreServer{Services: Services{Contests: uc, Submissions: uc, NATS: snapshotJS{stream: stream}}}
 			var cursor corev1.OptInt64
 			if scoreboard {
 				response, err := server.GetContestScoreboard(context.Background(), corev1.GetContestScoreboardParams{})

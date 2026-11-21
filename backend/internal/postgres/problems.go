@@ -27,7 +27,6 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *problemsmodel.
 	_, err := r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
-		OwnerID:        params.OwnerID,
 		Visibility:     params.Visibility,
 	})
 	if err != nil {
@@ -57,8 +56,12 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 	if filter.Descending != nil {
 		descending = *filter.Descending
 	}
+	viewer, all, err := (Access{r.queries}).visibility(ctx)
+	if err != nil {
+		return nil, err
+	}
 	items, total, err := scopeProblems(ctx, r.queries, sqlc.ScopeProblemsParams{
-		ViewerID: filter.ViewerID, Now: accessmodel.ReadTime(ctx), OrganizationID: filter.OrganizationID,
+		ViewerID: viewer, All: all, OrganizationID: filter.OrganizationID,
 		OwnerID: filter.OwnerID, Search: filter.Search, Visibility: filter.Visibility,
 		IsTemplate: filter.IsTemplate, Descending: descending, PageSize: filter.PageSize,
 		PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize),
@@ -73,7 +76,6 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:         id,
 		Visibility: problem.Visibility,
-		OwnerID:    problem.OwnerID,
 		IsTemplate: problem.IsTemplate,
 	})
 	if err != nil {
@@ -119,11 +121,11 @@ func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID)
 	return teams, nil
 }
 
-func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error {
+func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error {
 	err := r.queries.AddProblemTeam(ctx, sqlc.AddProblemTeamParams{
-		ProblemID:  problemID,
-		TeamID:     teamID,
-		Permission: permission,
+		ProblemID: problemID,
+		TeamID:    teamID,
+		Role:      permission,
 	})
 	if err != nil {
 		return dbError("add problem team", err)
@@ -131,11 +133,11 @@ func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uui
 	return nil
 }
 
-func (r *ProblemsRepo) UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error {
-	err := r.queries.UpdateProblemTeamPermission(ctx, sqlc.UpdateProblemTeamPermissionParams{
-		ProblemID:  problemID,
-		TeamID:     teamID,
-		Permission: permission,
+func (r *ProblemsRepo) UpdateProblemTeamRole(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error {
+	err := r.queries.UpdateProblemTeamRole(ctx, sqlc.UpdateProblemTeamRoleParams{
+		ProblemID: problemID,
+		TeamID:    teamID,
+		Role:      permission,
 	})
 	if err != nil {
 		return dbError("update problem team permission", err)
@@ -177,7 +179,7 @@ func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UU
 	return members, safeInt32(count), nil
 }
 
-func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error {
+func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error {
 	err := r.queries.UpdateProblemMemberRole(ctx, sqlc.UpdateProblemMemberRoleParams{
 		ProblemID: problemID,
 		UserID:    userID,
@@ -205,7 +207,6 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) problemsmodel.Problem {
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrgLogin,
-		OwnerID:           p.OwnerID,
 		Visibility:        string(p.Visibility),
 		Title:             p.Title,
 		ShortName:         p.ShortName,
@@ -221,7 +222,7 @@ func mapProblemMember(pm sqlc.ProblemMember) problemsmodel.ProblemMember {
 	return problemsmodel.ProblemMember{
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
-		Role:      problemsmodel.ProblemRole(pm.Role),
+		Role:      accessmodel.ProblemRole(pm.Role),
 		Username:  "",
 		Email:     "",
 		CreatedAt: pm.CreatedAt,
@@ -230,18 +231,18 @@ func mapProblemMember(pm sqlc.ProblemMember) problemsmodel.ProblemMember {
 
 func mapProblemTeam(pt sqlc.ListProblemTeamsRow) problemsmodel.ProblemTeam {
 	return problemsmodel.ProblemTeam{
-		ProblemID:  pt.ProblemID,
-		TeamID:     pt.TeamID,
-		Permission: problemsmodel.ProblemPermission(pt.Permission),
-		TeamName:   pt.TeamName,
-		TeamSlug:   pt.TeamSlug,
-		CreatedAt:  pt.CreatedAt,
+		ProblemID: pt.ProblemID,
+		TeamID:    pt.TeamID,
+		Role:      pt.Role,
+		TeamName:  pt.TeamName,
+		TeamSlug:  pt.TeamSlug,
+		CreatedAt: pt.CreatedAt,
 	}
 }
 
 func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
 	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
-		ViewerID: readViewerID(ctx), Now: accessmodel.ReadTime(ctx), PageSize: limit,
+		ViewerID: userID, PageSize: limit,
 	})
 	if err != nil {
 		return nil, dbError("list dashboard problems", err)
@@ -263,7 +264,7 @@ func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) problemsmodel.Probl
 	return problemsmodel.ProblemMember{
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
-		Role:      problemsmodel.ProblemRole(pm.Role),
+		Role:      accessmodel.ProblemRole(pm.Role),
 		Username:  pm.Username,
 		Email:     email,
 		CreatedAt: pm.CreatedAt,
@@ -281,4 +282,12 @@ func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) problemsmodel.Dashbo
 		MemoryLimitMb:     int(row.MemoryLimitMb),
 		UpdatedAt:         row.UpdatedAt,
 	}
+}
+
+func (r *ProblemsRepo) GetProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) (problemsmodel.ProblemTeam, error) {
+	row, err := r.queries.GetProblemTeam(ctx, sqlc.GetProblemTeamParams{ProblemID: problemID, TeamID: teamID})
+	if err != nil {
+		return problemsmodel.ProblemTeam{}, dbError("get problem team", err)
+	}
+	return problemsmodel.ProblemTeam{ProblemID: row.ProblemID, TeamID: row.TeamID, Role: row.Role, CreatedAt: row.CreatedAt}, nil
 }

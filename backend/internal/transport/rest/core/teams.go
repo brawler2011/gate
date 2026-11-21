@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -116,9 +118,9 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 }
 
 func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMemberParams) error {
-	role := organizationsmodel.TeamRoleMember
+	role := accessmodel.TeamMember
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = organizationsmodel.TeamRole(params.Role.Value)
+		role = accessmodel.TeamRole(params.Role.Value)
 	}
 
 	input := &organizationsmodel.AddTeamMemberInput{
@@ -136,7 +138,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 }
 
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
-	err := h.Teams.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role))
+	err := h.Teams.UpdateTeamMemberRole(ctx, params.ID, params.UserID, accessmodel.TeamRole(params.Role))
 	if err != nil {
 		return err
 	}

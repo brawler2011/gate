@@ -3,8 +3,6 @@ package problems
 import (
 	"context"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -31,8 +29,4 @@ type ProblemsRepo interface {
 
 type TemplatePackages interface {
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-}
-
-type ProblemPermissions interface {
-	CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 }

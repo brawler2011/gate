@@ -135,11 +135,15 @@ func seedSubmissions(tb testing.TB, pool *pgxpool.Pool, size int) submissionBenc
 	f := submissionBenchFixture{participants: participants, rows: size}
 	var org uuid.UUID
 	require.NoError(tb, pool.QueryRow(ctx, `SELECT md5('contest')::uuid,md5('organization')::uuid`).Scan(&f.contest, &org))
-	fixtureExec(tb, pool, `INSERT INTO organizations(id,login,name) VALUES ($1,'benchmark','Benchmark')`, org)
 	fixtureExec(tb, pool, `INSERT INTO users(id,username,password_hash) SELECT md5('user'||i)::uuid,'bench'||i,'unused' FROM generate_series(1,$1::int) i`, participants)
-	fixtureExec(tb, pool, `INSERT INTO contests(id,organization_id,title,login,freeze_status,freeze_duration_minutes,start_time,end_time)
- VALUES ($1,$2,'Benchmark','benchmark','frozen',60,'2026-01-01 00:00Z','2026-01-01 02:00Z')`, f.contest, org)
-	fixtureExec(tb, pool, `INSERT INTO problems(id,organization_id) SELECT md5('problem'||i)::uuid,$1 FROM generate_series(1,10) i`, org)
+	// The first participant owns every resource; owners must exist when the statement ends.
+	fixtureExec(tb, pool, `WITH o AS (INSERT INTO organizations(id,login,name) VALUES ($1,'benchmark','Benchmark') RETURNING id)
+ INSERT INTO organization_members(organization_id,user_id,role) SELECT id,md5('user1')::uuid,'owner' FROM o`, org)
+	fixtureExec(tb, pool, `WITH c AS (INSERT INTO contests(id,organization_id,title,login,freeze_status,freeze_duration_minutes,start_time,end_time)
+ VALUES ($1,$2,'Benchmark','benchmark','frozen',60,'2026-01-01 00:00Z','2026-01-01 02:00Z') RETURNING id)
+ INSERT INTO contest_members(contest_id,user_id,role) SELECT id,md5('user1')::uuid,'owner' FROM c`, f.contest, org)
+	fixtureExec(tb, pool, `WITH p AS (INSERT INTO problems(id,organization_id) SELECT md5('problem'||i)::uuid,$1 FROM generate_series(1,10) i RETURNING id)
+ INSERT INTO problem_members(problem_id,user_id,role) SELECT id,md5('user1')::uuid,'owner' FROM p`, org)
 	fixtureExec(tb, pool, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
  SELECT md5('problem'||i)::uuid,$1,'Problem '||i,'p'||i,'pass-fail',1000,256 FROM generate_series(1,10) i`, org)
 	for i := 1; i <= 10; i++ {
@@ -149,7 +153,7 @@ func seedSubmissions(tb testing.TB, pool *pgxpool.Pool, size int) submissionBenc
 		require.NoError(tb, err)
 		fixtureExec(tb, pool, `INSERT INTO contest_problems(contest_id,problem_id,package_id,ordinal) VALUES ($1,$2,$3,$4)`, f.contest, problem, pack, i)
 	}
-	fixtureExec(tb, pool, `INSERT INTO contest_members(contest_id,user_id) SELECT $1,md5('user'||i)::uuid FROM generate_series(1,$2::int) i`, f.contest, participants)
+	fixtureExec(tb, pool, `INSERT INTO contest_members(contest_id,user_id) SELECT $1,md5('user'||i)::uuid FROM generate_series(1,$2::int) i ON CONFLICT DO NOTHING`, f.contest, participants)
 	fixtureExec(tb, pool, `INSERT INTO submissions(id,contest_id,owner_id,problem_id,source,language,state,revision,created_at)
  SELECT md5('submission'||i)::uuid,$1,md5('user'||(((i-1)/10)%$3::int+1))::uuid,md5('problem'||((i-1)%10+1))::uuid,
  repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,1,

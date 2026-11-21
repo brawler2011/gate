@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -67,7 +69,7 @@ func (m *mockDraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 
 func TestDraftsUseCase_Validation(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{mockDraftsRepo: repo}}, repo, draftTestStore{mockDraftsRepo: repo})
 
 	contestID := uuid.New()
 	userID := uuid.New()
@@ -94,7 +96,7 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 
 func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{mockDraftsRepo: repo}}, repo, draftTestStore{mockDraftsRepo: repo})
 
 	contestID := uuid.New()
 	userID := uuid.New()
@@ -121,7 +123,7 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 
 func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{mockDraftsRepo: repo}}, repo, draftTestStore{mockDraftsRepo: repo})
 
 	authorID := uuid.New()
 	otherUserID := uuid.New()
@@ -159,13 +161,21 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	}
 }
 
-type draftTestStore struct{ *mockDraftsRepo }
-
-func (draftTestStore) GetContest(_ context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
-	return contestsmodel.Contest{ID: id}, nil
+type draftTestStore struct {
+	*mockDraftsRepo
+	runningContests
 }
-func (draftTestStore) CanContest(ctx context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	return action == accessmodel.ActionGetContest || accessmodel.UserFromContext(ctx).IsAdmin(), nil
+
+// runningContests treats every id as a public, running contest anyone may enter.
+type runningContests struct{ accesstest.Loader }
+
+func (runningContests) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+	facts := map[uuid.UUID]access.ContestFacts{}
+	for _, id := range ids {
+		contest := contestsmodel.Contest{ID: id, Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen}}
+		facts[id] = access.ContestFacts{Contest: contest, Now: time.Now()}
+	}
+	return facts, nil
 }
 
 func (m *mockDraftsRepo) ListDrafts(_ context.Context, userID uuid.UUID, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
@@ -181,7 +191,7 @@ func (m *mockDraftsRepo) ListDrafts(_ context.Context, userID uuid.UUID, filter 
 
 func TestDraftListReturnsOnlyCallerDrafts(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{mockDraftsRepo: repo}}, repo, draftTestStore{mockDraftsRepo: repo})
 	owner, other, contest := uuid.New(), uuid.New(), uuid.New()
 	id, err := repo.CreateDraft(context.Background(), owner, &contestsmodel.ContestDraftCreation{ContestID: contest, Code: "private"})
 	if err != nil {
@@ -226,7 +236,7 @@ func TestDraftListPagination(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := newMockDraftsRepo()
-			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
+			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{mockDraftsRepo: repo}}, repo, draftTestStore{mockDraftsRepo: repo})
 			if tc.err != nil {
 				// Invalid pagination must return before accessing a transaction.
 				uc = NewDraftsUseCase(nil, nil, nil)

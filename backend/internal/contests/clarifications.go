@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -12,13 +13,13 @@ import (
 )
 
 type ClarificationsUseCase struct {
-	transactor  ContestEventsTransactions
-	reads       ClarificationReads
-	permissions Permissions
+	transactor ContestEventsTransactions
+	reads      ClarificationReads
+	access     access.Loader
 }
 
-func NewClarificationsUseCase(transactor ContestEventsTransactions, reads ClarificationReads, permissions Permissions) *ClarificationsUseCase {
-	return &ClarificationsUseCase{transactor: transactor, reads: reads, permissions: permissions}
+func NewClarificationsUseCase(transactor ContestEventsTransactions, reads ClarificationReads, loader access.Loader) *ClarificationsUseCase {
+	return &ClarificationsUseCase{transactor: transactor, reads: reads, access: loader}
 }
 
 func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
@@ -32,16 +33,12 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 	}
 
 	var clarification *contestsmodel.ContestClarification
-	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionGetContest, func(tx ContestEventsTxStore) error {
-		contest, err := tx.GetContest(ctx, input.ContestID)
-		if err != nil {
-			return err
-		}
-
-		if !contest.Settings.AllowClarifications {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ContestView, func(tx ContestEventsTxStore, a access.ContestAccess) error {
+		if !a.Facts.Contest.Settings.AllowClarifications {
 			return pkg.Wrap(pkg.ErrClarificationsDisabled, nil, "clarifications are disabled for this contest")
 		}
 
+		var err error
 		clarification, err = tx.CreateClarification(ctx, user.Id, input)
 		if err != nil {
 			return err
@@ -84,7 +81,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 		return nil, err
 	}
 	var clarification *contestsmodel.ContestClarification
-	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ContestManage, func(tx ContestEventsTxStore, _ access.ContestAccess) error {
 		var err error
 		clarification, err = tx.AnswerClarification(
 			ctx,

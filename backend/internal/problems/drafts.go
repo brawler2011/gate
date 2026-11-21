@@ -46,7 +46,7 @@ type DraftUseCase struct {
 	Problems       interface {
 		GetProblemById(context.Context, uuid.UUID) (model.Problem, error)
 	}
-	Permissions  ProblemPermissions
+	Access       access.Loader
 	Store        DraftObjectStore
 	Bucket       string
 	TempDir      string
@@ -55,12 +55,13 @@ type DraftUseCase struct {
 	Languages    *sandbox.Config
 }
 
+// authorize fails fast before uploads; mutations authorize again inside their transaction.
 func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) (model.Problem, error) {
-	action := accessmodel.ActionViewProblem
+	action := accessmodel.ProblemView
 	if edit {
-		action = accessmodel.ActionEditProblem
+		action = accessmodel.ProblemEdit
 	}
-	if err := access.Problem(ctx, uc.Permissions, id, action); err != nil {
+	if _, err := access.Problem(ctx, uc.Access, id, action); err != nil {
 		return model.Problem{}, err
 	}
 	return uc.Problems.GetProblemById(ctx, id)

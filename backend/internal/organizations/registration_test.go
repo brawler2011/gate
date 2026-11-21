@@ -41,7 +41,7 @@ func (s *registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*o
 func (s *registrationStore) GetUserById(_ context.Context, id uuid.UUID) (accessmodel.User, error) {
 	return accessmodel.User{Id: id, Role: accessmodel.UserRoleUser}, nil
 }
-func (s *registrationStore) AddMember(context.Context, uuid.UUID, uuid.UUID, organizationsmodel.OrganizationRole) error {
+func (s *registrationStore) AddMember(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrganizationRole) error {
 	s.added = true
 	return nil
 }
@@ -55,20 +55,20 @@ func (t registrationTransactions) Within(ctx context.Context, fn func(Organizati
 func TestRegistrationUsesCurrentOrganizationState(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		policy organizationsmodel.OrganizationJoinPolicy
+		policy accessmodel.JoinPolicy
 		member bool
 		joined bool
 		err    error
 	}{
-		{name: "open", policy: organizationsmodel.OrgJoinPolicyOpen, joined: true},
-		{name: "policy changed", policy: organizationsmodel.OrgJoinPolicyInviteOnly, err: pkg.ErrInviteOnly},
-		{name: "concurrent membership", policy: organizationsmodel.OrgJoinPolicyOpen, member: true, err: pkg.ErrConflict},
+		{name: "open", policy: accessmodel.JoinOpen, joined: true},
+		{name: "policy changed", policy: accessmodel.JoinInviteOnly, err: pkg.ErrInviteOnly},
+		{name: "concurrent membership", policy: accessmodel.JoinOpen, member: true, err: pkg.ErrConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			id := uuid.New()
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			store := &registrationStore{org: organizationsmodel.Organization{ID: id, JoinPolicy: tc.policy}, member: tc.member}
-			reader := registrationReader{org: organizationsmodel.Organization{ID: id, Login: "org", JoinPolicy: organizationsmodel.OrgJoinPolicyOpen}}
+			reader := registrationReader{org: organizationsmodel.Organization{ID: id, Login: "org", JoinPolicy: accessmodel.JoinOpen}}
 			uc := NewOrganizationsUseCase(reader, nil, nil, registrationTransactions{store}, nil)
 			_, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), user), "org", nil)
 			if tc.joined {
@@ -91,7 +91,7 @@ func (s *registrationStore) GetPendingJoinRequest(context.Context, uuid.UUID, uu
 }
 
 func TestDuplicateOrganizationJoinRequest(t *testing.T) {
-	org := organizationsmodel.Organization{ID: uuid.New(), Login: "org", JoinPolicy: organizationsmodel.OrgJoinPolicyByRequest}
+	org := organizationsmodel.Organization{ID: uuid.New(), Login: "org", JoinPolicy: accessmodel.JoinByRequest}
 	store := &registrationStore{org: org, pending: true}
 	uc := NewOrganizationsUseCase(registrationReader{org: org}, nil, nil, registrationTransactions{store}, nil)
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}

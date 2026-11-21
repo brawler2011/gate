@@ -5,6 +5,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
@@ -45,7 +47,7 @@ func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 	store := &recordingStore{}
 	repo := &savingRepo{}
 	problem := uuid.New()
-	uc := &DraftUseCase{Repo: repo, Store: store, Problems: singleProblem{uuid.New()}, Permissions: allowProblemPermissions{}}
+	uc := &DraftUseCase{Repo: repo, Store: store, Problems: singleProblem{uuid.New()}, Access: ownedProblems{}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 
 	draft := model.Draft{ProblemID: problem, Revision: 4, Title: "Renamed", DraftContent: model.DraftContent{Statements: []model.DraftStatement{{Language: "en", Legend: "New statement"}}}}
@@ -56,17 +58,22 @@ func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 	require.Zero(t, store.calls)
 }
 
-type allowProblemPermissions struct{}
+// ownedProblems makes the caller the owner of every problem.
+type ownedProblems struct{ accesstest.Loader }
 
-func (allowProblemPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
-	return true, nil
+func (ownedProblems) ProblemFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ProblemFacts, error) {
+	facts := map[uuid.UUID]access.ProblemFacts{}
+	for _, id := range ids {
+		facts[id] = access.ProblemFacts{ID: id, Role: accessmodel.ProblemOwner}
+	}
+	return facts, nil
 }
 
 // A mismatched draft revision must be rejected before database access.
 func TestSavingDraftRejectsMismatchedRevision(t *testing.T) {
 	repo := &savingRepo{}
 	problem := uuid.New()
-	uc := &DraftUseCase{Repo: repo, Problems: singleProblem{uuid.New()}, Permissions: allowProblemPermissions{}}
+	uc := &DraftUseCase{Repo: repo, Problems: singleProblem{uuid.New()}, Access: ownedProblems{}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 	_, err := uc.SaveDraft(ctx, problem, 3, "key-1", model.Draft{ProblemID: problem, Revision: 4})
 	require.Error(t, err)

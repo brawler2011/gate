@@ -341,29 +341,29 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
 	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
-	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, teamsRepo, orgsRepo), pgstore.NewPolicyFactsRepo(pool))
-	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), permissionsUC)
+	accessLoader := pgstore.NewAccess(pool)
+	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), accessLoader)
 	contestsUC.SetNotificationsUC(notificationsUC)
 
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(pool), store, defaultS3BlogBucket)
-	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
-	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool), permissionsUC)
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsRepo, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
-	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool), pgstore.NewDraftsRepo(pool), permissionsUC)
-	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool), announcementsRepo, permissionsUC)
-	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool), clarificationsRepo, permissionsUC)
+	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, accessLoader, pgstore.NewOrganizationTransactions(pool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(teamsRepo, accessLoader, pgstore.NewTeamTransactions(pool))
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, pgstore.NewSubmissionTransactions(pool), accessLoader)
+	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool), pgstore.NewDraftsRepo(pool), accessLoader)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool), announcementsRepo, accessLoader)
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool), clarificationsRepo, accessLoader)
 	logger.Info("successfully initialized use cases")
 
 	problemPolicy := cfg.Problems
 	problemDrafts := d.problemDrafts
 	objectStore := store
 	buildOptions := problemsmodel.BuildOptions{Languages: languages.Langs, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
-	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, BuildOptions: buildOptions, Languages: languages}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Access: accessLoader, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, BuildOptions: buildOptions, Languages: languages}
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket}
 	draftUC.PackageContent = packageContent
-	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, packagesRepo)
-	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, booklet.NewClient(natsJS.Conn()), usersRepo)
+	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, accessLoader, packagesRepo)
+	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: accessLoader}
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, booklet.NewClient(natsJS.Conn()))
 
 	outboxDispatcher := outbox.NewEventDispatcher()
 	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
@@ -375,7 +375,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC, pgstore.NewPolicyFactsRepo(pool))
+	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC)
 
 	for _, event := range []submissionsmodel.SubmissionEventType{
 		submissionsmodel.SubmissionEventCreated,
@@ -410,34 +410,34 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		return nil, nil, fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC, logger), authUC, permissionsUC, contestsRepo, pgstore.NewPolicyFactsRepo(pool))
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC, logger), authUC, accessLoader, contestsRepo)
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
 
 	coreServer := handlers.NewCoreServer(handlers.Services{
-		Auth:               authUC,
-		Users:              usersUC,
-		UserReads:          usersRepo,
-		Avatars:            avatarsUC,
-		Organizations:      orgsUC,
-		Teams:              teamsUC,
-		Contests:           contestsUC,
-		ContestPermissions: permissionsUC,
-		ContestDetails:     contestDetails,
-		Drafts:             draftsUC,
-		Announcements:      announcementsUC,
-		Clarifications:     clarificationsUC,
-		Problems:           problemsUC,
-		ProblemDrafts:      draftUC,
-		Packages:           packagesUC,
-		Submissions:        submissionsUC,
-		Notifications:      notificationsUC,
-		NotificationReads:  notificationsRepo,
-		Blogs:              blogsUC,
-		BlogReads:          blogsRepo,
-		NATS:               natsJS,
-		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
+		Auth:              authUC,
+		Users:             usersUC,
+		UserReads:         usersRepo,
+		Avatars:           avatarsUC,
+		Organizations:     orgsUC,
+		Teams:             teamsUC,
+		Contests:          contestsUC,
+		Access:            accessLoader,
+		ContestDetails:    contestDetails,
+		Drafts:            draftsUC,
+		Announcements:     announcementsUC,
+		Clarifications:    clarificationsUC,
+		Problems:          problemsUC,
+		ProblemDrafts:     draftUC,
+		Packages:          packagesUC,
+		Submissions:       submissionsUC,
+		Notifications:     notificationsUC,
+		NotificationReads: notificationsRepo,
+		Blogs:             blogsUC,
+		BlogReads:         blogsRepo,
+		NATS:              natsJS,
+		Capabilities:      access.NewCapabilities(accessLoader),
 	}, cfg.HTTP.SecureCookies).WithLanguages(languages)
 
 	secHandler := middleware.NewSecurityHandler()

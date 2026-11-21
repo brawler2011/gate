@@ -51,7 +51,7 @@ type sharedContainers struct {
 }
 
 const (
-	postgresPort = "5432/tcp"
+	postgresPort     = "5432/tcp"
 	templateDatabase = "gate_template"
 )
 

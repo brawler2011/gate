@@ -8,10 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -19,7 +21,6 @@ import (
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -123,22 +124,25 @@ func (t blockingTransactor) Within(_ context.Context, fn func(submissions.Submis
 	return fn(t.SubmissionTxStore)
 }
 
-type blockingProblems struct{ ProblemsUC }
-
-func (blockingProblems) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
-	return problemsmodel.Problem{}, nil
+// moderatorAccess lets alice moderate the fixture contest half an hour after it starts.
+func moderatorAccess(f *scoreboardFixture) *accesstest.Loader {
+	contest := f.repo.contest
+	l := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contest.ID: {Contest: contest, Now: contest.StartTime.Add(30 * time.Minute)}}}
+	l.Grant(contest.ID, f.users["alice"], string(accessmodel.ContestModerator))
+	return l
 }
 
 func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	f := newScoreboardFixture("alice")
 	id := f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 20*time.Minute)
-	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
-	uc := submissions.NewSubmissionsUseCase(repo, f.repo, blockingProblems{}, blockingTransactor{struct {
+	repo, outbox, loader := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}, moderatorAccess(f)
+	uc := submissions.NewSubmissionsUseCase(repo, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo
-	}{repo, outbox, f.repo}}, allowSubmissionPermissions{})
+		*accesstest.Loader
+	}{repo, outbox, f.repo, loader}}, loader)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Cheating"
 	require.NoError(t, uc.BlockSubmission(ctx, f.repo.contest.ID, id, &reason))
@@ -169,17 +173,19 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	alice := f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
 	bob := f.submit(t, "bob", 0, submissionsmodel.Accepted, 20*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 30*time.Minute)
-	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
+	repo, outbox, loader := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}, moderatorAccess(f)
 	f.uc = contests.NewContestsUseCase(f.repo, nil, contestCommandTransactions{struct {
 		*scoreboardRepo
 		*blockingSubmissionsRepo
 		OutboxRepo
-	}{f.repo, repo, outbox}}, allowSubmissionPermissions{})
-	uc := submissions.NewSubmissionsUseCase(repo, f.repo, blockingProblems{}, blockingTransactor{struct {
+		*accesstest.Loader
+	}{f.repo, repo, outbox, loader}}, loader)
+	uc := submissions.NewSubmissionsUseCase(repo, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo
-	}{repo, outbox, f.repo}}, allowSubmissionPermissions{})
+		*accesstest.Loader
+	}{repo, outbox, f.repo, loader}}, loader)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID
@@ -243,22 +249,6 @@ func (t contestCommandTransactions) Within(_ context.Context, fn func(contests.C
 	return fn(t.store)
 }
 
-type allowSubmissionPermissions struct{}
-
-func (allowSubmissionPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
-}
-func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
-}
-
-func (*blockingSubmissionsRepo) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
-}
-func (*blockingSubmissionsRepo) CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error) {
-	return true, nil
-}
-
 func (*blockingSubmissionsRepo) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
 	return nil, pkg.ErrNotFound
 }
@@ -269,12 +259,14 @@ func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificatio
 
 func (*blockingSubmissionsRepo) LockContestProblemOrder(context.Context, uuid.UUID) error { return nil }
 
-func (t blockingTransactor) Prepare(ctx context.Context) (context.Context, error) { return ctx, nil }
-
-func (t contestCommandTransactions) Prepare(ctx context.Context) (context.Context, error) {
-	return ctx, nil
+func (*blockingSubmissionsRepo) ListContestOwners(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, errors.New("not implemented")
 }
 
-func (allowSubmissionPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
-	return false, nil
+func (*blockingSubmissionsRepo) GetContestTeam(context.Context, uuid.UUID, uuid.UUID) (contestsmodel.ContestTeam, error) {
+	return contestsmodel.ContestTeam{}, errors.New("not implemented")
+}
+
+func (*blockingSubmissionsRepo) ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (contestsmodel.PackageRef, error) {
+	return contestsmodel.PackageRef{}, errors.New("not implemented")
 }
