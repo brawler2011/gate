@@ -175,6 +175,8 @@ tasks:
     generates:
       - backend/internal/postgres/sqlc/*.go
     cmds:
+      # sqlc never deletes outputs whose queries were removed.
+      - rm -f backend/internal/postgres/sqlc/*.go
       - >-
         sqlc
         generate -f sqlc.yaml
