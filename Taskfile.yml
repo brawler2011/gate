@@ -7,10 +7,9 @@ vars:
     frontend/contracts
     backend/internal/postgres/sqlc
     backend/tests/mocks
-  DOCKER_COMPOSE: JUDGE_IMAGE="$(go run ./tools/judgeimage)" docker compose --env-file deploy/local/.env -f deploy/local/docker-compose.yml
-  # Name the context explicitly to avoid touching another cluster.
-  K3D_KUBECTL: kubectl --context k3d-gate
-  K3D_HELM: helm --kube-context k3d-gate
+  # deploy/k3s/install.sh names the local k3s context; naming it avoids touching another cluster.
+  KUBECTL: kubectl --context gate
+  HELM: helm --kube-context gate
 
 tasks:
   default:
@@ -115,10 +114,11 @@ tasks:
   deploy:lint:
     desc: Lint the Helm charts with the values of every environment
     cmds:
-      - for: [prod, k3d]
+      - for: [prod, cluster]
         cmd: >-
           helm lint --strict deploy/charts/gate-infra -f deploy/{{.ITEM}}/gate-infra.yaml &&
           helm lint --strict deploy/charts/gate -f deploy/{{.ITEM}}/gate.yaml --set-file backend.config=deploy/{{.ITEM}}/config.yaml --set imageTag=lint
+      - helm lint --strict deploy/charts/gate-infra -f deploy/local/gate-infra.yaml --set judge.image=lint --set judge.problemWork=/lint
 
   fe:lint:
     desc: Run ESLint and Stylelint
@@ -240,48 +240,64 @@ tasks:
     cmds:
       - go run ./backend -config=deploy/local/config.yaml -env=deploy/local/.env -migrate
 
-  docker:up:
-    desc: Start local Docker containers in background
-    deps: [judge:image]
+  k3s:up:
+    internal: true
     cmds:
-      # Docker would create the go-judge bind mount owned by root, leaving it unwritable for the backend.
+      - "{{.KUBECTL}} apply -f deploy/k3s/"
+
+  k3s:secrets:
+    internal: true
+    requires:
+      vars: [NAMESPACE]
+    cmds:
+      - "{{.KUBECTL}} create namespace {{.NAMESPACE}} --dry-run=client -o yaml | {{.KUBECTL}} apply -f -"
+      - |
+        set -a; . deploy/local/.env; set +a
+        sh deploy/secrets.sh {{.KUBECTL}} -n {{.NAMESPACE}}
+
+  infra:up:
+    desc: Deploy PostgreSQL, Redis, NATS, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
+    deps: [k3s:up, judge:image]
+    vars:
+      JUDGE_IMAGE:
+        sh: go run ./tools/judgeimage
+    cmds:
       - mkdir -p backend/data/problem-work
-      - "{{.DOCKER_COMPOSE}} up -d {{.CLI_ARGS}}"
+      - |
+        {{.KUBECTL}} get nodes -o jsonpath='{.items[*].status.images[*].names[*]}' | tr ' ' '\n' | grep -qxF '{{.JUDGE_IMAGE}}' \
+          || docker save '{{.JUDGE_IMAGE}}' | sudo k3s ctr images import -
+      - task: k3s:secrets
+        vars: {NAMESPACE: gate-dev}
+      - >-
+        {{.HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate-dev -f deploy/local/gate-infra.yaml
+        --set judge.image={{.JUDGE_IMAGE}} --set judge.problemWork={{.ROOT_DIR}}/backend/data/problem-work
+        --wait --timeout 5m
 
-  docker:down:
-    desc: Stop local Docker containers
+  infra:down:
+    desc: Remove the task infra:up services, keeping their data (delete namespace gate-dev to reset it)
     cmds:
-      - "{{.DOCKER_COMPOSE}} down {{.CLI_ARGS}}"
+      - "{{.HELM}} uninstall gate-infra -n gate-dev --ignore-not-found --wait"
 
-  k3d:up:
-    desc: Create the local k3s cluster (k3d) with the deploy/k3s bootstrap
-    status:
-      - k3d cluster get gate
-    cmds:
-      - k3d cluster create gate --image rancher/k3s:v1.37.1-k3s1 -p "9080:80@loadbalancer" -p "9443:443@loadbalancer" --kubeconfig-switch-context=false --wait
-      - "{{.K3D_KUBECTL}} apply -f deploy/k3s/"
-
-  k3d:deploy:
-    desc: Build the images and deploy both charts to the local cluster at https://gate.localhost:9443
-    deps: [k3d:up, judge:image]
+  cluster:deploy:
+    desc: Build the images and deploy both charts to local k3s (namespace gate) at https://gate.localhost:30443
+    deps: [k3s:up, judge:image]
     vars:
       TAG:
         sh: echo "local-$(date +%s)"
     cmds:
       - docker build -t ghcr.io/brawler2011/gate-backend:{{.TAG}} .
       - docker tag "$(go run ./tools/judgeimage)" ghcr.io/brawler2011/gate-go-judge:{{.TAG}}
-      - k3d image import -c gate ghcr.io/brawler2011/gate-backend:{{.TAG}} ghcr.io/brawler2011/gate-go-judge:{{.TAG}}
-      - "{{.K3D_KUBECTL}} create namespace gate --dry-run=client -o yaml | {{.K3D_KUBECTL}} apply -f -"
-      - |
-        set -a; . deploy/local/.env; set +a
-        sh deploy/secrets.sh {{.K3D_KUBECTL}} -n gate
-      - "{{.K3D_HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate -f deploy/k3d/gate-infra.yaml --wait --timeout 5m"
-      - "{{.K3D_HELM}} upgrade --install gate deploy/charts/gate -n gate -f deploy/k3d/gate.yaml --set-file backend.config=deploy/k3d/config.yaml --set imageTag={{.TAG}} --rollback-on-failure --timeout 5m {{.CLI_ARGS}}"
+      # The k3s containerd socket is root-only.
+      - docker save ghcr.io/brawler2011/gate-backend:{{.TAG}} ghcr.io/brawler2011/gate-go-judge:{{.TAG}} | sudo k3s ctr images import -
+      - task: k3s:secrets
+        vars: {NAMESPACE: gate}
+      - "{{.HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate -f deploy/cluster/gate-infra.yaml --wait --timeout 5m"
+      - "{{.HELM}} upgrade --install gate deploy/charts/gate -n gate -f deploy/cluster/gate.yaml --set-file backend.config=deploy/cluster/config.yaml --set imageTag={{.TAG}} --rollback-on-failure --timeout 5m {{.CLI_ARGS}}"
 
-  k3d:down:
-    desc: Delete the local k3s cluster and its data
+  cluster:down:
+    desc: Delete the task cluster:deploy releases and their data
     cmds:
-      - k3d cluster delete gate
+      - "{{.KUBECTL}} delete namespace gate --ignore-not-found"
 
   hooks:install:
     desc: Install Git hooks using Lefthook

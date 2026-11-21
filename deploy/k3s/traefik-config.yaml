@@ -6,6 +6,9 @@ metadata:
 spec:
   valuesContent: |-
     ports:
+      # Local k3s serves Traefik on loopback through this NodePort; ServiceLB host ports skip loopback.
+      websecure:
+        nodePort: 30443
       web:
         http:
           redirections:

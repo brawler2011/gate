@@ -7,6 +7,8 @@ postgres:
   resources:
     requests: {cpu: 250m, memory: 256Mi}
     limits: {memory: 2Gi}
+  # Set to reach the service from the host (development).
+  nodePort: null
 
 redis:
   image: redis:7.2.4-alpine
@@ -15,6 +17,7 @@ redis:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 640Mi}
   maxMemory: 512mb
+  nodePort: null
 
 nats:
   image: nats:2.10-alpine
@@ -22,6 +25,7 @@ nats:
   resources:
     requests: {cpu: 50m, memory: 64Mi}
     limits: {memory: 512Mi}
+  nodePort: null
 
 seaweedfs:
   image: chrislusf/seaweedfs:4.53_full
@@ -32,5 +36,13 @@ seaweedfs:
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 2Gi}
+  nodePort: null
+
+# Development only: go-judge for a backend running on the host.
+judge:
+  image: ""
+  # Absolute host path of problems.work_dir.
+  problemWork: ""
+  nodePort: null
 
 appArmorProfile: {}
