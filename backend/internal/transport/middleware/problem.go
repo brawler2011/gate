@@ -15,6 +15,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/go-faster/jx"
 	"github.com/ogen-go/ogen/ogenerrors"
+	"github.com/ogen-go/ogen/validate"
 )
 
 // NewProblem maps err to the response body and attaches err to the request log line.
@@ -33,9 +34,12 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 
 	var appErr *pkg.Error
 	var rateErr *pkg.RateLimitError
+	var fields pkg.FieldErrors
 	switch {
 	case errors.Is(err, context.Canceled) && ctx.Err() != nil:
 		code, status = pkg.CodeInternal, statusClientClosedRequest
+	case errors.As(err, &fields):
+		detail = fields.Error()
 	case errors.As(err, &appErr):
 		detail = appErr.Message
 		res.Response.Params = problemParams(appErr.Params)
@@ -49,6 +53,7 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 		if s := ogenerrors.ErrorCode(err); s != http.StatusInternalServerError {
 			status, code = s, statusCode(s)
 			detail = err.Error()
+			fields = schemaFields(err)
 		}
 	}
 	if status >= 500 || status == statusClientClosedRequest {
@@ -68,8 +73,7 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 	if detail != "" {
 		res.Response.Detail = corev1.NewOptString(detail)
 	}
-	var fields pkg.FieldErrors
-	if errors.As(err, &fields) {
+	if status < 500 {
 		for _, f := range fields {
 			code := f.Code
 			if code == "" {
@@ -84,6 +88,33 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 		}
 	}
 	return res
+}
+
+// schemaFields turns ogen's schema validation failures into field errors.
+func schemaFields(err error) pkg.FieldErrors {
+	var verr *validate.Error
+	if !errors.As(err, &verr) {
+		return nil
+	}
+	out := make(pkg.FieldErrors, 0, len(verr.Fields))
+	for _, f := range verr.Fields {
+		field := pkg.FieldError{Pointer: "/" + f.Name, Code: pkg.CodeInvalid, Message: f.Error.Error()}
+		var minErr *validate.MinLengthError
+		var maxErr *validate.MaxLengthError
+		var regexErr *validate.NoRegexMatchError
+		switch {
+		case errors.Is(f.Error, validate.ErrFieldRequired):
+			field.Code = pkg.ErrRequired.Code
+		case errors.As(f.Error, &minErr):
+			field.Code, field.Params = pkg.ErrLength.Code, map[string]any{"min": minErr.MinLength}
+		case errors.As(f.Error, &maxErr):
+			field.Code, field.Params = pkg.ErrLength.Code, map[string]any{"max": maxErr.MaxLength}
+		case errors.As(f.Error, &regexErr):
+			field.Code = pkg.ErrFormat.Code
+		}
+		out = append(out, field)
+	}
+	return out
 }
 
 func rawParams(params map[string]any) map[string]jx.Raw {

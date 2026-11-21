@@ -71,6 +71,15 @@ var (
 	ErrProblemShortNameTaken  = NewCode("problem_short_name_taken", CodeConflict)
 	ErrProblemInContest       = NewCode("problem_in_contest", CodeConflict)
 	ErrEmailNotVerified       = NewCode("email_not_verified", CodeForbidden)
+	ErrWrongPassword          = NewCode("wrong_password", CodeInvalid)
+
+	// Field validation; params carry the violated bounds (min, max).
+	ErrRequired       = NewCode("required", CodeInvalid)
+	ErrLength         = NewCode("length", CodeInvalid)
+	ErrFormat         = NewCode("format", CodeInvalid)
+	ErrReserved       = NewCode("reserved", CodeInvalid)
+	ErrRange          = NewCode("range", CodeInvalid)
+	ErrEndBeforeStart = NewCode("end_before_start", CodeInvalid)
 )
 
 // NewCode registers a specific code whose status is that of kind.
@@ -183,3 +192,40 @@ func (e FieldErrors) Error() string {
 }
 
 func (e FieldErrors) Unwrap() error { return ErrInvalid }
+
+// Invalid is a validation failure of one value; AtField places it in the request.
+func Invalid(code *Error, message string, params map[string]any) error {
+	return &Error{Code: code.Code, Message: message, Params: params}
+}
+
+// AtField reports err as a failure of the value at pointer; errors without a code become invalid.
+func AtField(pointer string, err error) error {
+	if err == nil {
+		return nil
+	}
+	f := FieldError{Pointer: pointer, Code: CodeInvalid, Message: err.Error()}
+	var e *Error
+	if errors.As(err, &e) {
+		f.Code, f.Params, f.Message = e.Code, e.Params, e.Message
+	}
+	return FieldErrors{f}
+}
+
+// Fields merges the field errors of errs into one error, nil when there are none.
+func Fields(errs ...error) error {
+	var out FieldErrors
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		var fields FieldErrors
+		if !errors.As(err, &fields) {
+			fields = FieldErrors{{Code: CodeInvalid, Message: err.Error()}}
+		}
+		out = append(out, fields...)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}

@@ -58,7 +58,7 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.Creat
 		IsEmailVerified: true,
 	}
 	if err := params.Validate(); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, err.Error())
+		return uuid.Nil, err
 	}
 
 	err = withinAccount(ctx, u.txManager, uuid.Nil, true, func(store IdentityTxStore) error {
@@ -76,7 +76,7 @@ func (u *UsersUseCase) UpdateUser(ctx context.Context, input identitymodel.Updat
 		return err
 	}
 	if err := input.Validate(); err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid user update")
+		return err
 	}
 	return withinAccount(ctx, u.txManager, input.Id, input.Role != nil || input.ExpiresAt != nil || input.IsEmailVerified != nil, func(store IdentityTxStore) error {
 		return store.UpdateUser(ctx, input)
@@ -178,7 +178,7 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 		return err
 	}
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
+		return pkg.AtField("/password", err)
 	}
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
@@ -236,7 +236,7 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return err
 	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
+		return pkg.AtField("/email", err)
 	}
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)

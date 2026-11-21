@@ -34,25 +34,35 @@ func isReservedContestLogin(login string) bool {
 
 func validateContestLogin(login string) error {
 	if len(login) < 3 || len(login) > 64 {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "contest login must be between 3 and 64 characters")
+		return pkg.AtField("/login", pkg.Invalid(pkg.ErrLength, "contest login must be between 3 and 64 characters", map[string]any{"min": 3, "max": 64}))
 	}
 	if !contestLoginRegex.MatchString(login) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "contest login must contain only lowercase alphanumeric characters and hyphens, and cannot start or end with a hyphen")
+		return pkg.AtField("/login", pkg.Invalid(pkg.ErrFormat, "contest login must contain only lowercase alphanumeric characters and hyphens, and cannot start or end with a hyphen", nil))
 	}
 	if isReservedContestLogin(login) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("contest login '%s' is reserved", login))
+		return pkg.AtField("/login", pkg.Invalid(pkg.ErrReserved, fmt.Sprintf("contest login '%s' is reserved", login), nil))
 	}
 	return nil
 }
 
+func lengthError(pointer string, min, max int) error {
+	field := pointer[1:]
+	if min == 0 {
+		return pkg.AtField(pointer, pkg.Invalid(pkg.ErrLength, fmt.Sprintf("%s must be at most %d characters", field, max), map[string]any{"max": max}))
+	}
+	return pkg.AtField(pointer, pkg.Invalid(pkg.ErrLength, fmt.Sprintf("%s must be between %d and %d characters", field, min, max), map[string]any{"min": min, "max": max}))
+}
+
+func invalidValue(pointer string) error {
+	return pkg.AtField(pointer, pkg.Invalid(pkg.ErrInvalid, "invalid "+pointer[1:]+" value", nil))
+}
+
 func validateCreateContestParams(title string, login corev1.OptString) error {
 	if title == "" {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "empty title")
+		return pkg.AtField("/title", pkg.Invalid(pkg.ErrRequired, "title is required", nil))
 	}
-
-	titleLength := utf8.RuneCountInString(title)
-	if titleLength < 3 || titleLength > 64 {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "title must be between 3 and 64 characters")
+	if !checkLength(title, 3, 64) {
+		return lengthError("/title", 3, 64)
 	}
 
 	if login.IsSet() && login.Value != "" {
@@ -89,43 +99,43 @@ func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) erro
 	}
 
 	if params.Title.IsSet() && !checkLength(params.Title.Value, 3, 64) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "title must be between 3 and 64 characters")
+		return lengthError("/title", 3, 64)
 	}
 
 	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "description length must be less than 2048 characters")
+		return lengthError("/description", 0, 2048)
 	}
 
 	if params.Visibility.IsSet() && !publicOrPrivate(params.Visibility.Value) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid visibility value")
+		return invalidValue("/visibility")
 	}
 
 	if params.MonitorScope.IsSet() && !checkScope(params.MonitorScope.Value) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid monitor scope value")
+		return invalidValue("/monitor_scope")
 	}
 
 	if params.SubmissionsListScope.IsSet() && !checkScope(params.SubmissionsListScope.Value) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid submissions list scope value")
+		return invalidValue("/submissions_list_scope")
 	}
 
 	if params.SubmissionsReviewScope.IsSet() && !checkScope(params.SubmissionsReviewScope.Value) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid submissions review scope value")
+		return invalidValue("/submissions_review_scope")
 	}
 
 	if params.StartTime.IsSet() && params.EndTime.IsSet() && !params.EndTime.Null && !params.StartTime.Null {
 		if !params.EndTime.Value.After(params.StartTime.Value) {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "end_time must be after start_time")
+			return pkg.AtField("/end_time", pkg.Invalid(pkg.ErrEndBeforeStart, "end_time must be after start_time", nil))
 		}
 	}
 
 	if params.FreezeDurationMinutes.IsSet() && !params.FreezeDurationMinutes.Null && params.FreezeDurationMinutes.Value < 0 {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "freeze_duration_minutes must be non-negative")
+		return pkg.AtField("/freeze_duration_minutes", pkg.Invalid(pkg.ErrRange, "freeze_duration_minutes must be non-negative", map[string]any{"min": 0}))
 	}
 
 	if params.FreezeStatus.IsSet() {
 		status := string(params.FreezeStatus.Value)
 		if status != contestsmodel.FreezeStatusAuto && status != contestsmodel.FreezeStatusFrozen && status != contestsmodel.FreezeStatusUnfrozen {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid freeze_status value")
+			return invalidValue("/freeze_status")
 		}
 	}
 
@@ -164,24 +174,21 @@ var (
 
 func validateOrgLogin(login string) error {
 	normalized := strings.ToLower(strings.TrimSpace(login))
-	if strings.HasPrefix(normalized, "@") {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "organization login cannot start with '@'")
-	}
 	if len(normalized) < 3 || len(normalized) > 32 {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "organization login must be between 3 and 32 characters")
+		return lengthError("/login", 3, 32)
 	}
 	if !orgLoginRegex.MatchString(normalized) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "organization login must contain only lowercase latin letters, numbers, and hyphens, and cannot start or end with a hyphen")
+		return pkg.AtField("/login", pkg.Invalid(pkg.ErrFormat, "organization login must contain only lowercase latin letters, numbers, and hyphens, and cannot start or end with a hyphen", nil))
 	}
 	if _, isReserved := reservedOrgLogins[normalized]; isReserved {
-		return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("organization login '%s' is reserved", normalized))
+		return pkg.AtField("/login", pkg.Invalid(pkg.ErrReserved, fmt.Sprintf("organization login '%s' is reserved", normalized), nil))
 	}
 	return nil
 }
 
 func validateCreateOrganizationParams(name string) error {
 	if !checkLength(name, 3, 64) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "name must be between 3 and 64 characters")
+		return lengthError("/name", 3, 64)
 	}
 
 	return nil
@@ -199,11 +206,11 @@ func validateUpdateOrganizationRequest(params *corev1.UpdateOrganizationRequestM
 	}
 
 	if params.Name.IsSet() && !checkLength(params.Name.Value, 3, 64) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "name must be between 3 and 64 characters")
+		return lengthError("/name", 3, 64)
 	}
 
 	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "description length must be less than 2048 characters")
+		return lengthError("/description", 0, 2048)
 	}
 
 	return nil
@@ -217,11 +224,11 @@ func validateOrganizationRole(role string) bool {
 
 func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {
 	if !checkLength(name, 3, 64) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "name must be between 3 and 64 characters")
+		return lengthError("/name", 3, 64)
 	}
 
 	if organizationID == uuid.Nil {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "organization_id is required")
+		return pkg.AtField("/organization_id", pkg.Invalid(pkg.ErrRequired, "organization_id is required", nil))
 	}
 
 	return nil
@@ -233,11 +240,11 @@ func validateUpdateTeamRequest(params *corev1.UpdateTeamRequestModel) error {
 	}
 
 	if params.Name.IsSet() && !checkLength(params.Name.Value, 3, 64) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "name must be between 3 and 64 characters")
+		return lengthError("/name", 3, 64)
 	}
 
 	if params.Description.IsSet() && !checkLength(params.Description.Value, 0, 2048) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "description length must be less than 2048 characters")
+		return lengthError("/description", 0, 2048)
 	}
 
 	return nil

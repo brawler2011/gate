@@ -3954,7 +3954,7 @@ components:
       required: [pointer, code]
       properties:
         pointer:
-          description: RFC 6901 JSON Pointer into the request body.
+          description: RFC 6901 JSON Pointer into the request body; a query parameter is /<name>.
           type: string
           example: /tests/3/input/generator
         code:
@@ -3988,6 +3988,13 @@ components:
         - problem_short_name_taken
         - problem_in_contest
         - email_not_verified
+        - wrong_password
+        - required
+        - length
+        - format
+        - reserved
+        - range
+        - end_before_start
     CreationResponseModel:
       description: "Result of creation."
       example:

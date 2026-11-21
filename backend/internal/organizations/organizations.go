@@ -231,15 +231,15 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 ) (*organizationsmodel.BatchCreateOrganizationUsersResult, error) {
 	requestUserID := accessmodel.UserFromContext(ctx).Id
 	if input.Count < 1 || input.Count > 500 {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "count must be between 1 and 500")
+		return nil, pkg.AtField("/count", pkg.Invalid(pkg.ErrRange, "count must be between 1 and 500", map[string]any{"min": 1, "max": 500}))
 	}
 
 	prefix := strings.TrimSpace(input.Prefix)
 	if prefix == "" {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "prefix cannot be empty")
+		return nil, pkg.AtField("/prefix", pkg.Invalid(pkg.ErrRequired, "prefix cannot be empty", nil))
 	}
 	if len(prefix) > 20 {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "prefix cannot exceed 20 characters")
+		return nil, pkg.AtField("/prefix", pkg.Invalid(pkg.ErrLength, "prefix cannot exceed 20 characters", map[string]any{"max": 20}))
 	}
 
 	org, err := uc.repo.GetOrganizationByLogin(ctx, input.OrgLogin)

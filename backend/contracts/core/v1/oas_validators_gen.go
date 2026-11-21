@@ -720,6 +720,20 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "email_not_verified":
 		return nil
+	case "wrong_password":
+		return nil
+	case "required":
+		return nil
+	case "length":
+		return nil
+	case "format":
+		return nil
+	case "reserved":
+		return nil
+	case "range":
+		return nil
+	case "end_before_start":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

@@ -6615,6 +6615,20 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeProblemInContest
 	case ErrorCodeEmailNotVerified:
 		*s = ErrorCodeEmailNotVerified
+	case ErrorCodeWrongPassword:
+		*s = ErrorCodeWrongPassword
+	case ErrorCodeRequired:
+		*s = ErrorCodeRequired
+	case ErrorCodeLength:
+		*s = ErrorCodeLength
+	case ErrorCodeFormat:
+		*s = ErrorCodeFormat
+	case ErrorCodeReserved:
+		*s = ErrorCodeReserved
+	case ErrorCodeRange:
+		*s = ErrorCodeRange
+	case ErrorCodeEndBeforeStart:
+		*s = ErrorCodeEndBeforeStart
 	default:
 		*s = ErrorCode(v)
 	}

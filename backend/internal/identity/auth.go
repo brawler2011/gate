@@ -71,14 +71,12 @@ func hashToken(token string) string {
 }
 
 func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, password string) (accessmodel.User, error) {
-	if err := identitymodel.UsernameValidate(username); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid username")
-	}
-	if err := identitymodel.EmailValidate(emailAddr); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
-	}
-	if err := identitymodel.PasswordValidate(password); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
+	if err := pkg.Fields(
+		pkg.AtField("/username", identitymodel.UsernameValidate(username)),
+		pkg.AtField("/email", identitymodel.EmailValidate(emailAddr)),
+		pkg.AtField("/password", identitymodel.PasswordValidate(password)),
+	); err != nil {
+		return accessmodel.User{}, err
 	}
 
 	if err := uc.limiter.Email(ctx, emailAddr); err != nil {
@@ -483,7 +481,7 @@ func (uc *AuthUseCase) ResetPassword(ctx context.Context, token, newPassword str
 
 func (uc *AuthUseCase) resetPasswordWithin(ctx context.Context, store IdentityTxStore, token, newPassword string) error {
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
+		return pkg.AtField("/password", err)
 	}
 
 	tokenHash := hashToken(token)
@@ -525,14 +523,14 @@ func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 		return uuid.Nil, err
 	}
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
+		return uuid.Nil, pkg.AtField("/new_password", err)
 	}
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
 	if err != nil {
 		return uuid.Nil, err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "incorrect current password")
+		return uuid.Nil, pkg.AtField("/old_password", pkg.Wrap(pkg.ErrWrongPassword, err, "incorrect current password"))
 	}
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -570,7 +568,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return err
 	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
+		return pkg.AtField("/new_email", err)
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
@@ -580,7 +578,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "incorrect password")
+		return pkg.AtField("/password", pkg.Wrap(pkg.ErrWrongPassword, err, "incorrect password"))
 	}
 
 	existing, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail)
