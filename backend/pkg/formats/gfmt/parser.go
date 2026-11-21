@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"gopkg.in/yaml.v3"
 )
@@ -15,14 +16,14 @@ import (
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
-		return nil, fmt.Errorf("read problem.yaml: %w", err)
+		return nil, err
 	}
 	var manifest *Problem
 	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return nil, fmt.Errorf("parse problem.yaml: %w", err)
+		return nil, spec.Syntax("problem.yaml", err)
 	}
 	if manifest == nil {
-		return nil, fmt.Errorf("problem.yaml must contain a mapping")
+		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
 	p := &spec.Problem{Title: manifest.Title, Type: manifest.Type, TimeLimitMs: manifest.Limits.TimeMs, MemoryLimitMb: manifest.Limits.MemoryMb,
 		InputFile: manifest.InputFile, OutputFile: manifest.OutputFile}
@@ -38,9 +39,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		switch {
 		case rel == "problem.yaml" || folder == TestFolder:
 		case folderRole(folder) != "" && name != "" && !strings.Contains(name, "/"):
-			deps, err := dependencies(manifest.Sources[rel])
+			deps, err := dependencies(rel, manifest.Sources[rel])
 			if err != nil {
-				return fmt.Errorf("%s: %w", rel, err)
+				return err
 			}
 			source := manifest.Sources[rel]
 			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard, Groups: source.Groups})
@@ -58,7 +59,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			}
 			s.Sections[strings.TrimSuffix(file, ".md")] = rel
 		default:
-			return fmt.Errorf("unexpected file %s", rel)
+			return spec.Fail(pkg.ErrPackageLayout, rel, "", "unexpected file %s", rel)
 		}
 		return nil
 	})
@@ -68,13 +69,13 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	for _, name := range manifest.SystemLibrary {
 		rel := LibraryFolder + "/" + name
 		if name == "" || strings.Contains(name, "/") || files[rel] {
-			return nil, fmt.Errorf("system library file %q is invalid or also in %s/", name, LibraryFolder)
+			return nil, spec.Fail(pkg.ErrDuplicate, rel, name, "system library file %q is invalid or also in %s/", name, LibraryFolder)
 		}
 		p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: true})
 	}
 	for language, title := range manifest.Titles {
 		if statements[language] == nil {
-			return nil, fmt.Errorf("title in %s has no statement", language)
+			return nil, spec.Fail(pkg.ErrUnknown, "problem.yaml", language, "title in %s has no statement", language)
 		}
 		statements[language].Title = title
 	}
@@ -88,7 +89,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		case 1:
 			return &list[0], nil
 		default:
-			return nil, fmt.Errorf("more than one %s in %s/", role, folder)
+			return nil, spec.Fail(pkg.ErrPackageLayout, folder, "", "more than one %s in %s/", role, folder)
 		}
 	}
 	if p.Checker, err = singleton(RoleFolder("checker"), "checker"); err != nil {
@@ -115,7 +116,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	for _, g := range p.Generators {
 		stem := spec.Stem(g.Name)
 		if _, ok := generators[stem]; ok {
-			return nil, fmt.Errorf("several generators named %s", stem)
+			return nil, spec.Fail(pkg.ErrDuplicate, g.Path, stem, "several generators named %s", stem)
 		}
 		generators[stem] = g.Path
 	}
@@ -130,26 +131,26 @@ func programTests(program *spec.Program, folder string, tests []ProgramTest) err
 		input := TestFolder + "/" + t.Input
 		switch {
 		case t.Input == "":
-			return fmt.Errorf("%s: test %d has no input", program.Path, i+1)
+			return spec.Fail(pkg.ErrRequired, program.Path, "", "%s: test %d has no input", program.Path, i+1)
 		case folder == RoleFolder("checker") && t.Output != "" && t.Answer != "" && t.Group == "":
 			program.CheckerTests = append(program.CheckerTests, spec.CheckerTest{Input: input, Output: TestFolder + "/" + t.Output, Answer: TestFolder + "/" + t.Answer, Verdict: t.Verdict, Points: t.Points})
 		case folder == RoleFolder("validator") && (t.Verdict == "valid" || t.Verdict == "invalid") && t.Output == "" && t.Answer == "" && t.Points == nil:
 			program.ValidatorTests = append(program.ValidatorTests, spec.ValidatorTest{Input: input, Valid: t.Verdict == "valid", Group: t.Group})
 		default:
-			return fmt.Errorf("%s: test %d is no checker test with output and answer or validator test with a valid or invalid verdict", program.Path, i+1)
+			return spec.Fail(pkg.ErrPackageSyntax, program.Path, "", "%s: test %d is no checker test with output and answer or validator test with a valid or invalid verdict", program.Path, i+1)
 		}
 	}
 	return nil
 }
 
 // Programs without explicit dependencies include the whole library.
-func dependencies(s Source) (map[string]string, error) {
+func dependencies(rel string, s Source) (map[string]string, error) {
 	if len(s.DependencyMap) == 0 {
 		return nil, nil
 	}
 	for _, source := range s.DependencyMap {
 		if !strings.HasPrefix(source, LibraryFolder+"/") {
-			return nil, fmt.Errorf("dependency %s is outside lib/", source)
+			return nil, spec.Fail(pkg.ErrPackageLayout, rel, source, "dependency %s is outside lib/", source)
 		}
 	}
 	return s.DependencyMap, nil
@@ -230,7 +231,7 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 		}
 		name, ok := generators[argv[0]]
 		if !ok {
-			return test, fmt.Errorf("generator %s not found", argv[0])
+			return test, spec.Fail(pkg.ErrUnknown, "", argv[0], "generator %s not found", argv[0])
 		}
 		test.Generator, test.Args = name, argv[1:]
 	}

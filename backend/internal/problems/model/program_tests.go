@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
@@ -76,15 +77,18 @@ func (d *Draft) validateProgramTests(v *validation, q DraftQuotas) {
 	ids := map[uuid.UUID]bool{}
 	count := 0
 	id := func(at string, test uuid.UUID) {
-		if test == uuid.Nil || ids[test] {
-			v.fail(at+"/id", "ID is missing or not unique")
+		switch {
+		case test == uuid.Nil:
+			v.fail(at+"/id", pkg.ErrRequired, nil, "ID is missing")
+		case ids[test]:
+			v.fail(at+"/id", pkg.ErrDuplicate, nil, "ID is not unique")
 		}
 		ids[test] = true
 		count++
 	}
 	object := func(at string, oid uuid.UUID) {
 		if oid == uuid.Nil {
-			v.fail(at, "file has no content")
+			v.fail(at, pkg.ErrRequired, nil, "file has no content")
 		}
 	}
 	if d.Checker != nil {
@@ -95,10 +99,12 @@ func (d *Draft) validateProgramTests(v *validation, q DraftQuotas) {
 			object(at+"/output", t.Output)
 			object(at+"/answer", t.Answer)
 			if !slices.Contains(CheckerVerdicts, t.Verdict) {
-				v.fail(at+"/verdict", "invalid verdict %q", t.Verdict)
+				v.fail(at+"/verdict", pkg.ErrUnknown, value(t.Verdict), "invalid verdict %q", t.Verdict)
 			}
-			if t.Points != nil && (t.Verdict != "POINTS" || *t.Points < 0 || *t.Points > points.Max) {
-				v.fail(at+"/points", "expected points need the POINTS verdict and a valid score")
+			if t.Points != nil && t.Verdict != "POINTS" {
+				v.fail(at+"/points", pkg.ErrInconsistent, with(at+"/verdict"), "expected points need the POINTS verdict")
+			} else if t.Points != nil && (*t.Points < 0 || *t.Points > points.Max) {
+				v.fail(at+"/points", pkg.ErrRange, map[string]any{"min": 0, "max": points.Max}, "expected points are out of range")
 			}
 		}
 	}
@@ -108,11 +114,11 @@ func (d *Draft) validateProgramTests(v *validation, q DraftQuotas) {
 			id(at, t.ID)
 			object(at+"/input", t.Input)
 			if len(t.Group) > 255 || !utf8.ValidString(t.Group) || strings.ContainsRune(t.Group, 0) {
-				v.fail(at+"/group", "invalid group %q", t.Group)
+				v.fail(at+"/group", pkg.ErrFormat, nil, "invalid group %q", t.Group)
 			}
 		}
 	}
 	if count > q.Tests {
-		v.fail("", "more than %d checker and validator tests", q.Tests)
+		v.fail("", pkg.ErrTooMany, maximum(q.Tests), "more than %d checker and validator tests", q.Tests)
 	}
 }

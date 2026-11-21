@@ -60,7 +60,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	defer archive.file.Close()
 	z, err := zip.NewReader(archive.file, archive.spec.Size)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid import ZIP")
+		return nil, pkg.Wrap(pkg.ErrZipInvalid, err, "invalid import ZIP")
 	}
 	tree := filepath.Join(root, "tree")
 	if err := ziputil.ExtractZipLimited(z, tree, int64(uc.BuildOptions.Limits.DiskBytes)-archive.spec.Size, uc.BuildOptions.Limits.FileCount); err != nil {
@@ -72,7 +72,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	problem, err := formats.Read(packageRoot)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid author package")
+		return nil, err
 	}
 	if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
 		return nil, err
@@ -99,13 +99,13 @@ func detectImportRoot(root string) (string, error) {
 		path := filepath.Join(root, entry.Name())
 		if _, err := formats.DetectFormat(path); err == nil {
 			if found != "" {
-				return "", pkg.Wrap(pkg.ErrInvalid, nil, "multiple packages in archive")
+				return "", spec.Fail(pkg.ErrPackageLayout, "", "", "multiple packages in archive")
 			}
 			found = path
 		}
 	}
 	if found == "" {
-		return "", pkg.Wrap(pkg.ErrInvalid, nil, "package root not found")
+		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "package root not found")
 	}
 	return found, nil
 }
@@ -211,7 +211,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 	}
 	if p.MainSolution != "" && c.draft.MainSolution == nil {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "main solution "+p.MainSolution+" not found")
+		return spec.Fail(pkg.ErrUnknown, "", p.MainSolution, "main solution %s not found", p.MainSolution)
 	}
 	for _, s := range p.Statements {
 		if err := c.addStatement(s); err != nil {
@@ -220,7 +220,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	}
 	for _, a := range p.Assets {
 		if !model.ValidFileName(a.Name) {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid asset name "+a.Name)
+			return spec.Fail(pkg.ErrFormat, a.Path, a.Name, "invalid asset name %s", a.Name)
 		}
 		if err := c.charge(0); err != nil {
 			return err
@@ -277,7 +277,7 @@ func (c *importConverter) scopeValidators(validators []spec.Program) error {
 		for _, group := range v.Groups {
 			id, ok := ids[group]
 			if !ok {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "validator "+v.Path+" checks unknown test group "+group)
+				return spec.Fail(pkg.ErrUnknown, v.Path, group, "validator %s checks unknown test group %s", v.Path, group)
 			}
 			c.draft.Validators[i].Subtasks = append(c.draft.Validators[i].Subtasks, id)
 		}
@@ -299,7 +299,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	sources := map[string][]string{}
 	add := func(name string, f spec.File, generator bool) error {
 		if !model.ValidFileName(name) {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid library file name "+name)
+			return spec.Fail(pkg.ErrFormat, "", name, "invalid library file name %s", name)
 		}
 		if _, ok := texts[name]; !ok && !system[name] {
 			order = append(order, name)
@@ -343,7 +343,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		for _, name := range slices.Sorted(maps.Keys(program.Dependencies)) {
 			f, ok := paths[program.Dependencies[name]]
 			if !ok {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "dependency "+program.Dependencies[name]+" of "+program.Path+" is not a library file")
+				return spec.Fail(pkg.ErrUnknown, program.Path, program.Dependencies[name], "dependency %s of %s is not a library file", program.Dependencies[name], program.Path)
 			}
 			if err := add(name, f, generator); err != nil {
 				return err
@@ -386,16 +386,16 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		case pinned[name] && len(list) == 1:
 			file.Content = list[0]
 		case system[name] && !known:
-			return pkg.Wrap(pkg.ErrInvalid, nil, "unknown system library file "+name)
+			return spec.Fail(pkg.ErrUnknown, "", name, "unknown system library file %s", name)
 		case system[name] && len(list) > 0:
-			return pkg.Wrap(pkg.ErrInvalid, nil, "the package has its own "+name+" and names the system one")
+			return spec.Fail(pkg.ErrDuplicate, "", name, "the package has its own %s and names the system one", name)
 		case system[name], upstream && !generated[name], upstream && len(list) == 1 && list[0] == current.Content:
 			file.AutoUpdate = true
 		case len(list) == 1:
 			file.Content = list[0]
 		default:
-			return pkg.Wrap(pkg.ErrInvalid, nil, "programs include different files named "+name+": "+strings.Join(sources[name], ", ")+
-				"; a problem has one library file of each name, so rename one of them")
+			return spec.Fail(pkg.ErrDuplicate, strings.Join(sources[name], ", "), name,
+				"programs include different files named %s: %s; a problem has one library file of each name, so rename one of them", name, strings.Join(sources[name], ", "))
 		}
 		c.draft.Library = append(c.draft.Library, file)
 	}
@@ -443,9 +443,9 @@ func (c *importConverter) language(program spec.Program) (string, error) {
 	}
 	if _, ok := c.uc.Languages.Langs[language]; !ok {
 		if language == "" {
-			return "", pkg.Wrap(pkg.ErrInvalid, nil, "no language configuration accepts "+program.Path)
+			return "", spec.Fail(pkg.ErrUnsupported, program.Path, "", "no language configuration accepts %s", program.Path)
 		}
-		return "", pkg.Wrap(pkg.ErrInvalid, nil, "unsupported language configuration "+language+" of "+program.Path)
+		return "", spec.Fail(pkg.ErrUnsupported, program.Path, language, "unsupported language configuration %s of %s", language, program.Path)
 	}
 	return language, nil
 }
@@ -467,7 +467,7 @@ func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Pr
 
 func (c *importConverter) addStatement(s spec.Statement) error {
 	if c.draft.Statement(s.Language) != nil {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "several statements in "+s.Language)
+		return spec.Fail(pkg.ErrDuplicate, "", s.Language, "several statements in %s", s.Language)
 	}
 	statement := model.DraftStatement{Language: s.Language, Title: strings.TrimSpace(s.Title)}
 	sections := map[string]string{}
@@ -489,7 +489,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	for name, text := range sections {
 		section := statement.Section(name)
 		if section == nil {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "unknown statement section "+name+" in "+s.Language)
+			return spec.Fail(pkg.ErrUnknown, "", name, "unknown statement section %s in %s", name, s.Language)
 		}
 		if len(text) > int(c.uc.DraftQuotas.FileBytes) {
 			return pkg.ErrPayloadTooLarge
@@ -510,7 +510,7 @@ func (c *importConverter) addGroups(groups []spec.Group, generators, solutions m
 	ids := map[string]uuid.UUID{}
 	for _, g := range groups {
 		if _, ok := ids[g.Name]; ok {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "several test groups named "+g.Name)
+			return spec.Fail(pkg.ErrDuplicate, "", g.Name, "several test groups named %s", g.Name)
 		}
 		ids[g.Name] = uuid.New()
 	}
@@ -520,7 +520,7 @@ func (c *importConverter) addGroups(groups []spec.Group, generators, solutions m
 		for _, dep := range g.DependsOn {
 			did, ok := ids[dep]
 			if !ok {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "test group "+g.Name+" depends on unknown group "+dep)
+				return spec.Fail(pkg.ErrUnknown, "", dep, "test group %s depends on unknown group %s", g.Name, dep)
 			}
 			subtask.DependsOn = append(subtask.DependsOn, did)
 		}
@@ -558,7 +558,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, so
 	if test.Generator != "" {
 		gen, ok := generators[test.Generator]
 		if !ok {
-			return t, pkg.Wrap(pkg.ErrInvalid, nil, "generator "+test.Generator+" not found")
+			return t, spec.Fail(pkg.ErrUnknown, "", test.Generator, "generator %s not found", test.Generator)
 		}
 		t.Input = model.DraftInput{Mode: "generator", Generator: &gen, Args: test.Args}
 		if t.Input.Args == nil {
@@ -583,7 +583,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, so
 	case test.AnswerSolution != "":
 		name, ok := solutions[test.AnswerSolution]
 		if !ok {
-			return t, pkg.Wrap(pkg.ErrInvalid, nil, "solution "+test.AnswerSolution+" not found")
+			return t, spec.Fail(pkg.ErrUnknown, "", test.AnswerSolution, "solution %s not found", test.AnswerSolution)
 		}
 		t.Answer = model.DraftAnswer{Mode: "generated", Solution: &name}
 	default:
@@ -611,7 +611,7 @@ func (c *importConverter) readText(path, charset string) (string, error) {
 	}
 	text, converted, err := spec.DecodeText(data, charset)
 	if err != nil {
-		return "", pkg.Wrap(pkg.ErrInvalid, err, "cannot read text of "+path)
+		return "", spec.Fail(pkg.ErrNotUTF8, path, "", "cannot read text of %s: %v", path, err)
 	}
 	if converted && !slices.Contains(c.converted, path) {
 		c.converted = append(c.converted, path)
@@ -722,12 +722,12 @@ func copyLF(dst io.Writer, src io.Reader) (bool, error) {
 
 func (c *importConverter) file(path string) (string, error) {
 	if !fs.ValidPath(path) || path == "." {
-		return "", pkg.Wrap(pkg.ErrInvalid, nil, "invalid package path "+path)
+		return "", spec.Fail(pkg.ErrPackageLayout, path, "", "invalid package path %s", path)
 	}
 	full := filepath.Join(c.root, filepath.FromSlash(path))
 	info, err := os.Lstat(full)
 	if err != nil || !info.Mode().IsRegular() {
-		return "", pkg.Wrap(pkg.ErrInvalid, err, "missing package file "+path)
+		return "", spec.Fail(pkg.ErrPackageLayout, path, "", "missing package file %s", path)
 	}
 	return full, nil
 }

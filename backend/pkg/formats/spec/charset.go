@@ -3,10 +3,10 @@ package spec
 import (
 	"bytes"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"unicode/utf8"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/htmlindex"
 )
@@ -18,7 +18,7 @@ func DecodeText(data []byte, charset string) (string, bool, error) {
 	if charset != "" {
 		enc, err := htmlindex.Get(charset)
 		if err != nil {
-			return "", false, fmt.Errorf("unsupported charset %s", charset)
+			return "", false, Fail(pkg.ErrUnsupported, "", charset, "unsupported charset %s", charset)
 		}
 		if name, _ := htmlindex.Name(enc); name != "utf-8" {
 			decoder = enc.NewDecoder()
@@ -31,7 +31,7 @@ func DecodeText(data []byte, charset string) (string, bool, error) {
 	}
 	text, err := decoder.Bytes(data)
 	if err != nil {
-		return "", false, fmt.Errorf("decode %s: %w", charset, err)
+		return "", false, Fail(pkg.ErrPackageSyntax, "", charset, "decode %s: %v", charset, err)
 	}
 	return string(text), !bytes.Equal(text, data), nil
 }
@@ -42,12 +42,12 @@ func UnmarshalXML(data []byte, v any) error {
 	d.CharsetReader = func(label string, input io.Reader) (io.Reader, error) {
 		enc, err := htmlindex.Get(label)
 		if err != nil {
-			return nil, fmt.Errorf("unsupported encoding %s", label)
+			return nil, Fail(pkg.ErrUnsupported, "", label, "unsupported encoding %s", label)
 		}
 		return enc.NewDecoder().Reader(input), nil
 	}
 	if err := d.Decode(v); err != nil {
-		return fmt.Errorf("decode xml: %w", err)
+		return Fail(pkg.ErrPackageSyntax, "", "", "decode xml: %v", err)
 	}
 	return nil
 }

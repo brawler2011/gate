@@ -3,6 +3,7 @@ import {useMutation, useQuery, useQueryClient, type UseQueryResult} from "@tanst
 import {useCallback} from "react";
 
 import {api, unwrap, type Problem} from "@/lib/api";
+import {fieldText} from "@/lib/problemText";
 
 import {describePointer, type OpResult} from "./draftOps";
 
@@ -23,7 +24,11 @@ const isConflict = (error: unknown): boolean => (error as DraftError | undefined
 export const errorMessage = (error: unknown, draft?: ProblemDraft): string => {
   const fields = (error as DraftError | undefined)?.errors;
   if (draft && fields && fields.length > 0) {
-    return fields.map((field) => `${describePointer(draft, field.pointer)}: ${field.detail ?? field.code}`).join("\n");
+    return fields.map((field) => {
+      const other = field.params?.with;
+      const text = typeof other === "string" ? `${fieldText(field)} (${describePointer(draft, other)})` : fieldText(field);
+      return `${describePointer(draft, field.pointer)}: ${text}`;
+    }).join("\n");
   }
   return error instanceof Error ? error.message : "Неизвестная ошибка";
 };

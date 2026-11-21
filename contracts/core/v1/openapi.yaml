@@ -4021,6 +4021,15 @@ components:
         - end_before_start
         - duplicate
         - too_large
+        - unknown
+        - not_utf8
+        - cycle
+        - inconsistent
+        - too_many
+        - unsupported
+        - zip_invalid
+        - package_layout
+        - package_syntax
     CreationResponseModel:
       description: "Result of creation."
       example:

@@ -535,6 +535,15 @@ func TestImportRejectsUnknownStatementSection(t *testing.T) {
 	require.ErrorContains(t, err, "unknown statement section story in en")
 }
 
+// The client sees only the outermost pkg.Error, so the defect must be its public message.
+func TestImportShowsWhyAPackageIsInvalid(t *testing.T) {
+	_, err := importAPlusB(t, map[string]string{"junk.txt": "x\n"})
+	var e *pkg.Error
+	require.ErrorAs(t, err, &e)
+	require.Equal(t, pkg.ErrPackageLayout.Code, e.Code)
+	require.Contains(t, e.Message, "unexpected file junk.txt")
+}
+
 func TestImportKeepsPolygonSourceTypes(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "polygon-source-types"), nil)
 	require.NoError(t, err)

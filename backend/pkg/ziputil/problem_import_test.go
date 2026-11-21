@@ -30,7 +30,7 @@ func archive(t *testing.T, corrupt bool) *zip.Reader {
 
 func TestExtractZipLimitedCodes(t *testing.T) {
 	require.NoError(t, ExtractZipLimited(archive(t, false), t.TempDir(), 1024, 10))
-	require.Equal(t, pkg.CodeInvalid, pkg.CodeOf(ExtractZipLimited(archive(t, true), t.TempDir(), 1024, 10)))
+	require.Equal(t, pkg.ErrZipInvalid.Code, pkg.CodeOf(ExtractZipLimited(archive(t, true), t.TempDir(), 1024, 10)))
 	require.Equal(t, pkg.CodePayloadTooLarge, pkg.CodeOf(ExtractZipLimited(archive(t, false), t.TempDir(), 3, 10)))
 	require.Equal(t, pkg.CodePayloadTooLarge, pkg.CodeOf(ExtractZipLimited(archive(t, false), t.TempDir(), 1024, 1)))
 }
