@@ -4232,10 +4232,7 @@ export interface components {
         RegisterRequestModel: {
             /** @example john_doe */
             username: string;
-            /**
-             * Format: email
-             * @example john@example.com
-             */
+            /** @example john@example.com */
             email: string;
             /**
              * Format: password
@@ -4338,7 +4335,6 @@ export interface components {
         RequestEmailChangeRequestModel: {
             /** Format: password */
             password: string;
-            /** Format: email */
             new_email: string;
         };
         /**
@@ -4357,7 +4353,6 @@ export interface components {
          *     }
          */
         AdminChangeEmailRequestModel: {
-            /** Format: email */
             email: string;
             /** @default true */
             with_confirmation: boolean;

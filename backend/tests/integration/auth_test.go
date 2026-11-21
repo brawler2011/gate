@@ -71,7 +71,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "ab", Email: "short@example.com", Password: "short"})
 		s.Equal(map[string]string{"/username": "length", "/password": "length"}, fieldCodes(err))
 		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "valid_name", Email: "not-an-email", Password: "password123"})
-		s.Equal(map[string]string{"/email": "invalid"}, fieldCodes(err), "schema failures are field errors too")
+		s.Equal(map[string]string{"/email": "format"}, fieldCodes(err))
 	})
 
 	s.Run("Login", func() {

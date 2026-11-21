@@ -200,8 +200,9 @@ func Invalid(code *Error, message string, params map[string]any) error {
 
 // AtField reports err as a failure of the value at pointer; errors without a code become invalid.
 func AtField(pointer string, err error) error {
-	if err == nil {
-		return nil
+	var fields FieldErrors
+	if err == nil || errors.As(err, &fields) {
+		return err
 	}
 	f := FieldError{Pointer: pointer, Code: CodeInvalid, Message: err.Error()}
 	var e *Error

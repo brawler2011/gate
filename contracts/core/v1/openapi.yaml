@@ -2462,8 +2462,6 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 3
-                  maxLength: 64
                 organization_id:
                   type: string
                   format: uuid
@@ -6307,11 +6305,8 @@ components:
       properties:
         name:
           type: string
-          minLength: 3
-          maxLength: 64
         description:
           type: string
-          maxLength: 2048
     TeamMemberModel:
       description: "Team member data."
       example:
@@ -6663,7 +6658,6 @@ components:
           example: john_doe
         email:
           type: string
-          format: email
           example: john@example.com
         password:
           type: string
@@ -6781,7 +6775,6 @@ components:
           format: password
         new_email:
           type: string
-          format: email
     ConfirmEmailChangeRequestModel:
       description: "Fields for the confirm email change request."
       example:
@@ -6802,7 +6795,6 @@ components:
       properties:
         email:
           type: string
-          format: email
         with_confirmation:
           type: boolean
           default: true
@@ -7022,8 +7014,6 @@ components:
         count:
           type: integer
           format: int32
-          minimum: 1
-          maximum: 500
           example: 50
         ttl_days:
           type: integer
