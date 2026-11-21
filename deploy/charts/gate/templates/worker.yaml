@@ -22,11 +22,22 @@ spec:
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 40
-      # Uploads and runs must reach the same go-judge file store.
       initContainers:
+        # go-judge runs as many programs at once as the worker resolves from go_judge.parallelism.
+        - name: judge-parallelism
+          image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
+          args: [-config=/etc/gate/config.yaml, -judge-parallelism=/run/judge/parallelism]
+          env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
+          # Detect under go-judge's CPU limits, which the value sizes.
+          resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
+          volumeMounts:
+            - {name: config, mountPath: /etc/gate, readOnly: true}
+            - {name: judge-run, mountPath: /run/judge}
+        # Uploads and runs must reach the same go-judge file store.
         - name: go-judge
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
           restartPolicy: Always
+          command: [/opt/runtime/bin/bash, -c, 'exec /opt/go-judge -mount-conf=/opt/mount.yaml -parallelism="$(cat /run/judge/parallelism)" "$@"', go-judge]
           # Only this pod may access sandbox execution.
           args: [-http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache, -no-fallback]
           # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
@@ -36,6 +47,7 @@ spec:
             # Keep large inputs and answers out of sandbox memory.
             - {name: judge-data, mountPath: /data}
             - {name: problem-work, mountPath: /problem-work, readOnly: true}
+            - {name: judge-run, mountPath: /run/judge, readOnly: true}
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
@@ -54,4 +66,6 @@ spec:
         - name: problem-work
           emptyDir: {}
         - name: judge-data
+          emptyDir: {}
+        - name: judge-run
           emptyDir: {}

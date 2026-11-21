@@ -21,7 +21,7 @@ type Worker struct {
 }
 
 func (w *Worker) Run(ctx context.Context) error {
-	if w.Parallelism <= 0 || w.Lease < 3*time.Second || w.Poll <= 0 {
+	if w.Parallelism <= 0 || w.Pipeline.Parallelism <= 0 || w.Lease < 3*time.Second || w.Poll <= 0 {
 		return fmt.Errorf("invalid build worker configuration")
 	}
 	var group sync.WaitGroup

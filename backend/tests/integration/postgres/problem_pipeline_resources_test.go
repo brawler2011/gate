@@ -78,7 +78,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
 	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client,
-		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {

@@ -5,6 +5,7 @@ http:
 go_judge:
   http_url: http://127.0.0.1:5050
   work_dir: /problem-work
+  parallelism: 0
 storage:
   s3_endpoint: http://s3:8333
 email:

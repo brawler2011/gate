@@ -107,7 +107,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)
@@ -167,7 +167,7 @@ func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsR
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
 	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: aux, Auxiliary: aux}
 	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
-		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", *d), *d)
 	require.NoError(t, err)
 	*d, err = repo.GetDraft(ctx, d.ProblemID)
