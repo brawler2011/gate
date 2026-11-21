@@ -35,7 +35,7 @@ func (r *ProblemDraftsRepo) finalizeCreate(ctx context.Context, k model.Mutation
 		return *replay, nil
 	}
 	q := sqlc.New(tx)
-	if _, err := access.Organization(ctx, Access{q}, k.OrganizationID, accessmodel.OrganizationManage); err != nil {
+	if _, err := access.Organization(ctx, commandAccess(q), k.OrganizationID, accessmodel.OrganizationManage); err != nil {
 		return model.MutationResult{}, err
 	}
 	repo := &ProblemsRepo{queries: q}

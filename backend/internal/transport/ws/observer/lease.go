@@ -28,7 +28,7 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 			return "", pkg.ErrForbidden
 		}
 		audience := "public"
-		if can(accessmodel.ContestListOwnSubmissions) {
+		if a.Participates() {
 			audience = "participants"
 		}
 		if can(accessmodel.ContestManage) {

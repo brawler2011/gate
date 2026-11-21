@@ -231,3 +231,23 @@ func (q *Queries) LoadTeamAccess(ctx context.Context, arg LoadTeamAccessParams) 
 	}
 	return items, nil
 }
+
+const lockAccessActor = `-- name: LockAccessActor :one
+SELECT id, role, expires_at FROM users
+WHERE id = $1 AND (expires_at IS NULL OR expires_at > now())
+FOR SHARE
+`
+
+type LockAccessActorRow struct {
+	ID        uuid.UUID  `json:"id"`
+	Role      string     `json:"role"`
+	ExpiresAt *time.Time `json:"expires_at"`
+}
+
+// Commands hold the account row so expiry or demotion waits for them or aborts them.
+func (q *Queries) LockAccessActor(ctx context.Context, id uuid.UUID) (LockAccessActorRow, error) {
+	row := q.db.QueryRow(ctx, lockAccessActor, id)
+	var i LockAccessActorRow
+	err := row.Scan(&i.ID, &i.Role, &i.ExpiresAt)
+	return i, err
+}

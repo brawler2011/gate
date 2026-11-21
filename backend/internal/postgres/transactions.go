@@ -63,7 +63,7 @@ func NewTeamTransactions(pool *pgxpool.Pool) organizations.TeamTransactions {
 			*TeamsRepo
 			*OrganizationsRepo
 			Access
-		}{&TeamsRepo{q: q}, &OrganizationsRepo{q: q}, Access{q}}
+		}{&TeamsRepo{q: q}, &OrganizationsRepo{q: q}, commandAccess(q)}
 	})
 }
 
@@ -74,7 +74,7 @@ func NewProblemTransactions(pool *pgxpool.Pool) problems.ProblemTransactions {
 			*OrganizationsRepo
 			*PackagesRepo
 			Access
-		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, &PackagesRepo{queries: q}, Access{q}}
+		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, &PackagesRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -95,7 +95,7 @@ func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationT
 			*UsersRepo
 			*NotificationsRepo
 			Access
-		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, Access{q}}
+		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -107,7 +107,7 @@ func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransac
 			*JudgeJobs
 			*ContestsRepo
 			Access
-		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, Access{q}}
+		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -118,7 +118,7 @@ func NewContestEventsTransactions(pool *pgxpool.Pool) contests.ContestEventsTran
 			*ClarificationsRepo
 			*OutboxRepo
 			Access
-		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, Access{q}}
+		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -143,7 +143,7 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*OrganizationsRepo
 			*NotificationsRepo
 			Access
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, Access{q}}
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -152,7 +152,7 @@ func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {
 		return struct {
 			*DraftsRepo
 			Access
-		}{&DraftsRepo{queries: q}, Access{q}}
+		}{&DraftsRepo{queries: q}, commandAccess(q)}
 	})
 }
 

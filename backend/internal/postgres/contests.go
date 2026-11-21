@@ -163,7 +163,7 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmo
 }
 func (r *ContestsRepo) listScopedContests(ctx context.Context, params sqlc.ScopeContestsParams, page, size int32) (*contestsmodel.ContestsList, error) {
 	var err error
-	if params.ViewerID, params.All, err = (Access{r.queries}).visibility(ctx); err != nil {
+	if params.ViewerID, params.All, err = (Access{q: r.queries}).visibility(ctx); err != nil {
 		return nil, err
 	}
 	params.PageSize, params.PageOffset = size, (int64(page)-1)*int64(size)

@@ -13,13 +13,26 @@ import (
 )
 
 // Access loads authorization facts through whatever connection its queries are bound to.
-type Access struct{ q *sqlc.Queries }
+// Inside a command, lock keeps the actor's account row stable until the command commits.
+type Access struct {
+	q    *sqlc.Queries
+	lock bool
+}
 
 var _ access.Loader = Access{}
 
-func NewAccess(pool *pgxpool.Pool) Access { return Access{sqlc.New(pool)} }
+func NewAccess(pool *pgxpool.Pool) Access { return Access{q: sqlc.New(pool)} }
+
+func commandAccess(q *sqlc.Queries) Access { return Access{q: q, lock: true} }
 
 func (a Access) Actor(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
+	if a.lock {
+		row, err := a.q.LockAccessActor(ctx, id)
+		if err != nil {
+			return accessmodel.User{}, dbError("lock access actor", err)
+		}
+		return accessmodel.User{Id: row.ID, Role: row.Role, ExpiresAt: row.ExpiresAt}, nil
+	}
 	row, err := a.q.GetAccessActor(ctx, id)
 	if err != nil {
 		return accessmodel.User{}, dbError("get access actor", err)

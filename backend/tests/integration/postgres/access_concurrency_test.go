@@ -7,10 +7,12 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
@@ -76,6 +78,40 @@ func TestOwnerRemovalRaceKeepsAnOwner(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A command racing an account expiry either commits before it or sees the account gone.
+func TestCommandWaitsForAccountExpiry(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	pool := getTestPool(t)
+	org := helperCreateOrg(t, ctx, pool, "expiry-"+uuid.NewString(), "Expiry")
+	owner, problem := helperOrgOwner(t, ctx, pool, org), uuid.New()
+	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org, Owner: owner, Title: "Expiry", ShortName: problem.String()}))
+	uc := problems.NewProblemsUseCase(postgres.NewProblemsRepo(pool), postgres.NewProblemTransactions(pool), postgres.NewOrganizationsRepo(pool), postgres.NewAccess(pool), postgres.NewPackagesRepo(pool))
+
+	expiry, err := pool.Begin(ctx)
+	require.NoError(t, err)
+	defer func() { _ = expiry.Rollback(ctx) }()
+	_, err = expiry.Exec(ctx, `UPDATE users SET expires_at = now() - interval '1 minute' WHERE id = $1`, owner)
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		public := "public"
+		actor := accessmodel.WithUser(ctx, accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
+		done <- uc.UpdateProblem(actor, problem, &problemsmodel.ProblemUpdate{Visibility: &public})
+	}()
+	select {
+	case err := <-done:
+		t.Fatalf("command finished while the account change was uncommitted: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+	require.NoError(t, expiry.Commit(ctx))
+	require.Error(t, <-done)
+	var visibility string
+	require.NoError(t, pool.QueryRow(ctx, `SELECT visibility FROM problems WHERE id = $1`, problem).Scan(&visibility))
+	require.Equal(t, "private", visibility)
 }
 
 func isAny(err error, targets []error) bool {

@@ -3,6 +3,12 @@
 SELECT id, role, expires_at FROM users
 WHERE id = $1 AND (expires_at IS NULL OR expires_at > now());
 
+-- Commands hold the account row so expiry or demotion waits for them or aborts them.
+-- name: LockAccessActor :one
+SELECT id, role, expires_at FROM users
+WHERE id = $1 AND (expires_at IS NULL OR expires_at > now())
+FOR SHARE;
+
 -- name: LoadOrganizationAccess :many
 SELECT o.id, o.join_policy, COALESCE(om.role::text, '')::text AS role
 FROM organizations o

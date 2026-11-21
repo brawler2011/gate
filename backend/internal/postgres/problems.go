@@ -56,7 +56,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 	if filter.Descending != nil {
 		descending = *filter.Descending
 	}
-	viewer, all, err := (Access{r.queries}).visibility(ctx)
+	viewer, all, err := (Access{q: r.queries}).visibility(ctx)
 	if err != nil {
 		return nil, err
 	}

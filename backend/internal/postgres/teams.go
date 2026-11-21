@@ -94,7 +94,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 }
 
 func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error) {
-	viewer, all, err := (Access{r.q}).visibility(ctx)
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -267,7 +267,7 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.U
 	if err != nil {
 		return nil, 0, err
 	}
-	viewer, all, err := (Access{r.q}).visibility(ctx)
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -278,7 +278,7 @@ func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.U
 	if err != nil {
 		return nil, 0, err
 	}
-	viewer, all, err := (Access{r.q}).visibility(ctx)
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
 	if err != nil {
 		return nil, 0, err
 	}

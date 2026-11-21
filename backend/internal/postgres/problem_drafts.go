@@ -74,7 +74,7 @@ func authorizedMutation(run func() (model.MutationResult, error)) (model.Mutatio
 }
 
 func authorizeEdit(ctx context.Context, q *sqlc.Queries, problemID uuid.UUID) error {
-	_, err := access.Problem(ctx, Access{q}, problemID, accessmodel.ProblemEdit)
+	_, err := access.Problem(ctx, commandAccess(q), problemID, accessmodel.ProblemEdit)
 	return err
 }
 

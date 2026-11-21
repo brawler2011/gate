@@ -63,6 +63,9 @@ func (a ContestAccess) Role() m.ContestRole {
 	return ""
 }
 
+// Participates reports whether the caller competes as a participant; upsolvers only see their own submissions.
+func (a ContestAccess) Participates() bool { return newContestState(a.Actor, a.Facts).participant }
+
 func (a ContestAccess) CanSubmission(author uuid.UUID, action m.SubmissionAction) bool {
 	return SubmissionAllows(a.Actor, a.Facts, author, action)
 }

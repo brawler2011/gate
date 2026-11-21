@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -31,8 +33,11 @@ type registrationStore struct {
 	owners, notified  []uuid.UUID
 }
 
-func (r *registrationStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
-	return r.contest, nil
+func (r *registrationStore) Actor(ctx context.Context, _ uuid.UUID) (accessmodel.User, error) {
+	return accessmodel.UserFromContext(ctx), nil
+}
+func (r *registrationStore) ContestFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+	return map[uuid.UUID]access.ContestFacts{r.contest.ID: {Contest: r.contest, Now: time.Now()}}, nil
 }
 func (r *registrationStore) GetContestMember(context.Context, *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
 	if r.member {
@@ -69,7 +74,7 @@ func (r *registrationStore) CreateNotification(_ context.Context, input *notific
 func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 	for _, mode := range []contestsmodel.ParticipationMode{contestsmodel.ParticipationModeOpen, contestsmodel.ParticipationModeByRequest, contestsmodel.ParticipationModeInviteOnly} {
 		t.Run(string(mode), func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: contestsmodel.ContestSettings{ParticipationMode: mode}}
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: mode}}
 			store := &registrationStore{contest: contest, owners: []uuid.UUID{uuid.New(), uuid.New()}}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
@@ -95,6 +100,19 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 	}
 }
 
+func TestContestRegistrationRechecksVisibility(t *testing.T) {
+	contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen}}
+	hidden := contest
+	hidden.Visibility = contestsmodel.ContestVisibilityPrivate
+	// The pre-transaction lookup still sees the public contest; the transaction sees it hidden.
+	store := &registrationStore{contest: hidden}
+	uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
+	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+	_, _, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
+	require.ErrorIs(t, err, pkg.ErrNotFound)
+	require.False(t, store.joined)
+}
+
 func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
@@ -104,7 +122,7 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 		{name: "pending request", pending: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeByRequest}}
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeByRequest}}
 			store := &registrationStore{contest: contest, member: tc.member, pending: tc.pending}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}

@@ -46,6 +46,8 @@ type accessStub struct {
 	permissionErr error
 	contestErr    error
 	onPermissions func()
+	// facts, when set, replaces the flag translation below.
+	facts *access.ContestFacts
 }
 
 func (m *accessStub) Authenticate(context.Context, uuid.UUID) (accessmodel.User, error) {
@@ -62,7 +64,7 @@ func (m *accessStub) Actor(context.Context, uuid.UUID) (accessmodel.User, error)
 
 func (m *accessStub) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
 	m.mu.Lock()
-	p, err, hook, c := m.permissions, m.permissionErr, m.onPermissions, m.contest
+	p, err, hook, c, fixed := m.permissions, m.permissionErr, m.onPermissions, m.contest, m.facts
 	m.onPermissions = nil
 	m.mu.Unlock()
 	if hook != nil {
@@ -70,6 +72,9 @@ func (m *accessStub) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUI
 	}
 	if err != nil {
 		return nil, err
+	}
+	if fixed != nil {
+		return map[uuid.UUID]access.ContestFacts{c.ID: *fixed}, nil
 	}
 	scope := func(granted bool) contestsmodel.ContestScope {
 		if granted {
@@ -528,6 +533,25 @@ func TestPublicGuestAudience(t *testing.T) {
 	payload := readPayload(t, conn)
 	require.Equal(t, true, payload["frozen"])
 	require.NotContains(t, payload, "state")
+}
+
+func TestUpsolverGetsPublicAudience(t *testing.T) {
+	f := newWSFixture(t)
+	end := time.Now().Add(-time.Minute)
+	c := f.stub.contest
+	c.EndTime = &end
+	c.Settings.EnableUpsolving = true
+	c.Settings.ParticipationMode = contestsmodel.ParticipationModeInviteOnly
+	c.Settings.MonitorScope = contestsmodel.ScopePublic
+	c.Settings.SubmissionsListScope = contestsmodel.ScopeParticipant
+	f.stub.contest.Settings, f.stub.contest.EndTime = c.Settings, c.EndTime
+	f.stub.facts = &access.ContestFacts{Contest: c, Now: time.Now()}
+	conn := f.connect(t, f.path("submissions"))
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	own := uuid.New()
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: own, State: 200, SubmissionEventMeta: f.meta(f.stub.user.Id)})
+	// Participant-scoped submissions of others must not reach an upsolver, so the first frame is its own.
+	require.Equal(t, own.String(), readPayload(t, conn)["id"])
 }
 
 func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {

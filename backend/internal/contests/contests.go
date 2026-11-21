@@ -501,11 +501,11 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	registered := false
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		current, err := tx.GetContest(ctx, contest.ID)
+		current, err := access.Contest(ctx, tx, contest.ID, accessmodel.ContestView)
 		if err != nil {
 			return err
 		}
-		contest = current
+		contest = current.Facts.Contest
 		_, err = tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
 		if err == nil {
 			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "already a member of the contest")
