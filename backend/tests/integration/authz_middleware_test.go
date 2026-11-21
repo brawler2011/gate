@@ -125,7 +125,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "LUS Allowed Contest",
 			Login:          "lus-allowed-" + suffix,
 			Description:    "contest for allowed own submissions",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 
@@ -145,7 +144,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "LUS Denied Contest",
 			Login:          "lus-denied-" + suffix,
 			Description:    "contest for denied own submissions",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 
@@ -227,7 +225,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "LCS Contest",
 			Login:          "lcs-contest-" + suffix,
 			Description:    "contest for list contest submissions custom checks",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 
@@ -309,7 +306,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "Team Contest",
 			Login:          "team-contest-" + suffix,
 			Description:    "private contest for authz",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 
@@ -362,7 +358,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "Mixed Role Contest",
 			Login:          "mixed-role-" + suffix,
 			Description:    "contest for mixed direct+team role resolution",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 
@@ -493,7 +488,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			Title:          "Private Contest",
 			Login:          "policy-contest-" + suffix,
 			Description:    "contest with private access",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 

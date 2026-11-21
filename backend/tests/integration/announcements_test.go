@@ -35,7 +35,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		}
 		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: login, Login: login,
-			Visibility: visibility, Settings: map[string]interface{}{},
+			Visibility: visibility,
 		}))
 	}
 	path := "/organizations/" + org.Login + "/contests/ann-public/announcements"

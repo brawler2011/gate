@@ -13,13 +13,13 @@ LEFT JOIN problem_members m ON m.problem_id = p.id AND m.user_id = sqlc.narg('vi
 WHERE p.id = ANY(sqlc.arg('ids')::uuid[]);
 
 -- name: LoadContestFacts :many
-SELECT c.id, jsonb_build_object('BlockedProblems', (SELECT COALESCE(jsonb_agg(b.problem_id), '[]'::jsonb) FROM contest_user_problem_blocks b WHERE b.contest_id=c.id AND b.user_id=sqlc.narg('viewer_id')::uuid), 'Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM users u WHERE u.expires_at IS NULL AND (u.id = c.owner_id OR EXISTS (SELECT 1 FROM contest_members own WHERE own.contest_id = c.id AND own.user_id = u.id AND own.role = 'owner'))), 'ID', c.id, 'StartTime', c.start_time, 'EndTime', c.end_time, 'Settings', c.settings, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
+SELECT c.id, jsonb_build_object('BlockedProblems', (SELECT COALESCE(jsonb_agg(b.problem_id), '[]'::jsonb) FROM contest_user_problem_blocks b WHERE b.contest_id=c.id AND b.user_id=sqlc.narg('viewer_id')::uuid), 'Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM users u WHERE u.expires_at IS NULL AND (u.id = c.owner_id OR EXISTS (SELECT 1 FROM contest_members own WHERE own.contest_id = c.id AND own.user_id = u.id AND own.role = 'owner'))), 'ID', c.id, 'StartTime', c.start_time, 'EndTime', c.end_time, 'MonitorScope', c.monitor_scope, 'SubmissionsListScope', c.submissions_list_scope, 'SubmissionsReviewScope', c.submissions_review_scope, 'SubmissionDetailsScope', c.submission_details_scope, 'HideStatements', c.hide_statements, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
     'Visibility', c.visibility, 'DirectRole', COALESCE(m.role::text, ''),
     'Teams', COALESCE((SELECT jsonb_agg(jsonb_build_object(
       'OrganizationID', t.organization_id, 'Membership', tm.role, 'Active', true, 'Role', link.role))
       FROM contest_teams link JOIN teams t ON t.id = link.team_id
       JOIN team_members tm ON tm.team_id = t.id
-      WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid), '[]'::jsonb), 'ParticipationMode', COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open')) AS facts
+      WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid), '[]'::jsonb), 'ParticipationMode', c.participation_mode) AS facts
 FROM contests c JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = sqlc.narg('viewer_id')::uuid
 LEFT JOIN contest_members m ON m.contest_id = c.id AND m.user_id = sqlc.narg('viewer_id')::uuid

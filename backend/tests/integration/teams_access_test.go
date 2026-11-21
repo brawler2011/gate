@@ -50,7 +50,6 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			Title:          "Private Contest " + suffix,
 			Login:          "priv-" + suffix,
 			Description:    "Private contest description",
-			Settings:       map[string]interface{}{},
 		})
 		s.Require().NoError(err)
 

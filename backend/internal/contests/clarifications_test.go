@@ -3,9 +3,10 @@ package contests
 import (
 	"context"
 	"encoding/json"
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"testing"
 	"time"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -74,7 +75,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	outboxRepo := &mockOutboxRepo{}
 
 	contestID := uuid.New()
-	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo, Contest: contestsmodel.Contest{ID: contestID, Settings: map[string]interface{}{"allow_clarifications": true}}}}, nil, nil)
+	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo, Contest: contestsmodel.Contest{ID: contestID, Settings: contestsmodel.ContestSettings{AllowClarifications: true}}}}, nil, nil)
 
 	participantID := uuid.New()
 	juryID := uuid.New()

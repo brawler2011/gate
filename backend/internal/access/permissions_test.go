@@ -362,9 +362,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			ID:             f.contestID,
 			OrganizationID: f.orgID,
 			Visibility:     contestsmodel.ContestVisibilityPublic,
-			Settings: map[string]interface{}{
-				"participation_mode": contestsmodel.ParticipationModeOpen,
-			},
+			Settings:       contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen},
 		}
 
 		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
@@ -381,9 +379,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			ID:             f.contestID,
 			OrganizationID: f.orgID,
 			Visibility:     contestsmodel.ContestVisibilityPublic,
-			Settings: map[string]interface{}{
-				"participation_mode": contestsmodel.ParticipationModeInviteOnly,
-			},
+			Settings:       contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeInviteOnly},
 		}
 
 		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
@@ -512,10 +508,7 @@ func TestContestABAC_PreStart(t *testing.T) {
 		Visibility:     contestsmodel.ContestVisibilityPublic,
 		StartTime:      &futureStart,
 		EndTime:        &futureEnd,
-		Settings: map[string]interface{}{
-			"participation_mode": contestsmodel.ParticipationModeOpen,
-			"monitor_scope":      "public",
-		},
+		Settings:       contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic},
 	}
 
 	partID := uuid.New()
@@ -570,12 +563,7 @@ func TestContestABAC_Running(t *testing.T) {
 		Visibility:     contestsmodel.ContestVisibilityPublic,
 		StartTime:      &pastStart,
 		EndTime:        &futureEnd,
-		Settings: map[string]interface{}{
-			"participation_mode":       contestsmodel.ParticipationModeOpen,
-			"monitor_scope":            "participant",
-			"submissions_list_scope":   "moderator",
-			"submission_details_scope": "moderator",
-		},
+		Settings:       contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator},
 	}
 
 	partID := uuid.New()
@@ -632,10 +620,7 @@ func TestContestABAC_Finished_Upsolving(t *testing.T) {
 			Visibility:     contestsmodel.ContestVisibilityPublic,
 			StartTime:      &pastStart,
 			EndTime:        &pastEnd,
-			Settings: map[string]interface{}{
-				"enable_upsolving":   enableUpsolving,
-				"participation_mode": contestsmodel.ParticipationModeOpen,
-			},
+			Settings:       contestsmodel.ContestSettings{EnableUpsolving: enableUpsolving, ParticipationMode: contestsmodel.ParticipationModeOpen},
 		}
 
 		userID := uuid.New()
@@ -662,9 +647,7 @@ func TestContestABAC_Finished_Upsolving(t *testing.T) {
 			Visibility:     contestsmodel.ContestVisibilityPublic,
 			StartTime:      &pastStart,
 			EndTime:        &pastEnd,
-			Settings: map[string]interface{}{
-				"enable_upsolving": enableUpsolving,
-			},
+			Settings:       contestsmodel.ContestSettings{EnableUpsolving: enableUpsolving},
 		}
 
 		partID := uuid.New()

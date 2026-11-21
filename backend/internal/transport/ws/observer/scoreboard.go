@@ -24,7 +24,7 @@ func scoreboardConfigurationAt(contest contestsmodel.Contest, now time.Time) str
 	started := contest.StartTime == nil || !now.Before(*contest.StartTime)
 	finished := contest.EndTime != nil && !now.Before(*contest.EndTime)
 	return fmt.Sprintf("%t/%t/%t/%v/%v/%v/%s/%d", started, finished, contest.IsFrozenAt(now), contest.StartTime, contest.EndTime,
-		contest.GetFreezeTime(), contest.GetFreezeStatus(), contest.GetPenaltyPerAttempt())
+		contest.GetFreezeTime(), contest.Settings.FreezeStatus, contestsmodel.PenaltyPerAttempt)
 }
 
 func (h *Hub) trackScoreboard(ctx context.Context, contestID *uuid.UUID) error {

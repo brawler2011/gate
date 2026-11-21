@@ -151,7 +151,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	contestID := uuid.New()
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	require.NoError(t, contestsRepo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end, Settings: map[string]interface{}{}}))
+	require.NoError(t, contestsRepo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
 	require.NoError(t, contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
 	require.NoError(t, contestsRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}))
 
@@ -298,7 +298,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 		executor, judgeworker.NewEventPublisher(js))
 
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
-	require.NoError(t, h.contests.CreateContest(h.ctx, &contestsmodel.CreateContestParams{ID: h.contestID, OrganizationID: org.ID, OwnerID: &h.userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end, Settings: map[string]interface{}{}}))
+	require.NoError(t, h.contests.CreateContest(h.ctx, &contestsmodel.CreateContestParams{ID: h.contestID, OrganizationID: org.ID, OwnerID: &h.userID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
 	require.NoError(t, h.contests.CreateContestMember(h.ctx, &contestsmodel.CreateContestMemberParams{ContestId: h.contestID, UserId: h.userID, Role: contestsmodel.ContestRoleParticipant}))
 	return h
 }

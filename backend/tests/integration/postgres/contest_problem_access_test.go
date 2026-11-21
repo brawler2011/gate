@@ -288,7 +288,7 @@ func TestContestLifecyclePostgresBoundaries(t *testing.T) {
 	start := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
 	end := start.Add(2 * time.Hour)
 	freeze := end.Add(-30 * time.Minute)
-	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,settings='{"monitor_scope":"public","freeze_duration_minutes":30}' WHERE id=$1`, f.contest, start, end)
+	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,monitor_scope='public',freeze_duration_minutes=30 WHERE id=$1`, f.contest, start, end)
 	require.NoError(t, err)
 	visitor := uuid.New()
 	_, err = f.pool.Exec(f.ctx, `INSERT INTO users(id,username,password_hash) VALUES($1,$2,'unused')`, visitor, uuid.NewString())

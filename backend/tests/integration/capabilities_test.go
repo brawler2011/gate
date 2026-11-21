@@ -20,7 +20,7 @@ func (s *IntegrationTestSuite) TestCapabilitiesRESTParity() {
 	s.Require().NoError(err)
 	contest := uuid.New()
 	end := time.Now().Add(time.Hour)
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &cm.CreateContestParams{ID: contest, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Capabilities", Login: "caps-round", Visibility: cm.ContestVisibilityPrivate, EndTime: &end, Settings: map[string]any{}}))
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &cm.CreateContestParams{ID: contest, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Capabilities", Login: "caps-round", Visibility: cm.ContestVisibilityPrivate, EndTime: &end}))
 	detail, err := s.client.GetContest(ctx, corev1.GetContestParams{OrgLogin: org.Login, ContestLogin: "caps-round"})
 	s.Require().NoError(err)
 	list, err := s.client.ListOrganizationContests(ctx, corev1.ListOrganizationContestsParams{OrgLogin: org.Login})

@@ -34,7 +34,7 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
 
   const isManager = checker.canManageContest(contestResponse.contest);
 
-  const draftsDisabled = contestResponse.contest.enable_drafts === false;
+  const draftsDisabled = !contestResponse.contest.enable_drafts;
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && draftsDisabled)) {
     throw redirect(`/${slug}/${contestLogin}`);
   }

@@ -190,34 +190,7 @@ func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev
 	}
 
 	visibility := string(c.Visibility)
-	settings := c.TypedSettings()
-	monitorScope := "moderator"
-	if settings.MonitorScope != "" {
-		monitorScope = settings.MonitorScope
-	}
-	submissionsListScope := "moderator"
-	if settings.SubmissionsListScope != "" {
-		submissionsListScope = settings.SubmissionsListScope
-	}
-	submissionsReviewScope := "moderator"
-	if settings.SubmissionsReviewScope != "" {
-		submissionsReviewScope = settings.SubmissionsReviewScope
-	}
-	submissionDetailsScope := "moderator"
-	if settings.SubmissionDetailsScope != "" {
-		submissionDetailsScope = settings.SubmissionDetailsScope
-	}
-
-	freezeDurationMinutes := int32PtrToOptNilInt32(c.GetFreezeDurationMinutes())
-	freezeStatus := corev1.ContestModelFreezeStatus(c.GetFreezeStatus())
-
-	enableDrafts := corev1.NewOptBool(settings.GetEnableDrafts())
-	allowClarifications := corev1.NewOptBool(settings.GetAllowClarifications())
-	enableUpsolving := corev1.NewOptBool(settings.GetEnableUpsolving())
-	enableVirtualContests := corev1.NewOptBool(settings.GetEnableVirtualContests())
-	participationMode := corev1.NewOptContestModelParticipationMode(corev1.ContestModelParticipationMode(settings.GetParticipationMode()))
-	hideStatements := corev1.NewOptBool(settings.GetHideStatements())
-
+	s := c.Settings
 	model := corev1.ContestModel{Capabilities: []string{},
 		ID:                     c.ID,
 		Login:                  c.Login,
@@ -226,19 +199,18 @@ func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev
 		Title:                  title,
 		Description:            c.Description,
 		Visibility:             visibility,
-		MonitorScope:           monitorScope,
-		SubmissionsListScope:   submissionsListScope,
-		SubmissionsReviewScope: submissionsReviewScope,
-		SubmissionDetailsScope: submissionDetailsScope,
-		FreezeDurationMinutes:  freezeDurationMinutes,
-		FreezeStatus:           freezeStatus,
-		EnableDrafts:           enableDrafts,
-		AllowClarifications:    allowClarifications,
-		EnableUpsolving:        enableUpsolving,
-		EnableVirtualContests:  enableVirtualContests,
-		ParticipationMode:      participationMode,
-		HideStatements:         hideStatements,
-		Languages:              append([]string{}, settings.Languages...),
+		MonitorScope:           corev1.ContestScope(s.MonitorScope),
+		SubmissionsListScope:   corev1.ContestScope(s.SubmissionsListScope),
+		SubmissionsReviewScope: corev1.ContestScope(s.SubmissionsReviewScope),
+		SubmissionDetailsScope: corev1.ContestScope(s.SubmissionDetailsScope),
+		FreezeDurationMinutes:  int32PtrToOptNilInt32(s.FreezeDurationMinutes),
+		FreezeStatus:           corev1.ContestModelFreezeStatus(s.FreezeStatus),
+		EnableDrafts:           s.EnableDrafts,
+		AllowClarifications:    s.AllowClarifications,
+		EnableUpsolving:        s.EnableUpsolving,
+		ParticipationMode:      corev1.ContestModelParticipationMode(s.ParticipationMode),
+		HideStatements:         s.HideStatements,
+		Languages:              append([]string{}, s.Languages...),
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,

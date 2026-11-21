@@ -39,7 +39,8 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			end := start.Add(2 * time.Hour)
 			contest, otherContest := uuid.New(), uuid.New()
 			for _, id := range []uuid.UUID{contest, otherContest} {
-				require.NoError(t, repo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: id, OrganizationID: org, Title: "Scoreboard", Login: id.String(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusAuto, "freeze_duration_minutes": 60}}))
+				require.NoError(t, repo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: id, OrganizationID: org, Title: "Scoreboard", Login: id.String(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}))
+				require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{FreezeDurationMinutes: new(int32(60)), FreezeDurationSet: true}}))
 			}
 			var problems []uuid.UUID
 			for i := 0; i < size+1; i++ {
@@ -141,7 +142,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	start, end := now.Add(-time.Hour), now.Add(time.Hour)
 	freeze := now.Add(-10 * time.Minute)
-	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,settings='{"monitor_scope":"public","freeze_duration_minutes":70}' WHERE id=$1`, f.contest, start, end)
+	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,monitor_scope='public',freeze_duration_minutes=70 WHERE id=$1`, f.contest, start, end)
 	require.NoError(t, err)
 	users := []uuid.UUID{uuid.New(), uuid.New()}
 	for _, user := range users {

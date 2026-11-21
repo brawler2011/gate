@@ -33,7 +33,7 @@ func TestMetadataPermissionsFailClosed(t *testing.T) {
 	org := m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}
 	valid := metadataFactsStub{
 		problems: map[uuid.UUID]m.ProblemContext{id: {ID: id, Organization: org, Visibility: m.VisibilityPublic}},
-		contests: map[uuid.UUID]m.ContestContext{id: {ID: id, Organization: org, Visibility: m.VisibilityPublic, ParticipationMode: m.ParticipationOpen}},
+		contests: map[uuid.UUID]m.ContestContext{id: {ID: id, Organization: org, Visibility: m.VisibilityPublic, ParticipationMode: m.ParticipationOpen, MonitorScope: "participant", SubmissionsListScope: "moderator", SubmissionsReviewScope: "moderator", SubmissionDetailsScope: "moderator"}},
 		teams:    map[uuid.UUID]m.TeamContext{id: {ID: id, Organization: org, Privacy: m.TeamClosed}},
 	}
 	users := newMockUsersReader()

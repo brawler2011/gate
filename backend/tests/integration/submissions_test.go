@@ -45,7 +45,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		Login:          "submission-contest",
 		Description:    "A test contest for submissions",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-		Settings:       make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
 

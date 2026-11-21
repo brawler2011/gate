@@ -52,7 +52,7 @@ func (m *visibilityStub) ListSubmissions(context.Context, submissionsmodel.Submi
 
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
-	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
+	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
 	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, stub, nil, nil, stub)
 	h := NewCoreServer(Services{Contests: stub, ContestPermissions: stub, Submissions: application}, false)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser})
@@ -99,7 +99,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
 	stub.permissions.ManageContest = false
-	stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusUnfrozen}
+	stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
 	stub.permissionErr = errors.New("db")

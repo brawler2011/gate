@@ -24,8 +24,8 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   enable_drafts: true,
   allow_clarifications: true,
   enable_upsolving: true,
-  enable_virtual_contests: false,
   participation_mode: "open",
+  languages: [],
   created_by: "user", created_at: "2026-10-01", updated_at: "2026-10-01", ...schedule,
 });
 

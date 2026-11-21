@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 	"fmt"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -37,8 +38,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			return err
 		}
 
-		settings := contestsmodel.MapToContestSettings(contest.Settings)
-		if settings.AllowClarifications != nil && !*settings.AllowClarifications {
+		if !contest.Settings.AllowClarifications {
 			return pkg.Wrap(pkg.ErrClarificationsDisabled, nil, "clarifications are disabled for this contest")
 		}
 

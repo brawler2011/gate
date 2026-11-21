@@ -2,9 +2,7 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -43,12 +41,7 @@ func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 }
 
 func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error {
-	settingsJSON, err := marshalJSON(params.Settings)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.queries.CreateContest(ctx, sqlc.CreateContestParams{
+	_, err := r.queries.CreateContest(ctx, sqlc.CreateContestParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
 		OwnerID:        params.OwnerID,
@@ -56,7 +49,6 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 		Title:          params.Title,
 		Login:          params.Login,
 		Description:    params.Description,
-		Settings:       settingsJSON,
 		StartTime:      params.StartTime,
 		EndTime:        params.EndTime,
 	})
@@ -71,7 +63,7 @@ func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (contestsmo
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest", err)
 	}
-	return mapGetContestByIDRow(contest)
+	return mapGetContestByIDRow(contest), nil
 }
 
 func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (contestsmodel.Contest, error) {
@@ -82,7 +74,7 @@ func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, l
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by login", err)
 	}
-	return mapGetContestByLoginRow(contest)
+	return mapGetContestByLoginRow(contest), nil
 }
 
 func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
@@ -93,32 +85,35 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by org login and contest login", err)
 	}
-	return mapGetContestByOrgLoginAndContestLoginRow(contest)
+	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
-	var settingsJSON []byte
-	var err error
-
-	if c.Settings != nil {
-		settingsJSON, err = marshalJSON(*c.Settings)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
-		ID:           c.ID,
-		Login:        c.Login,
-		Title:        c.Title,
-		Description:  c.Description,
-		Visibility:   c.Visibility,
-		Settings:     settingsJSON,
-		StartTime:    c.StartTime,
-		StartTimeSet: c.StartTimeSet,
-		EndTime:      c.EndTime,
-		EndTimeSet:   c.EndTimeSet,
-		OwnerID:      c.OwnerID,
+	s := c.Settings
+	err := r.queries.UpdateContest(ctx, sqlc.UpdateContestParams{
+		ID:                     c.ID,
+		Login:                  c.Login,
+		Title:                  c.Title,
+		Description:            c.Description,
+		Visibility:             c.Visibility,
+		ParticipationMode:      s.ParticipationMode,
+		MonitorScope:           s.MonitorScope,
+		SubmissionsListScope:   s.SubmissionsListScope,
+		SubmissionsReviewScope: s.SubmissionsReviewScope,
+		SubmissionDetailsScope: s.SubmissionDetailsScope,
+		FreezeStatus:           s.FreezeStatus,
+		FreezeDurationSet:      s.FreezeDurationSet,
+		FreezeDurationMinutes:  s.FreezeDurationMinutes,
+		HideStatements:         s.HideStatements,
+		AllowClarifications:    s.AllowClarifications,
+		EnableDrafts:           s.EnableDrafts,
+		EnableUpsolving:        s.EnableUpsolving,
+		Languages:              s.Languages,
+		StartTime:              c.StartTime,
+		StartTimeSet:           c.StartTimeSet,
+		EndTime:                c.EndTime,
+		EndTimeSet:             c.EndTimeSet,
+		OwnerID:                c.OwnerID,
 	})
 	if err != nil {
 		return dbError("update contest", err)
@@ -477,56 +472,44 @@ func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestI
 	return nil
 }
 
-func mapContestFields(
-	id uuid.UUID,
-	orgID uuid.UUID,
-	orgLogin string,
-	ownerID *uuid.UUID,
-	visibility string,
-	title string,
-	login string,
-	description string,
-	settingsBytes []byte,
-	startTime *time.Time,
-	endTime *time.Time,
-	createdAt time.Time,
-	updatedAt time.Time,
-) (contestsmodel.Contest, error) {
-	var settings map[string]interface{}
-
-	if len(settingsBytes) > 0 {
-		if err := json.Unmarshal(settingsBytes, &settings); err != nil {
-			return contestsmodel.Contest{}, fmt.Errorf("decode settings of contest %s: %w", id, err)
-		}
-	}
-
+func mapGetContestByIDRow(c sqlc.GetContestByIDRow) contestsmodel.Contest {
 	return contestsmodel.Contest{
-		ID:                id,
-		OrganizationID:    orgID,
-		OrganizationLogin: orgLogin,
-		OwnerID:           ownerID,
-		Visibility:        visibility,
-		Title:             title,
-		Login:             login,
-		Description:       description,
-		Settings:          settings,
-		StartTime:         startTime,
-		EndTime:           endTime,
-		CreatedAt:         createdAt,
-		UpdatedAt:         updatedAt,
-	}, nil
+		ID:                c.ID,
+		OrganizationID:    c.OrganizationID,
+		OrganizationLogin: c.OrgLogin,
+		OwnerID:           c.OwnerID,
+		Visibility:        c.Visibility,
+		Title:             c.Title,
+		Login:             c.Login,
+		Description:       c.Description,
+		Settings: contestsmodel.ContestSettings{
+			ParticipationMode:      c.ParticipationMode,
+			MonitorScope:           c.MonitorScope,
+			SubmissionsListScope:   c.SubmissionsListScope,
+			SubmissionsReviewScope: c.SubmissionsReviewScope,
+			SubmissionDetailsScope: c.SubmissionDetailsScope,
+			FreezeStatus:           c.FreezeStatus,
+			FreezeDurationMinutes:  c.FreezeDurationMinutes,
+			FreezeStartedAt:        c.FreezeStartedAt,
+			HideStatements:         c.HideStatements,
+			AllowClarifications:    c.AllowClarifications,
+			EnableDrafts:           c.EnableDrafts,
+			EnableUpsolving:        c.EnableUpsolving,
+			Languages:              c.Languages,
+		},
+		StartTime: c.StartTime,
+		EndTime:   c.EndTime,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+	}
 }
 
-func mapGetContestByIDRow(c sqlc.GetContestByIDRow) (contestsmodel.Contest, error) {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) contestsmodel.Contest {
+	return mapGetContestByIDRow(sqlc.GetContestByIDRow(c))
 }
 
-func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) (contestsmodel.Contest, error) {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
-}
-
-func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) (contestsmodel.Contest, error) {
-	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) contestsmodel.Contest {
+	return mapGetContestByIDRow(sqlc.GetContestByIDRow(c))
 }
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestProblem {
@@ -575,17 +558,6 @@ func mapContestTeam(c sqlc.ListContestTeamsRow) contestsmodel.ContestTeam {
 		TeamSlug:  c.TeamSlug,
 		CreatedAt: c.CreatedAt,
 	}
-}
-
-func marshalJSON(v map[string]interface{}) ([]byte, error) {
-	if v == nil {
-		return []byte("{}"), nil
-	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, dbError("failed to marshal JSON", err)
-	}
-	return data, nil
 }
 
 func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error) {

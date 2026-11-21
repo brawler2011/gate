@@ -3417,19 +3417,19 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("monitor_scope")
-		e.Str(s.MonitorScope)
+		s.MonitorScope.Encode(e)
 	}
 	{
 		e.FieldStart("submissions_list_scope")
-		e.Str(s.SubmissionsListScope)
+		s.SubmissionsListScope.Encode(e)
 	}
 	{
 		e.FieldStart("submissions_review_scope")
-		e.Str(s.SubmissionsReviewScope)
+		s.SubmissionsReviewScope.Encode(e)
 	}
 	{
 		e.FieldStart("submission_details_scope")
-		e.Str(s.SubmissionDetailsScope)
+		s.SubmissionDetailsScope.Encode(e)
 	}
 	{
 		if s.FreezeDurationMinutes.Set {
@@ -3472,54 +3472,36 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.EnableDrafts.Set {
-			e.FieldStart("enable_drafts")
-			s.EnableDrafts.Encode(e)
-		}
+		e.FieldStart("enable_drafts")
+		e.Bool(s.EnableDrafts)
 	}
 	{
-		if s.AllowClarifications.Set {
-			e.FieldStart("allow_clarifications")
-			s.AllowClarifications.Encode(e)
-		}
+		e.FieldStart("allow_clarifications")
+		e.Bool(s.AllowClarifications)
 	}
 	{
-		if s.EnableUpsolving.Set {
-			e.FieldStart("enable_upsolving")
-			s.EnableUpsolving.Encode(e)
-		}
+		e.FieldStart("enable_upsolving")
+		e.Bool(s.EnableUpsolving)
 	}
 	{
-		if s.EnableVirtualContests.Set {
-			e.FieldStart("enable_virtual_contests")
-			s.EnableVirtualContests.Encode(e)
-		}
+		e.FieldStart("participation_mode")
+		s.ParticipationMode.Encode(e)
 	}
 	{
-		if s.ParticipationMode.Set {
-			e.FieldStart("participation_mode")
-			s.ParticipationMode.Encode(e)
-		}
+		e.FieldStart("hide_statements")
+		e.Bool(s.HideStatements)
 	}
 	{
-		if s.HideStatements.Set {
-			e.FieldStart("hide_statements")
-			s.HideStatements.Encode(e)
+		e.FieldStart("languages")
+		e.ArrStart()
+		for _, elem := range s.Languages {
+			e.Str(elem)
 		}
-	}
-	{
-		if s.Languages != nil {
-			e.FieldStart("languages")
-			e.ArrStart()
-			for _, elem := range s.Languages {
-				e.Str(elem)
-			}
-			e.ArrEnd()
-		}
+		e.ArrEnd()
 	}
 }
 
-var jsonFieldsNameOfContestModel = [27]string{
+var jsonFieldsNameOfContestModel = [26]string{
 	0:  "capabilities",
 	1:  "id",
 	2:  "login",
@@ -3543,10 +3525,9 @@ var jsonFieldsNameOfContestModel = [27]string{
 	20: "enable_drafts",
 	21: "allow_clarifications",
 	22: "enable_upsolving",
-	23: "enable_virtual_contests",
-	24: "participation_mode",
-	25: "hide_statements",
-	26: "languages",
+	23: "participation_mode",
+	24: "hide_statements",
+	25: "languages",
 }
 
 // Decode decodes ContestModel from json.
@@ -3555,7 +3536,6 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode ContestModel to nil")
 	}
 	var requiredBitSet [4]uint8
-	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -3666,9 +3646,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		case "monitor_scope":
 			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
-				v, err := d.Str()
-				s.MonitorScope = string(v)
-				if err != nil {
+				if err := s.MonitorScope.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3678,9 +3656,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		case "submissions_list_scope":
 			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.SubmissionsListScope = string(v)
-				if err != nil {
+				if err := s.SubmissionsListScope.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3690,9 +3666,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		case "submissions_review_scope":
 			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
-				v, err := d.Str()
-				s.SubmissionsReviewScope = string(v)
-				if err != nil {
+				if err := s.SubmissionsReviewScope.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3702,9 +3676,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		case "submission_details_scope":
 			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
-				v, err := d.Str()
-				s.SubmissionDetailsScope = string(v)
-				if err != nil {
+				if err := s.SubmissionDetailsScope.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3798,9 +3770,11 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"end_time\"")
 			}
 		case "enable_drafts":
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
-				s.EnableDrafts.Reset()
-				if err := s.EnableDrafts.Decode(d); err != nil {
+				v, err := d.Bool()
+				s.EnableDrafts = bool(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3808,9 +3782,11 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"enable_drafts\"")
 			}
 		case "allow_clarifications":
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
-				s.AllowClarifications.Reset()
-				if err := s.AllowClarifications.Decode(d); err != nil {
+				v, err := d.Bool()
+				s.AllowClarifications = bool(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3818,28 +3794,20 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"allow_clarifications\"")
 			}
 		case "enable_upsolving":
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
-				s.EnableUpsolving.Reset()
-				if err := s.EnableUpsolving.Decode(d); err != nil {
+				v, err := d.Bool()
+				s.EnableUpsolving = bool(v)
+				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"enable_upsolving\"")
 			}
-		case "enable_virtual_contests":
-			if err := func() error {
-				s.EnableVirtualContests.Reset()
-				if err := s.EnableVirtualContests.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"enable_virtual_contests\"")
-			}
 		case "participation_mode":
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
-				s.ParticipationMode.Reset()
 				if err := s.ParticipationMode.Decode(d); err != nil {
 					return err
 				}
@@ -3848,9 +3816,11 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"participation_mode\"")
 			}
 		case "hide_statements":
+			requiredBitSet[3] |= 1 << 0
 			if err := func() error {
-				s.HideStatements.Reset()
-				if err := s.HideStatements.Decode(d); err != nil {
+				v, err := d.Bool()
+				s.HideStatements = bool(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -3858,6 +3828,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
 			}
 		case "languages":
+			requiredBitSet[3] |= 1 << 1
 			if err := func() error {
 				s.Languages = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -3888,8 +3859,8 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 	for i, mask := range [4]uint8{
 		0b11111111,
 		0b01101111,
+		0b11110011,
 		0b00000011,
-		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -4801,6 +4772,48 @@ func (s *ContestProblemReorderItemModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ContestProblemReorderItemModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ContestScope as json.
+func (s ContestScope) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ContestScope from json.
+func (s *ContestScope) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestScope to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ContestScope(v) {
+	case ContestScopePublic:
+		*s = ContestScopePublic
+	case ContestScopeParticipant:
+		*s = ContestScopeParticipant
+	case ContestScopeModerator:
+		*s = ContestScopeModerator
+	default:
+		*s = ContestScope(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ContestScope) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestScope) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -12124,18 +12137,18 @@ func (s *OptContestJoinRequestModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ContestModelParticipationMode as json.
-func (o OptContestModelParticipationMode) Encode(e *jx.Encoder) {
+// Encode encodes ContestScope as json.
+func (o OptContestScope) Encode(e *jx.Encoder) {
 	if !o.Set {
 		return
 	}
 	e.Str(string(o.Value))
 }
 
-// Decode decodes ContestModelParticipationMode from json.
-func (o *OptContestModelParticipationMode) Decode(d *jx.Decoder) error {
+// Decode decodes ContestScope from json.
+func (o *OptContestScope) Decode(d *jx.Decoder) error {
 	if o == nil {
-		return errors.New("invalid: unable to decode OptContestModelParticipationMode to nil")
+		return errors.New("invalid: unable to decode OptContestScope to nil")
 	}
 	o.Set = true
 	if err := o.Value.Decode(d); err != nil {
@@ -12145,14 +12158,14 @@ func (o *OptContestModelParticipationMode) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s OptContestModelParticipationMode) MarshalJSON() ([]byte, error) {
+func (s OptContestScope) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptContestModelParticipationMode) UnmarshalJSON(data []byte) error {
+func (s *OptContestScope) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -24425,12 +24438,6 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.EnableVirtualContests.Set {
-			e.FieldStart("enable_virtual_contests")
-			s.EnableVirtualContests.Encode(e)
-		}
-	}
-	{
 		if s.ParticipationMode.Set {
 			e.FieldStart("participation_mode")
 			s.ParticipationMode.Encode(e)
@@ -24454,7 +24461,7 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfUpdateContestRequestModel = [19]string{
+var jsonFieldsNameOfUpdateContestRequestModel = [18]string{
 	0:  "login",
 	1:  "title",
 	2:  "description",
@@ -24470,10 +24477,9 @@ var jsonFieldsNameOfUpdateContestRequestModel = [19]string{
 	12: "enable_drafts",
 	13: "allow_clarifications",
 	14: "enable_upsolving",
-	15: "enable_virtual_contests",
-	16: "participation_mode",
-	17: "hide_statements",
-	18: "languages",
+	15: "participation_mode",
+	16: "hide_statements",
+	17: "languages",
 }
 
 // Decode decodes UpdateContestRequestModel from json.
@@ -24633,16 +24639,6 @@ func (s *UpdateContestRequestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"enable_upsolving\"")
-			}
-		case "enable_virtual_contests":
-			if err := func() error {
-				s.EnableVirtualContests.Reset()
-				if err := s.EnableVirtualContests.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"enable_virtual_contests\"")
 			}
 		case "participation_mode":
 			if err := func() error {

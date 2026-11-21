@@ -1,7 +1,6 @@
 package contestsmodel
 
 import (
-	"math"
 	"slices"
 	"time"
 
@@ -33,13 +32,32 @@ type UserContestMembership struct {
 	Role      ContestRole
 }
 
-type ContestFreezeStatus = string
+type FreezeStatus string
 
 const (
-	FreezeStatusAuto     ContestFreezeStatus = "auto"
-	FreezeStatusFrozen   ContestFreezeStatus = "frozen"
-	FreezeStatusUnfrozen ContestFreezeStatus = "unfrozen"
+	FreezeStatusAuto     FreezeStatus = "auto"
+	FreezeStatusFrozen   FreezeStatus = "frozen"
+	FreezeStatusUnfrozen FreezeStatus = "unfrozen"
 )
+
+// ContestScope is the lowest audience that may see a contest view.
+type ContestScope string
+
+const (
+	ScopePublic      ContestScope = "public"
+	ScopeParticipant ContestScope = "participant"
+	ScopeModerator   ContestScope = "moderator"
+)
+
+type ParticipationMode string
+
+const (
+	ParticipationModeOpen       ParticipationMode = "open"
+	ParticipationModeByRequest  ParticipationMode = "by_request"
+	ParticipationModeInviteOnly ParticipationMode = "invite_only"
+)
+
+const PenaltyPerAttempt int32 = 20
 
 type CreateContestParams struct {
 	ID             uuid.UUID
@@ -49,7 +67,6 @@ type CreateContestParams struct {
 	Title          string
 	Login          string
 	Description    string
-	Settings       map[string]interface{}
 	StartTime      *time.Time
 	EndTime        *time.Time
 }
@@ -61,7 +78,6 @@ type CreateContestInput struct {
 	Login          string
 	Description    string
 	Visibility     ContestVisibility
-	Settings       map[string]interface{}
 	StartTime      *time.Time
 	EndTime        *time.Time
 }
@@ -116,7 +132,7 @@ type ContestUpdateInput struct {
 	Title        *string
 	Description  *string
 	Visibility   *ContestVisibility
-	Settings     *map[string]interface{}
+	Settings     ContestSettingsPatch
 	StartTime    *time.Time
 	StartTimeSet bool
 	EndTime      *time.Time
@@ -230,7 +246,7 @@ type Contest struct {
 	Title             string
 	Login             string
 	Description       string
-	Settings          map[string]interface{}
+	Settings          ContestSettings
 	StartTime         *time.Time
 	EndTime           *time.Time
 	CreatedAt         time.Time
@@ -268,14 +284,6 @@ type ContestMember struct {
 	UpdatedAt   time.Time
 }
 
-type ContestParticipationMode = string
-
-const (
-	ParticipationModeOpen       ContestParticipationMode = "open"
-	ParticipationModeByRequest  ContestParticipationMode = "by_request"
-	ParticipationModeInviteOnly ContestParticipationMode = "invite_only"
-)
-
 type ContestJoinRequest struct {
 	ID                uuid.UUID
 	ContestID         uuid.UUID
@@ -300,22 +308,36 @@ type CreateContestJoinRequestInput struct {
 }
 
 type ContestSettings struct {
-	PenaltyPerAttempt      int32  `json:"penalty_per_attempt,omitempty"`
-	FreezeDurationMinutes  *int32 `json:"freeze_duration_minutes,omitempty"`
-	FreezeStatus           string `json:"freeze_status,omitempty"`
-	MonitorScope           string `json:"monitor_scope,omitempty"`
-	SubmissionsListScope   string `json:"submissions_list_scope,omitempty"`
-	SubmissionsReviewScope string `json:"submissions_review_scope,omitempty"`
-	SubmissionDetailsScope string `json:"submission_details_scope,omitempty"`
-	ShowVerdicts           *bool  `json:"show_verdicts,omitempty"`
-	ShowTestDetails        *bool  `json:"show_test_details,omitempty"`
-	AllowClarifications    *bool  `json:"allow_clarifications,omitempty"`
-	EnableDrafts           *bool  `json:"enable_drafts,omitempty"`
-	EnableUpsolving        *bool  `json:"enable_upsolving,omitempty"`
-	EnableVirtualContests  *bool  `json:"enable_virtual_contests,omitempty"`
-	ParticipationMode      string `json:"participation_mode,omitempty"`
-	HideStatements         *bool  `json:"hide_statements,omitempty"`
-	Languages []string `json:"languages,omitempty"`
+	ParticipationMode      ParticipationMode
+	MonitorScope           ContestScope
+	SubmissionsListScope   ContestScope
+	SubmissionsReviewScope ContestScope
+	SubmissionDetailsScope ContestScope
+	FreezeStatus           FreezeStatus
+	FreezeDurationMinutes  *int32
+	FreezeStartedAt        *time.Time
+	HideStatements         bool
+	AllowClarifications    bool
+	EnableDrafts           bool
+	EnableUpsolving        bool
+	Languages              []string
+}
+
+// Nil fields keep the stored value; FreezeDurationSet distinguishes clearing the duration from omitting it.
+type ContestSettingsPatch struct {
+	ParticipationMode      *ParticipationMode
+	MonitorScope           *ContestScope
+	SubmissionsListScope   *ContestScope
+	SubmissionsReviewScope *ContestScope
+	SubmissionDetailsScope *ContestScope
+	FreezeStatus           *FreezeStatus
+	FreezeDurationMinutes  *int32
+	FreezeDurationSet      bool
+	HideStatements         *bool
+	AllowClarifications    *bool
+	EnableDrafts           *bool
+	EnableUpsolving        *bool
+	Languages              []string
 }
 
 // Contest language restrictions do not apply to problem programs.
@@ -323,267 +345,15 @@ func (s ContestSettings) AllowsLanguage(id string) bool {
 	return len(s.Languages) == 0 || slices.Contains(s.Languages, id)
 }
 
-func (s ContestSettings) GetHideStatements() bool {
-	if s.HideStatements == nil {
-		return false
-	}
-	return *s.HideStatements
-}
-
-func (s ContestSettings) GetPenaltyPerAttempt() int32 {
-	if s.PenaltyPerAttempt <= 0 {
-		return 20
-	}
-	return s.PenaltyPerAttempt
-}
-
-func (s ContestSettings) GetFreezeDurationMinutes() *int32 {
-	if s.FreezeDurationMinutes == nil || *s.FreezeDurationMinutes <= 0 {
-		return nil
-	}
-	return s.FreezeDurationMinutes
-}
-
-func (s ContestSettings) GetFreezeStatus() string {
-	switch s.FreezeStatus {
-	case FreezeStatusFrozen, FreezeStatusUnfrozen, FreezeStatusAuto:
-		return s.FreezeStatus
-	default:
-		return FreezeStatusAuto
-	}
-}
-
-func (s ContestSettings) GetEnableDrafts() bool {
-	if s.EnableDrafts == nil {
-		return true
-	}
-	return *s.EnableDrafts
-}
-
-func (s ContestSettings) GetAllowClarifications() bool {
-	if s.AllowClarifications == nil {
-		return true
-	}
-	return *s.AllowClarifications
-}
-
-func (s ContestSettings) GetEnableUpsolving() bool {
-	if s.EnableUpsolving == nil {
-		return true
-	}
-	return *s.EnableUpsolving
-}
-
-func (s ContestSettings) GetEnableVirtualContests() bool {
-	if s.EnableVirtualContests == nil {
-		return false
-	}
-	return *s.EnableVirtualContests
-}
-
-func (s ContestSettings) GetParticipationMode() string {
-	if s.ParticipationMode == ParticipationModeInviteOnly {
-		return ParticipationModeInviteOnly
-	}
-	if s.ParticipationMode == ParticipationModeByRequest {
-		return ParticipationModeByRequest
-	}
-	return ParticipationModeOpen
-}
-
-func parseFlexibleInt32(v interface{}, defaultVal int32) int32 {
-	switch n := v.(type) {
-	case float64:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return defaultVal
-		}
-		return int32(n)
-	case int:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return defaultVal
-		}
-		return int32(n)
-	case int32:
-		return n
-	case int64:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return defaultVal
-		}
-		return int32(n)
-	default:
-		return defaultVal
-	}
-}
-
-func parseFlexibleInt32Ptr(v interface{}) *int32 {
-	if v == nil {
-		return nil
-	}
-	switch n := v.(type) {
-	case float64:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return nil
-		}
-		res := int32(n)
-		return &res
-	case int:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return nil
-		}
-		res := int32(n)
-		return &res
-	case int32:
-		res := n
-		return &res
-	case int64:
-		if n > math.MaxInt32 || n < math.MinInt32 {
-			return nil
-		}
-		res := int32(n)
-		return &res
-	default:
-		return nil
-	}
-}
-
-func parseFlexibleBoolPtr(v interface{}) *bool {
-	if v == nil {
-		return nil
-	}
-	if b, ok := v.(bool); ok {
-		return &b
-	}
-	return nil
-}
-
-func MapToContestSettings(m map[string]interface{}) ContestSettings {
-	var s ContestSettings
-	if m == nil {
-		return s
-	}
-
-	if raw, ok := m["penalty_per_attempt"]; ok && raw != nil {
-		s.PenaltyPerAttempt = parseFlexibleInt32(raw, 20)
-	} else {
-		s.PenaltyPerAttempt = 20
-	}
-
-	if raw, ok := m["freeze_duration_minutes"]; ok && raw != nil {
-		s.FreezeDurationMinutes = parseFlexibleInt32Ptr(raw)
-	}
-
-	if raw, ok := m["freeze_status"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.FreezeStatus = str
-		}
-	}
-
-	if raw, ok := m["monitor_scope"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.MonitorScope = str
-		}
-	}
-
-	if raw, ok := m["submissions_list_scope"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.SubmissionsListScope = str
-		}
-	}
-
-	if raw, ok := m["submissions_review_scope"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.SubmissionsReviewScope = str
-		}
-	}
-
-	if raw, ok := m["submission_details_scope"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.SubmissionDetailsScope = str
-		}
-	}
-
-	if raw, ok := m["show_verdicts"]; ok && raw != nil {
-		s.ShowVerdicts = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["show_test_details"]; ok && raw != nil {
-		s.ShowTestDetails = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["allow_clarifications"]; ok && raw != nil {
-		s.AllowClarifications = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["enable_drafts"]; ok && raw != nil {
-		s.EnableDrafts = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["enable_upsolving"]; ok && raw != nil {
-		s.EnableUpsolving = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["enable_virtual_contests"]; ok && raw != nil {
-		s.EnableVirtualContests = parseFlexibleBoolPtr(raw)
-	}
-
-	if raw, ok := m["participation_mode"]; ok && raw != nil {
-		if str, ok := raw.(string); ok {
-			s.ParticipationMode = str
-		}
-	}
-
-	if raw, ok := m["hide_statements"]; ok && raw != nil {
-		s.HideStatements = parseFlexibleBoolPtr(raw)
-	}
-
-	switch raw := m["languages"].(type) {
-	case []string:
-		s.Languages = raw
-	case []interface{}:
-		for _, item := range raw {
-			if id, ok := item.(string); ok {
-				s.Languages = append(s.Languages, id)
-			}
-		}
-	}
-
-	return s
-}
-
-func (c *Contest) TypedSettings() ContestSettings {
-	return MapToContestSettings(c.Settings)
-}
-
-func (c *Contest) GetHideStatements() bool {
-	return c.TypedSettings().GetHideStatements()
-}
-
-func (c *Contest) GetPenaltyPerAttempt() int32 {
-	return c.TypedSettings().GetPenaltyPerAttempt()
-}
-
-func (c *Contest) GetFreezeDurationMinutes() *int32 {
-	return c.TypedSettings().GetFreezeDurationMinutes()
-}
-
-func (c *Contest) GetFreezeStatus() string {
-	return c.TypedSettings().GetFreezeStatus()
-}
-
 func (c *Contest) GetFreezeTime() *time.Time {
-	if c.GetFreezeStatus() == FreezeStatusFrozen {
-		if raw, ok := c.Settings["freeze_started_at"].(string); ok {
-			if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-				return &t
-			}
-		}
+	if c.Settings.FreezeStatus == FreezeStatusFrozen {
+		return c.Settings.FreezeStartedAt
+	}
+	duration := c.Settings.FreezeDurationMinutes
+	if duration == nil || c.EndTime == nil {
 		return nil
 	}
-	durPtr := c.GetFreezeDurationMinutes()
-	if durPtr == nil || *durPtr <= 0 || c.EndTime == nil {
-		return nil
-	}
-	freezeTime := c.EndTime.Add(-time.Duration(*durPtr) * time.Minute)
+	freezeTime := c.EndTime.Add(-time.Duration(*duration) * time.Minute)
 	if c.StartTime != nil && freezeTime.Before(*c.StartTime) {
 		freezeTime = *c.StartTime
 	}
@@ -594,8 +364,7 @@ func (c *Contest) IsFrozenAt(t time.Time) bool {
 	if c.StartTime != nil && t.Before(*c.StartTime) || c.EndTime != nil && !t.Before(*c.EndTime) {
 		return false
 	}
-	status := c.GetFreezeStatus()
-	switch status {
+	switch c.Settings.FreezeStatus {
 	case FreezeStatusUnfrozen:
 		return false
 	case FreezeStatusFrozen:

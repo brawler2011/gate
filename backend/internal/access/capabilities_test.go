@@ -32,7 +32,7 @@ func TestCapabilitiesRelationshipBoundaries(t *testing.T) {
 	member := m.User{Id: uuid.New(), Role: m.UserRoleUser}
 	org := m.OrganizationContext{ID: uuid.New(), Role: m.OrganizationOwner, JoinPolicy: m.JoinOpen, Owners: []m.User{owner}}
 	problem := m.ProblemContext{ID: uuid.New(), Organization: org, OwnerID: owner.Id, Visibility: m.VisibilityPrivate, Owners: []m.User{owner}}
-	contest := m.ContestContext{ID: uuid.New(), Organization: org, OwnerID: owner.Id, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationOpen, Owners: []m.User{owner}}
+	contest := m.ContestContext{ID: uuid.New(), Organization: org, OwnerID: owner.Id, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationOpen, MonitorScope: "participant", SubmissionsListScope: "moderator", SubmissionsReviewScope: "moderator", SubmissionDetailsScope: "moderator", Owners: []m.User{owner}}
 	f := &capabilityFactsStub{metadataFactsStub: metadataFactsStub{problems: map[uuid.UUID]m.ProblemContext{problem.ID: problem}, contests: map[uuid.UUID]m.ContestContext{contest.ID: contest}}, orgs: map[uuid.UUID]m.OrganizationContext{org.ID: org}, users: map[uuid.UUID]m.User{owner.Id: owner, member.Id: member}}
 	uc := NewCapabilities(f)
 	ctx := m.WithUser(m.WithReadTime(context.Background(), time.Now()), owner)
@@ -76,7 +76,7 @@ func TestCapabilitiesTemporalBlockAndFailClosed(t *testing.T) {
 	now := time.Now().UTC()
 	start, end := now, now.Add(time.Hour)
 	u := m.User{Id: uuid.New(), Role: m.UserRoleUser}
-	c := m.ContestContext{ID: uuid.New(), Organization: m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}, Visibility: m.VisibilityPublic, ParticipationMode: m.ParticipationOpen, StartTime: &start, EndTime: &end, BlockedProblems: []uuid.UUID{uuid.New()}}
+	c := m.ContestContext{ID: uuid.New(), Organization: m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}, Visibility: m.VisibilityPublic, ParticipationMode: m.ParticipationOpen, MonitorScope: "participant", SubmissionsListScope: "moderator", SubmissionsReviewScope: "moderator", SubmissionDetailsScope: "moderator", StartTime: &start, EndTime: &end, BlockedProblems: []uuid.UUID{uuid.New()}}
 	f := &capabilityFactsStub{metadataFactsStub: metadataFactsStub{contests: map[uuid.UUID]m.ContestContext{c.ID: c}}}
 	requests := []CapabilityRequest{{Scope: "contest", ID: c.ID}, {Scope: "contest", ID: c.ID, Kind: "problem", Target: c.BlockedProblems[0]}}
 	for _, test := range []struct {
@@ -113,7 +113,7 @@ func contains(values []string, value string) bool {
 func TestContestAudienceOwnRevocation(t *testing.T) {
 	user := m.User{Id: uuid.New(), Role: m.UserRoleUser}
 	in := m.PolicyInput{Actor: user, Now: time.Now().UTC()}
-	c := m.ContestContext{ID: uuid.New(), Organization: m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationInviteOnly, DirectRole: m.ContestParticipant}
+	c := m.ContestContext{ID: uuid.New(), Organization: m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationInviteOnly, MonitorScope: "participant", SubmissionsListScope: "moderator", SubmissionsReviewScope: "moderator", SubmissionDetailsScope: "moderator", DirectRole: m.ContestParticipant}
 	require.NoError(t, RequireContestAudience(in, c, "participants", uuid.Nil))
 	require.NoError(t, RequireContestAudience(in, c, "own", user.Id))
 	require.ErrorIs(t, RequireContestAudience(in, c, "own", uuid.New()), pkg.ErrForbidden)

@@ -120,6 +120,8 @@ type ProblemContext struct {
 	Visibility   Visibility
 }
 
+type ContestScope string
+
 type ContestConditions struct {
 	ViewStatements        bool
 	ViewScoreboard        bool
@@ -133,20 +135,24 @@ type SubmissionContext struct {
 	ContestID uuid.UUID
 }
 type ContestContext struct {
-	BlockedProblems   []uuid.UUID
-	Owners            []User
-	StartTime         *time.Time
-	EndTime           *time.Time
-	Settings          map[string]interface{}
-	ID                uuid.UUID
-	Organization      OrganizationContext
-	OwnerID           uuid.UUID
-	DirectRole        ContestRole
-	Teams             []TeamGrant[ContestTeamRole]
-	Visibility        Visibility
-	ParticipationMode ParticipationMode
-	Conditions        *ContestConditions
-	Submission        SubmissionContext
+	BlockedProblems        []uuid.UUID
+	Owners                 []User
+	StartTime              *time.Time
+	EndTime                *time.Time
+	MonitorScope           ContestScope
+	SubmissionsListScope   ContestScope
+	SubmissionsReviewScope ContestScope
+	SubmissionDetailsScope ContestScope
+	HideStatements         bool
+	ID                     uuid.UUID
+	Organization           OrganizationContext
+	OwnerID                uuid.UUID
+	DirectRole             ContestRole
+	Teams                  []TeamGrant[ContestTeamRole]
+	Visibility             Visibility
+	ParticipationMode      ParticipationMode
+	Conditions             *ContestConditions
+	Submission             SubmissionContext
 }
 
 // Count explicit active owners, excluding inherited organization owners.

@@ -2,11 +2,8 @@ package access
 
 import (
 	"context"
-	"math"
-	"time"
 
 	m "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -14,30 +11,6 @@ import (
 func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 	if err := validateInput(in); err != nil {
 		return err
-	}
-	if raw, ok := c.Settings["freeze_status"]; ok && raw != nil && raw != "" {
-		status, valid := raw.(string)
-		if !valid || status != contestsmodel.FreezeStatusAuto && status != contestsmodel.FreezeStatusFrozen && status != contestsmodel.FreezeStatusUnfrozen {
-			return pkg.ErrForbidden
-		}
-	}
-	if raw, ok := c.Settings["freeze_duration_minutes"]; ok && raw != nil {
-		var minutes float64
-		switch v := raw.(type) {
-		case float64:
-			minutes = v
-		case int:
-			minutes = float64(v)
-		case int32:
-			minutes = float64(v)
-		case int64:
-			minutes = float64(v)
-		default:
-			return pkg.ErrForbidden
-		}
-		if math.IsNaN(minutes) || math.IsInf(minutes, 0) || minutes < 0 || minutes != math.Trunc(minutes) || minutes > float64(math.MaxInt64/int64(time.Minute)) {
-			return pkg.ErrForbidden
-		}
 	}
 	if c.StartTime != nil && c.EndTime != nil && !c.StartTime.Before(*c.EndTime) {
 		return pkg.ErrForbidden
@@ -49,15 +22,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 	participant := !in.Actor.IsGuest() && (c.OwnerID == in.Actor.Id || c.DirectRole != "" || hasContestParticipation(*c) || c.Visibility == m.VisibilityPublic && c.ParticipationMode == m.ParticipationOpen)
 	started := c.StartTime == nil || !in.Now.Before(*c.StartTime)
 	finished := c.EndTime != nil && !in.Now.Before(*c.EndTime)
-	audience := func(key, defaultScope string) (bool, error) {
-		scope := defaultScope
-		if raw, ok := c.Settings[key]; ok && raw != nil && raw != "" {
-			var valid bool
-			scope, valid = raw.(string)
-			if !valid {
-				return false, pkg.ErrForbidden
-			}
-		}
+	audience := func(scope m.ContestScope) (bool, error) {
 		switch scope {
 		case "public":
 			return started, nil
@@ -70,25 +35,17 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 		}
 	}
 	t := &m.ContestConditions{Submit: participant && started && !finished}
-	hidden := false
-	if raw, ok := c.Settings["hide_statements"]; ok && raw != nil {
-		var valid bool
-		hidden, valid = raw.(bool)
-		if !valid {
-			return pkg.ErrForbidden
-		}
-	}
-	t.ViewStatements = started && !hidden
-	if t.ViewScoreboard, err = audience("monitor_scope", "participant"); err != nil {
+	t.ViewStatements = started && !c.HideStatements
+	if t.ViewScoreboard, err = audience(c.MonitorScope); err != nil {
 		return err
 	}
-	if t.ListSubmissions, err = audience("submissions_list_scope", "moderator"); err != nil {
+	if t.ListSubmissions, err = audience(c.SubmissionsListScope); err != nil {
 		return err
 	}
-	if t.ViewOtherSubmission, err = audience("submissions_review_scope", "moderator"); err != nil {
+	if t.ViewOtherSubmission, err = audience(c.SubmissionsReviewScope); err != nil {
 		return err
 	}
-	if t.ViewSubmissionDetails, err = audience("submission_details_scope", "moderator"); err != nil {
+	if t.ViewSubmissionDetails, err = audience(c.SubmissionDetailsScope); err != nil {
 		return err
 	}
 	c.Conditions = t
@@ -137,10 +94,6 @@ func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id uui
 	p.GetSubmissionDetails = RequireContest(in, c, m.ActionGetSubmissionDetails) == nil
 	p.GetOwnSubmission = RequireContest(in, c, m.ActionGetOwnSubmission) == nil
 	return p, nil
-}
-
-func ContestFromFacts(c m.ContestContext) contestsmodel.Contest {
-	return contestsmodel.Contest{ID: c.ID, StartTime: c.StartTime, EndTime: c.EndTime, Settings: c.Settings}
 }
 
 type RelationshipPermissions interface {

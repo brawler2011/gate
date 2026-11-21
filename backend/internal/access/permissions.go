@@ -182,8 +182,8 @@ func (uc *PermissionsUseCase) canViewMonitor(cc *contestContext) bool {
 		return false
 	}
 
-	settings := cc.contest.TypedSettings()
-	scope := settings.MonitorScope
+	settings := cc.contest.Settings
+	scope := string(settings.MonitorScope)
 	if scope == "" {
 		scope = "participant"
 	}
@@ -205,8 +205,8 @@ func (uc *PermissionsUseCase) canListAllSubmissions(cc *contestContext) bool {
 		return true
 	}
 
-	settings := cc.contest.TypedSettings()
-	scope := settings.SubmissionsListScope
+	settings := cc.contest.Settings
+	scope := string(settings.SubmissionsListScope)
 	if scope == "" {
 		scope = "moderator"
 	}
@@ -248,8 +248,8 @@ func (uc *PermissionsUseCase) canViewOtherSubmission(cc *contestContext) bool {
 		return true
 	}
 
-	settings := cc.contest.TypedSettings()
-	scope := settings.SubmissionsReviewScope
+	settings := cc.contest.Settings
+	scope := string(settings.SubmissionsReviewScope)
 	if scope == "" {
 		scope = "moderator"
 	}
@@ -271,8 +271,8 @@ func (uc *PermissionsUseCase) canViewSubmissionDetails(cc *contestContext) bool 
 		return true
 	}
 
-	settings := cc.contest.TypedSettings()
-	scope := settings.SubmissionDetailsScope
+	settings := cc.contest.Settings
+	scope := string(settings.SubmissionDetailsScope)
 	if scope == "" {
 		scope = "moderator"
 	}
@@ -306,8 +306,8 @@ func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
 		return cc.isParticipant
 	}
 
-	settings := cc.contest.TypedSettings()
-	if settings.GetEnableUpsolving() {
+	settings := cc.contest.Settings
+	if settings.EnableUpsolving {
 		return uc.canViewContest(cc)
 	}
 
@@ -632,8 +632,8 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 	}
 
 	if bestRole == nil && contest.Visibility == contestsmodel.ContestVisibilityPublic {
-		settings := contest.TypedSettings()
-		if settings.GetParticipationMode() == contestsmodel.ParticipationModeOpen {
+		settings := contest.Settings
+		if settings.ParticipationMode == contestsmodel.ParticipationModeOpen {
 			partRole := contestsmodel.ContestRoleParticipant
 			bestRole = &partRole
 		}

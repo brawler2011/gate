@@ -9,6 +9,12 @@ CREATE TYPE auth_token_type AS ENUM (
     'email_change'
 );
 
+CREATE TYPE contest_scope AS ENUM (
+    'public',
+    'participant',
+    'moderator'
+);
+
 CREATE TYPE contest_role AS ENUM (
     'owner',
     'moderator',
@@ -19,6 +25,12 @@ CREATE TYPE contest_visibility AS ENUM (
     'private',
     'public',
     'unlisted'
+);
+
+CREATE TYPE freeze_status AS ENUM (
+    'auto',
+    'frozen',
+    'unfrozen'
 );
 
 CREATE TYPE organization_role AS ENUM (
@@ -32,6 +44,12 @@ CREATE TYPE outbox_event_status AS ENUM (
     'processing',
     'completed',
     'failed'
+);
+
+CREATE TYPE participation_mode AS ENUM (
+    'open',
+    'by_request',
+    'invite_only'
 );
 
 CREATE TYPE package_status AS ENUM (
@@ -614,12 +632,26 @@ CREATE TABLE contests (
     title text NOT NULL,
     login varchar(64) NOT NULL,
     description text DEFAULT ''::text NOT NULL,
-    settings jsonb NOT NULL,
+    participation_mode participation_mode DEFAULT 'open'::participation_mode NOT NULL,
+    monitor_scope contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
+    submissions_list_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    submissions_review_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    submission_details_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    freeze_status freeze_status DEFAULT 'auto'::freeze_status NOT NULL,
+    freeze_duration_minutes integer,
+    freeze_started_at timestamptz,
+    hide_statements boolean DEFAULT false NOT NULL,
+    allow_clarifications boolean DEFAULT true NOT NULL,
+    enable_drafts boolean DEFAULT true NOT NULL,
+    enable_upsolving boolean DEFAULT true NOT NULL,
+    languages text[] DEFAULT '{}'::text[] NOT NULL,
     start_time timestamptz,
     end_time timestamptz,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT contests_check CHECK (((end_time IS NULL) OR (start_time IS NULL) OR (end_time > start_time))),
+    CONSTRAINT contests_freeze_duration_check CHECK ((freeze_duration_minutes > 0)),
+    CONSTRAINT contests_freeze_started_check CHECK (((freeze_status = 'frozen'::freeze_status) = (freeze_started_at IS NOT NULL))),
     CONSTRAINT contests_login_check CHECK (((length((login)::text) >= 3) AND (length((login)::text) <= 64))),
     CONSTRAINT contests_pkey PRIMARY KEY (id),
     CONSTRAINT contests_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
@@ -779,14 +811,14 @@ CREATE FUNCTION capture_manual_freeze() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF NEW.settings->>'freeze_status'='frozen' THEN
-    IF TG_OP='INSERT' OR OLD.settings->>'freeze_status' IS DISTINCT FROM 'frozen' THEN
-      NEW.settings=jsonb_set(NEW.settings,'{freeze_started_at}',to_jsonb(clock_timestamp()));
+  IF NEW.freeze_status='frozen' THEN
+    IF TG_OP='INSERT' OR OLD.freeze_status<>'frozen' THEN
+      NEW.freeze_started_at=clock_timestamp();
     ELSE
-      NEW.settings=jsonb_set(NEW.settings,'{freeze_started_at}',OLD.settings->'freeze_started_at');
+      NEW.freeze_started_at=OLD.freeze_started_at;
     END IF;
   ELSE
-    NEW.settings=NEW.settings-'freeze_started_at';
+    NEW.freeze_started_at=NULL;
   END IF;
   RETURN NEW;
 END;
@@ -810,7 +842,7 @@ END;
 $$;
 -- +goose StatementEnd
 
-CREATE TRIGGER manual_freeze_changed BEFORE INSERT OR UPDATE OF settings ON contests FOR EACH ROW EXECUTE FUNCTION capture_manual_freeze();
+CREATE TRIGGER manual_freeze_changed BEFORE INSERT OR UPDATE OF freeze_status, freeze_started_at ON contests FOR EACH ROW EXECUTE FUNCTION capture_manual_freeze();
 CREATE TRIGGER on_contests_update BEFORE UPDATE ON contests FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 CREATE TRIGGER max_problems_on_contest_check BEFORE INSERT ON contest_problems FOR EACH ROW EXECUTE FUNCTION check_max_problems_on_contest();
 
@@ -893,134 +925,6 @@ $$;
 
 CREATE TRIGGER on_submissions_update BEFORE UPDATE ON submissions FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 CREATE TRIGGER submission_state_changed AFTER INSERT OR UPDATE OF state ON submissions FOR EACH ROW EXECUTE FUNCTION capture_submission_state();
-
--- +goose StatementBegin
-CREATE FUNCTION get_contest_scoreboard(p_contest_id uuid, p_realtime boolean DEFAULT false) RETURNS TABLE(user_id uuid, username varchar, problems_solved integer, total_penalty integer, last_accepted_at timestamptz, problem_results jsonb)
-    LANGUAGE plpgsql STABLE
-    AS $$
-DECLARE
-    v_freeze_time TIMESTAMPTZ;
-    v_contest_start TIMESTAMPTZ;
-    v_contest_end TIMESTAMPTZ;
-BEGIN
-    SELECT 
-        start_time,
-        end_time,
-        CASE 
-            WHEN NOT p_realtime 
-                AND (settings->>'freeze_monitor')::boolean IS TRUE
-                AND end_time IS NOT NULL
-            THEN end_time - COALESCE(
-                (settings->>'freeze_duration')::interval,
-                INTERVAL '1 hour'
-            )
-            ELSE NULL
-        END
-    INTO v_contest_start, v_contest_end, v_freeze_time
-    FROM contests 
-    WHERE id = p_contest_id;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Contest not found: %', p_contest_id;
-    END IF;
-
-    RETURN QUERY
-    WITH ranked_submissions AS (
-        SELECT 
-            s.owner_id,
-            s.problem_id,
-            s.state,
-            s.score,
-            s.penalty,
-            s.created_at,
-            CASE 
-                WHEN v_freeze_time IS NOT NULL AND s.created_at >= v_freeze_time 
-                THEN NULL
-                ELSE s.state
-            END as visible_state,
-            CASE 
-                WHEN v_freeze_time IS NOT NULL AND s.created_at >= v_freeze_time 
-                THEN NULL
-                ELSE s.score
-            END as visible_score,
-            ROW_NUMBER() OVER (
-                PARTITION BY s.owner_id, s.problem_id 
-                ORDER BY s.created_at ASC
-            ) as attempt_num
-        FROM submissions s
-        WHERE s.contest_id = p_contest_id
-          AND s.owner_id IS NOT NULL
-    ),
-    problem_stats AS (
-        SELECT 
-            rs.owner_id,
-            rs.problem_id,
-            COUNT(*) as attempts,
-            COUNT(*) FILTER (WHERE rs.visible_state IS NULL) as frozen_attempts,
-            MIN(CASE WHEN rs.visible_state = 3 THEN rs.created_at END) as first_ac_time,
-            COALESCE(SUM(
-                CASE 
-                    WHEN rs.visible_state = 3 THEN 0
-                    WHEN MIN(CASE WHEN rs.visible_state = 3 THEN rs.created_at END) 
-                         OVER (PARTITION BY rs.owner_id, rs.problem_id) IS NOT NULL
-                    THEN rs.penalty
-                    ELSE 0
-                END
-            ), 0) as problem_penalty,
-            BOOL_OR(rs.visible_state = 3) as solved,
-            MAX(rs.visible_score) as best_score
-        FROM ranked_submissions rs
-        GROUP BY rs.owner_id, rs.problem_id
-    ),
-    user_stats AS (
-        SELECT 
-            ps.owner_id,
-            COUNT(*) FILTER (WHERE ps.solved) as problems_solved,
-            COALESCE(SUM(
-                CASE WHEN ps.solved AND v_contest_start IS NOT NULL
-                THEN EXTRACT(EPOCH FROM (ps.first_ac_time - v_contest_start))::INTEGER / 60 
-                     + ps.problem_penalty
-                ELSE 0 END
-            ), 0)::INTEGER as total_penalty,
-            MAX(ps.first_ac_time) as last_accepted_at,
-            jsonb_object_agg(
-                ps.problem_id,
-                jsonb_build_object(
-                    'attempts', ps.attempts,
-                    'frozen_attempts', ps.frozen_attempts,
-                    'solved', ps.solved,
-                    'time_minutes', CASE 
-                        WHEN ps.first_ac_time IS NOT NULL AND v_contest_start IS NOT NULL
-                        THEN EXTRACT(EPOCH FROM (ps.first_ac_time - v_contest_start))::INTEGER / 60
-                        ELSE NULL 
-                    END,
-                    'penalty', ps.problem_penalty,
-                    'score', ps.best_score
-                )
-            ) as problem_results
-        FROM problem_stats ps
-        GROUP BY ps.owner_id
-    )
-    SELECT 
-        u.id,
-        u.username,
-        COALESCE(us.problems_solved, 0)::INTEGER,
-        COALESCE(us.total_penalty, 0)::INTEGER,
-        us.last_accepted_at,
-        COALESCE(us.problem_results, '{}'::jsonb)
-    FROM contest_members cm
-    INNER JOIN users u ON u.id = cm.user_id
-    LEFT JOIN user_stats us ON us.owner_id = u.id
-    WHERE cm.contest_id = p_contest_id
-      AND cm.role = 'participant'
-    ORDER BY 
-        COALESCE(us.problems_solved, 0) DESC,
-        COALESCE(us.total_penalty, 0) ASC,
-        us.last_accepted_at ASC NULLS LAST,
-        u.username ASC;
-END;
-$$;
--- +goose StatementEnd
 
 
 CREATE TABLE outbox_events (

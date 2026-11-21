@@ -65,7 +65,7 @@ export const ContestMessagesClient = ({
     (c: ContestClarificationModel) => c.status === "pending",
   ).length;
 
-  const allowClarifications = contest.allow_clarifications ?? true;
+  const allowClarifications = contest.allow_clarifications;
 
   const handleDeleteAnnouncement = async (id: string) => {
     if (!confirm("Вы действительно хотите удалить это объявление?")) {

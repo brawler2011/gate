@@ -17,6 +17,7 @@ func policyFixture() (m.PolicyInput, m.OrganizationContext, m.ProblemContext, m.
 	org := m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}
 	problem := m.ProblemContext{ID: uuid.New(), Organization: org, Visibility: m.VisibilityPrivate}
 	contest := m.ContestContext{ID: uuid.New(), Organization: org, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationInviteOnly,
+		MonitorScope: "participant", SubmissionsListScope: "moderator", SubmissionsReviewScope: "moderator", SubmissionDetailsScope: "moderator",
 		Conditions: &m.ContestConditions{ViewStatements: true, ViewScoreboard: true, ListSubmissions: true, ViewOtherSubmission: true, ViewSubmissionDetails: true, Submit: true}}
 	contest.Submission = m.SubmissionContext{ContestID: contest.ID, OwnerID: in.Actor.Id}
 	return in, org, problem, contest

@@ -7,7 +7,6 @@ import (
 	"unicode/utf8"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -78,10 +77,6 @@ func publicOrPrivate(s string) bool {
 	return s == "private" || s == "public"
 }
 
-func checkScope(scope string) bool {
-	return scope == "participant" || scope == "moderator" || scope == "owner"
-}
-
 func checkLength(s string, min, max int) bool {
 	length := utf8.RuneCountInString(s)
 	return length >= min && length <= max
@@ -110,32 +105,9 @@ func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) erro
 		return invalidValue("/visibility")
 	}
 
-	if params.MonitorScope.IsSet() && !checkScope(params.MonitorScope.Value) {
-		return invalidValue("/monitor_scope")
-	}
-
-	if params.SubmissionsListScope.IsSet() && !checkScope(params.SubmissionsListScope.Value) {
-		return invalidValue("/submissions_list_scope")
-	}
-
-	if params.SubmissionsReviewScope.IsSet() && !checkScope(params.SubmissionsReviewScope.Value) {
-		return invalidValue("/submissions_review_scope")
-	}
-
 	if params.StartTime.IsSet() && params.EndTime.IsSet() && !params.EndTime.Null && !params.StartTime.Null {
 		if !params.EndTime.Value.After(params.StartTime.Value) {
 			return pkg.AtField("/end_time", pkg.Invalid(pkg.ErrEndBeforeStart, "end_time must be after start_time", nil))
-		}
-	}
-
-	if params.FreezeDurationMinutes.IsSet() && !params.FreezeDurationMinutes.Null && params.FreezeDurationMinutes.Value < 0 {
-		return pkg.AtField("/freeze_duration_minutes", pkg.Invalid(pkg.ErrRange, "freeze_duration_minutes must be non-negative", map[string]any{"min": 0}))
-	}
-
-	if params.FreezeStatus.IsSet() {
-		status := string(params.FreezeStatus.Value)
-		if status != contestsmodel.FreezeStatusAuto && status != contestsmodel.FreezeStatusFrozen && status != contestsmodel.FreezeStatusUnfrozen {
-			return invalidValue("/freeze_status")
 		}
 	}
 

@@ -47,19 +47,11 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 		if emptyScopeRow(row.Resource) {
 			continue
 		}
-		var resource struct {
-			sqlc.GetContestByIDRow
-			Settings json.RawMessage `json:"settings"`
-		}
+		var resource sqlc.GetContestByIDRow
 		if err := json.Unmarshal(row.Resource, &resource); err != nil {
 			return nil, 0, dbError("decode scoped contest", err)
 		}
-		resource.GetContestByIDRow.Settings = resource.Settings
-		contest, err := mapGetContestByIDRow(resource.GetContestByIDRow)
-		if err != nil {
-			return nil, 0, err
-		}
-		items = append(items, contest)
+		items = append(items, mapGetContestByIDRow(resource))
 	}
 	return items, total, nil
 }

@@ -128,7 +128,7 @@ func newScoreboardFixture(names ...string) *scoreboardFixture {
 	start := time.Date(2020, 1, 1, 10, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
 	r := &scoreboardRepo{
-		contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusUnfrozen, "freeze_duration_minutes": 60, "penalty_per_attempt": 20}},
+		contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusUnfrozen, FreezeDurationMinutes: new(int32(60))}},
 		users:   map[uuid.UUID]string{}, roles: map[uuid.UUID]contestsmodel.ContestRole{}, submissions: map[uuid.UUID]submissionsmodel.Submission{},
 		results: map[scoreboardKey]contestsmodel.ContestProblemResult{}, blocks: map[scoreboardKey]contestsmodel.ContestUserProblemBlock{},
 	}
@@ -205,7 +205,7 @@ func TestScoreboardFrozenAndLiveViews(t *testing.T) {
 	} {
 		f.submit(t, s.user, s.problem, s.state, time.Duration(s.minute)*time.Minute)
 	}
-	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusAuto
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusAuto
 	frozen := f.scoreboard(t, false)
 	require.True(t, frozen.IsFrozen)
 	require.Equal(t, f.repo.contest.EndTime.Add(-time.Hour), *frozen.FreezeTime)
@@ -250,7 +250,7 @@ func TestScoreboardFrozenAndLiveViews(t *testing.T) {
 			require.Zero(t, result.PendingAttempts)
 		}
 	}
-	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusUnfrozen
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusUnfrozen
 	unfrozen := f.scoreboard(t, false)
 	require.False(t, unfrozen.IsFrozen)
 	require.Equal(t, live.Items, unfrozen.Items)
@@ -258,7 +258,7 @@ func TestScoreboardFrozenAndLiveViews(t *testing.T) {
 
 func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	f := newScoreboardFixture("alice")
-	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusAuto
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusAuto
 	for _, s := range []struct {
 		state  submissionsmodel.State
 		offset time.Duration
@@ -309,8 +309,8 @@ func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	f.submit(t, "alice", 0, submissionsmodel.Accepted, 20*time.Minute)
 	f.submit(t, "alice", 0, submissionsmodel.Saved, 25*time.Minute)
 	f.submit(t, "alice", 0, submissionsmodel.GotCE, 30*time.Minute)
-	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusFrozen
-	f.repo.contest.Settings["freeze_duration_minutes"] = 0
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusFrozen
+	f.repo.contest.Settings.FreezeDurationMinutes = nil
 	sb := f.scoreboard(t, false)
 	require.True(t, sb.IsFrozen)
 	require.Nil(t, sb.FreezeTime)
@@ -322,11 +322,10 @@ func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	require.Zero(t, sb.Items[0].ProblemResults[0].FailedAttempts)
 }
 
-func TestScoreboardCustomPenaltyAndTieBreaks(t *testing.T) {
+func TestScoreboardPenaltyAndTieBreaks(t *testing.T) {
 	f := newScoreboardFixture("alice", "bob", "charlie", "dave")
-	f.repo.contest.Settings["penalty_per_attempt"] = 15
-	f.submit(t, "alice", 0, submissionsmodel.GotWA, 5*time.Minute)
-	f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
+	f.submit(t, "alice", 0, submissionsmodel.GotWA, 3*time.Minute)
+	f.submit(t, "alice", 0, submissionsmodel.Accepted, 5*time.Minute)
 	f.submit(t, "bob", 0, submissionsmodel.Accepted, 25*time.Minute)
 	sb := f.scoreboard(t, false)
 	require.Len(t, sb.Items, 4)
@@ -335,7 +334,7 @@ func TestScoreboardCustomPenaltyAndTieBreaks(t *testing.T) {
 	}
 	require.EqualValues(t, 25, sb.Items[0].TotalPenalty)
 	require.EqualValues(t, 25, sb.Items[1].TotalPenalty)
-	require.EqualValues(t, 15, sb.PenaltyPerAttempt)
+	require.EqualValues(t, 20, sb.PenaltyPerAttempt)
 	f.submit(t, "bob", 1, submissionsmodel.Accepted, 30*time.Minute)
 	sb = f.scoreboard(t, false)
 	require.Equal(t, "bob", sb.Items[0].Username)
@@ -352,8 +351,8 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 	f.submit(t, "charlie", 0, submissionsmodel.Accepted, -time.Minute)
 	check := func() {
 		t.Helper()
-		for _, frozen := range []string{contestsmodel.FreezeStatusUnfrozen, contestsmodel.FreezeStatusAuto, contestsmodel.FreezeStatusFrozen} {
-			f.repo.contest.Settings["freeze_status"] = frozen
+		for _, frozen := range []contestsmodel.FreezeStatus{contestsmodel.FreezeStatusUnfrozen, contestsmodel.FreezeStatusAuto, contestsmodel.FreezeStatusFrozen} {
+			f.repo.contest.Settings.FreezeStatus = frozen
 			for _, unfrozen := range []bool{false, true} {
 				snapshot := f.scoreboard(t, unfrozen)
 				for _, item := range snapshot.Items {
@@ -386,7 +385,7 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 
 func TestScoreboardHistoryErrors(t *testing.T) {
 	f := newScoreboardFixture("alice")
-	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusFrozen
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusFrozen
 	f.repo.historyErr = errors.New("history failed")
 	result, err := f.uc.ProjectScoreboard(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, false)
 	require.ErrorIs(t, err, f.repo.historyErr)

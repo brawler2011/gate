@@ -122,7 +122,6 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		Login:          login,
 		Description:    "",
 		Visibility:     contestsmodel.ContestVisibilityPrivate,
-		Settings:       make(map[string]interface{}),
 		StartTime:      nil,
 		EndTime:        nil,
 	}
@@ -181,78 +180,38 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		}
 	}
 
-	settingsMap := make(map[string]interface{})
-
-	hasSettingsUpdate := false
-	if req.MonitorScope.IsSet() {
-		settingsMap["monitor_scope"] = req.MonitorScope.Value
-		hasSettingsUpdate = true
+	settings := contestsmodel.ContestSettingsPatch{
+		MonitorScope:           optScope(req.MonitorScope),
+		SubmissionsListScope:   optScope(req.SubmissionsListScope),
+		SubmissionsReviewScope: optScope(req.SubmissionsReviewScope),
+		SubmissionDetailsScope: optScope(req.SubmissionDetailsScope),
+		FreezeDurationSet:      req.FreezeDurationMinutes.IsSet(),
+		HideStatements:         optBool(req.HideStatements),
+		AllowClarifications:    optBool(req.AllowClarifications),
+		EnableDrafts:           optBool(req.EnableDrafts),
+		EnableUpsolving:        optBool(req.EnableUpsolving),
 	}
-	if req.SubmissionsListScope.IsSet() {
-		settingsMap["submissions_list_scope"] = req.SubmissionsListScope.Value
-		hasSettingsUpdate = true
+	if v, ok := req.FreezeDurationMinutes.Get(); ok {
+		settings.FreezeDurationMinutes = &v
 	}
-	if req.SubmissionsReviewScope.IsSet() {
-		settingsMap["submissions_review_scope"] = req.SubmissionsReviewScope.Value
-		hasSettingsUpdate = true
+	if v, ok := req.FreezeStatus.Get(); ok {
+		status := contestsmodel.FreezeStatus(v)
+		settings.FreezeStatus = &status
 	}
-	if req.SubmissionDetailsScope.IsSet() {
-		settingsMap["submission_details_scope"] = req.SubmissionDetailsScope.Value
-		hasSettingsUpdate = true
-	}
-	if req.FreezeDurationMinutes.IsSet() {
-		if req.FreezeDurationMinutes.Null {
-			settingsMap["freeze_duration_minutes"] = nil
-		} else {
-			settingsMap["freeze_duration_minutes"] = req.FreezeDurationMinutes.Value
-		}
-		hasSettingsUpdate = true
-	}
-	if req.FreezeStatus.IsSet() {
-		settingsMap["freeze_status"] = string(req.FreezeStatus.Value)
-		hasSettingsUpdate = true
-	}
-	if req.EnableDrafts.IsSet() {
-		settingsMap["enable_drafts"] = req.EnableDrafts.Value
-		hasSettingsUpdate = true
-	}
-	if req.AllowClarifications.IsSet() {
-		settingsMap["allow_clarifications"] = req.AllowClarifications.Value
-		hasSettingsUpdate = true
-	}
-	if req.EnableUpsolving.IsSet() {
-		settingsMap["enable_upsolving"] = req.EnableUpsolving.Value
-		hasSettingsUpdate = true
-	}
-	if req.EnableVirtualContests.IsSet() {
-		settingsMap["enable_virtual_contests"] = req.EnableVirtualContests.Value
-		hasSettingsUpdate = true
-	}
-	if req.ParticipationMode.IsSet() {
-		settingsMap["participation_mode"] = string(req.ParticipationMode.Value)
-		hasSettingsUpdate = true
-	}
-	if req.HideStatements.IsSet() {
-		settingsMap["hide_statements"] = req.HideStatements.Value
-		hasSettingsUpdate = true
+	if v, ok := req.ParticipationMode.Get(); ok {
+		mode := contestsmodel.ParticipationMode(v)
+		settings.ParticipationMode = &mode
 	}
 	if req.Languages != nil {
-		languages := []string{}
+		settings.Languages = []string{}
 		for _, id := range req.Languages {
 			if _, ok := h.languages.Langs[id]; !ok {
 				return pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration "+id, map[string]any{"id": id})
 			}
-			if !slices.Contains(languages, id) {
-				languages = append(languages, id)
+			if !slices.Contains(settings.Languages, id) {
+				settings.Languages = append(settings.Languages, id)
 			}
 		}
-		settingsMap["languages"] = languages
-		hasSettingsUpdate = true
-	}
-
-	var settings *map[string]interface{}
-	if hasSettingsUpdate {
-		settings = &settingsMap
 	}
 
 	var reqTitle, reqDesc, reqVisibility *string
@@ -963,4 +922,19 @@ func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, params corev1
 	}
 
 	return nil
+}
+
+func optScope(v corev1.OptContestScope) *contestsmodel.ContestScope {
+	if !v.IsSet() {
+		return nil
+	}
+	scope := contestsmodel.ContestScope(v.Value)
+	return &scope
+}
+
+func optBool(v corev1.OptBool) *bool {
+	if !v.IsSet() {
+		return nil
+	}
+	return &v.Value
 }

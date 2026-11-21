@@ -58,9 +58,9 @@ func (r *registrationStore) CreateContestJoinRequest(_ context.Context, input *c
 }
 
 func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
-	for _, mode := range []string{contestsmodel.ParticipationModeOpen, contestsmodel.ParticipationModeByRequest, contestsmodel.ParticipationModeInviteOnly} {
-		t.Run(mode, func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: map[string]interface{}{"participation_mode": mode}}
+	for _, mode := range []contestsmodel.ParticipationMode{contestsmodel.ParticipationModeOpen, contestsmodel.ParticipationModeByRequest, contestsmodel.ParticipationModeInviteOnly} {
+		t.Run(string(mode), func(t *testing.T) {
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: contestsmodel.ContestSettings{ParticipationMode: mode}}
 			store := &registrationStore{contest: contest}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
@@ -94,7 +94,7 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 		{name: "pending request", pending: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: map[string]interface{}{"participation_mode": contestsmodel.ParticipationModeByRequest}}
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeByRequest}}
 			store := &registrationStore{contest: contest, member: tc.member, pending: tc.pending}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
