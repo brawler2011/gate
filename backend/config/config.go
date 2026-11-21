@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/cpus"
 	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/yaml.v3"
 )
@@ -32,9 +33,22 @@ type HTTP struct {
 }
 
 type GoJudge struct {
-	HTTPURL  string `yaml:"http_url"`
+	HTTPURL string `yaml:"http_url"`
 	// Where go-judge sees problems.work_dir; it reads test files from there by path.
 	WorkDir string `yaml:"work_dir"`
+	// Programs go-judge runs at once, and one build's concurrent steps; 0 means the physical cores available.
+	Parallelism *int `yaml:"parallelism"`
+}
+
+func (g GoJudge) ResolveParallelism() (int, error) {
+	if *g.Parallelism > 0 {
+		return *g.Parallelism, nil
+	}
+	n, err := cpus.Physical()
+	if err != nil {
+		return 0, fmt.Errorf("detect go_judge.parallelism: %w", err)
+	}
+	return n, nil
 }
 
 type Storage struct {
@@ -65,8 +79,8 @@ type Judge struct {
 type Mode string
 
 const (
-	ModeAll Mode = "all"
-	ModeAPI Mode = "api"
+	ModeAll    Mode = "all"
+	ModeAPI    Mode = "api"
 	ModeWorker Mode = "worker"
 )
 
@@ -122,6 +136,7 @@ func (c Config) Validate(mode Mode) error {
 		v.url("go_judge.http_url", c.GoJudge.HTTPURL)
 		v.check(filepath.IsAbs(c.GoJudge.WorkDir), "go_judge.work_dir", "must be an absolute path")
 		v.check(c.Judge.Workers >= 1, "judge.workers", "must be at least 1")
+		v.check(c.GoJudge.Parallelism != nil && *c.GoJudge.Parallelism >= 0, "go_judge.parallelism", "must be set, 0 to detect physical cores")
 	}
 	if mode == ModeAPI {
 		v.required("judge.manifest_dir", c.Judge.ManifestDir)

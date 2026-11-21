@@ -10,9 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type directory struct {
+	mu        sync.Mutex
 	root      string
 	remaining int64
 	files     int
@@ -28,14 +30,23 @@ type quotaWriter struct {
 }
 
 func (w quotaWriter) Write(p []byte) (int, error) {
-	if int64(len(p)) > w.directory.remaining {
+	d := w.directory
+	d.mu.Lock()
+	if int64(len(p)) > d.remaining {
+		d.mu.Unlock()
 		return 0, errBudgetExceeded
 	}
+	d.remaining -= int64(len(p))
+	d.mu.Unlock()
 	n, err := w.writer.Write(p)
-	w.directory.remaining -= int64(n)
+	d.mu.Lock()
+	d.remaining += int64(len(p) - n)
+	d.mu.Unlock()
 	return n, err
 }
 func (d *directory) create(path string) (*os.File, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	if !fs.ValidPath(path) || path == "." || strings.ContainsAny(path, "\\\x00") {
 		return nil, fmt.Errorf("invalid build path %q", path)
 	}

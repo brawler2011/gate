@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/judging"
@@ -47,7 +48,9 @@ type Pipeline struct {
 	Files     *sandbox.FileTransport
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
-	Logger    *slog.Logger
+	// Programs one build runs at once.
+	Parallelism int
+	Logger      *slog.Logger
 }
 type Failure struct {
 	Stage     string `json:"stage"`
@@ -151,10 +154,8 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.checkPrograms(ctx); err != nil {
 		return uuid.Nil, err
 	}
-	for _, test := range s.Draft.Tests {
-		if err := e.test(ctx, test); err != nil {
-			return uuid.Nil, err
-		}
+	if err := e.runTests(ctx); err != nil {
+		return uuid.Nil, err
 	}
 	if err := e.checkSolutions(ctx); err != nil {
 		return uuid.Nil, err
@@ -324,10 +325,15 @@ func (e *execution) compile(ctx context.Context) error {
 			judged[key] = true
 		}
 	}
+	var needed []placedProgram
 	for _, p := range programs(d, e.pipeline.Languages) {
-		if !required[p.key] && !judged[p.key] {
-			continue
+		if required[p.key] || judged[p.key] {
+			needed = append(needed, p)
 		}
+	}
+	var mu sync.Mutex
+	return ordered(ctx, len(needed), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
+		p := needed[i]
 		// Judge programs compile with the whole library; solutions alone.
 		deps := map[string][]byte{}
 		if p.role != "solution" {
@@ -337,8 +343,10 @@ func (e *execution) compile(ctx context.Context) error {
 		}
 		compiled, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
 		if err != nil && judged[p.key] && processKind(err) == "author" {
+			mu.Lock()
 			e.uncompiled[strings.TrimPrefix(p.key, "solution/")] = true
-			continue
+			mu.Unlock()
+			return nil
 		}
 		if err != nil {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", p.path, err))
@@ -348,9 +356,11 @@ func (e *execution) compile(ctx context.Context) error {
 		if err != nil {
 			return fail("compile", 0, "infrastructure", fmt.Errorf("%s: %w", p.path, err))
 		}
+		mu.Lock()
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
-	}
-	return nil
+		mu.Unlock()
+		return nil
+	})
 }
 func (e *execution) solutionLimits() sandbox.FileRunLimits {
 	d := e.build.Snapshot.Draft
@@ -361,8 +371,37 @@ func (e *execution) solutionLimits() sandbox.FileRunLimits {
 	limits.Output = e.build.Snapshot.Limits.TestOutputBytes
 	return limits
 }
-func (e *execution) test(ctx context.Context, test model.DraftTest) error {
+
+type testResult struct {
+	solutions map[string]judging.TestResult
+	sample    *model.Sample
+}
+
+func (e *execution) runTests(ctx context.Context) error {
+	tests := e.build.Snapshot.Draft.Tests
+	results := make([]testResult, len(tests))
+	err := ordered(ctx, len(tests), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
+		var err error
+		results[i], err = e.test(ctx, tests[i])
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range results {
+		for name, result := range r.solutions {
+			e.solutions[name] = append(e.solutions[name], result)
+		}
+		if r.sample != nil {
+			e.samples = append(e.samples, *r.sample)
+		}
+	}
+	return nil
+}
+
+func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult, error) {
 	s := e.build.Snapshot
+	tr := testResult{solutions: map[string]judging.TestResult{}}
 	aux := s.Limits.Auxiliary
 	ids := []string{}
 	defer func() {
@@ -375,7 +414,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	if test.Input.Mode == "manual" {
 		id, err := e.upload(ctx, files.Input)
 		if err != nil {
-			return fail("input", test.Ordinal, "infrastructure", err)
+			return tr, fail("input", test.Ordinal, "infrastructure", err)
 		}
 		inputID = id
 		ids = append(ids, id)
@@ -383,15 +422,15 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		gen := e.compiled[programKey("generator", *test.Input.Generator)]
 		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, sandbox.File{}, test.Input.Args, nil, aux)
 		if err != nil {
-			return fail("generate", test.Ordinal, "infrastructure", err)
+			return tr, fail("generate", test.Ordinal, "infrastructure", err)
 		}
 		ids = append(ids, result.OutputID)
 		if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-			return fail("generate", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
+			return tr, fail("generate", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
 		}
 		inputID = result.OutputID
 		if err := e.download(ctx, files.Input, inputID, int64(s.Limits.ObjectBytes)); err != nil {
-			return fail("generate", test.Ordinal, "infrastructure", err)
+			return tr, fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
 	var args []string
@@ -405,11 +444,11 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		v := e.compiled[programKey("validator", validator.Name)]
 		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, sandbox.FileID(inputID), args, nil, aux)
 		if err != nil {
-			return fail("validate", test.Ordinal, "infrastructure", fmt.Errorf("validator %s: %w", validator.Name, err))
+			return tr, fail("validate", test.Ordinal, "infrastructure", fmt.Errorf("validator %s: %w", validator.Name, err))
 		}
 		ids = append(ids, result.OutputID)
 		if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-			return fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: exit %d: %s", validator.Name, result.ExitStatus, result.Stderr))
+			return tr, fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: exit %d: %s", validator.Name, result.ExitStatus, result.Stderr))
 		}
 	}
 	var outputID, answerID string
@@ -419,21 +458,21 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		intr := e.compiled["interactor"]
 		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, sandbox.FileID(inputID), sandbox.File{}, e.solutionLimits(), aux)
 		if err != nil {
-			return fail("interact", test.Ordinal, "infrastructure", err)
+			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
 		ids = append(ids, result.OutputID)
 		if result.Status != sandbox.StatusOK {
-			return fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
+			return tr, fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
 		outputID, answerID = result.OutputID, result.OutputID
 		if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
-			return fail("interact", test.Ordinal, "infrastructure", err)
+			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
 	} else {
 		if test.Answer.Mode == "provided" {
 			id, err := e.upload(ctx, files.Answer)
 			if err != nil {
-				return fail("answer", test.Ordinal, "infrastructure", err)
+				return tr, fail("answer", test.Ordinal, "infrastructure", err)
 			}
 			answerID = id
 			ids = append(ids, id)
@@ -447,17 +486,17 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			sol := e.compiled[programKey("solution", *solution)]
 			result, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
 			if err != nil {
-				return fail("answer", test.Ordinal, "infrastructure", err)
+				return tr, fail("answer", test.Ordinal, "infrastructure", err)
 			}
 			ids = append(ids, result.OutputID)
 			if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-				return fail("answer", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
+				return tr, fail("answer", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
 			}
 			outputID = result.OutputID
 			if test.Answer.Mode == "generated" {
 				answerID = outputID
 				if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
-					return fail("answer", test.Ordinal, "infrastructure", err)
+					return tr, fail("answer", test.Ordinal, "infrastructure", err)
 				}
 			}
 		}
@@ -466,10 +505,10 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		checker := e.compiled["checker"]
 		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
-			return fail("check", test.Ordinal, "infrastructure", err)
+			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
 		if result.Status != sandbox.StatusOK {
-			return fail("check", test.Ordinal, string(result.Status), errors.New(result.Message))
+			return tr, fail("check", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
 	}
 	for _, sol := range s.Draft.Solutions {
@@ -478,24 +517,35 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		}
 		result, err := e.judge(ctx, sol.Name, test.Ordinal, inputID, answerID)
 		if err != nil {
-			return fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
+			return tr, fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
 		}
-		e.solutions[sol.Name] = append(e.solutions[sol.Name], result)
+		tr.solutions[sol.Name] = result
 	}
 	if test.Sample {
 		sampleAnswer := files.Answer
 		if s.Draft.Type == "interactive" {
 			sampleAnswer = "" // the interactor's output is no sample output
 		}
-		if err := e.addSample(files.Input, sampleAnswer); err != nil {
-			return fail("sample", test.Ordinal, "infrastructure", err)
+		sample, err := e.sample(files.Input, sampleAnswer)
+		if err != nil {
+			return tr, fail("sample", test.Ordinal, "infrastructure", err)
 		}
+		tr.sample = &sample
 	}
-	return nil
+	return tr, nil
 }
 
-// judge runs a solution on a test as the judge runs submissions.
+// judge runs a solution on a test as the judge runs submissions. A TLE runs again before it counts,
+// since concurrent steps contend for the CPU.
 func (e *execution) judge(ctx context.Context, name string, ordinal int, inputID, answerID string) (judging.TestResult, error) {
+	for rerun := true; ; rerun = false {
+		result, err := e.judgeOnce(ctx, name, ordinal, inputID, answerID)
+		if err != nil || !rerun || result.Verdict != string(sandbox.StatusTLE) {
+			return result, err
+		}
+	}
+}
+func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inputID, answerID string) (judging.TestResult, error) {
 	s := e.build.Snapshot
 	aux := s.Limits.Auxiliary
 	sol := e.compiled[programKey("solution", name)]
@@ -653,17 +703,16 @@ func (e *execution) checkPrograms(ctx context.Context) error {
 const maxSampleBytes = 128 * 1024
 
 // Generated samples become available only after materialization.
-func (e *execution) addSample(inputPath, answerPath string) error {
+func (e *execution) sample(inputPath, answerPath string) (model.Sample, error) {
 	input, err := e.readSample(inputPath)
 	if err != nil {
-		return err
+		return model.Sample{}, err
 	}
 	answer, err := e.readSample(answerPath)
 	if err != nil {
-		return err
+		return model.Sample{}, err
 	}
-	e.samples = append(e.samples, model.Sample{Input: input, Output: answer})
-	return nil
+	return model.Sample{Input: input, Output: answer}, nil
 }
 func (e *execution) readSample(path string) (string, error) {
 	if path == "" {

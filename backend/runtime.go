@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -230,8 +231,13 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	if err != nil {
 		return nil, err
 	}
+	parallelism, err := d.cfg.GoJudge.ResolveParallelism()
+	if err != nil {
+		return nil, err
+	}
+	d.logger.Info("go-judge parallelism", slog.Int("parallelism", parallelism))
 	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
-	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Logger: d.logger}
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
@@ -546,6 +552,22 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		newHTTPService("public server", publicServer),
 	}
 	return services, closeAPI, nil
+}
+
+// writeJudgeParallelism lets the go-judge container start with the parallelism the worker resolves.
+func writeJudgeParallelism(configFile, envFile, path string) error {
+	cfg, err := loadConfig(configFile, envFile, config.ModeWorker)
+	if err != nil {
+		return err
+	}
+	n, err := cfg.GoJudge.ResolveParallelism()
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, []byte(strconv.Itoa(n)), 0o600); err != nil {
+		return fmt.Errorf("write go-judge parallelism: %w", err)
+	}
+	return nil
 }
 
 func loadConfig(configFile, envFile string, mode config.Mode) (config.Config, error) {

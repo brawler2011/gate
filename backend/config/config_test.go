@@ -60,6 +60,7 @@ func TestInvalidConfigNamesField(t *testing.T) {
 		{"relative go-judge url", "http_url: http://127.0.0.1:5050", "http_url: 127.0.0.1:5050", "go_judge.http_url"},
 		{"unknown email provider", "provider: resend", "provider: smtp", "email.provider"},
 		{"no judge workers", "workers: 1", "workers: 0", "judge.workers"},
+		{"no go-judge parallelism", "  parallelism: 0\n", "", "go_judge.parallelism"},
 		{"lease too short", "lease: 30s", "lease: 1s", "problems.lease"},
 		{"compile diagnostic too large", "diagnostic: 64KiB", "diagnostic: 65KiB", "problems.limits.compile.diagnostic"},
 	}
