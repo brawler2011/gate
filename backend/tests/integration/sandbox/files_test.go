@@ -18,6 +18,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -50,7 +51,8 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
 	sb := sandbox.NewSandbox(client, cfg)
-	program, err := sb.Compile(ctx, []byte("#include <unistd.h>\nint main(){char b[32768]; ssize_t n; while((n=read(0,b,sizeof b))>0){ssize_t p=0; while(p<n){ssize_t w=write(1,b+p,n-p); if(w<=0)return 2;p+=w;}} return n<0;}"), "cpp17", nil)
+	buildLimits := dbfixtures.BuildLimits(t)
+	program, err := sb.CompileWithLimits(ctx, []byte("#include <unistd.h>\nint main(){char b[32768]; ssize_t n; while((n=read(0,b,sizeof b))>0){ssize_t p=0; while(p<n){ssize_t w=write(1,b+p,n-p); if(w<=0)return 2;p+=w;}} return n<0;}"), "cpp17", nil, buildLimits.Compile)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, transport.Delete(context.Background(), program.PrimaryFileID)) })
 	const size = int64(144 * 1024 * 1024)
@@ -61,7 +63,8 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	_, err = io.CopyN(io.MultiWriter(f, hash), rand.Reader, size)
 	require.NoError(t, err)
 	expected := fmt.Sprintf("%x", hash.Sum(nil))
-	limits := sandbox.FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 64 * 1024 * 1024, Processes: 10, Output: bytesize.Size(size), Diagnostic: 4096}
+	limits := buildLimits.Auxiliary
+	limits.Output = bytesize.Size(size)
 	runtime.GC()
 	var initial runtime.MemStats
 	runtime.ReadMemStats(&initial)

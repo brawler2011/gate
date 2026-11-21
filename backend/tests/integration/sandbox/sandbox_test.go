@@ -14,10 +14,12 @@ import (
 	"testing"
 	"time"
 
+	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -84,10 +86,11 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	sb := sandbox.NewSandbox(client, cfg)
 	r := runner{sb: sb, files: files}
+	limits := dbfixtures.BuildLimits(t)
 
 	for i := 0; i < 30; i++ {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp17", nil)
+		_, err := sb.CompileWithLimits(probeCtx, []byte("int main(){return 0;}"), "cpp17", nil, limits.Compile)
 		cancel()
 		if err == nil {
 			break
@@ -116,11 +119,11 @@ func TestIntegrationSandbox(t *testing.T) {
 			{"output file only", "import sys\nopen('output.txt', 'w').write(sys.stdin.read())", sandbox.Streams{Output: "output.txt"}, "1 2\n"},
 		} {
 			t.Run(c.name, func(t *testing.T) {
-				exe, err := sb.Compile(ctx, []byte(c.source), "python3", nil)
+				exe, err := sb.CompileWithLimits(ctx, []byte(c.source), "python3", nil, limits.Compile)
 				if err != nil {
 					t.Fatalf("compile: %v", err)
 				}
-				res, err := sb.RunSolution(ctx, exe, "python3", input, c.streams, solutionLimits(2000, 256))
+				res, err := sb.RunSolution(ctx, exe, "python3", input, c.streams, solutionLimits(limits, 2000, 256))
 				if err != nil {
 					t.Fatalf("run: %v", err)
 				}
@@ -138,11 +141,13 @@ func TestIntegrationSandbox(t *testing.T) {
 			})
 		}
 		t.Run("output file over the limit", func(t *testing.T) {
-			exe, err := sb.Compile(ctx, []byte("open('output.txt', 'w').write('x' * (11 << 20))"), "python3", nil)
+			exe, err := sb.CompileWithLimits(ctx, []byte("open('output.txt', 'w').write('x' * (11 << 20))"), "python3", nil, limits.Compile)
 			if err != nil {
 				t.Fatalf("compile: %v", err)
 			}
-			res, err := sb.RunSolution(ctx, exe, "python3", input, both, solutionLimits(2000, 256))
+			over := solutionLimits(limits, 2000, 256)
+			over.Output = 10 * bytesize.MiB
+			res, err := sb.RunSolution(ctx, exe, "python3", input, both, over)
 			if err != nil {
 				t.Fatalf("run: %v", err)
 			}
@@ -203,7 +208,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							if err != nil {
 								t.Fatalf("failed to read checker file %s: %v", f.Name(), err)
 							}
-							exe, err := sb.Compile(ctx, code, langKey, deps)
+							exe, err := sb.CompileWithLimits(ctx, code, langKey, deps, limits.Compile)
 							if err != nil {
 								t.Fatalf("failed to compile checker %s: %v", f.Name(), err)
 							}
@@ -226,7 +231,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							if err != nil {
 								t.Fatalf("failed to read interactor file %s: %v", f.Name(), err)
 							}
-							exe, err := sb.Compile(ctx, code, langKey, deps)
+							exe, err := sb.CompileWithLimits(ctx, code, langKey, deps, limits.Compile)
 							if err != nil {
 								t.Fatalf("failed to compile interactor %s: %v", f.Name(), err)
 							}
@@ -249,7 +254,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							if err != nil {
 								t.Fatalf("failed to read generator file %s: %v", f.Name(), err)
 							}
-							exe, err := sb.Compile(ctx, code, langKey, deps)
+							exe, err := sb.CompileWithLimits(ctx, code, langKey, deps, limits.Compile)
 							if err != nil {
 								t.Fatalf("failed to compile generator %s: %v", f.Name(), err)
 							}
@@ -305,7 +310,7 @@ func TestIntegrationSandbox(t *testing.T) {
 					if !ok {
 						return nil, fmt.Errorf("generator not found: %s", genName)
 					}
-					res, stdout := r.run(t, gen, sandbox.File{}, args, auxLimits)
+					res, stdout := r.run(t, gen, sandbox.File{}, args, limits.Auxiliary)
 					if res.Status != sandbox.StatusOK {
 						return nil, fmt.Errorf("generator %s: %s: %s", genName, res.Status, res.Stderr)
 					}
@@ -358,7 +363,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to read reference solution %s: %v", referenceSol.Filename, err)
 				}
-				refExe, err := sb.Compile(ctx, refCode, referenceSol.Lang, nil)
+				refExe, err := sb.CompileWithLimits(ctx, refCode, referenceSol.Lang, nil, limits.Compile)
 				if err != nil {
 					t.Fatalf("failed to compile reference solution %s: %v", referenceSol.Filename, err)
 				}
@@ -384,7 +389,7 @@ func TestIntegrationSandbox(t *testing.T) {
 						if memLimit <= 0 {
 							memLimit = 256
 						}
-						solResult, stdout := r.run(t, program{refExe, referenceSol.Lang}, r.upload(t, input), nil, solutionLimits(timeLimit, memLimit))
+						solResult, stdout := r.run(t, program{refExe, referenceSol.Lang}, r.upload(t, input), nil, solutionLimits(limits, timeLimit, memLimit))
 						if solResult.Status != sandbox.StatusOK {
 							t.Fatalf("reference solution did not return OK on test %s: status=%s, stderr=%s",
 								tc.Name, solResult.Status, string(solResult.Stderr))
@@ -406,7 +411,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							t.Fatalf("failed to read solution %s: %v", sol.Filename, err)
 						}
 
-						solExe, err := sb.Compile(ctx, solCode, sol.Lang, nil)
+						solExe, err := sb.CompileWithLimits(ctx, solCode, sol.Lang, nil, limits.Compile)
 						if sol.Expected == "CE" {
 							if err == nil {
 								t.Errorf("expected compilation error for %s, but compiled successfully", sol.Filename)
@@ -431,7 +436,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							}
 
 							if pkg.Problem.Type == "interactive" {
-								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, interactor.exe, interactor.lang, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(timeLimit, memLimit), auxLimits)
+								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, interactor.exe, interactor.lang, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(limits, timeLimit, memLimit), limits.Auxiliary)
 								if err != nil {
 									t.Fatalf("interact failed: %v", err)
 								}
@@ -443,14 +448,14 @@ func TestIntegrationSandbox(t *testing.T) {
 									break
 								}
 							} else {
-								runRes, stdout := r.run(t, program{solExe, sol.Lang}, r.upload(t, tcd.Input), nil, solutionLimits(timeLimit, memLimit))
+								runRes, stdout := r.run(t, program{solExe, sol.Lang}, r.upload(t, tcd.Input), nil, solutionLimits(limits, timeLimit, memLimit))
 								if runRes.Status != sandbox.StatusOK {
 									finalStatus = runRes.Status
 									lastStderr = runRes.Stderr
 									lastExitStatus = runRes.ExitStatus
 									break
 								}
-								checkRes, err := sb.CheckFiles(ctx, checker.exe, checker.lang, r.upload(t, tcd.Input), r.upload(t, stdout), r.upload(t, tcd.Answer), auxLimits)
+								checkRes, err := sb.CheckFiles(ctx, checker.exe, checker.lang, r.upload(t, tcd.Input), r.upload(t, stdout), r.upload(t, tcd.Answer), limits.Auxiliary)
 								if err != nil {
 									t.Fatalf("checker failed: %v", err)
 								}
@@ -493,11 +498,11 @@ public class Main {
         System.out.println(new Point(1, 2).y + new Timestamp(0).getNanos() + half);
     }
 }`
-		executable, err := sb.Compile(ctx, []byte(source), "java", nil)
+		executable, err := sb.CompileWithLimits(ctx, []byte(source), "java", nil, limits.Compile)
 		if err != nil {
 			t.Fatalf("failed to compile: %v", err)
 		}
-		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(5000, 256))
+		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
 		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "2.5" {
 			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 		}
@@ -524,11 +529,11 @@ public class Main {
 				if !ok {
 					t.Fatalf("no test program for configuration %q", id)
 				}
-				executable, err := sb.Compile(ctx, []byte(source), id, nil)
+				executable, err := sb.CompileWithLimits(ctx, []byte(source), id, nil, limits.Compile)
 				if err != nil {
 					t.Fatalf("failed to compile: %v", err)
 				}
-				result, stdout := r.run(t, program{executable, id}, r.upload(t, []byte("2000000000 3000000000\n")), nil, solutionLimits(5000, 256))
+				result, stdout := r.run(t, program{executable, id}, r.upload(t, []byte("2000000000 3000000000\n")), nil, solutionLimits(limits, 5000, 256))
 				if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "5000000000" {
 					t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 				}
@@ -539,11 +544,11 @@ public class Main {
 	// JSON would turn these bytes into U+FFFD, so the source must travel through the file store.
 	t.Run("non-UTF-8 source", func(t *testing.T) {
 		cp1251 := "\xcf\xf0\xe8\xe2\xe5\xf2"
-		executable, err := sb.Compile(ctx, []byte("#include <cstdio>\nint main(){fputs(\""+cp1251+"\", stdout);}"), "cpp17", nil)
+		executable, err := sb.CompileWithLimits(ctx, []byte("#include <cstdio>\nint main(){fputs(\""+cp1251+"\", stdout);}"), "cpp17", nil, limits.Compile)
 		if err != nil {
 			t.Fatalf("failed to compile: %v", err)
 		}
-		result, stdout := r.run(t, program{executable, "cpp17"}, sandbox.File{}, nil, solutionLimits(5000, 256))
+		result, stdout := r.run(t, program{executable, "cpp17"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
 		if result.Status != sandbox.StatusOK || string(stdout) != cp1251 {
 			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 		}
@@ -564,7 +569,7 @@ public class Main {
 Test legend. Условие задачи на русском языке.
 \end{problem}
 \end{document}`
-		pdfBytes, err := sb.CompilePDF(ctx, texSource)
+		pdfBytes, err := sb.CompilePDF(ctx, texSource, limits.Booklet)
 		if err != nil {
 			t.Fatalf("failed to compile PDF booklet in sandbox: %v", err)
 		}
@@ -583,11 +588,8 @@ type program struct {
 	lang string
 }
 
-var auxLimits = sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 512 * bytesize.MiB, Processes: 50, Output: 10 * bytesize.MiB, Diagnostic: 64 * 1024}
-
-func solutionLimits(timeMs, memoryMb int) sandbox.FileRunLimits {
-	cpu := time.Duration(timeMs) * time.Millisecond
-	return sandbox.FileRunLimits{CPU: cpu, Wall: 2 * cpu, Memory: bytesize.Size(memoryMb) * bytesize.MiB, Processes: 50, Output: 10 * bytesize.MiB, Diagnostic: 64 * 1024}
+func solutionLimits(limits model.BuildLimits, timeMs, memoryMb int) sandbox.FileRunLimits {
+	return limits.Solution(time.Duration(timeMs)*time.Millisecond, bytesize.Size(memoryMb)*bytesize.MiB)
 }
 
 // runner feeds in-memory test data through the file store, as judging does with package files.

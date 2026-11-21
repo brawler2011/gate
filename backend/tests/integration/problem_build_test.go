@@ -51,12 +51,9 @@ func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	t.Helper()
 	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	return problemsmodel.BuildOptions{
 		Languages:   cfg.Langs,
-		Limits:      problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 1000, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux},
+		Limits:      dbfixtures.BuildLimits(t),
 		MaxAttempts: 3, Duration: 10 * time.Minute, Lease: time.Minute,
 	}
 }

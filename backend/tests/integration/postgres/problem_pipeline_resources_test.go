@@ -57,10 +57,10 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	ctx, pool, repo, org, d := draftFixture(t)
 	services := startPipelineServices(t)
 	work := dbfixtures.DiskTempDir(t)
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 20 * time.Second, Memory: 256 << 20, Processes: 50, Output: bytesize.Size(objectBytes), Diagnostic: 4096}
-	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 30*time.Second, 512<<20, 150
-	limits := model.BuildLimits{DiskBytes: bytesize.Size(diskBytes), FileCount: 100, ObjectBytes: bytesize.Size(objectBytes), TestOutputBytes: bytesize.Size(objectBytes), Compile: compile, Auxiliary: aux}
+	// The tests exercise these quotas.
+	limits := dbfixtures.BuildLimits(t)
+	limits.DiskBytes, limits.FileCount = bytesize.Size(diskBytes), 100
+	limits.ObjectBytes, limits.TestOutputBytes, limits.Auxiliary.Output = bytesize.Size(objectBytes), bytesize.Size(objectBytes), bytesize.Size(objectBytes)
 	options := postgres.ProblemBuildOptions{
 		Languages: services.langs,
 		Limits:    limits, MaxAttempts: 1, Duration: 5 * time.Minute, Lease: 3 * time.Second,
@@ -302,8 +302,7 @@ func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 func TestPipelineCancelFreesWorkerForNextBuild(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
-	h.options.Limits.Auxiliary.Wall = 10 * time.Minute
-	h.options.Limits.Auxiliary.CPU = 10 * time.Minute
+	h.options.Limits.Auxiliary = h.options.Limits.WithCPU(h.options.Limits.Auxiliary, 10*time.Minute)
 	h.generatorBuild(t, "import time\ntime.sleep(300)\n")
 	_, err := h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", "slow"), h.draft.ProblemID, mustRevision(t, h), h.options)
 	require.NoError(t, err)

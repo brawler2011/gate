@@ -90,13 +90,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	compile := aux
-	compile.CPU = 10 * time.Second
-	compile.Wall = 20 * time.Second
-	compile.Memory = 512 << 20
-	compile.Processes = 150
-	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
+	limits := dbfixtures.BuildLimits(t)
 	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	d.Title = "Changed after enqueue"
@@ -164,8 +158,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 // buildDraft saves the draft and runs one build of it, returning the build's ID.
 func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, error) {
 	t.Helper()
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: aux, Auxiliary: aux}
+	limits := dbfixtures.BuildLimits(t)
 	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
 		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", *d), *d)

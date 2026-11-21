@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/nats-io/nats.go"
 )
 
@@ -21,23 +22,24 @@ const (
 	maxErrorBytes = 64 << 10
 )
 
-// Allow the sandbox compilation limit plus transfer time.
-const RequestTimeout = 90 * time.Second
+// Requests wait for the booklet's wall-clock limit plus this much for queueing and transfer.
+const transferTime = 30 * time.Second
 
 type Compiler interface {
-	CompilePDF(ctx context.Context, texSource string) ([]byte, error)
+	CompilePDF(ctx context.Context, texSource string, limits sandbox.FileRunLimits) ([]byte, error)
 }
 
 type Client struct {
-	conn *nats.Conn
+	conn    *nats.Conn
+	timeout time.Duration
 }
 
-func NewClient(conn *nats.Conn) *Client {
-	return &Client{conn: conn}
+func NewClient(conn *nats.Conn, limits sandbox.FileRunLimits) *Client {
+	return &Client{conn: conn, timeout: limits.Wall + transferTime}
 }
 
 func (c *Client) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	reply, err := c.conn.RequestMsgWithContext(ctx, &nats.Msg{Subject: subject, Data: []byte(texSource)})
 	if errors.Is(err, nats.ErrNoResponders) {
@@ -55,11 +57,12 @@ func (c *Client) CompilePDF(ctx context.Context, texSource string) ([]byte, erro
 type Responder struct {
 	conn     *nats.Conn
 	compiler Compiler
+	limits   sandbox.FileRunLimits
 	logger   *slog.Logger
 }
 
-func NewResponder(conn *nats.Conn, compiler Compiler) *Responder {
-	return &Responder{conn: conn, compiler: compiler, logger: slog.Default().With("component", "booklet_responder")}
+func NewResponder(conn *nats.Conn, compiler Compiler, limits sandbox.FileRunLimits) *Responder {
+	return &Responder{conn: conn, compiler: compiler, limits: limits, logger: slog.Default().With("component", "booklet_responder")}
 }
 
 func (r *Responder) Run(ctx context.Context) error {
@@ -81,7 +84,7 @@ func (r *Responder) Run(ctx context.Context) error {
 }
 
 func (r *Responder) respond(ctx context.Context, msg *nats.Msg) {
-	pdf, err := r.compiler.CompilePDF(ctx, string(msg.Data))
+	pdf, err := r.compiler.CompilePDF(ctx, string(msg.Data), r.limits)
 	if err == nil {
 		err = msg.Respond(pdf)
 		if errors.Is(err, nats.ErrMaxPayload) {

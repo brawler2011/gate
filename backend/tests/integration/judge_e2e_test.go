@@ -111,10 +111,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d, err = drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
-	limits := problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
+	limits := dbfixtures.BuildLimits(t)
 	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
@@ -287,10 +284,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	require.NoError(t, err)
 	h.ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: h.userID, Role: accessmodel.UserRoleUser})
 
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
-	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
+	h.limits = dbfixtures.BuildLimits(t)
 	programs := sandbox.NewProgramCache(diskCache(t), client, files, image)
 	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Parallelism: judgeParallelism(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packages, workDir := judgeCache(t)

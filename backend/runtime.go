@@ -259,7 +259,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		judging.DefaultRecoveryInterval,
 	)
 	inboxPruner := inbox.NewPruner(pgstore.NewInbox(d.pool), d.cfg.Inbox.Retention, inbox.DefaultPruneInterval)
-	bookletResponder := booklet.NewResponder(d.natsJS.Conn(), sandbox.NewSandbox(sandboxClient, judgeImage.Config))
+	bookletResponder := booklet.NewResponder(d.natsJS.Conn(), sandbox.NewSandbox(sandboxClient, judgeImage.Config), problemPolicy.Limits.Booklet)
 
 	noStop := func(context.Context) error { return nil }
 	return []appService{
@@ -369,7 +369,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, accessLoader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: accessLoader}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, booklet.NewClient(natsJS.Conn()))
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, booklet.NewClient(natsJS.Conn(), cfg.Problems.Limits.Booklet))
 
 	outboxDispatcher := outbox.NewEventDispatcher()
 	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))

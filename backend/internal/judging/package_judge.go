@@ -106,7 +106,7 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	p := pkg.Format.Problem
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
-	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Languages.SubmissionCompileLimits(lang, j.Limits.Compile))
+	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
 	if err != nil {
 		// A missing worker language is a system configuration error, not a contestant compilation error.
 		if IsTemporary(err) || errors.Is(err, sandbox.ErrUnknownLanguage) {
@@ -164,11 +164,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 }
 func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, details bool) (TestResult, error) {
 	p := pkg.Format.Problem
-	limits := j.Limits.Auxiliary
-	limits.CPU = time.Duration(p.Limits.TimeMs) * time.Millisecond
-	limits.Wall = 2 * limits.CPU
-	limits.Memory = bytesize.Size(p.Limits.MemoryMb) * bytesize.MiB
-	limits.Output = j.Limits.TestOutputBytes
+	limits := j.Limits.Solution(time.Duration(p.Limits.TimeMs)*time.Millisecond, bytesize.Size(p.Limits.MemoryMb)*bytesize.MiB)
 	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
 	input, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, inputPath))
 	if err != nil {

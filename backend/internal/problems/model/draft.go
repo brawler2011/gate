@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -158,12 +159,36 @@ type BuildSnapshot struct {
 }
 
 type BuildLimits struct {
-	DiskBytes       bytesize.Size         `json:"disk_bytes" yaml:"disk_bytes"`
-	FileCount       int                   `json:"file_count" yaml:"file_count"`
-	ObjectBytes     bytesize.Size         `json:"object_bytes" yaml:"object_bytes"`
-	TestOutputBytes bytesize.Size         `json:"test_output_bytes" yaml:"test_output_bytes"`
-	Compile         sandbox.FileRunLimits `json:"compile" yaml:"compile"`
-	Auxiliary       sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
+	DiskBytes       bytesize.Size `json:"disk_bytes" yaml:"disk_bytes"`
+	FileCount       int           `json:"file_count" yaml:"file_count"`
+	ObjectBytes     bytesize.Size `json:"object_bytes" yaml:"object_bytes"`
+	TestOutputBytes bytesize.Size `json:"test_output_bytes" yaml:"test_output_bytes"`
+	// Every run's wall-clock limit is its CPU limit times this factor.
+	WallFactor int                   `json:"wall_factor" yaml:"wall_factor"`
+	Compile    sandbox.FileRunLimits `json:"compile" yaml:"compile"`
+	Auxiliary  sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
+	// Booklets are no part of a build snapshot.
+	Booklet sandbox.FileRunLimits `json:"-" yaml:"booklet"`
+}
+
+// WithCPU sets a run's CPU limit and the wall-clock limit that follows from it.
+func (l BuildLimits) WithCPU(r sandbox.FileRunLimits, cpu time.Duration) sandbox.FileRunLimits {
+	r.CPU, r.Wall = cpu, time.Duration(l.WallFactor)*cpu
+	return r
+}
+
+// DeriveWalls sets the wall-clock limits of the configured runs.
+func (l *BuildLimits) DeriveWalls() {
+	for _, r := range []*sandbox.FileRunLimits{&l.Compile, &l.Auxiliary, &l.Booklet} {
+		*r = l.WithCPU(*r, r.CPU)
+	}
+}
+
+// Solution limits a solution's run on a test.
+func (l BuildLimits) Solution(timeLimit time.Duration, memory bytesize.Size) sandbox.FileRunLimits {
+	r := l.WithCPU(l.Auxiliary, timeLimit)
+	r.Memory, r.Output = memory, l.TestOutputBytes
+	return r
 }
 
 // DraftQuotas counts library files and assets as Files, and programs as Components.

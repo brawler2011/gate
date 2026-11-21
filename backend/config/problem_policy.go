@@ -10,7 +10,7 @@ import (
 
 type ProblemPolicy struct {
 	// Builds and judging require scratch space on a real disk, not tmpfs.
-	WorkDir          string            `yaml:"work_dir"`
+	WorkDir string `yaml:"work_dir"`
 	// Worker disk budget for extracted packages and compiled programs under work_dir/cache.
 	CacheBytes       bytesize.Size     `yaml:"cache_bytes"`
 	Draft            model.DraftQuotas `yaml:"draft"`
@@ -43,8 +43,10 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.CacheBytes >= p.Limits.DiskBytes, "problems.cache_bytes", "must be at least problems.limits.disk_bytes")
 	v.check(p.Limits.FileCount > 0, "problems.limits.file_count", "must be positive")
 	v.check(p.Limits.ObjectBytes > 0 && p.Limits.ObjectBytes <= 5*bytesize.GiB, "problems.limits.object_bytes", "must be in (0, 5GiB]")
+	v.check(p.Limits.WallFactor >= 1, "problems.limits.wall_factor", "must be at least 1")
 	validateRunLimits(v, "problems.limits.compile", p.Limits.Compile)
 	validateRunLimits(v, "problems.limits.auxiliary", p.Limits.Auxiliary)
+	validateRunLimits(v, "problems.limits.booklet", p.Limits.Booklet)
 
 	v.check(p.Parallelism >= 1, "problems.parallelism", "must be at least 1")
 	v.check(p.Attempts >= 1, "problems.attempts", "must be at least 1")
@@ -63,7 +65,6 @@ func (p ProblemPolicy) validate(v *validator) {
 
 func validateRunLimits(v *validator, field string, l sandbox.FileRunLimits) {
 	v.check(l.CPU > 0, field+".cpu", "must be positive")
-	v.check(l.Wall > 0, field+".wall", "must be positive")
 	v.check(l.Memory > 0, field+".memory", "must be positive")
 	v.check(l.Processes > 0, field+".processes", "must be positive")
 	v.check(l.Output > 0, field+".output", "must be positive")
