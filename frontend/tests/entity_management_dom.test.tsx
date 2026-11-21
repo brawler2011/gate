@@ -54,7 +54,7 @@ describe("Production entity management", () => {
     });
     if (failure) {
       expect(view.getByText("Team A")).toBeTruthy();
-      expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"}));
+      expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Недостаточно прав", color: "red"}));
     } else {
       await waitFor(() => expect(view.getByText("Нет команд. Добавьте команды для привязки к контесту")).toBeTruthy());
     }
@@ -88,7 +88,7 @@ describe("Production entity management", () => {
       fireEvent.click(within(view.getByText("@alice").closest("tr")!).getByRole("button"));
     });
     if (failure) {
-      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"})));
+      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Недостаточно прав", color: "red"})));
       expect(view.getByText("@alice")).toBeTruthy();
     } else {
       await waitFor(() => expect(view.queryByText("@alice")).toBeNull());
@@ -120,7 +120,7 @@ describe("Production entity management", () => {
       fireEvent.click(view.getByRole("button", {name: "Применить"}));
     });
     if (failure) {
-      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied"})));
+      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Недостаточно прав"})));
     } else {
       await waitFor(() => expect(within(view.getByText("Team A").closest("tr")!).getByText("Модератор")).toBeTruthy());
     }
@@ -232,7 +232,7 @@ describe("Production entity management", () => {
     });
     await waitFor(() => expect(notification).toHaveBeenCalled());
     if (failure) {
-      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied", color: "red"})));
+      await waitFor(() => expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Недостаточно прав", color: "red"})));
       expect(view.getByRole("dialog")).toBeTruthy();
     } else {
       fireEvent.click(view.getByRole("tab", {name: /Приглашения/}));

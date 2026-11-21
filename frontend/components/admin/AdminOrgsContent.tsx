@@ -9,6 +9,7 @@ import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
+import {problemMessage} from "@/lib/problemText";
 
 import classes from "./AdminPage.module.css";
 import {DeleteOrgModal} from "./DeleteOrgModal";
@@ -100,10 +101,10 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось удалить организацию",
+          message: problemMessage(err, "Не удалось удалить организацию"),
           color: "red",
         });
-        throw new Error(err.detail);
+        throw new Error(problemMessage(err));
       }
 
       notifications.show({

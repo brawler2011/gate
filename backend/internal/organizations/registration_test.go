@@ -61,7 +61,7 @@ func TestRegistrationUsesCurrentOrganizationState(t *testing.T) {
 		err    error
 	}{
 		{name: "open", policy: organizationsmodel.OrgJoinPolicyOpen, joined: true},
-		{name: "policy changed", policy: organizationsmodel.OrgJoinPolicyInviteOnly, err: pkg.ErrInvalid},
+		{name: "policy changed", policy: organizationsmodel.OrgJoinPolicyInviteOnly, err: pkg.ErrInviteOnly},
 		{name: "concurrent membership", policy: organizationsmodel.OrgJoinPolicyOpen, member: true, err: pkg.ErrConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -77,7 +77,7 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 				require.True(t, store.requested)
 				require.NotNil(t, request)
 			case contestsmodel.ParticipationModeInviteOnly:
-				require.ErrorIs(t, err, pkg.ErrInvalid)
+				require.ErrorIs(t, err, pkg.ErrInviteOnly)
 				require.False(t, store.joined)
 				require.False(t, store.requested)
 			}

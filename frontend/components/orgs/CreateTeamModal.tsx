@@ -6,6 +6,7 @@ import {useState} from "react";
 import {useRevalidator} from "react-router-dom";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 
@@ -49,7 +50,7 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
     setLoading(false);
 
     if (error) {
-      setFormError(error.detail || "Не удалось создать команду");
+      setFormError(problemMessage(error, "Не удалось создать команду"));
       return;
     }
 

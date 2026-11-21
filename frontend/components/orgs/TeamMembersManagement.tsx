@@ -12,6 +12,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {usePagedQuery} from "@/hooks/usePagedQuery";
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {TeamMemberModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -84,7 +85,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     });
     setAdding(false);
     if (error) {
-      const msg = error.detail || "Не удалось добавить участника";
+      const msg = problemMessage(error, "Не удалось добавить участника");
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;
@@ -105,7 +106,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     });
     setDeletingId(null);
     if (error) {
-      const msg = error.detail || "Не удалось добавить участника";
+      const msg = problemMessage(error, "Не удалось добавить участника");
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;
@@ -141,7 +142,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     setModalOpened(false);
 
     if (error) {
-      const msg = error.detail || "Не удалось добавить участника";
+      const msg = problemMessage(error, "Не удалось добавить участника");
       notifications.show({title: "Ошибка", message: msg, color: "red"});
       setStatus({type: "error", message: msg});
       return;

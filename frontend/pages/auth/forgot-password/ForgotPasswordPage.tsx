@@ -6,6 +6,7 @@ import {Link} from "react-router-dom";
 import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const ForgotPasswordPage = (): ReactNode => {
   const [identifier, setIdentifier] = useState("");
@@ -25,7 +26,7 @@ const ForgotPasswordPage = (): ReactNode => {
       if (!err) {
         setSubmitted(true);
       } else {
-        setError(err?.detail || "Ошибка при отправке запроса");
+        setError(problemMessage(err, "Ошибка при отправке запроса"));
       }
     } catch {
       setError("Не удалось подключиться к серверу");

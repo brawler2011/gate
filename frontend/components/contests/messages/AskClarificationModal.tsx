@@ -5,6 +5,7 @@ import {notifications} from "@mantine/notifications";
 import {useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 
@@ -66,7 +67,7 @@ export const AskClarificationModal = ({
     if (err) {
       notifications.show({
         title: "Ошибка отправки",
-        message: err.detail || "Не удалось отправить вопрос",
+        message: problemMessage(err, "Не удалось отправить вопрос"),
         color: "red",
       });
       return;

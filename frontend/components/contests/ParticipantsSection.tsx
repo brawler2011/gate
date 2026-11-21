@@ -8,6 +8,7 @@ import {useCallback, useEffect, useState} from "react";
 
 import {StatusMessage} from '@/components/shared/StatusMessage';
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {ChangeRoleModal} from "./ChangeRoleModal";
 import {ContestTeamsManagement} from "./ContestTeamsManagement";
@@ -158,7 +159,7 @@ export const ParticipantsSection = ({
       console.error("Failed to add participant:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось добавить участника",
+        message: problemMessage(error, "Не удалось добавить участника"),
         color: "red",
       });
       setStatusMessage({
@@ -195,7 +196,7 @@ export const ParticipantsSection = ({
       console.error("Failed to delete participant:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось удалить участника",
+        message: problemMessage(error, "Не удалось удалить участника"),
         color: "red",
       });
       setStatusMessage({
@@ -246,7 +247,7 @@ export const ParticipantsSection = ({
       console.error("Failed to change role:", error);
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось изменить роль",
+        message: problemMessage(error, "Не удалось изменить роль"),
         color: "red",
       });
       setStatusMessage({
@@ -283,7 +284,7 @@ export const ParticipantsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось одобрить заявку",
+        message: problemMessage(error, "Не удалось одобрить заявку"),
         color: "red",
       });
       return;
@@ -316,7 +317,7 @@ export const ParticipantsSection = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось отклонить заявку",
+        message: problemMessage(error, "Не удалось отклонить заявку"),
         color: "red",
       });
       return;

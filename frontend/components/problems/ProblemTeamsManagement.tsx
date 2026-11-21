@@ -10,6 +10,7 @@ import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
 
@@ -121,7 +122,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось добавить команду",
+        message: problemMessage(error, "Не удалось добавить команду"),
         color: "red",
       });
       setStatusMessage({
@@ -153,7 +154,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось удалить команду",
+        message: problemMessage(error, "Не удалось удалить команду"),
         color: "red",
       });
       setStatusMessage({
@@ -197,7 +198,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось изменить права команды",
+        message: problemMessage(error, "Не удалось изменить права команды"),
         color: "red",
       });
       setStatusMessage({

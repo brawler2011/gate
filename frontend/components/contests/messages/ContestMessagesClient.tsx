@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {AnswerClarificationModal} from "./AnswerClarificationModal";
 import {AskClarificationModal} from "./AskClarificationModal";
@@ -87,7 +88,7 @@ export const ContestMessagesClient = ({
     if (err) {
       notifications.show({
         title: "Ошибка",
-        message: err.detail || "Не удалось удалить объявление",
+        message: problemMessage(err, "Не удалось удалить объявление"),
         color: "red",
       });
       return;

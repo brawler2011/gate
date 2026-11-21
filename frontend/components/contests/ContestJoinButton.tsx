@@ -8,6 +8,7 @@ import {useCallback, useEffect, useState, type ReactNode} from "react";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ContestJoinRequestModel, ContestModel} from "@/contracts/core/v1/schema";
 
@@ -77,7 +78,7 @@ export const ContestJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error),
         color: "red",
       });
       return;
@@ -105,7 +106,7 @@ export const ContestJoinButton = ({
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail,
+        message: problemMessage(error),
         color: "red",
       });
       return;

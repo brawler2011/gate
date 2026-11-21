@@ -7,6 +7,7 @@ import {useRevalidator, useNavigate} from "react-router-dom";
 
 import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/schema';
 import {api} from '@/lib/api';
+import {problemMessage} from "@/lib/problemText";
 
 type Props = { org: OrganizationModel };
 
@@ -67,7 +68,7 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
     });
     setSaving(false);
     if (error) {
-      notifications.show({title: 'Ошибка', message: error.detail, color: 'red'});
+      notifications.show({title: 'Ошибка', message: problemMessage(error), color: 'red'});
       return;
     }
     notifications.show({title: 'Готово', message: 'Настройки обновлены', color: 'green'});

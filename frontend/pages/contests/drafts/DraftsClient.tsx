@@ -6,6 +6,7 @@ import {IconCheck, IconCopy, IconDeviceFloppy, IconFileCode, IconInfoCircle, Ico
 import React, {useCallback, useState, useTransition, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import classes from "./DraftsClient.module.css";
 
@@ -88,7 +89,7 @@ export const DraftsClient = ({
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Ошибка при сохранении черновика",
+          message: problemMessage(error, "Ошибка при сохранении черновика"),
           color: "red",
         });
       } else if (response?.id) {
@@ -127,7 +128,7 @@ export const DraftsClient = ({
     } else {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось удалить черновик",
+        message: problemMessage(error, "Не удалось удалить черновик"),
         color: "red",
       });
     }

@@ -6,6 +6,7 @@ import {useSearchParams, Link} from "react-router-dom";
 import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const ResetPasswordPage = (): ReactNode => {
   return (
@@ -60,7 +61,7 @@ const ResetPasswordContent = () => {
       if (!err) {
         setSuccess(true);
       } else {
-        setError(err?.detail || "Не удалось сбросить пароль. Возможно, срок действия ссылки истёк.");
+        setError(problemMessage(err, "Не удалось сбросить пароль. Возможно, срок действия ссылки истёк."));
       }
     } catch {
       setError("Не удалось подключиться к серверу");

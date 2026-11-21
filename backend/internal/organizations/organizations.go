@@ -387,7 +387,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 
 		_, err = tx.GetMember(ctx, org.ID, targetUserID)
 		if err == nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "пользователь уже является участником организации")
+			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "user is already a member of the organization")
 		}
 
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
@@ -399,7 +399,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 			return fmt.Errorf("get pending invitation: %w", err)
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "приглашение этому пользователю уже отправлено")
+			return pkg.Wrap(pkg.ErrInvitationPending, nil, "an invitation to this user is already pending")
 		}
 
 		invitation, err = tx.CreateInvitation(ctx, &organizationsmodel.CreateOrganizationInvitationInput{
@@ -559,7 +559,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 
 		_, err = tx.GetMember(ctx, org.ID, userID)
 		if err == nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "вы уже состоите в этой организации")
+			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "already a member of the organization")
 		}
 
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
@@ -567,7 +567,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyInviteOnly {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "вступление в организацию только по приглашениям")
+			return pkg.Wrap(pkg.ErrInviteOnly, nil, "the organization accepts members by invitation only")
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyOpen {
@@ -583,7 +583,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 			return fmt.Errorf("get pending request: %w", err)
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrConflict, nil, "заявка на вступление уже подана и ожидает рассмотрения")
+			return pkg.Wrap(pkg.ErrRequestPending, nil, "a join request is already pending")
 		}
 
 		req, err = tx.CreateJoinRequest(ctx, &organizationsmodel.CreateOrganizationJoinRequestInput{
@@ -706,7 +706,7 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 
 		if err := tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
@@ -768,7 +768,7 @@ func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin 
 			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 
 		if err := tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID); err != nil {

@@ -6,6 +6,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
 import {canManageOrgMembers} from "@/lib/permissions";
+import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -45,7 +46,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const teamsError = teamsErr
     ? {
       status: teamsResponse.status,
-      message: teamsErr.detail || teamsResponse.statusText,
+      message: problemMessage(teamsErr),
     }
     : null;
   return {org, showMembersTab, teamsError, teamsData};

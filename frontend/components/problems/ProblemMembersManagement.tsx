@@ -11,6 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {usePagedQuery} from "@/hooks/usePagedQuery";
 import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
 
@@ -98,7 +99,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось добавить участника",
+        message: problemMessage(error, "Не удалось добавить участника"),
         color: "red",
       });
       setStatusMessage({
@@ -130,7 +131,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось удалить участника",
+        message: problemMessage(error, "Не удалось удалить участника"),
         color: "red",
       });
       setStatusMessage({
@@ -177,7 +178,7 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     if (error) {
       notifications.show({
         title: "Ошибка",
-        message: error.detail || "Не удалось изменить роль участника",
+        message: problemMessage(error, "Не удалось изменить роль участника"),
         color: "red",
       });
       setStatusMessage({

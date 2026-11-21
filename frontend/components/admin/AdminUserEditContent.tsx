@@ -8,6 +8,7 @@ import {useRevalidator, Link} from "react-router-dom";
 
 import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/schema";
@@ -62,7 +63,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось изменить роль",
+          message: problemMessage(error, "Не удалось изменить роль"),
           color: "red",
         });
         return;
@@ -104,7 +105,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось изменить email",
+          message: problemMessage(error, "Не удалось изменить email"),
           color: "red",
         });
         return;
@@ -156,7 +157,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось установить пароль",
+          message: problemMessage(error, "Не удалось установить пароль"),
           color: "red",
         });
         return;
@@ -199,7 +200,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось отправить письмо для сброса",
+          message: problemMessage(error, "Не удалось отправить письмо для сброса"),
           color: "red",
         });
         return;
@@ -236,7 +237,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
       if (error) {
         notifications.show({
           title: "Ошибка",
-          message: error.detail || "Не удалось отправить письмо",
+          message: problemMessage(error, "Не удалось отправить письмо"),
           color: "red",
         });
         return;

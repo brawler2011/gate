@@ -6,6 +6,7 @@ import {Link} from "react-router-dom";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {NotificationModel, PaginationModel} from "@/contracts/core/v1/schema";
@@ -110,7 +111,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось принять приглашение",
+        message: problemMessage(error, "Не удалось принять приглашение"),
       });
       return;
     }
@@ -139,7 +140,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось отклонить приглашение",
+        message: problemMessage(error, "Не удалось отклонить приглашение"),
       });
       return;
     }
@@ -173,7 +174,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось одобрить заявку",
+        message: problemMessage(error, "Не удалось одобрить заявку"),
       });
       return;
     }
@@ -206,7 +207,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось отклонить заявку",
+        message: problemMessage(error, "Не удалось отклонить заявку"),
       });
       return;
     }
@@ -246,7 +247,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось одобрить заявку",
+        message: problemMessage(error, "Не удалось одобрить заявку"),
       });
       return;
     }
@@ -286,7 +287,7 @@ export const NotificationsClient = (): ReactNode => {
     if (error) {
       mantineNotifications.show({
         color: "red",
-        message: error.detail || "Не удалось отклонить заявку",
+        message: problemMessage(error, "Не удалось отклонить заявку"),
       });
       return;
     }

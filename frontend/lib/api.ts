@@ -2,6 +2,8 @@ import createFetchClient from "openapi-fetch";
 import createClient from "openapi-react-query";
 import {redirect} from "react-router-dom";
 
+import {problemMessage} from "@/lib/problemText";
+
 import type {Problem, paths} from "@/contracts/core/v1/schema";
 import type {Client, MaybeOptionalInit, ParseAsResponse} from "openapi-fetch";
 import type {
@@ -213,14 +215,13 @@ export const unwrap: UnwrapFn = ((
     const {data, error, response} = await arg;
     if (!response.ok || error || !data) {
       const problem = problemFrom(response.status, response.statusText || "Error", error);
-      const message = problem.detail || problem.title;
       if (response.status === 404) {
-        throw new Response(message, {status: 404});
+        throw new Response(problem.detail || problem.title, {status: 404});
       }
       if (response.status === 401) {
         throw redirect("/auth/login");
       }
-      throw Object.assign(new Error(message), problem);
+      throw Object.assign(new Error(problemMessage(problem)), problem);
     }
     return data;
   })();

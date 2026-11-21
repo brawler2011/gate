@@ -3079,6 +3079,9 @@ const (
 	ErrorCodeProblemInContest       ErrorCode = "problem_in_contest"
 	ErrorCodeEmailNotVerified       ErrorCode = "email_not_verified"
 	ErrorCodeWrongPassword          ErrorCode = "wrong_password"
+	ErrorCodeInvitationPending      ErrorCode = "invitation_pending"
+	ErrorCodeRequestResolved        ErrorCode = "request_resolved"
+	ErrorCodeInviteOnly             ErrorCode = "invite_only"
 	ErrorCodeRequired               ErrorCode = "required"
 	ErrorCodeLength                 ErrorCode = "length"
 	ErrorCodeFormat                 ErrorCode = "format"
@@ -3112,6 +3115,9 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeProblemInContest,
 		ErrorCodeEmailNotVerified,
 		ErrorCodeWrongPassword,
+		ErrorCodeInvitationPending,
+		ErrorCodeRequestResolved,
+		ErrorCodeInviteOnly,
 		ErrorCodeRequired,
 		ErrorCodeLength,
 		ErrorCodeFormat,
@@ -3167,6 +3173,12 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeEmailNotVerified:
 		return []byte(s), nil
 	case ErrorCodeWrongPassword:
+		return []byte(s), nil
+	case ErrorCodeInvitationPending:
+		return []byte(s), nil
+	case ErrorCodeRequestResolved:
+		return []byte(s), nil
+	case ErrorCodeInviteOnly:
 		return []byte(s), nil
 	case ErrorCodeRequired:
 		return []byte(s), nil
@@ -3253,6 +3265,15 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeWrongPassword:
 		*s = ErrorCodeWrongPassword
+		return nil
+	case ErrorCodeInvitationPending:
+		*s = ErrorCodeInvitationPending
+		return nil
+	case ErrorCodeRequestResolved:
+		*s = ErrorCodeRequestResolved
+		return nil
+	case ErrorCodeInviteOnly:
+		*s = ErrorCodeInviteOnly
 		return nil
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired

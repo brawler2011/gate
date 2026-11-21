@@ -8,6 +8,7 @@ import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 const LoginPage = (): ReactNode => {
   return (
@@ -51,7 +52,7 @@ const LoginPageContent = () => {
         setUser(data.user);
         navigate(returnTo);
       } else {
-        const msg = err?.detail || "Неверный логин или пароль";
+        const msg = err?.code === "unauthenticated" ? "Неверный логин или пароль" : problemMessage(err, "Не удалось войти");
         if (err?.code === "email_not_verified") {
           setIsUnverified(true);
           setError("Почта для этого аккаунта ещё не подтверждена. Пожалуйста, проверьте ваш почтовый ящик.");
@@ -85,7 +86,7 @@ const LoginPageContent = () => {
       } else {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось отправить письмо",
+          message: problemMessage(err, "Не удалось отправить письмо"),
           color: "red",
         });
       }

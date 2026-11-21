@@ -10,6 +10,7 @@ import {SubmissionDetailsModal} from '@/components/submissions';
 import {api, unwrap} from "@/lib/api";
 import {languageName, useLanguages} from "@/lib/languages";
 import {ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {problemMessage} from "@/lib/problemText";
 
 import classes from "./AdminPage.module.css";
 
@@ -115,7 +116,7 @@ export const AdminSubmissionsContent = ({
       if (err) {
         notifications.show({
           title: "Ошибка",
-          message: err.detail || "Не удалось перепроверить посылку",
+          message: problemMessage(err, "Не удалось перепроверить посылку"),
           color: "red",
         });
         return;

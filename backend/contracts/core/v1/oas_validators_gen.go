@@ -631,6 +631,12 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "wrong_password":
 		return nil
+	case "invitation_pending":
+		return nil
+	case "request_resolved":
+		return nil
+	case "invite_only":
+		return nil
 	case "required":
 		return nil
 	case "length":

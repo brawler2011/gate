@@ -3987,6 +3987,9 @@ components:
         - problem_in_contest
         - email_not_verified
         - wrong_password
+        - invitation_pending
+        - request_resolved
+        - invite_only
         - required
         - length
         - format
