@@ -47,7 +47,7 @@ type CreateUserParams struct {
 	IsEmailVerified bool
 }
 
-var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,30}$`)
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 var reservedUsernames = map[string]struct{}{
 	"admin":       {},
@@ -75,41 +75,41 @@ var reservedUsernames = map[string]struct{}{
 
 func UsernameValidate(username string) error {
 	username = strings.TrimPrefix(username, "@")
+	if !pkg.IsLengthBetween(username, 3, 30) {
+		return pkg.Invalid(pkg.ErrLength, "username must be between 3 and 30 characters", map[string]any{"min": 3, "max": 30})
+	}
 	if !usernameRegex.MatchString(username) {
-		return errors.New("username must be between 3 and 30 characters and contain only letters, numbers, and underscores")
+		return pkg.Invalid(pkg.ErrFormat, "username may contain only latin letters, numbers, and underscores", nil)
 	}
 	if _, reserved := reservedUsernames[strings.ToLower(username)]; reserved {
-		return errors.New("username is reserved")
+		return pkg.Invalid(pkg.ErrReserved, "username is reserved", nil)
 	}
 	return nil
 }
 
 func EmailValidate(email string) error {
 	if !pkg.IsEmail(email) {
-		return errors.New("email must be a valid email address")
+		return pkg.Invalid(pkg.ErrFormat, "email must be a valid email address", nil)
 	}
 	return nil
 }
 
 func PasswordValidate(password string) error {
 	if len(password) < 8 {
-		return errors.New("password must be at least 8 characters")
+		return pkg.Invalid(pkg.ErrLength, "password must be at least 8 characters", map[string]any{"min": 8})
 	}
 	return nil
 }
 
 func (p CreateUserParams) Validate() error {
 	errs := []error{
-		UsernameValidate(p.Username),
-		accessmodel.UserRoleValidate(p.Role),
+		pkg.AtField("/username", UsernameValidate(p.Username)),
+		pkg.AtField("/role", accessmodel.UserRoleValidate(p.Role)),
 	}
 	if p.Email != nil && *p.Email != "" {
-		if err := EmailValidate(*p.Email); err != nil {
-			errs = append(errs, err)
-		}
+		errs = append(errs, pkg.AtField("/email", EmailValidate(*p.Email)))
 	}
-
-	return errors.Join(errs...)
+	return pkg.Fields(errs...)
 }
 
 type CreateUserInput struct {
@@ -141,19 +141,17 @@ type UpdateUserInput struct {
 type UpdateUserParams = UpdateUserInput
 
 func (p UpdateUserInput) Validate() error {
-	errs := make([]error, 0)
-
+	var errs []error
 	if p.Username != nil {
-		errs = append(errs, UsernameValidate(*p.Username))
+		errs = append(errs, pkg.AtField("/username", UsernameValidate(*p.Username)))
 	}
 	if p.Role != nil {
-		errs = append(errs, accessmodel.UserRoleValidate(*p.Role))
+		errs = append(errs, pkg.AtField("/role", accessmodel.UserRoleValidate(*p.Role)))
 	}
 	if p.Email != nil {
-		errs = append(errs, EmailValidate(*p.Email))
+		errs = append(errs, pkg.AtField("/email", EmailValidate(*p.Email)))
 	}
-
-	return errors.Join(errs...)
+	return pkg.Fields(errs...)
 }
 
 type AuthTokenType = string

@@ -55,7 +55,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 	} else {
 		login = generateLogin(params.Name)
 		if login == "" {
-			return nil, pkg.Wrap(pkg.ErrInvalid, nil, "name must contain at least one latin letter or digit")
+			return nil, pkg.AtField("/name", pkg.Invalid(pkg.ErrFormat, "name must contain at least one latin letter or digit", nil))
 		}
 		if err := validateOrgLogin(login); err != nil {
 			return nil, err

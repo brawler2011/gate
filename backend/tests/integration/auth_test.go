@@ -54,14 +54,24 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Require().Error(err)
 		s.Equal(http.StatusConflict, s.getStatusCode(err))
 
-		// Registration rejects passwords below the minimum length.
-		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{
-			Username: "shortpassuser",
-			Email:    "short@example.com",
-			Password: "short",
-		})
-		s.Require().Error(err)
-		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+		// Registration reports every invalid field with a code the client can translate.
+		fieldCodes := func(err error) map[string]string {
+			var problem *corev1.ProblemStatusCodeWithHeaders
+			s.Require().ErrorAs(err, &problem)
+			s.Equal(http.StatusBadRequest, problem.StatusCode)
+			codes := map[string]string{}
+			for _, f := range problem.Response.Errors {
+				codes[f.Pointer] = string(f.Code)
+				if f.Pointer == "/password" {
+					s.JSONEq(`8`, string(f.Params.Value["min"]))
+				}
+			}
+			return codes
+		}
+		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "ab", Email: "short@example.com", Password: "short"})
+		s.Equal(map[string]string{"/username": "length", "/password": "length"}, fieldCodes(err))
+		_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "valid_name", Email: "not-an-email", Password: "password123"})
+		s.Equal(map[string]string{"/email": "format"}, fieldCodes(err))
 	})
 
 	s.Run("Login", func() {

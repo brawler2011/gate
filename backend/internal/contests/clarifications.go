@@ -22,7 +22,7 @@ func NewClarificationsUseCase(transactor ContestEventsTransactions, reads Clarif
 
 func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
 	if input.Question == "" {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "question cannot be empty")
+		return nil, pkg.AtField("/question", pkg.Invalid(pkg.ErrRequired, "question cannot be empty", nil))
 	}
 
 	user := accessmodel.UserFromContext(ctx)
@@ -76,7 +76,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 
 func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input *contestsmodel.AnswerContestClarificationInput) (*contestsmodel.ContestClarification, error) {
 	if input.Answer == "" {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "answer cannot be empty")
+		return nil, pkg.AtField("/answer", pkg.Invalid(pkg.ErrRequired, "answer cannot be empty", nil))
 	}
 
 	user := accessmodel.UserFromContext(ctx)

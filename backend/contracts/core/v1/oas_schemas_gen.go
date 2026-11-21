@@ -3078,6 +3078,13 @@ const (
 	ErrorCodeProblemShortNameTaken  ErrorCode = "problem_short_name_taken"
 	ErrorCodeProblemInContest       ErrorCode = "problem_in_contest"
 	ErrorCodeEmailNotVerified       ErrorCode = "email_not_verified"
+	ErrorCodeWrongPassword          ErrorCode = "wrong_password"
+	ErrorCodeRequired               ErrorCode = "required"
+	ErrorCodeLength                 ErrorCode = "length"
+	ErrorCodeFormat                 ErrorCode = "format"
+	ErrorCodeReserved               ErrorCode = "reserved"
+	ErrorCodeRange                  ErrorCode = "range"
+	ErrorCodeEndBeforeStart         ErrorCode = "end_before_start"
 )
 
 // AllValues returns all ErrorCode values.
@@ -3104,6 +3111,13 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeProblemShortNameTaken,
 		ErrorCodeProblemInContest,
 		ErrorCodeEmailNotVerified,
+		ErrorCodeWrongPassword,
+		ErrorCodeRequired,
+		ErrorCodeLength,
+		ErrorCodeFormat,
+		ErrorCodeReserved,
+		ErrorCodeRange,
+		ErrorCodeEndBeforeStart,
 	}
 }
 
@@ -3151,6 +3165,20 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeProblemInContest:
 		return []byte(s), nil
 	case ErrorCodeEmailNotVerified:
+		return []byte(s), nil
+	case ErrorCodeWrongPassword:
+		return []byte(s), nil
+	case ErrorCodeRequired:
+		return []byte(s), nil
+	case ErrorCodeLength:
+		return []byte(s), nil
+	case ErrorCodeFormat:
+		return []byte(s), nil
+	case ErrorCodeReserved:
+		return []byte(s), nil
+	case ErrorCodeRange:
+		return []byte(s), nil
+	case ErrorCodeEndBeforeStart:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3222,6 +3250,27 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeEmailNotVerified:
 		*s = ErrorCodeEmailNotVerified
+		return nil
+	case ErrorCodeWrongPassword:
+		*s = ErrorCodeWrongPassword
+		return nil
+	case ErrorCodeRequired:
+		*s = ErrorCodeRequired
+		return nil
+	case ErrorCodeLength:
+		*s = ErrorCodeLength
+		return nil
+	case ErrorCodeFormat:
+		*s = ErrorCodeFormat
+		return nil
+	case ErrorCodeReserved:
+		*s = ErrorCodeReserved
+		return nil
+	case ErrorCodeRange:
+		*s = ErrorCodeRange
+		return nil
+	case ErrorCodeEndBeforeStart:
+		*s = ErrorCodeEndBeforeStart
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -3327,7 +3376,7 @@ func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 // One invalid value of a request body.
 // Ref: #/components/schemas/FieldProblem
 type FieldProblem struct {
-	// RFC 6901 JSON Pointer into the request body.
+	// RFC 6901 JSON Pointer into the request body; a query parameter is /.
 	Pointer string                `json:"pointer"`
 	Code    ErrorCode             `json:"code"`
 	Params  OptFieldProblemParams `json:"params"`

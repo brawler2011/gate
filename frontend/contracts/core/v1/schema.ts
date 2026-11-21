@@ -2051,7 +2051,7 @@ export interface components {
         /** @description One invalid value of a request body. */
         FieldProblem: {
             /**
-             * @description RFC 6901 JSON Pointer into the request body.
+             * @description RFC 6901 JSON Pointer into the request body; a query parameter is /<name>.
              * @example /tests/3/input/generator
              */
             pointer: string;
@@ -2062,7 +2062,7 @@ export interface components {
             detail?: string;
         };
         /** @enum {string} */
-        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified";
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start";
         /**
          * @description Result of creation.
          * @example {
@@ -4232,10 +4232,7 @@ export interface components {
         RegisterRequestModel: {
             /** @example john_doe */
             username: string;
-            /**
-             * Format: email
-             * @example john@example.com
-             */
+            /** @example john@example.com */
             email: string;
             /**
              * Format: password
@@ -4338,7 +4335,6 @@ export interface components {
         RequestEmailChangeRequestModel: {
             /** Format: password */
             password: string;
-            /** Format: email */
             new_email: string;
         };
         /**
@@ -4357,7 +4353,6 @@ export interface components {
          *     }
          */
         AdminChangeEmailRequestModel: {
-            /** Format: email */
             email: string;
             /** @default true */
             with_confirmation: boolean;
