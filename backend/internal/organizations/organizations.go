@@ -196,7 +196,7 @@ func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login st
 		_, err := uc.repo.GetMember(ctx, orgID, caller.Id)
 		if err != nil {
 			if errors.Is(err, pkg.ErrNotFound) {
-				return nil, pkg.Wrap(pkg.ErrNotOrgMember, nil, "must be a member of organization")
+				return nil, pkg.Wrap(pkg.ErrForbidden, nil, "must be a member of organization")
 			}
 			return nil, fmt.Errorf("get member: %w", err)
 		}

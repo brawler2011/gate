@@ -93,7 +93,7 @@ var (
 	ErrClarificationsDisabled      = NewCode("clarifications_disabled", CodeForbidden)
 	ErrScoreboardFrozen            = NewCode("scoreboard_frozen", CodeForbidden)
 	// Params: limit.
-	ErrLimitReached       = NewCode("limit_reached", CodeConflict)
+	ErrLimitReached       = NewCode("limit_reached", CodeInvalid)
 	ErrUnknownLanguage    = NewCode("unknown_language", CodeInvalid)
 	ErrLanguageNotAllowed = NewCode("language_not_allowed", CodeInvalid)
 	ErrPackageNotReady    = NewCode("package_not_ready", CodeInvalid)

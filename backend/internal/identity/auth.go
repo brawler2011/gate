@@ -131,7 +131,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		}
 
 		if errByName == nil && errByEmail == nil && existingByName.Id != existingByEmail.Id {
-			return pkg.Wrap(pkg.ErrConflict, nil, "username or email already in use")
+			return pkg.Wrap(pkg.ErrUsernameTaken, nil, "username and email belong to different accounts")
 		}
 
 		switch {
