@@ -199,7 +199,7 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 				hc.Privileged = true
 				hc.Binds = append(hc.Binds, dir+":"+judgeMount+":ro")
 			},
-			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", fmt.Sprintf("-parallelism=%d", runtime.NumCPU()), "-src-prefix=" + judgeMount, "-no-fallback"},
+			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", fmt.Sprintf("-parallelism=%d", physicalCores(t)), "-src-prefix=" + judgeMount, "-no-fallback"},
 			WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
 		c, err := startShared(ctx, "go-judge", request)
 		require.NoError(t, err)
@@ -215,6 +215,21 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 		shared.judge = &goJudge{client: client, files: files}
 	}
 	return shared.judge.client, shared.judge.files
+}
+
+// SMT siblings share a core; a compile per thread inflates CPU time past compile limits.
+func physicalCores(t *testing.T) int {
+	t.Helper()
+	paths, err := filepath.Glob("/sys/devices/system/cpu/cpu[0-9]*/topology/core_cpus_list")
+	require.NoError(t, err)
+	cores := map[string]bool{}
+	for _, p := range paths {
+		siblings, err := os.ReadFile(p)
+		require.NoError(t, err)
+		cores[strings.TrimSpace(string(siblings))] = true
+	}
+	require.NotEmpty(t, cores)
+	return len(cores)
 }
 
 // judgeCache is a package cache that the shared go-judge reads by path.

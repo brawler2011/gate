@@ -121,23 +121,30 @@ func TestIntegrationSuite(t *testing.T) {
 			t.Errorf("%s has unsupported signature %s; expected func(*IntegrationTestSuite)", method.Name, method.Type)
 			continue
 		}
-		t.Run(method.Name, func(t *testing.T) {
-			t.Parallel()
-			defer func() {
-				if recovered := recover(); recovered != nil {
-					t.Errorf("%s panicked: %v\n%s", method.Name, recovered, debug.Stack())
-				}
-			}()
-			s := new(IntegrationTestSuite)
-			s.SetT(t)
-			s.ctx = context.Background()
-			s.dbPool = newTestDB(t)
-			s.ctrl = gomock.NewController(t)
-			s.mockNats = mocks.NewMockPublisher(s.ctrl)
-			s.initApp()
+		runIsolated(t, method.Name, func(s *IntegrationTestSuite) {
 			method.Func.Call([]reflect.Value{reflect.ValueOf(s)})
 		})
 	}
+}
+
+// runIsolated runs fn as a parallel subtest with its own database and app.
+func runIsolated(t *testing.T, name string, fn func(*IntegrationTestSuite)) {
+	t.Run(name, func(t *testing.T) {
+		t.Parallel()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				t.Errorf("%s panicked: %v\n%s", name, recovered, debug.Stack())
+			}
+		}()
+		s := new(IntegrationTestSuite)
+		s.SetT(t)
+		s.ctx = context.Background()
+		s.dbPool = newTestDB(t)
+		s.ctrl = gomock.NewController(t)
+		s.mockNats = mocks.NewMockPublisher(s.ctrl)
+		s.initApp()
+		fn(s)
+	})
 }
 
 func (s *IntegrationTestSuite) initApp() {

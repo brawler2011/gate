@@ -22,9 +22,6 @@ import (
 
 // Author packages import and build with the real judge.
 func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
-	admin := s.createUser("admin_import", accessmodel.UserRoleAdmin)
-	org := s.createOrganization("import-org", "Import Organization", admin.Id)
-	ctx := withTestUser(s.ctx, admin.Id)
 	packages, err := filepath.Glob("../../pkg/testdata/*/*")
 	s.Require().NoError(err)
 	s.Require().NotEmpty(packages)
@@ -33,7 +30,11 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 		if name == "pcms2/interactive-guess" {
 			continue // no main solution to interact with; see the draft import test
 		}
-		s.Run(name, func() {
+		// Builds claim the next queued build, so each package gets its own database.
+		runIsolated(s.T(), name, func(s *IntegrationTestSuite) {
+			admin := s.createUser("admin_import", accessmodel.UserRoleAdmin)
+			org := s.createOrganization("import-org", "Import Organization", admin.Id)
+			ctx := withTestUser(s.ctx, admin.Id)
 			var archive bytes.Buffer
 			w := zip.NewWriter(&archive)
 			s.Require().NoError(w.AddFS(os.DirFS(dir)))
