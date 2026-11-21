@@ -199,7 +199,7 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 				hc.Privileged = true
 				hc.Binds = append(hc.Binds, dir+":"+judgeMount+":ro")
 			},
-			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2", "-src-prefix=" + judgeMount, "-no-fallback"},
+			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", fmt.Sprintf("-parallelism=%d", runtime.NumCPU()), "-src-prefix=" + judgeMount, "-no-fallback"},
 			WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
 		c, err := startShared(ctx, "go-judge", request)
 		require.NoError(t, err)
