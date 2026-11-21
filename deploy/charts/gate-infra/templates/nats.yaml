@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: nats
 spec:
+  {{- if .Values.nats.nodePort }}
+  type: NodePort
+  {{- end }}
   selector: {app.kubernetes.io/name: nats}
   ports:
-    - {name: client, port: 4222}
+    - {name: client, port: 4222{{ with .Values.nats.nodePort }}, nodePort: {{ . }}{{ end }}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

@@ -23,7 +23,7 @@ func setSecrets(t *testing.T) {
 
 func TestEnvironmentConfigsLoad(t *testing.T) {
 	setSecrets(t)
-	envModes := map[string][]Mode{"local": {ModeAll}, "prod": {ModeAPI, ModeWorker}, "k3d": {ModeAPI, ModeWorker}}
+	envModes := map[string][]Mode{"local": {ModeAll}, "prod": {ModeAPI, ModeWorker}, "cluster": {ModeAPI, ModeWorker}}
 	for env, modes := range envModes {
 		for _, mode := range modes {
 			t.Run(env+"/"+string(mode), func(t *testing.T) {

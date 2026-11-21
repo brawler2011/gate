@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: s3
 spec:
+  {{- if .Values.seaweedfs.nodePort }}
+  type: NodePort
+  {{- end }}
   selector: {app.kubernetes.io/name: seaweedfs}
   ports:
-    - {name: s3, port: 8333}
+    - {name: s3, port: 8333{{ with .Values.seaweedfs.nodePort }}, nodePort: {{ . }}{{ end }}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

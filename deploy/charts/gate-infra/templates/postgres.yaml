@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: postgres
 spec:
+  {{- if .Values.postgres.nodePort }}
+  type: NodePort
+  {{- end }}
   selector: {app.kubernetes.io/name: postgres}
   ports:
-    - {name: postgres, port: 5432}
+    - {name: postgres, port: 5432{{ with .Values.postgres.nodePort }}, nodePort: {{ . }}{{ end }}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

@@ -9,15 +9,15 @@ DEPLOY_USER="${1:?usage: install.sh <deploy user>}"
 id "$DEPLOY_USER" > /dev/null
 
 # Allow compile and startup memory peaks to spill to swap instead of triggering OOM kills.
-if ! swapon --show=NAME --noheadings | grep -qx /swapfile; then
+if [ -z "$(swapon --show --noheadings)" ]; then
   [ -f /swapfile ] || fallocate -l "$SWAP_SIZE" /swapfile
   chmod 600 /swapfile
   blkid -t TYPE=swap /swapfile > /dev/null || mkswap /swapfile
   swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  echo 'vm.swappiness=10' > /etc/sysctl.d/90-gate-swap.conf
+  sysctl -q -p /etc/sysctl.d/90-gate-swap.conf
 fi
-grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-echo 'vm.swappiness=10' > /etc/sysctl.d/90-gate-swap.conf
-sysctl -q -p /etc/sysctl.d/90-gate-swap.conf
 
 # Block the public API interface while retaining cluster access and the deploy SSH tunnel.
 cat > /usr/local/sbin/gate-close-k3s-api <<'EOF'
@@ -48,6 +48,8 @@ EOF
 systemctl daemon-reload
 systemctl enable --now gate-close-k3s-api.service
 
+# Only AppArmor hosts use this profile (deploy/prod values); a laptop may run without AppArmor.
+if [ "$(cat /sys/module/apparmor/parameters/enabled 2> /dev/null)" = Y ]; then
 cat > /etc/apparmor.d/gate-default <<'EOF'
 #include <tunables/global>
 
@@ -86,6 +88,7 @@ profile gate-default flags=(attach_disconnected,mediate_deleted) {
 }
 EOF
 apparmor_parser -r -W /etc/apparmor.d/gate-default
+fi
 
 # k3s requires a kubelet config drop-in for LimitedSwap.
 install -d /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
@@ -96,14 +99,17 @@ memorySwap:
   swapBehavior: LimitedSwap
 EOF
 
+# Dev NodePorts include go-judge, so serve them on loopback only.
 curl -sfL "https://raw.githubusercontent.com/k3s-io/k3s/$K3S_VERSION/install.sh" \
   | INSTALL_K3S_VERSION="$K3S_VERSION" sh -s - \
-    --disable metrics-server --write-kubeconfig-mode 600
+    --disable metrics-server --write-kubeconfig-mode 600 \
+    --kube-proxy-arg=nodeport-addresses=127.0.0.0/8
 
 home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
 group="$(id -gn "$DEPLOY_USER")"
 install -d -m 700 -o "$DEPLOY_USER" -g "$group" "$home/.kube"
 install -m 600 -o "$DEPLOY_USER" -g "$group" /etc/rancher/k3s/k3s.yaml "$home/.kube/config"
+k3s kubectl --kubeconfig "$home/.kube/config" config rename-context default gate > /dev/null
 
 # Wait for node registration before waiting for readiness.
 timeout 180 sh -c 'until k3s kubectl get nodes -o name 2> /dev/null | grep -q .; do sleep 2; done'

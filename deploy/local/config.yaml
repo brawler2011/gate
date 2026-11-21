@@ -4,11 +4,11 @@ http:
   trusted_proxy: ""
   secure_cookies: false
 go_judge:
-  http_url: http://localhost:5050
+  http_url: http://localhost:30050
   work_dir: /problem-work
   parallelism: 0
 storage:
-  s3_endpoint: http://localhost:8333
+  s3_endpoint: http://localhost:30833
 email:
   provider: log
   from: Gate <no-reply@gate.local>

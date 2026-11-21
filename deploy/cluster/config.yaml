@@ -11,7 +11,7 @@ storage:
 email:
   provider: log
   from: Gate <no-reply@gate.localhost>
-  app_base_url: https://gate.localhost:9443
+  app_base_url: https://gate.localhost:30443
 inbox:
   retention: 168h
 judge:

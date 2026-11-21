@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: redis
 spec:
+  {{- if .Values.redis.nodePort }}
+  type: NodePort
+  {{- end }}
   selector: {app.kubernetes.io/name: redis}
   ports:
-    - {name: redis, port: 6379}
+    - {name: redis, port: 6379{{ with .Values.redis.nodePort }}, nodePort: {{ . }}{{ end }}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

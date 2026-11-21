@@ -22,11 +22,11 @@ that hook, so use it only when the schema matches.
 ## Layout
 
 - `charts/`: the two charts. Their defaults fit one node.
-- `secrets.sh`: writes the `gate-secrets` secret, used by the deploy and `task k3d:deploy`.
+- `secrets.sh`: writes the `gate-secrets` secret, used by the deploy and the local tasks.
 - `prod/`: the production backend config and chart values (domain, sizing).
 - `k3s/`: server setup and cluster bootstrap manifests, applied on every deploy.
-- `k3d/`: backend config and chart values for the local cluster.
-- `local/`: Docker Compose services for `task dev`.
+- `cluster/`: backend config and chart values for `task cluster:deploy`.
+- `local/`: backend config, secrets and infra chart values for `task dev`.
 
 ## Server
 
@@ -73,9 +73,29 @@ check to restore writes; deleting objects may not immediately shrink volume file
 
 The images in ghcr.io are public, so the cluster pulls them without credentials.
 
-## Local cluster
+## Local k3s
 
-`task k3d:deploy` creates a k3d cluster if needed, builds the images, and installs
-both releases. Passwords come from `local/.env`. The app is then at
-https://gate.localhost:9443 (self-signed certificate). `task k3d:down` deletes the
-cluster. Every `kubectl`/`helm` call in these tasks names the `k3d-gate` context.
+Development machines run the same k3s, prepared once with the server script:
+
+```sh
+sudo sh deploy/k3s/install.sh "$USER"
+```
+
+It replaces `~/.kube/config` with a context named `gate`, which every local
+`kubectl`/`helm` call names. Swap and AppArmor setup are skipped when the host
+already has swap or runs without AppArmor. Docker keeps working beside k3s:
+k3s has its own containerd, so local images reach it through
+`sudo k3s ctr images import`, and the tasks below ask for sudo when they do.
+NodePorts listen only on loopback. A VPN that captures all traffic must exclude
+the pod and service networks (10.42.0.0/16, 10.43.0.0/16), or cluster DNS breaks.
+
+Passwords for both environments come from `local/.env`.
+
+- `task infra:up` installs `gate-infra` in the `gate-dev` namespace with a
+  standalone go-judge that reads `backend/data/problem-work` through hostPath.
+  `task dev` then runs the backend and Vite on the host against the NodePorts in
+  `local/gate-infra.yaml`. `task infra:down` keeps the data; delete the
+  namespace to reset it.
+- `task cluster:deploy` builds the images and installs both releases in the
+  `gate` namespace, as in production. The app is then at https://gate.localhost:30443
+  (self-signed certificate). `task cluster:down` deletes it with its data.

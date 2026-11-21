@@ -1,0 +1,13 @@
+postgres:
+  storage: 1Gi
+  nodePort: 30432
+redis:
+  nodePort: 30379
+nats:
+  storage: 1Gi
+  nodePort: 30422
+seaweedfs:
+  storage: 5Gi
+  nodePort: 30833
+judge:
+  nodePort: 30050

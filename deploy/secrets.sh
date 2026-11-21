@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: sh deploy/secrets.sh kubectl --context k3d-gate -n gate
+# Usage: sh deploy/secrets.sh kubectl --context gate -n gate
 set -eu
 
 escape() { jq -rn --arg value "$1" '$value | @uri'; }
