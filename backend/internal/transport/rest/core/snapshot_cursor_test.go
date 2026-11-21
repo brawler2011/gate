@@ -40,11 +40,11 @@ func (s snapshotUC) GetContestByOrgLoginAndContestLogin(context.Context, string,
 	return contestsmodel.Contest{ID: uuid.New()}, nil
 }
 
-func (s snapshotUC) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (s snapshotUC) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	return &accessmodel.ContestPermissions{ManageContest: true}, nil
 }
 
-func (s snapshotUC) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (s snapshotUC) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
 

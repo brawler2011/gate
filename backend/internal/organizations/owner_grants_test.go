@@ -36,7 +36,8 @@ func newMockOwnerGrantStore(org organizationsmodel.Organization) *mockOwnerGrant
 	}
 }
 
-func (s *mockOwnerGrantStore) HasOrganizationPermission(_ context.Context, _ uuid.UUID, userID uuid.UUID, action accessmodel.OrgAction) (bool, error) {
+func (s *mockOwnerGrantStore) CanOrganization(ctx context.Context, _ uuid.UUID, action accessmodel.OrgAction) (bool, error) {
+	userID := accessmodel.UserFromContext(ctx).Id
 	user, ok := s.users[userID]
 	if ok && user.Role == accessmodel.UserRoleAdmin {
 		return true, nil

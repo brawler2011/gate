@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -11,287 +9,199 @@ import (
 	ogenMiddleware "github.com/ogen-go/ogen/middleware"
 )
 
-type EvalContext struct {
-	User    accessmodel.User
-	Request ogenMiddleware.Request
+type level int
+
+const (
+	public level = iota
+	authenticated
+	admin
+)
+
+// Login and admin gates only; resource permissions are checked by use cases.
+var endpointPolicies = map[string]level{
+	"GetHealth":          public,
+	"ListPublicContests": public,
+	"ListPosts":          public,
+	"GetPostById":        public,
+	"GetPostImage":       public,
+	"ListProblems":       public,
+	"ListUsers":          authenticated,
+	"GetUser":            public,
+	"GetUserAvatar":      public,
+	"GetLanguages":       public,
+	"GetSystemLibrary":   public,
+	"Register":           public,
+	"Login":              public,
+	"Logout":             public,
+	"VerifyEmail":        public,
+	"ResendVerification": public,
+	"ForgotPassword":     public,
+	"ResetPassword":      public,
+	"ConfirmEmailChange": public,
+
+	"GetMe":              authenticated,
+	"GetMyDashboard":     authenticated,
+	"ChangePassword":     authenticated,
+	"RequestEmailChange": authenticated,
+	"CreateContest":      authenticated,
+	"GetMyContestRole":   authenticated,
+
+	"ListOrganizations":              authenticated,
+	"CreateOrganization":             authenticated,
+	"GetOrganization":                authenticated,
+	"UpdateOrganization":             authenticated,
+	"DeleteOrganization":             authenticated,
+	"ListOrganizationMembers":        authenticated,
+	"AddOrganizationMember":          authenticated,
+	"RemoveOrganizationMember":       authenticated,
+	"BatchCreateOrganizationUsers":   authenticated,
+	"ListOrganizationContests":       public,
+	"ListOrganizationInvitations":    authenticated,
+	"InviteOrganizationMember":       authenticated,
+	"CancelOrganizationInvitation":   authenticated,
+	"AcceptOrganizationInvitation":   authenticated,
+	"DeclineOrganizationInvitation":  authenticated,
+	"ListOrganizationJoinRequests":   authenticated,
+	"CreateOrganizationJoinRequest":  authenticated,
+	"GetMyOrganizationJoinRequest":   authenticated,
+	"CancelOrganizationJoinRequest":  authenticated,
+	"ApproveOrganizationJoinRequest": authenticated,
+	"RejectOrganizationJoinRequest":  authenticated,
+
+	"ListNotifications":           authenticated,
+	"GetUnreadNotificationsCount": authenticated,
+	"MarkNotificationAsRead":      authenticated,
+	"MarkAllNotificationsAsRead":  authenticated,
+
+	"ListTeams":            authenticated,
+	"CreateTeam":           authenticated,
+	"GetTeam":              authenticated,
+	"UpdateTeam":           authenticated,
+	"DeleteTeam":           authenticated,
+	"ListTeamMembers":      authenticated,
+	"AddTeamMember":        authenticated,
+	"UpdateTeamMemberRole": authenticated,
+	"RemoveTeamMember":     authenticated,
+	"ListTeamContests":     authenticated,
+	"ListTeamProblems":     authenticated,
+
+	"CreateProblem":         authenticated,
+	"ListProblemTemplates":  authenticated,
+	"ListUserContests":      authenticated,
+	"ListUserSubmissions":   authenticated,
+	"ListWorkshopContests":  authenticated,
+	"GetSubmission":         authenticated,
+	"UploadAvatar":          authenticated,
+	"DeleteAvatar":          authenticated,
+	"UpdateUser":            authenticated,
+	"ClaimTemporaryUser":    authenticated,
+	"ListMyClaimedAccounts": authenticated,
+
+	"ListAdminContests":       admin,
+	"CreatePost":              admin,
+	"PatchPostById":           admin,
+	"DeletePostById":          admin,
+	"ListSubmissions":         admin,
+	"AdminChangeEmail":        admin,
+	"AdminSetPassword":        admin,
+	"AdminSendPasswordReset":  admin,
+	"AdminResendVerification": admin,
+
+	"GetContest":                   public,
+	"DownloadContestStatementsPdf": public,
+	"GetContestScoreboard":         public,
+	"UpdateContest":                authenticated,
+	"DeleteContest":                authenticated,
+	"CreateContestProblem":         authenticated,
+	"GetContestProblem":            public,
+	"GetContestProblemAsset":       public,
+	"DeleteContestProblem":         authenticated,
+	"ReorderContestProblems":       authenticated,
+	"CreateContestMember":          authenticated,
+	"UpdateContestMember":          authenticated,
+	"DeleteContestMember":          authenticated,
+	"ListContestMembers":           authenticated,
+	"ListContestTeams":             authenticated,
+	"CreateContestTeam":            authenticated,
+	"UpdateContestTeam":            authenticated,
+	"DeleteContestTeam":            authenticated,
+	"ListContestSubmissions":       authenticated,
+	"CreateSubmission":             authenticated,
+	"ListContestDrafts":            authenticated,
+	"CreateContestDraft":           authenticated,
+	"DeleteContestDraft":           authenticated,
+	"RejudgeSubmission":            authenticated,
+	"RejudgeContestProblem":        authenticated,
+	"RejudgeContest":               authenticated,
+	"BlockSubmission":              authenticated,
+	"UnblockSubmission":            authenticated,
+	"BlockProblemForUser":          authenticated,
+	"UnblockProblemForUser":        authenticated,
+	"GetProblemBlockStatusForUser": authenticated,
+	"ListContestJoinRequests":      authenticated,
+	"CreateContestJoinRequest":     authenticated,
+	"GetMyContestJoinRequest":      authenticated,
+	"CancelContestJoinRequest":     authenticated,
+	"ApproveContestJoinRequest":    authenticated,
+	"RejectContestJoinRequest":     authenticated,
+
+	"ListContestAnnouncements":   public,
+	"CreateContestAnnouncement":  authenticated,
+	"DeleteContestAnnouncement":  authenticated,
+	"ListContestClarifications":  authenticated,
+	"CreateContestClarification": authenticated,
+	"AnswerContestClarification": authenticated,
+
+	"GetProblemDraft":        authenticated,
+	"SaveProblemDraft":       authenticated,
+	"BuildProblemPackage":    authenticated,
+	"ListProblemBuilds":      authenticated,
+	"GetProblemBuild":        authenticated,
+	"CancelProblemBuild":     authenticated,
+	"UploadProblemDraft":     authenticated,
+	"GetProblemDraftObject":  authenticated,
+	"ExportProblemDraft":     authenticated,
+	"GetProblem":             public,
+	"UpdateProblem":          authenticated,
+	"DeleteProblem":          authenticated,
+	"ImportProblem":          authenticated,
+	"DownloadProblemPackage": authenticated,
+	"ListProblemPackages":    authenticated,
+	"ListProblemMembers":     authenticated,
+	"CreateProblemMember":    authenticated,
+	"UpdateProblemMember":    authenticated,
+	"DeleteProblemMember":    authenticated,
+	"ListProblemTeams":       authenticated,
+	"CreateProblemTeam":      authenticated,
+	"UpdateProblemTeam":      authenticated,
+	"DeleteProblemTeam":      authenticated,
 }
 
-type AccessEvaluator func(ctx context.Context, evalCtx *EvalContext) error
-
-func Public(ctx context.Context, evalCtx *EvalContext) error {
-	return nil
-}
-
-func RequireAuth(ctx context.Context, evalCtx *EvalContext) error {
-	if evalCtx.User.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
-	return nil
-}
-
-func RequireAdmin(ctx context.Context, evalCtx *EvalContext) error {
-	if evalCtx.User.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
-	if !evalCtx.User.IsAdmin() {
-		return pkg.Wrap(pkg.ErrForbidden, nil, "admin access required")
-	}
-	return nil
-}
-
-func RequireSelfOrAdmin() AccessEvaluator {
-	return func(ctx context.Context, evalCtx *EvalContext) error {
-		if evalCtx.User.IsGuest() {
-			return pkg.ErrUnauthenticated
-		}
-		if evalCtx.User.IsAdmin() {
-			return nil
-		}
-		targetUsername, err := pathString(evalCtx.Request, "username")
-		if err != nil {
-			return pkg.Wrap(pkg.ErrInvalid, err, "user identifier is required for authorization")
-		}
-		cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
-		if cleanTarget != strings.ToLower(evalCtx.User.Username) {
-			return pkg.Wrap(pkg.ErrForbidden, nil, "can only modify your own resource")
-		}
-		return nil
-	}
-}
-
-var endpointPolicies = buildEndpointPolicies()
-
-type endpointPolicy struct {
-	beforeBody []AccessEvaluator
-	evaluators []AccessEvaluator
-}
-
-func policy(evaluators ...AccessEvaluator) endpointPolicy {
-	return endpointPolicy{evaluators: evaluators}
-}
-
-func authenticatedPolicy(evaluators ...AccessEvaluator) endpointPolicy {
-	return endpointPolicy{
-		beforeBody: []AccessEvaluator{RequireAuth},
-		evaluators: append([]AccessEvaluator{RequireAuth}, evaluators...),
-	}
-}
-
-func adminPolicy() endpointPolicy {
-	return endpointPolicy{
-		beforeBody: []AccessEvaluator{RequireAuth, RequireAdmin},
-		evaluators: []AccessEvaluator{RequireAuth, RequireAdmin},
-	}
-}
-
-func buildEndpointPolicies() map[string]endpointPolicy {
-	policies := map[string]endpointPolicy{
-		"GetHealth":          policy(Public),
-		"ListPublicContests": policy(Public),
-		"ListPosts":          policy(Public),
-		"GetPostById":        policy(Public),
-		"GetPostImage":       policy(Public),
-		"ListProblems":       policy(Public),
-		"ListUsers":          authenticatedPolicy(),
-		"GetUser":            policy(Public),
-		"GetUserAvatar":      policy(Public),
-		"GetLanguages":       policy(Public),
-		"GetSystemLibrary":   policy(Public),
-		"Register":           policy(Public),
-		"Login":              policy(Public),
-		"Logout":             policy(Public),
-		"VerifyEmail":        policy(Public),
-		"ResendVerification": policy(Public),
-		"ForgotPassword":     policy(Public),
-		"ResetPassword":      policy(Public),
-		"ConfirmEmailChange": policy(Public),
-
-		"GetMe":              authenticatedPolicy(),
-		"GetMyDashboard":     authenticatedPolicy(),
-		"ChangePassword":     authenticatedPolicy(),
-		"RequestEmailChange": authenticatedPolicy(),
-		"CreateContest":      authenticatedPolicy(),
-		"GetMyContestRole":   authenticatedPolicy(),
-
-		"ListOrganizations":              authenticatedPolicy(),
-		"CreateOrganization":             authenticatedPolicy(),
-		"GetOrganization":                authenticatedPolicy(),
-		"UpdateOrganization":             authenticatedPolicy(),
-		"DeleteOrganization":             authenticatedPolicy(),
-		"ListOrganizationMembers":        authenticatedPolicy(),
-		"AddOrganizationMember":          authenticatedPolicy(),
-		"RemoveOrganizationMember":       authenticatedPolicy(),
-		"BatchCreateOrganizationUsers":   authenticatedPolicy(),
-		"ListOrganizationContests":       policy(Public),
-		"ListOrganizationInvitations":    authenticatedPolicy(),
-		"InviteOrganizationMember":       authenticatedPolicy(),
-		"CancelOrganizationInvitation":   authenticatedPolicy(),
-		"AcceptOrganizationInvitation":   authenticatedPolicy(),
-		"DeclineOrganizationInvitation":  authenticatedPolicy(),
-		"ListOrganizationJoinRequests":   authenticatedPolicy(),
-		"CreateOrganizationJoinRequest":  authenticatedPolicy(),
-		"GetMyOrganizationJoinRequest":   authenticatedPolicy(),
-		"CancelOrganizationJoinRequest":  authenticatedPolicy(),
-		"ApproveOrganizationJoinRequest": authenticatedPolicy(),
-		"RejectOrganizationJoinRequest":  authenticatedPolicy(),
-
-		"ListNotifications":           authenticatedPolicy(),
-		"GetUnreadNotificationsCount": authenticatedPolicy(),
-		"MarkNotificationAsRead":      authenticatedPolicy(),
-		"MarkAllNotificationsAsRead":  authenticatedPolicy(),
-
-		"ListTeams":            authenticatedPolicy(),
-		"CreateTeam":           authenticatedPolicy(),
-		"GetTeam":              authenticatedPolicy(),
-		"UpdateTeam":           authenticatedPolicy(),
-		"DeleteTeam":           authenticatedPolicy(),
-		"ListTeamMembers":      authenticatedPolicy(),
-		"AddTeamMember":        authenticatedPolicy(),
-		"UpdateTeamMemberRole": authenticatedPolicy(),
-		"RemoveTeamMember":     authenticatedPolicy(),
-		"ListTeamContests":     authenticatedPolicy(),
-		"ListTeamProblems":     authenticatedPolicy(),
-
-		"CreateProblem":         authenticatedPolicy(),
-		"ListProblemTemplates":  authenticatedPolicy(),
-		"ListUserContests":      authenticatedPolicy(RequireSelfOrAdmin()),
-		"ListUserSubmissions":   authenticatedPolicy(),
-		"ListWorkshopContests":  authenticatedPolicy(),
-		"GetSubmission":         authenticatedPolicy(),
-		"UploadAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
-		"DeleteAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
-		"UpdateUser":            authenticatedPolicy(RequireSelfOrAdmin()),
-		"ClaimTemporaryUser":    authenticatedPolicy(),
-		"ListMyClaimedAccounts": authenticatedPolicy(),
-
-		"ListAdminContests":       adminPolicy(),
-		"CreatePost":              adminPolicy(),
-		"PatchPostById":           adminPolicy(),
-		"DeletePostById":          adminPolicy(),
-		"ListSubmissions":         adminPolicy(),
-		"AdminChangeEmail":        adminPolicy(),
-		"AdminSetPassword":        adminPolicy(),
-		"AdminSendPasswordReset":  adminPolicy(),
-		"AdminResendVerification": adminPolicy(),
-
-		"GetContest":                   policy(Public),
-		"DownloadContestStatementsPdf": policy(Public),
-		"GetContestScoreboard":         policy(Public),
-		"UpdateContest":                authenticatedPolicy(),
-		"DeleteContest":                authenticatedPolicy(),
-		"CreateContestProblem":         authenticatedPolicy(),
-		"GetContestProblem":            policy(Public),
-		"GetContestProblemAsset":       policy(Public),
-		"DeleteContestProblem":         authenticatedPolicy(),
-		"ReorderContestProblems":       authenticatedPolicy(),
-		"CreateContestMember":          authenticatedPolicy(),
-		"UpdateContestMember":          authenticatedPolicy(),
-		"DeleteContestMember":          authenticatedPolicy(),
-		"ListContestMembers":           authenticatedPolicy(),
-		"ListContestTeams":             authenticatedPolicy(),
-		"CreateContestTeam":            authenticatedPolicy(),
-		"UpdateContestTeam":            authenticatedPolicy(),
-		"DeleteContestTeam":            authenticatedPolicy(),
-		"ListContestSubmissions":       authenticatedPolicy(),
-		"CreateSubmission":             authenticatedPolicy(),
-		"ListContestDrafts":            authenticatedPolicy(),
-		"CreateContestDraft":           authenticatedPolicy(),
-		"DeleteContestDraft":           authenticatedPolicy(),
-		"RejudgeSubmission":            authenticatedPolicy(),
-		"RejudgeContestProblem":        authenticatedPolicy(),
-		"RejudgeContest":               authenticatedPolicy(),
-		"BlockSubmission":              authenticatedPolicy(),
-		"UnblockSubmission":            authenticatedPolicy(),
-		"BlockProblemForUser":          authenticatedPolicy(),
-		"UnblockProblemForUser":        authenticatedPolicy(),
-		"GetProblemBlockStatusForUser": authenticatedPolicy(),
-		"ListContestJoinRequests":      authenticatedPolicy(),
-		"CreateContestJoinRequest":     authenticatedPolicy(),
-		"GetMyContestJoinRequest":      authenticatedPolicy(),
-		"CancelContestJoinRequest":     authenticatedPolicy(),
-		"ApproveContestJoinRequest":    authenticatedPolicy(),
-		"RejectContestJoinRequest":     authenticatedPolicy(),
-
-		"ListContestAnnouncements":   policy(Public),
-		"CreateContestAnnouncement":  authenticatedPolicy(),
-		"DeleteContestAnnouncement":  authenticatedPolicy(),
-		"ListContestClarifications":  authenticatedPolicy(),
-		"CreateContestClarification": authenticatedPolicy(),
-		"AnswerContestClarification": authenticatedPolicy(),
-
-		"GetProblemDraft":        authenticatedPolicy(),
-		"SaveProblemDraft":       authenticatedPolicy(),
-		"BuildProblemPackage":    authenticatedPolicy(),
-		"ListProblemBuilds":      authenticatedPolicy(),
-		"GetProblemBuild":        authenticatedPolicy(),
-		"CancelProblemBuild":     authenticatedPolicy(),
-		"UploadProblemDraft":     authenticatedPolicy(),
-		"GetProblemDraftObject":  authenticatedPolicy(),
-		"ExportProblemDraft":     authenticatedPolicy(),
-		"GetProblem":             policy(Public),
-		"UpdateProblem":          authenticatedPolicy(),
-		"DeleteProblem":          authenticatedPolicy(),
-		"ImportProblem":          authenticatedPolicy(),
-		"DownloadProblemPackage": authenticatedPolicy(),
-		"ListProblemPackages":    authenticatedPolicy(),
-		"ListProblemMembers":     authenticatedPolicy(),
-		"CreateProblemMember":    authenticatedPolicy(),
-		"UpdateProblemMember":    authenticatedPolicy(),
-		"DeleteProblemMember":    authenticatedPolicy(),
-		"ListProblemTeams":       authenticatedPolicy(),
-		"CreateProblemTeam":      authenticatedPolicy(),
-		"UpdateProblemTeam":      authenticatedPolicy(),
-		"DeleteProblemTeam":      authenticatedPolicy(),
-	}
-
-	return policies
-}
-
-// Authorize identities before decoding bodies; self-or-admin checks need the decoded username.
-func authorizeBeforeBody(ctx context.Context, operationID string) error {
+func authorizeOperation(ctx context.Context, operationID string) error {
 	policy, ok := endpointPolicies[operationID]
-	if !ok || len(policy.evaluators) == 0 {
+	if !ok {
 		return pkg.Wrap(pkg.ErrForbidden, nil, "endpoint not permitted by authorization policy")
 	}
-	evalCtx := &EvalContext{User: accessmodel.UserFromContext(ctx)}
-	for _, evaluator := range policy.beforeBody {
-		if err := evaluator(ctx, evalCtx); err != nil {
-			return err
-		}
+	switch policy {
+	case authenticated:
+		_, err := accessmodel.RequireUser(ctx)
+		return err
+	case admin:
+		return accessmodel.RequireAdmin(ctx)
 	}
 	return nil
+}
+
+// Rejects callers before the request body is read.
+func authorizeBeforeBody(ctx context.Context, operationID string) error {
+	return authorizeOperation(ctx, operationID)
 }
 
 func AuthzMiddleware() corev1.Middleware {
 	return func(req ogenMiddleware.Request, next func(req ogenMiddleware.Request) (ogenMiddleware.Response, error)) (ogenMiddleware.Response, error) {
-		operationID := req.OperationID
-		policy, ok := endpointPolicies[operationID]
-		if !ok || len(policy.evaluators) == 0 {
-			return ogenMiddleware.Response{}, pkg.Wrap(pkg.ErrForbidden, nil, "endpoint not permitted by authorization policy")
+		if err := authorizeOperation(req.Context, req.OperationID); err != nil {
+			return ogenMiddleware.Response{}, err
 		}
-
-		user := accessmodel.UserFromContext(req.Context)
-		evalCtx := &EvalContext{
-			User:    user,
-			Request: req,
-		}
-
-		for _, evaluator := range policy.evaluators {
-			if err := evaluator(req.Context, evalCtx); err != nil {
-				return ogenMiddleware.Response{}, err
-			}
-		}
-
 		return next(req)
 	}
-}
-
-func pathString(req ogenMiddleware.Request, names ...string) (string, error) {
-	for _, name := range names {
-		value, _ := req.Params.Path(name)
-		if value, ok := value.(string); ok && value != "" {
-			return value, nil
-		}
-	}
-	return "", fmt.Errorf("missing string path parameter %q", names)
 }

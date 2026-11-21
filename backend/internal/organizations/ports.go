@@ -36,7 +36,7 @@ type OrganizationsRepo interface {
 }
 
 type PermissionsUC interface {
-	HasOrganizationPermission(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, action accessmodel.OrgAction) (bool, error)
+	CanOrganization(ctx context.Context, orgID uuid.UUID, action accessmodel.OrgAction) (bool, error)
 }
 
 type TeamsRepo interface {

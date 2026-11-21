@@ -103,7 +103,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			} else {
 				s.Require().InDelta(200, msg.Payload["state"], 0)
 			}
-			access, accessErr := permissions.GetContestPermissions(s.ctx, contestID, user.Id)
+			access, accessErr := permissions.GetContestPermissions(accessmodel.WithUser(s.ctx, accessmodel.User{Id: user.Id}), contestID)
 			s.Require().NoError(accessErr)
 			if access.GetMonitor && source != "participant" {
 				s.Require().NoError(conn.ReadJSON(&msg))

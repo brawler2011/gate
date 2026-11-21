@@ -106,11 +106,11 @@ func (s *mockTxStoreForCache) DeleteContest(_ context.Context, id uuid.UUID) err
 
 type allowAllPermissions struct{}
 
-func (allowAllPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (allowAllPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
 
-func (allowAllPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (allowAllPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
 

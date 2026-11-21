@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
-
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/booklet"
@@ -57,21 +57,14 @@ func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string
 	if err != nil {
 		return contest, err
 	}
-	allowed, err := r.permissions.HasContestPermission(ctx, contest.ID, accessmodel.UserFromContext(ctx).Id, action)
-	if err != nil {
-		return contest, err
-	}
-	if !allowed {
-		return contest, deniedContest(ctx, r.permissions, contest.ID, action)
-	}
-	return contest, nil
+	return contest, access.Contest(ctx, r.permissions, contest.ID, action)
 }
 func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string) (*ContestDetails, error) {
 	contest, err := r.authorizedContest(ctx, org, login, accessmodel.ActionGetContest)
 	if err != nil {
 		return nil, err
 	}
-	allowed, err := r.permissions.HasContestPermission(ctx, contest.ID, accessmodel.UserFromContext(ctx).Id, accessmodel.ActionGetContestProblem)
+	allowed, err := r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionGetContestProblem)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +97,7 @@ func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, i
 	if user.IsGuest() {
 		return link, false, nil
 	}
-	manager, err := r.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
+	manager, err := r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionManageContest)
 	return link, manager, err
 }
 func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login string, id uuid.UUID) (*ContestProblemDetails, error) {
@@ -142,7 +135,7 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 	var isManager bool
 	user := accessmodel.UserFromContext(ctx)
 	if !user.IsGuest() {
-		isManager, err = r.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
+		isManager, err = r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionManageContest)
 		if err != nil {
 			return nil, err
 		}

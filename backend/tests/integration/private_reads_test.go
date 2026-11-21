@@ -86,5 +86,5 @@ func (s *IntegrationTestSuite) TestDraftListChecksCurrentAccessOutsideHTTP() {
 	_, err = s.dbPool.Exec(s.ctx, "DELETE FROM organization_members WHERE organization_id=(SELECT organization_id FROM contests WHERE id=$1)", contest)
 	s.Require().NoError(err)
 	_, err = reader.ListDrafts(ownerCtx, filter)
-	s.ErrorIs(err, pkg.ErrForbidden)
+	s.ErrorIs(err, pkg.ErrNotFound)
 }

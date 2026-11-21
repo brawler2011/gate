@@ -163,9 +163,6 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmo
 }
 func (r *ContestsRepo) listScopedContests(ctx context.Context, params sqlc.ScopeContestsParams, page, size int32) (*contestsmodel.ContestsList, error) {
 	viewer := accessmodel.UserFromContext(ctx)
-	if err := access.CheckReadActor(ctx); err != nil {
-		return nil, err
-	}
 	params.ViewerID, params.Now = &viewer.Id, accessmodel.ReadTime(ctx)
 	params.PageSize, params.PageOffset = size, (int64(page)-1)*int64(size)
 	items, total, err := scopeContests(ctx, r.queries, params)

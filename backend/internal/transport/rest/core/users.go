@@ -196,10 +196,6 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 
 func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListClaimedAccountsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	accounts, err := h.UserReads.ListClaimedAccountsByUserId(ctx, user.Id)
 	if err != nil {
 		return nil, err
@@ -226,10 +222,6 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 	}
 
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	newSessionID, err := h.Auth.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
 	if err != nil {
 		return nil, err
@@ -250,10 +242,6 @@ func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.Request
 	}
 
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	err := h.Auth.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
 	if err != nil {
 		return err

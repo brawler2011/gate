@@ -7,7 +7,6 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
@@ -18,10 +17,6 @@ type NotificationsReader interface {
 
 func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNotificationsParams) (*corev1.NotificationsListResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
-
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
@@ -40,10 +35,6 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 
 func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
-	}
-
 	count, err := h.NotificationReads.GetUnreadCount(ctx, user.Id)
 	if err != nil {
 		return nil, err

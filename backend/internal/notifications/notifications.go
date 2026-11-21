@@ -7,7 +7,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/google/uuid"
 )
@@ -107,17 +106,17 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 }
 
 func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id uuid.UUID) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() || user.IsExpired() {
-		return pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return err
 	}
 	return uc.repo.MarkAsRead(ctx, id, user.Id)
 }
 
 func (uc *NotificationsUseCase) MarkAllAsRead(ctx context.Context) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() || user.IsExpired() {
-		return pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return err
 	}
 	return uc.repo.MarkAllAsRead(ctx, user.Id)
 }

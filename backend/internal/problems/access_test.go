@@ -15,7 +15,7 @@ import (
 
 type failedProblemPermissions struct{ err error }
 
-func (p failedProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (p failedProblemPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, p.err
 }
 
@@ -44,13 +44,9 @@ func TestProblemReadsAndDraftOperationsAuthorizeBeforeAnyDependency(t *testing.T
 		}
 		for name, call := range calls {
 			t.Run(name, func(t *testing.T) {
-				readOnly := name == "details" || name == "packages" || name == "download" || name == "draft"
-				var guestError error = pkg.ErrUnauthenticated
-				if readOnly {
-					guestError = failure
-					if guestError == nil {
-						guestError = pkg.ErrNotFound
-					}
+				guestError := failure
+				if guestError == nil {
+					guestError = pkg.ErrUnauthenticated
 				}
 				require.ErrorIs(t, call(context.Background()), guestError)
 				expected := failure

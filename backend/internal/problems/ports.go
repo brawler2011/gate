@@ -2,6 +2,7 @@ package problems
 
 import (
 	"context"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -33,5 +34,5 @@ type TemplatePackages interface {
 }
 
 type ProblemPermissions interface {
-	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
+	CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 }

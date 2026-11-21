@@ -245,17 +245,17 @@ func (t contestCommandTransactions) Within(_ context.Context, fn func(contests.C
 
 type allowSubmissionPermissions struct{}
 
-func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (allowSubmissionPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
-func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }
 
-func (*blockingSubmissionsRepo) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (*blockingSubmissionsRepo) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }
-func (*blockingSubmissionsRepo) HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error) {
+func (*blockingSubmissionsRepo) CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error) {
 	return true, nil
 }
 
@@ -275,6 +275,6 @@ func (t contestCommandTransactions) Prepare(ctx context.Context) (context.Contex
 	return ctx, nil
 }
 
-func (allowSubmissionPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (allowSubmissionPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }

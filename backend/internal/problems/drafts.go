@@ -12,6 +12,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -59,7 +60,7 @@ func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) 
 	if edit {
 		action = accessmodel.ActionEditProblem
 	}
-	if err := authorizeProblem(ctx, uc.Permissions, id, action); err != nil {
+	if err := access.Problem(ctx, uc.Permissions, id, action); err != nil {
 		return model.Problem{}, err
 	}
 	return uc.Problems.GetProblemById(ctx, id)

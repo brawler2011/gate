@@ -92,7 +92,7 @@ func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
 			} else {
 				err = f.create(candidate)
 			}
-			require.ErrorIs(t, err, pkg.ErrForbidden)
+			require.ErrorIs(t, err, pkg.ErrNotFound)
 			if operation == "create" {
 				_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 				require.ErrorIs(t, err, pkg.ErrNotFound)
@@ -197,7 +197,7 @@ func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 	require.NoError(t, err)
 	// This visitor has no source-problem permission; the public contest grants the read.
 	visitor := accessmodel.WithUser(context.Background(), accessmodel.Guest)
-	allowed, err := f.permissions.HasProblemPermission(visitor, f.problem, uuid.Nil, accessmodel.ActionViewProblem)
+	allowed, err := f.permissions.CanProblem(accessmodel.WithUser(visitor, accessmodel.User{Id: uuid.Nil}), f.problem, accessmodel.ActionViewProblem)
 	require.NoError(t, err)
 	require.False(t, allowed)
 	contest, err := f.repo.GetContest(f.ctx, f.contest)
@@ -270,7 +270,7 @@ func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
 	transactions := postgres.NewContestCommandTransactions(f.pool)
 	decision, err := transactions.Prepare(f.ctx)
 	require.NoError(t, err)
-	allowed, err := f.permissions.HasProblemPermission(decision, f.problem, f.actor, accessmodel.ActionUseProblem)
+	allowed, err := f.permissions.CanProblem(accessmodel.WithUser(decision, accessmodel.User{Id: f.actor}), f.problem, accessmodel.ActionUseProblem)
 	require.NoError(t, err)
 	require.True(t, allowed)
 	_, err = f.pool.Exec(f.ctx, `DELETE FROM problem_members WHERE problem_id=$1 AND user_id=$2`, f.problem, f.actor)
@@ -279,7 +279,7 @@ func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
 	err = transactions.Within(decision, func(contests.CommandTxStore) error { wrote = true; return nil })
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.False(t, wrote)
-	require.ErrorIs(t, f.create(f.original), pkg.ErrForbidden)
+	require.ErrorIs(t, f.create(f.original), pkg.ErrNotFound)
 }
 
 func TestContestLifecyclePostgresBoundaries(t *testing.T) {
@@ -305,13 +305,13 @@ func TestContestLifecyclePostgresBoundaries(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := accessmodel.WithReadTime(f.ctx, tc.now)
-			allowed, err := f.permissions.HasContestPermission(ctx, f.contest, visitor, accessmodel.ActionGetContestProblem)
+			allowed, err := f.permissions.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: visitor}), f.contest, accessmodel.ActionGetContestProblem)
 			require.NoError(t, err)
 			require.Equal(t, tc.read, allowed)
-			allowed, err = f.permissions.HasContestPermission(ctx, f.contest, visitor, accessmodel.ActionCreateSubmission)
+			allowed, err = f.permissions.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: visitor}), f.contest, accessmodel.ActionCreateSubmission)
 			require.NoError(t, err)
 			require.Equal(t, tc.submit, allowed)
-			allowed, err = f.permissions.HasContestPermission(ctx, f.contest, f.actor, accessmodel.ActionCreateSubmission)
+			allowed, err = f.permissions.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: f.actor}), f.contest, accessmodel.ActionCreateSubmission)
 			require.NoError(t, err)
 			require.Equal(t, tc.submit, allowed)
 		})

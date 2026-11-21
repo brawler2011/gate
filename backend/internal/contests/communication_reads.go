@@ -3,10 +3,10 @@ package contests
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
@@ -23,32 +23,24 @@ func (uc *AnnouncementsUseCase) ListAnnouncements(ctx context.Context, contest u
 	if err := paging.Validate(page, size); err != nil {
 		return nil, err
 	}
-	allowed, err := uc.permissions.HasContestPermission(ctx, contest, accessmodel.UserFromContext(ctx).Id, accessmodel.ActionGetContest)
-	if err != nil {
+	if err := access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetContest); err != nil {
 		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.ErrForbidden
 	}
 	return uc.reads.ListAnnouncements(ctx, contest, page, size)
 }
 
 func (uc *ClarificationsUseCase) ListClarifications(ctx context.Context, contest uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if err := paging.Validate(filter.Page, filter.PageSize); err != nil {
 		return nil, err
 	}
-	allowed, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionGetContest)
-	if err != nil {
+	if err := access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetContest); err != nil {
 		return nil, err
 	}
-	if !allowed {
-		return nil, pkg.ErrForbidden
-	}
-	moderator, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionManageContest)
+	moderator, err := uc.permissions.CanContest(ctx, contest, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}

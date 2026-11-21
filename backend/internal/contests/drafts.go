@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -18,7 +19,7 @@ const (
 
 type DraftTxStore interface {
 	LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error
-	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
 	CreateDraft(ctx context.Context, userID uuid.UUID, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
 	GetDraft(context.Context, uuid.UUID) (contestsmodel.ContestDraft, error)
@@ -50,28 +51,24 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 	if len(creation.Code) > maxDraftCodeSize {
 		return uuid.Nil, pkg.Invalid(pkg.ErrTooLarge, "draft code is too large", map[string]any{"max": maxDraftCodeSize})
 	}
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return uuid.Nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return uuid.Nil, err
 	}
 	var id uuid.UUID
-	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+	err = uc.transactions.Within(ctx, func(tx DraftTxStore) error {
 		if err := tx.LockDraftOwner(ctx, creation.ContestID, user.Id); err != nil {
 			return err
 		}
-		allowed, err := tx.HasContestPermission(ctx, creation.ContestID, user.Id, accessmodel.ActionGetContest)
-		if err != nil {
+		if err := access.Contest(ctx, tx, creation.ContestID, accessmodel.ActionGetContest); err != nil {
 			return err
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		contest, err := tx.GetContest(ctx, creation.ContestID)
 		if err != nil {
 			return err
 		}
 		if contest.EndTime != nil && time.Now().After(*contest.EndTime) {
-			manager, err := tx.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
+			manager, err := tx.CanContest(ctx, contest.ID, accessmodel.ActionManageContest)
 			if err != nil {
 				return err
 			}
@@ -96,17 +93,13 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 }
 
 func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uuid.UUID) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return err
 	}
 	return uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		allowed, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionGetContest)
-		if err != nil {
+		if err := access.Contest(ctx, tx, contestID, accessmodel.ActionGetContest); err != nil {
 			return err
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		draft, err := tx.GetDraft(ctx, draftID)
 		if err != nil {
@@ -116,12 +109,8 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 			return pkg.Wrap(pkg.ErrNotFound, nil, "draft does not belong to contest")
 		}
 		if draft.UserID != user.Id {
-			manager, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
-			if err != nil {
+			if err := access.Contest(ctx, tx, contestID, accessmodel.ActionManageContest); err != nil {
 				return err
-			}
-			if !manager {
-				return pkg.ErrForbidden
 			}
 		}
 		return tx.DeleteDraft(ctx, draftID)
@@ -129,22 +118,17 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 }
 
 func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
-	var err error
 	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 20)
 	if err != nil {
 		return nil, err
 	}
 
-	allowed, err := uc.permissions.HasContestPermission(ctx, filter.ContestID, user.Id, accessmodel.ActionGetContest)
-	if err != nil {
+	if err := access.Contest(ctx, uc.permissions, filter.ContestID, accessmodel.ActionGetContest); err != nil {
 		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.ErrForbidden
 	}
 	return uc.reads.ListDrafts(ctx, user.Id, filter)
 }

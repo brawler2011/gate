@@ -37,7 +37,7 @@ func (s *detailStore) GetProblemById(context.Context, uuid.UUID) (problemsmodel.
 
 type detailPermissions struct{ view, problems, manage bool }
 
-func (p detailPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+func (p detailPermissions) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	switch action {
 	case accessmodel.ActionManageContest:
 		return p.manage, nil

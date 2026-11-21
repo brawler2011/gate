@@ -24,14 +24,14 @@ func bindAuthorization(q *sqlc.Queries) *authorization {
 	)}
 }
 
-func (a *authorization) HasContestPermission(ctx context.Context, contest, user uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	return a.permissions.HasContestPermission(ctx, contest, user, action)
+func (a *authorization) CanContest(ctx context.Context, contest uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+	return a.permissions.CanContest(ctx, contest, action)
 }
-func (a *authorization) HasOrganizationPermission(ctx context.Context, org, user uuid.UUID, action accessmodel.OrgAction) (bool, error) {
-	return a.permissions.HasOrganizationPermission(ctx, org, user, action)
+func (a *authorization) CanOrganization(ctx context.Context, org uuid.UUID, action accessmodel.OrgAction) (bool, error) {
+	return a.permissions.CanOrganization(ctx, org, action)
 }
-func (a *authorization) HasProblemPermission(ctx context.Context, problem, user uuid.UUID, action accessmodel.ProblemAction) (bool, error) {
-	return a.permissions.HasProblemPermission(ctx, problem, user, action)
+func (a *authorization) CanProblem(ctx context.Context, problem uuid.UUID, action accessmodel.ProblemAction) (bool, error) {
+	return a.permissions.CanProblem(ctx, problem, action)
 }
 
 // Authorization reads hold mutable account privileges until the command commits.

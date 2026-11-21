@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -47,9 +48,8 @@ func NewSubmissionsUseCase(
 }
 
 func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return submissionsmodel.Submission{}, pkg.ErrUnauthenticated
+	if _, err := accessmodel.RequireUser(ctx); err != nil {
+		return submissionsmodel.Submission{}, err
 	}
 	sub, err := uc.submissionsRepo.GetSubmission(ctx, id)
 	if err != nil {
@@ -67,7 +67,7 @@ func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submission
 		}
 		return sub, nil
 	}
-	permissions, err := uc.permissions.GetContestPermissions(ctx, *sub.ContestID, user.Id)
+	permissions, err := uc.permissions.GetContestPermissions(ctx, *sub.ContestID)
 	if err != nil {
 		return submissionsmodel.Submission{}, err
 	}
@@ -99,7 +99,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if err := uc.requireContest(ctx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
+	if err := access.Contest(ctx, uc.permissions, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -175,7 +175,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 }
 
 func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
-	if err := uc.requireContest(ctx, contestID, accessmodel.ActionManageContest); err != nil {
+	if err := access.Contest(ctx, uc.permissions, contestID, accessmodel.ActionManageContest); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 			}
 		}
 		if sub.ContestID != nil {
-			if err := requireContest(ctx, tx, *sub.ContestID, accessmodel.ActionManageContest); err != nil {
+			if err := access.Contest(ctx, tx, *sub.ContestID, accessmodel.ActionManageContest); err != nil {
 				return err
 			}
 		}
@@ -234,13 +234,13 @@ func newOutboxEventParams(submission submissionsmodel.Submission, job judgingmod
 }
 
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	ownOnly := filter.UserId != nil && *filter.UserId == user.Id
 	if filter.ContestId != nil {
-		permissions, err := uc.permissions.GetContestPermissions(ctx, *filter.ContestId, user.Id)
+		permissions, err := uc.permissions.GetContestPermissions(ctx, *filter.ContestId)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 		return 0, pkg.AtField("/contest_id", pkg.Invalid(pkg.ErrRequired, "contest id is required", nil))
 	}
 
-	if err := uc.requireContest(ctx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
+	if err := access.Contest(ctx, uc.permissions, filter.ContestID, accessmodel.ActionManageContest); err != nil {
 		return 0, err
 	}
 
@@ -315,7 +315,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 	var rejudgedIDs []uuid.UUID
 
 	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if err := requireContest(ctx, tx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
+		if err := access.Contest(ctx, tx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
 			return err
 		}
 

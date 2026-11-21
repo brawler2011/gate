@@ -30,7 +30,7 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.Mutation
 		return *replay, nil
 	}
 	q := sqlc.New(tx)
-	allowed, err := bindAuthorization(q).HasOrganizationPermission(ctx, k.OrganizationID, user, accessmodel.ActionCreateProblem)
+	allowed, err := bindAuthorization(q).CanOrganization(ctx, k.OrganizationID, accessmodel.ActionCreateProblem)
 	if err != nil {
 		return model.MutationResult{}, err
 	}

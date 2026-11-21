@@ -532,27 +532,27 @@ func TestContestABAC_PreStart(t *testing.T) {
 		ContestRole: contestsmodel.ContestRoleModerator,
 	}
 
-	canViewProblem, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetContestProblem)
+	canViewProblem, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.False(t, canViewProblem, "Participant should NOT view problem before contest start")
 
-	canSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionCreateSubmission)
+	canSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionCreateSubmission)
 	require.NoError(t, err)
 	assert.False(t, canSubmit, "Participant should NOT submit before contest start")
 
-	canViewMonitor, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetMonitor)
+	canViewMonitor, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionGetMonitor)
 	require.NoError(t, err)
 	assert.False(t, canViewMonitor, "Participant should NOT view monitor before contest start")
 
-	modCanViewProblem, err := f.permUC.HasContestPermission(ctx, f.contestID, modID, accessmodel.ActionGetContestProblem)
+	modCanViewProblem, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: modID}), f.contestID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.True(t, modCanViewProblem, "Moderator should view problem before start")
 
-	modCanSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, modID, accessmodel.ActionCreateSubmission)
+	modCanSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: modID}), f.contestID, accessmodel.ActionCreateSubmission)
 	require.NoError(t, err)
 	assert.True(t, modCanSubmit, "Moderator should be able to submit solutions for testing before start")
 
-	modCanViewMonitor, err := f.permUC.HasContestPermission(ctx, f.contestID, modID, accessmodel.ActionGetMonitor)
+	modCanViewMonitor, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: modID}), f.contestID, accessmodel.ActionGetMonitor)
 	require.NoError(t, err)
 	assert.True(t, modCanViewMonitor, "Moderator should view monitor before start")
 }
@@ -588,31 +588,31 @@ func TestContestABAC_Running(t *testing.T) {
 		ContestRole: contestsmodel.ContestRoleModerator,
 	}
 
-	canViewProb, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetContestProblem)
+	canViewProb, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.True(t, canViewProb)
 
-	canSub, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionCreateSubmission)
+	canSub, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionCreateSubmission)
 	require.NoError(t, err)
 	assert.True(t, canSub)
 
-	canMon, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetMonitor)
+	canMon, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionGetMonitor)
 	require.NoError(t, err)
 	assert.True(t, canMon, "Participant meets monitor_scope='participant'")
 
-	canListAll, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionListUsersSubmissions)
+	canListAll, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionListUsersSubmissions)
 	require.NoError(t, err)
 	assert.False(t, canListAll, "Participant cannot list all submissions when submissions_list_scope='moderator'")
 
-	canListOwn, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionListOwnSubmissions)
+	canListOwn, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionListOwnSubmissions)
 	require.NoError(t, err)
 	assert.True(t, canListOwn, "Participant can list own submissions")
 
-	guestCanMon, err := f.permUC.HasContestPermission(ctx, f.contestID, uuid.Nil, accessmodel.ActionGetMonitor)
+	guestCanMon, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.Nil}), f.contestID, accessmodel.ActionGetMonitor)
 	require.NoError(t, err)
 	assert.False(t, guestCanMon, "Guest does NOT meet monitor_scope='participant'")
 
-	guestCanSub, err := f.permUC.HasContestPermission(ctx, f.contestID, uuid.Nil, accessmodel.ActionCreateSubmission)
+	guestCanSub, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.Nil}), f.contestID, accessmodel.ActionCreateSubmission)
 	require.NoError(t, err)
 	assert.False(t, guestCanSub, "Guest cannot submit")
 }
@@ -641,11 +641,11 @@ func TestContestABAC_Finished_Upsolving(t *testing.T) {
 		userID := uuid.New()
 		f.usersUC.users[userID] = accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser}
 
-		canSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, userID, accessmodel.ActionCreateSubmission)
+		canSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: userID}), f.contestID, accessmodel.ActionCreateSubmission)
 		require.NoError(t, err)
 		assert.True(t, canSubmit, "Logged-in user can submit in upsolving mode after contest end")
 
-		guestCanSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, uuid.Nil, accessmodel.ActionCreateSubmission)
+		guestCanSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.Nil}), f.contestID, accessmodel.ActionCreateSubmission)
 		require.NoError(t, err)
 		assert.False(t, guestCanSubmit, "Guest cannot submit in upsolving mode")
 	})
@@ -677,11 +677,11 @@ func TestContestABAC_Finished_Upsolving(t *testing.T) {
 			ContestRole: contestsmodel.ContestRoleModerator,
 		}
 
-		canSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionCreateSubmission)
+		canSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: partID}), f.contestID, accessmodel.ActionCreateSubmission)
 		require.NoError(t, err)
 		assert.False(t, canSubmit, "Participant cannot submit when upsolving is disabled")
 
-		modCanSubmit, err := f.permUC.HasContestPermission(ctx, f.contestID, modID, accessmodel.ActionCreateSubmission)
+		modCanSubmit, err := f.permUC.CanContest(accessmodel.WithUser(ctx, accessmodel.User{Id: modID}), f.contestID, accessmodel.ActionCreateSubmission)
 		require.NoError(t, err)
 		assert.True(t, modCanSubmit, "Moderator can always submit for testing even when upsolving is disabled")
 	})
@@ -720,40 +720,40 @@ func TestOrganizationPermissions(t *testing.T) {
 	}
 
 	for _, uid := range []uuid.UUID{ownerID, adminID, memberID, outsiderID, globalAdminID} {
-		canView, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, uid, accessmodel.ActionViewOrganization)
+		canView, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: uid}), f.orgID, accessmodel.ActionViewOrganization)
 		require.NoError(t, err)
 		assert.True(t, canView)
 	}
 
-	orgAdminCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, adminID, accessmodel.ActionManageOrganization)
+	orgAdminCanManage, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: adminID}), f.orgID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.True(t, orgAdminCanManage)
 
-	orgOwnerCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, ownerID, accessmodel.ActionManageOrganization)
+	orgOwnerCanManage, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: ownerID}), f.orgID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.True(t, orgOwnerCanManage)
 
-	memberCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, memberID, accessmodel.ActionManageOrganization)
+	memberCanManage, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: memberID}), f.orgID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.False(t, memberCanManage)
 
-	outsiderCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, outsiderID, accessmodel.ActionManageOrganization)
+	outsiderCanManage, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: outsiderID}), f.orgID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.False(t, outsiderCanManage)
 
-	globalAdminCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, globalAdminID, accessmodel.ActionManageOrganization)
+	globalAdminCanManage, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: globalAdminID}), f.orgID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.True(t, globalAdminCanManage)
 
-	orgOwnerCanDelete, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, ownerID, accessmodel.ActionDeleteOrganization)
+	orgOwnerCanDelete, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: ownerID}), f.orgID, accessmodel.ActionDeleteOrganization)
 	require.NoError(t, err)
 	assert.True(t, orgOwnerCanDelete)
 
-	orgAdminCanDelete, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, adminID, accessmodel.ActionDeleteOrganization)
+	orgAdminCanDelete, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: adminID}), f.orgID, accessmodel.ActionDeleteOrganization)
 	require.NoError(t, err)
 	assert.False(t, orgAdminCanDelete, "Org Admin cannot delete organization; only Owner or Global Admin can")
 
-	globalAdminCanDelete, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, globalAdminID, accessmodel.ActionDeleteOrganization)
+	globalAdminCanDelete, err := f.permUC.CanOrganization(accessmodel.WithUser(ctx, accessmodel.User{Id: globalAdminID}), f.orgID, accessmodel.ActionDeleteOrganization)
 	require.NoError(t, err)
 	assert.True(t, globalAdminCanDelete)
 }

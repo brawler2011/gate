@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -83,19 +84,11 @@ func (uc *ContestsUseCase) CreateContest(
 	}
 
 	err := uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		user := accessmodel.UserFromContext(ctx)
-		if user.IsGuest() {
-			return pkg.ErrUnauthenticated
-		}
-		allowed, err := tx.HasOrganizationPermission(ctx, c.OrganizationID, user.Id, accessmodel.ActionManageOrganization)
-		if err != nil {
+		if err := access.Organization(ctx, tx, c.OrganizationID, accessmodel.ActionManageOrganization); err != nil {
 			return err
 		}
-		if !allowed {
-			return pkg.ErrForbidden
-		}
 
-		err = tx.CreateContest(ctx, params)
+		err := tx.CreateContest(ctx, params)
 		if err != nil {
 			return fmt.Errorf("create contest: %w", err)
 		}
@@ -503,17 +496,13 @@ func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
 	ctx context.Context,
 	contestID, userID, problemID uuid.UUID,
 ) (*contestsmodel.ContestUserProblemBlock, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if user.Id != userID && !user.IsAdmin() {
-		allowed, err := uc.permissions.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
-		if err != nil {
+		if err := access.Contest(ctx, uc.permissions, contestID, accessmodel.ActionManageContest); err != nil {
 			return nil, err
-		}
-		if !allowed {
-			return nil, pkg.ErrForbidden
 		}
 	}
 	block, err := uc.contestRepo.GetContestUserProblemBlock(ctx, contestID, userID, problemID)
@@ -536,9 +525,9 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		return nil, false, err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() || user.IsExpired() {
-		return nil, false, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, false, err
 	}
 	userID := user.Id
 	var req *contestsmodel.ContestJoinRequest
@@ -630,21 +619,12 @@ func (uc *ContestsUseCase) ListJoinRequests(
 	ctx context.Context,
 	orgLogin, contestLogin string,
 ) ([]contestsmodel.ContestJoinRequest, error) {
-	user, err := accessmodel.RequireUser(ctx)
-	if err != nil {
-		return nil, err
-	}
 	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err
 	}
-
-	allowed, err := uc.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-	if err != nil {
+	if err := access.Contest(ctx, uc.permissions, contest.ID, accessmodel.ActionManageContest); err != nil {
 		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "access denied")
 	}
 
 	status := string(organizationsmodel.RequestStatusPending)
@@ -660,9 +640,9 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 		return err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() || user.IsExpired() {
-		return pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return err
 	}
 
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {

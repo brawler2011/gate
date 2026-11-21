@@ -58,7 +58,7 @@ func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 
 type allowProblemPermissions struct{}
 
-func (allowProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (allowProblemPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
 

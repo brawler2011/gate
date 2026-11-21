@@ -110,7 +110,8 @@ type PackageContext struct {
 	ID, ProblemID uuid.UUID
 }
 
-func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id, user uuid.UUID) (*m.ContestPermissions, error) {
+func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id uuid.UUID) (*m.ContestPermissions, error) {
+	user := m.UserFromContext(ctx).Id
 	in, err := uc.input(ctx, user)
 	if err != nil {
 		return nil, err
@@ -143,31 +144,16 @@ func ContestFromFacts(c m.ContestContext) contestsmodel.Contest {
 }
 
 type RelationshipPermissions interface {
-	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, m.ContestAction) (bool, error)
-	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, m.ProblemAction) (bool, error)
+	ContestChecker
+	ProblemChecker
 }
 
 func AuthorizeContestProblem(ctx context.Context, p RelationshipPermissions, contest, problem uuid.UUID, loadPackage func() (PackageContext, error)) (uuid.UUID, error) {
-	actor := m.UserFromContext(ctx)
-	if err := validateInput(m.PolicyInput{Actor: actor, Now: m.ReadTime(ctx)}); err != nil {
+	if err := Contest(ctx, p, contest, m.ActionManageContest); err != nil {
 		return uuid.Nil, err
 	}
-	if actor.IsGuest() {
-		return uuid.Nil, pkg.ErrUnauthenticated
-	}
-	allowed, err := p.HasContestPermission(ctx, contest, actor.Id, m.ActionManageContest)
-	if err != nil {
+	if err := Problem(ctx, p, problem, m.ActionUseProblem); err != nil {
 		return uuid.Nil, err
-	}
-	if !allowed {
-		return uuid.Nil, pkg.ErrForbidden
-	}
-	allowed, err = p.HasProblemPermission(ctx, problem, actor.Id, m.ActionUseProblem)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if !allowed {
-		return uuid.Nil, pkg.ErrForbidden
 	}
 	pack, err := loadPackage()
 	if err != nil {

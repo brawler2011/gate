@@ -121,7 +121,7 @@ func (r *joinRequestsLookup) ListContestJoinRequests(_ context.Context, id uuid.
 
 type joinRequestsPermissions struct{ *rosterPermissions }
 
-func (joinRequestsPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+func (joinRequestsPermissions) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	panic("unexpected problem authorization")
 }
 
@@ -131,10 +131,11 @@ func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
 		name                string
 		allow               accessmodel.ContestAction
 		permissionErr, want error
+		actions             []accessmodel.ContestAction
 	}{
-		{name: "manager", allow: accessmodel.ActionManageContest},
-		{name: "outsider", want: pkg.ErrForbidden},
-		{name: "permission error", permissionErr: failure, want: failure},
+		{name: "manager", allow: accessmodel.ActionManageContest, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest}},
+		{name: "participant", allow: accessmodel.ActionGetContest, want: pkg.ErrForbidden, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest, accessmodel.ActionGetContest}},
+		{name: "permission error", permissionErr: failure, want: failure, actions: []accessmodel.ContestAction{accessmodel.ActionManageContest}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			lookup := &joinRequestsLookup{registrationLookup: registrationLookup{contest: contestsmodel.Contest{ID: uuid.New()}}}
@@ -144,14 +145,14 @@ func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
 			_, err := uc.ListJoinRequests(accessmodel.WithUser(context.Background(), actor), "org", "contest")
 			require.ErrorIs(t, err, tc.want)
 			require.Equal(t, tc.want == nil, lookup.listed)
-			require.Equal(t, []accessmodel.ContestAction{accessmodel.ActionManageContest}, permissions.actions)
+			require.Equal(t, tc.actions, permissions.actions)
 		})
 	}
 }
 
 type deniedContestCommands struct{ CommandPermissions }
 
-func (deniedContestCommands) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+func (deniedContestCommands) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return false, nil
 }
 

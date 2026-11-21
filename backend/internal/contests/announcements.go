@@ -29,12 +29,12 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 		return nil, pkg.AtField("/body", pkg.Invalid(pkg.ErrRequired, "body cannot be empty", nil))
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	var announcement *contestsmodel.ContestAnnouncement
-	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
 		announcement, err = tx.CreateAnnouncement(ctx, user.Id, input)
 		if err != nil {

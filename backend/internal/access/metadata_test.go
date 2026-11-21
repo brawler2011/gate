@@ -52,12 +52,14 @@ func TestMetadataPermissionsFailClosed(t *testing.T) {
 			uc := NewMetadataPermissions(NewPermissionsUseCase(nil, users, nil, nil, nil), tc.facts)
 			for name, check := range map[string]func() (bool, error){
 				"problem": func() (bool, error) {
-					return uc.HasProblemPermission(context.Background(), id, u.Id, m.ActionViewProblem)
+					return uc.CanProblem(m.WithUser(context.Background(), m.User{Id: u.Id}), id, m.ActionViewProblem)
 				},
 				"contest": func() (bool, error) {
-					return uc.HasContestPermission(context.Background(), id, u.Id, m.ActionViewContest)
+					return uc.CanContest(m.WithUser(context.Background(), m.User{Id: u.Id}), id, m.ActionViewContest)
 				},
-				"team": func() (bool, error) { return uc.HasTeamPermission(context.Background(), id, u.Id, m.ActionViewTeam) },
+				"team": func() (bool, error) {
+					return uc.CanTeam(m.WithUser(context.Background(), m.User{Id: u.Id}), id, m.ActionViewTeam)
+				},
 			} {
 				t.Run(name, func(t *testing.T) {
 					allowed, err := check()
@@ -73,13 +75,13 @@ func TestMetadataPermissionsFailClosed(t *testing.T) {
 	users.users[u.Id] = u
 	uc := NewMetadataPermissions(NewPermissionsUseCase(nil, users, nil, nil, nil), nil)
 	ctx := m.WithReadTime(context.Background(), now)
-	allowed, err := uc.HasProblemPermission(ctx, id, u.Id, m.ActionViewProblem)
+	allowed, err := uc.CanProblem(m.WithUser(ctx, m.User{Id: u.Id}), id, m.ActionViewProblem)
 	require.False(t, allowed)
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
-	allowed, err = uc.HasContestPermission(ctx, id, u.Id, m.ActionViewContest)
+	allowed, err = uc.CanContest(m.WithUser(ctx, m.User{Id: u.Id}), id, m.ActionViewContest)
 	require.False(t, allowed)
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
-	allowed, err = uc.HasTeamPermission(ctx, id, u.Id, m.ActionViewTeam)
+	allowed, err = uc.CanTeam(m.WithUser(ctx, m.User{Id: u.Id}), id, m.ActionViewTeam)
 	require.False(t, allowed)
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 }

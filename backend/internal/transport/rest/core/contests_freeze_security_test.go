@@ -37,7 +37,7 @@ type MockPermissionsUC struct {
 	PermissionsUC
 }
 
-func (m *MockPermissionsUC) HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	args := m.Called(ctx, contestID, userID, action)
+func (m *MockPermissionsUC) CanContest(ctx context.Context, contestID uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+	args := m.Called(ctx, contestID, action)
 	return args.Bool(0), args.Error(1) //nolint:wrapcheck
 }

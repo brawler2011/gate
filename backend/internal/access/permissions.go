@@ -60,12 +60,12 @@ type problemContext struct {
 	isAdmin    bool
 }
 
-func (uc *PermissionsUseCase) HasContestPermission(
+func (uc *PermissionsUseCase) CanContest(
 	ctx context.Context,
 	contestID uuid.UUID,
-	userID uuid.UUID,
 	action accessmodel.ContestAction,
 ) (bool, error) {
+	userID := accessmodel.UserFromContext(ctx).Id
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
@@ -314,12 +314,12 @@ func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
 	return false
 }
 
-func (uc *PermissionsUseCase) HasProblemPermission(
+func (uc *PermissionsUseCase) CanProblem(
 	ctx context.Context,
 	problemID uuid.UUID,
-	userID uuid.UUID,
 	action accessmodel.ProblemAction,
 ) (bool, error) {
+	userID := accessmodel.UserFromContext(ctx).Id
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
@@ -403,8 +403,8 @@ func (uc *PermissionsUseCase) GetEffectiveContestRole(
 func (uc *PermissionsUseCase) GetContestPermissions(
 	ctx context.Context,
 	contestID uuid.UUID,
-	userID uuid.UUID,
 ) (*accessmodel.ContestPermissions, error) {
+	userID := accessmodel.UserFromContext(ctx).Id
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
@@ -514,12 +514,12 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 	}, nil
 }
 
-func (uc *PermissionsUseCase) HasOrganizationPermission(
+func (uc *PermissionsUseCase) CanOrganization(
 	ctx context.Context,
 	orgID uuid.UUID,
-	userID uuid.UUID,
 	action accessmodel.OrgAction,
 ) (bool, error) {
+	userID := accessmodel.UserFromContext(ctx).Id
 	if userID == uuid.Nil {
 		if action == accessmodel.ActionViewOrganization {
 			return true, nil
@@ -548,7 +548,7 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 	}
 
 	switch action {
-	case accessmodel.ActionViewOrganization:
+	case accessmodel.ActionViewOrganization, accessmodel.ActionListOrganizationMembers:
 		return true, nil
 	case accessmodel.ActionManageOrganization, accessmodel.ActionCreateProblem:
 		return member.Role == organizationsmodel.OrgRoleOwner || member.Role == organizationsmodel.OrgRoleAdmin, nil

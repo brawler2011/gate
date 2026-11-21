@@ -102,8 +102,8 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			ProblemId: problemID,
 		}).Return(contestProblem, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetContestProblem).Return(true, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionGetContestProblem).Return(true, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionManageContest).Return(false, nil)
 
 		resp, err := server.GetContestProblem(ctx, corev1.GetContestProblemParams{
 			OrgLogin:     "test-org",
@@ -136,8 +136,8 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetContestProblem).Return(true, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionGetContestProblem).Return(true, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionManageContest).Return(false, nil)
 
 		_, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{
 			OrgLogin:     "test-org",
@@ -160,8 +160,8 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionGetContestProblem).Return(true, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionManageContest).Return(true, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionGetContestProblem).Return(true, nil)
+		mockPerms.On("CanContest", mock.Anything, contestID, accessmodel.ActionManageContest).Return(true, nil)
 		mockContests.On("GetContestProblems", mock.Anything, contestID).Return([]contestsmodel.ContestProblem{contestProblem}, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
 

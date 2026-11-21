@@ -15,7 +15,7 @@ type RevisionReader interface {
 	AccessRevision(context.Context) (int64, error)
 }
 type audienceAuthorizer interface {
-	AuthorizeContestAudience(context.Context, uuid.UUID, uuid.UUID, string, uuid.UUID) error
+	AuthorizeContestAudience(context.Context, uuid.UUID, string, uuid.UUID) error
 }
 
 // Fix audience and revision before selecting history; every delivery and idle check validates the lease.
@@ -55,7 +55,7 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 			audience = "managers"
 		}
 		if authorize, ok := s.permissions.(audienceAuthorizer); ok {
-			if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, user.Id, audience, uuid.Nil); err != nil {
+			if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, audience, uuid.Nil); err != nil {
 				return "", err
 			}
 		}
@@ -65,7 +65,7 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 		}
 		if p.ListOwnSubmissions && !p.ManageContest {
 			if authorize, ok := s.permissions.(audienceAuthorizer); ok {
-				if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, user.Id, "own", user.Id); err != nil {
+				if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, "own", user.Id); err != nil {
 					return "", err
 				}
 			}

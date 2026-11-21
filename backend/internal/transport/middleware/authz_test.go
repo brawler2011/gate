@@ -21,39 +21,9 @@ func TestStrictAuthzPoliciesCoverStrictOperations(t *testing.T) {
 		if operationID == "NewError" {
 			continue
 		}
-		evaluators, ok := endpointPolicies[operationID]
-		if !ok || len(evaluators.evaluators) == 0 {
+		if _, ok := endpointPolicies[operationID]; !ok {
 			t.Errorf("missing authz policy for operation %q", operationID)
 		}
-	}
-}
-
-func TestSelfOrAdminUsesUsernamePathParameter(t *testing.T) {
-	user := accessmodel.User{Id: uuid.New(), Username: "owner", Role: accessmodel.UserRoleUser}
-	for _, tc := range []struct {
-		name    string
-		params  ogenMiddleware.Parameters
-		wantErr error
-	}{
-		{name: "owner", params: ogenMiddleware.Parameters{{Name: "username", In: "path"}: "OWNER"}},
-		{name: "other user", params: ogenMiddleware.Parameters{{Name: "username", In: "path"}: "other"}, wantErr: pkg.ErrForbidden},
-		{name: "query cannot replace path", params: ogenMiddleware.Parameters{{Name: "username", In: "query"}: "owner"}, wantErr: pkg.ErrInvalid},
-		{name: "missing path", wantErr: pkg.ErrInvalid},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			err := RequireSelfOrAdmin()(context.Background(), &EvalContext{
-				User: user,
-				Request: ogenMiddleware.Request{
-					Params: tc.params,
-					Body:   &corev1.UpdateUserRequestModel{},
-				},
-			})
-			if tc.wantErr == nil {
-				require.NoError(t, err)
-			} else {
-				require.ErrorIs(t, err, tc.wantErr)
-			}
-		})
 	}
 }
 
