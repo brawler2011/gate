@@ -364,12 +364,7 @@ func (e *execution) compile(ctx context.Context) error {
 }
 func (e *execution) solutionLimits() sandbox.FileRunLimits {
 	d := e.build.Snapshot.Draft
-	limits := e.build.Snapshot.Limits.Auxiliary
-	limits.CPU = time.Duration(d.TimeLimitMs) * time.Millisecond
-	limits.Wall = limits.CPU * 2
-	limits.Memory = bytesize.Size(d.MemoryLimitMb) * bytesize.MiB
-	limits.Output = e.build.Snapshot.Limits.TestOutputBytes
-	return limits
+	return e.build.Snapshot.Limits.Solution(time.Duration(d.TimeLimitMs)*time.Millisecond, bytesize.Size(d.MemoryLimitMb)*bytesize.MiB)
 }
 
 type testResult struct {

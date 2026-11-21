@@ -36,18 +36,7 @@ func safeDuration(v uint64) time.Duration {
 type Status string
 
 const (
-	defaultPipeCollectorSize = 10 * 1024 * 1024
 	dummyPipeCollectorSize = 1024
-
-	compilerCompileCpuTimeLimit = 20 * time.Second
-	compilerCompileMemoryLimit  = 512 * 1024 * 1024
-	compilerCompileProcLimit    = 150
-
-	bookletCompileCpuTimeLimit   = 30 * time.Second
-	bookletCompileClockTimeLimit = 60 * time.Second
-	bookletCompileMemoryLimit    = 512 * 1024 * 1024
-	bookletCompileProcLimit      = 100
-	bookletPDFLimit              = 64 * 1024 * 1024
 )
 
 const (
@@ -103,11 +92,6 @@ func NewSandbox(client *Client, config *Config) *Sandbox {
 		client: client,
 		config: config,
 	}
-}
-
-// Compile caches interpreted sources and their dependencies without invoking a compiler.
-func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte) (Executable, error) {
-	return s.CompileWithLimits(ctx, sourceCode, langKey, dependencies, FileRunLimits{CPU: compilerCompileCpuTimeLimit, Wall: 2 * compilerCompileCpuTimeLimit, Memory: compilerCompileMemoryLimit, Processes: compilerCompileProcLimit, Output: 64 * 1024 * 1024, Diagnostic: 64 * 1024})
 }
 
 // inline sends text in the JSON request; other bytes would be mangled there, so they go through the file store.
@@ -247,17 +231,19 @@ func statusToString(status string) Status {
 	}
 }
 
-func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
+// CompilePDF limits the PDF by limits.Output and the reported log tail by limits.Diagnostic.
+func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileRunLimits) ([]byte, error) {
+	latex := "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex >/dev/null"
 	results, err := s.client.run(ctx, request{Cmd: []cmd{{
-		Args:          []string{"/bin/sh", "-c", "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex && pdflatex -interaction=nonstopmode -halt-on-error booklet.tex"},
-		Files:         []*cmdFile{memoryFile(""), collector("stdout", defaultPipeCollectorSize, false), collector("stderr", defaultPipeCollectorSize, false)},
+		// The error is at the end of the log, so only its tail leaves the sandbox.
+		Args:          []string{"/bin/sh", "-c", fmt.Sprintf("{ %s && %s; } || { tail -c %d booklet.log; exit 1; }", latex, latex, int64(limits.Diagnostic))},
+		Files:         []*cmdFile{memoryFile(""), collector("stdout", int64(limits.Diagnostic), false), collector("stderr", int64(limits.Diagnostic), false)},
 		CopyIn:        map[string]cmdFile{"booklet.tex": *memoryFile(texSource), "olymp.sty": *memoryFile(string(booklet.OlympSty))},
-		CopyOut:       []string{"booklet.log"},
 		CopyOutCached: []string{"booklet.pdf"},
-		CPULimit:      safeUint64(bookletCompileCpuTimeLimit.Nanoseconds()),
-		ClockLimit:    safeUint64(bookletCompileClockTimeLimit.Nanoseconds()),
-		MemoryLimit:   bookletCompileMemoryLimit,
-		ProcLimit:     bookletCompileProcLimit,
+		CPULimit:      safeUint64(limits.CPU.Nanoseconds()),
+		ClockLimit:    safeUint64(limits.Wall.Nanoseconds()),
+		MemoryLimit:   limits.Memory.Uint64(),
+		ProcLimit:     limits.Processes,
 		Env:           []string{"PATH=/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
 	}}})
 	if err != nil {
@@ -268,18 +254,14 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, err
 	pdfID := res.FileIDs["booklet.pdf"]
 	defer s.client.release(pdfID)
 	if res.Status != resultAccepted {
-		logSnippet := res.Files["booklet.log"]
-		if len(logSnippet) > 4000 {
-			logSnippet = logSnippet[len(logSnippet)-4000:]
-		}
-		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nOutput:\n%s\nLog:\n%s",
-			res.Status, res.ExitStatus, res.Files["stdout"], logSnippet)
+		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nLog:\n%s\n%s",
+			res.Status, res.ExitStatus, res.Files["stdout"], res.Files["stderr"])
 	}
 	if pdfID == "" {
 		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")
 	}
 	var pdf bytes.Buffer
-	if _, err := s.client.get(ctx, pdfID, &pdf, bookletPDFLimit); err != nil {
+	if _, err := s.client.get(ctx, pdfID, &pdf, int64(limits.Output)); err != nil {
 		return nil, fmt.Errorf("download booklet.pdf: %w", err)
 	}
 	if pdf.Len() == 0 {

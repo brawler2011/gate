@@ -12,6 +12,7 @@ import (
 	"testing/iotest"
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
@@ -29,7 +30,7 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 	return &DraftUseCase{
 		TempDir: t.TempDir(), UploadTTL: 1e10, DraftQuotas: importQuotas,
 		BuildOptions: model.BuildOptions{
-			Limits:    model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000, ObjectBytes: 1 << 30},
+			Limits:    dbfixtures.BuildLimits(t),
 			Languages: testCatalog.Langs,
 		},
 		Languages: testCatalog,

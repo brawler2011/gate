@@ -62,6 +62,7 @@ func TestInvalidConfigNamesField(t *testing.T) {
 		{"no judge workers", "workers: 1", "workers: 0", "judge.workers"},
 		{"no go-judge parallelism", "  parallelism: 0\n", "", "go_judge.parallelism"},
 		{"lease too short", "lease: 30s", "lease: 1s", "problems.lease"},
+		{"no wall factor", "wall_factor: 3", "wall_factor: 0", "problems.limits.wall_factor"},
 		{"compile diagnostic too large", "diagnostic: 64KiB", "diagnostic: 65KiB", "problems.limits.compile.diagnostic"},
 	}
 	for _, c := range cases {

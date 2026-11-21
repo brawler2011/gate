@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/messaging/booklet"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +18,7 @@ import (
 
 type fakeCompiler struct{}
 
-func (fakeCompiler) CompilePDF(_ context.Context, tex string) ([]byte, error) {
+func (fakeCompiler) CompilePDF(_ context.Context, tex string, _ sandbox.FileRunLimits) ([]byte, error) {
 	if tex == "broken" {
 		return nil, errors.New("LaTeX compilation error:\n! Undefined control sequence.")
 	}
@@ -28,14 +30,15 @@ func TestBookletCompiledOnWorker(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	conn := newNATSConn(t, false)
-	client := booklet.NewClient(conn)
+	limits := dbfixtures.BuildLimits(t).Booklet
+	client := booklet.NewClient(conn, limits)
 
 	_, err := client.CompilePDF(ctx, "no worker yet")
 	require.ErrorIs(t, err, nats.ErrNoResponders)
 
 	runCtx, stop := context.WithCancel(ctx)
 	done := make(chan error, 1)
-	go func() { done <- booklet.NewResponder(conn, fakeCompiler{}).Run(runCtx) }()
+	go func() { done <- booklet.NewResponder(conn, fakeCompiler{}, limits).Run(runCtx) }()
 	t.Cleanup(func() {
 		stop()
 		require.NoError(t, <-done)

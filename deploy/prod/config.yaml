@@ -36,19 +36,24 @@ problems:
     file_count: 25000
     object_bytes: 512MiB
     test_output_bytes: 512MiB
+    wall_factor: 3
     compile:
-      cpu: 20s
-      wall: 60s
+      cpu: 40s
       memory: 512MiB
       processes: 150
       output: 64MiB
       diagnostic: 64KiB
     auxiliary:
       cpu: 5s
-      wall: 15s
       memory: 256MiB
       processes: 50
       output: 512MiB
+      diagnostic: 64KiB
+    booklet:
+      cpu: 30s
+      memory: 512MiB
+      processes: 100
+      output: 64MiB
       diagnostic: 64KiB
   parallelism: 1
   attempts: 3

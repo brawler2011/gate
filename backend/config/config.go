@@ -107,7 +107,8 @@ type Secrets struct {
 	ResendAPIKey string `env:"RESEND_API_KEY"`
 }
 
-func Load(path string, mode Mode) (Config, error) {
+// Read decodes a config file without secrets or validation, so tests can share the deploy configs.
+func Read(path string) (Config, error) {
 	var cfg Config
 	f, err := os.Open(path)
 	if err != nil {
@@ -118,6 +119,15 @@ func Load(path string, mode Mode) (Config, error) {
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&cfg); err != nil {
 		return cfg, fmt.Errorf("decode config %s: %w", path, err)
+	}
+	cfg.Problems.Limits.DeriveWalls()
+	return cfg, nil
+}
+
+func Load(path string, mode Mode) (Config, error) {
+	cfg, err := Read(path)
+	if err != nil {
+		return cfg, err
 	}
 	if err := cleanenv.ReadEnv(&cfg.Secrets); err != nil {
 		return cfg, fmt.Errorf("read secrets: %w", err)

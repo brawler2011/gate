@@ -12,8 +12,9 @@ import (
 )
 
 type FileRunLimits struct {
-	CPU        time.Duration `yaml:"cpu" json:"cpu"`
-	Wall       time.Duration `yaml:"wall" json:"wall"`
+	CPU time.Duration `yaml:"cpu" json:"cpu"`
+	// Derived from CPU by problems.limits.wall_factor.
+	Wall       time.Duration `yaml:"-" json:"wall"`
 	Memory     bytesize.Size `yaml:"memory" json:"memory"`
 	Processes  uint64        `yaml:"processes" json:"processes"`
 	Output     bytesize.Size `yaml:"output" json:"output"`
