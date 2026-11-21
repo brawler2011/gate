@@ -146,7 +146,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 	}
 
 	return &corev1.GetContestProblemResponseModel{
-		Problem: corev1.ContestProblemModel{Capabilities: []string{},
+		Problem: corev1.ContestProblemModel{
 			ProblemID:    contestProblem.ProblemID,
 			Title:        title,
 			TimeLimit:    safeInt32(problem.TimeLimitMs),
@@ -186,7 +186,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 
 	visibility := string(c.Visibility)
 	s := c.Settings
-	model := corev1.ContestModel{Capabilities: []string{},
+	model := corev1.ContestModel{
 		ID:                     c.ID,
 		Login:                  c.Login,
 		OrganizationID:         c.OrganizationID,
@@ -216,7 +216,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
-	return corev1.ContestProblemListItemModel{Capabilities: []string{}, ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	return corev1.ContestProblemListItemModel{ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 }
 func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
 	result := make([]corev1.ProblemSampleModel, len(samples))
@@ -243,7 +243,7 @@ func ParticipantDTO(p contestsmodel.ContestMember) corev1.UserModel {
 func ProblemsListItemDTO(p problemsmodel.Problem) corev1.ProblemsListItemModel {
 	title := p.Title
 
-	return corev1.ProblemsListItemModel{Capabilities: []string{},
+	return corev1.ProblemsListItemModel{
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
@@ -271,7 +271,7 @@ func ListProblemsResponseDTO(problemsList *problemsmodel.ProblemsList) *corev1.L
 }
 
 func ProblemDTO(p problemsmodel.Problem) *corev1.ProblemModel {
-	return &corev1.ProblemModel{Capabilities: []string{},
+	return &corev1.ProblemModel{
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
@@ -465,7 +465,7 @@ func organizationDTO(o organizationsmodel.Organization) corev1.OrganizationModel
 		joinPolicy = corev1.OrganizationModelJoinPolicy(o.JoinPolicy)
 	}
 
-	return corev1.OrganizationModel{Capabilities: []string{},
+	return corev1.OrganizationModel{
 		ID:          o.ID,
 		Login:       o.Login,
 		Name:        o.Name,
@@ -490,7 +490,7 @@ func listOrganizationsDTO(ol *organizationsmodel.OrganizationList) *corev1.ListO
 }
 
 func organizationMemberDTO(m organizationsmodel.OrganizationMember) corev1.OrganizationMemberModel {
-	return corev1.OrganizationMemberModel{Capabilities: []string{},
+	return corev1.OrganizationMemberModel{
 		UserID:         m.UserID,
 		OrganizationID: m.OrganizationID,
 		Username:       m.Username,
@@ -513,7 +513,7 @@ func listOrganizationMembersDTO(members []organizationsmodel.OrganizationMember,
 }
 
 func teamDTO(t organizationsmodel.Team) corev1.TeamModel {
-	return corev1.TeamModel{Capabilities: []string{},
+	return corev1.TeamModel{
 		ID:             t.ID,
 		Name:           t.Name,
 		OrganizationID: t.OrganizationID,
@@ -537,7 +537,7 @@ func listTeamsDTO(teams []organizationsmodel.Team, pagination paging.Pagination)
 }
 
 func teamMemberDTO(m organizationsmodel.TeamMember) corev1.TeamMemberModel {
-	return corev1.TeamMemberModel{Capabilities: []string{},
+	return corev1.TeamMemberModel{
 		UserID:    m.UserID,
 		TeamID:    m.TeamID,
 		Username:  m.Username,
@@ -770,7 +770,7 @@ func usersListDTO(ul *identitymodel.UsersList) corev1.ListUsersResponseModel {
 }
 
 func contestTeamDTO(ct contestsmodel.ContestTeam) corev1.ContestTeamModel {
-	return corev1.ContestTeamModel{Capabilities: []string{},
+	return corev1.ContestTeamModel{
 		ContestID:   ct.ContestID,
 		TeamID:      ct.TeamID,
 		TeamName:    ct.TeamName,
@@ -792,7 +792,7 @@ func listContestTeamsDTO(teams []contestsmodel.ContestTeam) *corev1.ListContestT
 }
 
 func problemTeamDTO(pt problemsmodel.ProblemTeam) corev1.ProblemTeamModel {
-	return corev1.ProblemTeamModel{Capabilities: []string{},
+	return corev1.ProblemTeamModel{
 		ProblemID: pt.ProblemID,
 		TeamID:    pt.TeamID,
 		TeamName:  pt.TeamName,
@@ -813,7 +813,7 @@ func listProblemTeamsDTO(teams []problemsmodel.ProblemTeam) *corev1.ListProblemT
 }
 
 func problemMemberDTO(pm problemsmodel.ProblemMember) corev1.ProblemMemberModel {
-	return corev1.ProblemMemberModel{Capabilities: []string{},
+	return corev1.ProblemMemberModel{
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
 		Username:  pm.Username,
@@ -834,7 +834,7 @@ func listProblemMembersDTO(members []problemsmodel.ProblemMember, pagination pag
 }
 
 func DashboardContestDTO(c contestsmodel.DashboardContest) corev1.DashboardContestModel {
-	return corev1.DashboardContestModel{Capabilities: []string{},
+	return corev1.DashboardContestModel{
 		ID:                 c.ID,
 		Login:              c.Login,
 		Title:              c.Title,
@@ -850,7 +850,7 @@ func DashboardContestDTO(c contestsmodel.DashboardContest) corev1.DashboardConte
 }
 
 func DashboardProblemDTO(p problemsmodel.DashboardProblem) corev1.DashboardProblemModel {
-	return corev1.DashboardProblemModel{Capabilities: []string{},
+	return corev1.DashboardProblemModel{
 		ID:                p.ID,
 		Title:             p.Title,
 		OrganizationID:    p.OrganizationID,

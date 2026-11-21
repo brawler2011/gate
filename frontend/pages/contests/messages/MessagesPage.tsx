@@ -1,9 +1,8 @@
 import {Container} from "@mantine/core";
-import {useLoaderData, redirect} from "react-router-dom";
+import {useLoaderData} from "react-router-dom";
 
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
 import {api, unwrap} from "@/lib/api";
-import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -26,14 +25,8 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
 
   const user = me?.user ?? null;
 
-  const checker = new PermissionChecker();
-
-  if (!checker.canViewContest(contestResponse.contest)) {
-    throw redirect(`/${slug}/${contestLogin}`);
-  }
-
   const isModerator =
-    contestResponse.contest.capabilities.includes("manage");
+    contestResponse.contest.permissions.manage;
 
   return {slug, contestLogin, contestResponse, user, isModerator};
 }) satisfies LoaderFunction;

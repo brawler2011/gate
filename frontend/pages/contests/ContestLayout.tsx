@@ -7,7 +7,6 @@ import {QueryState} from "@/components/shared/QueryState";
 import {SubmissionsProvider} from "@/contexts/SubmissionsProvider";
 import {useContestData} from "@/hooks/useContestData";
 import {api} from "@/lib/api";
-import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 
@@ -25,11 +24,9 @@ const ContestLayout = (): ReactNode => {
   }
   const {response, user, contestRole} = contest.data;
   const org = organization.data.organization;
-  const isModerator =
-    response.contest.capabilities.includes("manage");
-  const checker = new PermissionChecker();
-  const canSubscribe = checker.canViewMySubmissions(response.contest) || checker.canViewAllSubmissions(response.contest)
-    || checker.canViewMonitor(response.contest);
+  const {permissions} = response.contest;
+  const isModerator = permissions.manage;
+  const canSubscribe = permissions.list_own_submissions || permissions.list_submissions || permissions.view_scoreboard;
   return (
     <DefaultLayout
       headerUser={user}

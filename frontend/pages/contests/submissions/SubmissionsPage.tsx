@@ -5,7 +5,6 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -58,19 +57,11 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     ),
   ]);
 
-  const checker = contestData?.contest
-    ? new PermissionChecker()
-    : null;
-
-  if (contestData?.contest && checker) {
-
-    if (!checker.canViewAllSubmissions(contestData.contest)) {
-      throw redirect(`/${slug}/${contestLogin}`);
-    }
+  if (!contestData.contest.permissions.list_submissions) {
+    throw redirect(`/${slug}/${contestLogin}`);
   }
 
-  const canRejudge =
-    contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
+  const canRejudge = contestData.contest.permissions.manage;
 
   const selection = {orgLogin: slug, contestLogin, contestId: contestData.contest.id, ...parsedParams};
   return {slug, contestLogin, contestData, canRejudge, selection};

@@ -2151,12 +2151,61 @@ export interface components {
             problem_type: string;
             is_builtin: boolean;
         };
+        /** @description What the caller may do with the organization. */
+        OrganizationPermissionsModel: {
+            manage: boolean;
+            manage_members: boolean;
+            delete: boolean;
+            list_members: boolean;
+            join: boolean;
+            request_join: boolean;
+            leave: boolean;
+        };
+        /** @description What the caller may do with the team. */
+        TeamPermissionsModel: {
+            manage: boolean;
+            delete: boolean;
+            leave: boolean;
+        };
+        /** @description What the caller may do with the problem. */
+        ProblemPermissionsModel: {
+            use: boolean;
+            edit: boolean;
+            manage: boolean;
+            delete: boolean;
+        };
+        /** @description What the caller may do in the contest. */
+        ContestPermissionsModel: {
+            view_problems: boolean;
+            submit: boolean;
+            list_own_submissions: boolean;
+            list_submissions: boolean;
+            view_submission_details: boolean;
+            view_scoreboard: boolean;
+            manage: boolean;
+            delete: boolean;
+        };
+        /** @description What the caller may do with the contest problem. */
+        ContestProblemPermissionsModel: {
+            submit: boolean;
+            manage: boolean;
+            /** @description Whether the caller may edit the source problem. */
+            edit_problem: boolean;
+        };
+        /** @description Whether the caller may change or revoke this role grant. */
+        MemberPermissionsModel: {
+            change_role: boolean;
+            remove: boolean;
+        };
         /**
          * @description Problem catalog data. The statement, samples and assets belong to the draft and to published packages and are read there.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "use": false,
+         *         "edit": false,
+         *         "manage": false,
+         *         "delete": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_login": "example",
@@ -2170,7 +2219,7 @@ export interface components {
          *     }
          */
         ProblemModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ProblemPermissionsModel"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2201,9 +2250,12 @@ export interface components {
         /**
          * @description Problems list item data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "use": false,
+         *         "edit": false,
+         *         "manage": false,
+         *         "delete": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_login": "example",
@@ -2216,7 +2268,7 @@ export interface components {
          *     }
          */
         ProblemsListItemModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ProblemPermissionsModel"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2239,9 +2291,12 @@ export interface components {
          * @example {
          *       "problems": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "use": false,
+         *             "edit": false,
+         *             "manage": false,
+         *             "delete": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_login": "example",
@@ -2269,9 +2324,12 @@ export interface components {
          * @description Result of get problem.
          * @example {
          *       "problem": {
-         *         "capabilities": [
-         *           "view"
-         *         ],
+         *         "permissions": {
+         *           "use": false,
+         *           "edit": false,
+         *           "manage": false,
+         *           "delete": false
+         *         },
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_login": "example",
@@ -2305,9 +2363,11 @@ export interface components {
         /**
          * @description Contest problem data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "submit": false,
+         *         "manage": false,
+         *         "edit_problem": false
+         *       },
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "title": "Test problem",
          *       "time_limit": 1000,
@@ -2329,7 +2389,7 @@ export interface components {
          *     }
          */
         ContestProblemModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ContestProblemPermissionsModel"];
             /** Format: uuid */
             problem_id: string;
             /** @example Test problem */
@@ -2369,9 +2429,11 @@ export interface components {
          * @description Result of get contest problem.
          * @example {
          *       "problem": {
-         *         "capabilities": [
-         *           "view"
-         *         ],
+         *         "permissions": {
+         *           "submit": false,
+         *           "manage": false,
+         *           "edit_problem": false
+         *         },
          *         "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "title": "Test problem",
          *         "time_limit": 1000,
@@ -2404,9 +2466,16 @@ export interface components {
         /**
          * @description Contest data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "view_problems": false,
+         *         "submit": false,
+         *         "list_own_submissions": false,
+         *         "list_submissions": false,
+         *         "view_submission_details": false,
+         *         "view_scoreboard": false,
+         *         "manage": false,
+         *         "delete": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2430,7 +2499,7 @@ export interface components {
          *     }
          */
         ContestModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ContestPermissionsModel"];
             /** Format: uuid */
             id: string;
             /** @example contest-1 */
@@ -2478,9 +2547,16 @@ export interface components {
          * @example {
          *       "contests": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "view_problems": false,
+         *             "submit": false,
+         *             "list_own_submissions": false,
+         *             "list_submissions": false,
+         *             "view_submission_details": false,
+         *             "view_scoreboard": false,
+         *             "manage": false,
+         *             "delete": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2520,9 +2596,16 @@ export interface components {
          * @example {
          *       "contests": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "view_problems": false,
+         *             "submit": false,
+         *             "list_own_submissions": false,
+         *             "list_submissions": false,
+         *             "view_submission_details": false,
+         *             "view_scoreboard": false,
+         *             "manage": false,
+         *             "delete": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2560,9 +2643,11 @@ export interface components {
         /**
          * @description Contest problem list item data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "submit": false,
+         *         "manage": false,
+         *         "edit_problem": false
+         *       },
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "position": 1,
          *       "title": "Test task",
@@ -2573,7 +2658,7 @@ export interface components {
          *     }
          */
         ContestProblemListItemModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ContestProblemPermissionsModel"];
             /** Format: uuid */
             problem_id: string;
             /** Format: int32 */
@@ -2599,9 +2684,16 @@ export interface components {
          * @description Result of get contest.
          * @example {
          *       "contest": {
-         *         "capabilities": [
-         *           "view"
-         *         ],
+         *         "permissions": {
+         *           "view_problems": false,
+         *           "submit": false,
+         *           "list_own_submissions": false,
+         *           "list_submissions": false,
+         *           "view_submission_details": false,
+         *           "view_scoreboard": false,
+         *           "manage": false,
+         *           "delete": false
+         *         },
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "login": "contest-1",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2625,9 +2717,11 @@ export interface components {
          *       },
          *       "problems": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "submit": false,
+         *             "manage": false,
+         *             "edit_problem": false
+         *           },
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "position": 1,
          *           "title": "Test task",
@@ -3106,9 +3200,16 @@ export interface components {
         /**
          * @description Dashboard contest data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "view_problems": false,
+         *         "submit": false,
+         *         "list_own_submissions": false,
+         *         "list_submissions": false,
+         *         "view_submission_details": false,
+         *         "view_scoreboard": false,
+         *         "manage": false,
+         *         "delete": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
          *       "title": "A + B",
@@ -3120,7 +3221,7 @@ export interface components {
          *     }
          */
         DashboardContestModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ContestPermissionsModel"];
             /** Format: uuid */
             id: string;
             /** @example contest-1 */
@@ -3143,9 +3244,12 @@ export interface components {
         /**
          * @description Dashboard problem data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "use": false,
+         *         "edit": false,
+         *         "manage": false,
+         *         "delete": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "title": "A + B",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3157,7 +3261,7 @@ export interface components {
          *     }
          */
         DashboardProblemModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["ProblemPermissionsModel"];
             /** Format: uuid */
             id: string;
             title: string;
@@ -3177,9 +3281,16 @@ export interface components {
          * @example {
          *       "recent_contests": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "view_problems": false,
+         *             "submit": false,
+         *             "list_own_submissions": false,
+         *             "list_submissions": false,
+         *             "view_submission_details": false,
+         *             "view_scoreboard": false,
+         *             "manage": false,
+         *             "delete": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "title": "A + B",
@@ -3192,9 +3303,12 @@ export interface components {
          *       ],
          *       "my_problems": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "use": false,
+         *             "edit": false,
+         *             "manage": false,
+         *             "delete": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "title": "A + B",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3287,9 +3401,10 @@ export interface components {
          * @example {
          *       "members": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "user123",
@@ -3327,9 +3442,10 @@ export interface components {
         /**
          * @description Contest member data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
@@ -3340,7 +3456,7 @@ export interface components {
          *     }
          */
         ContestMemberModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3359,14 +3475,10 @@ export interface components {
         /**
          * @description Result of get my contest role.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
          *       "role": "owner"
          *     }
          */
         GetMyContestRoleResponseModel: {
-            readonly capabilities: string[];
             /** @example owner */
             role: string;
         };
@@ -3731,9 +3843,15 @@ export interface components {
         /**
          * @description Organization data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "manage": false,
+         *         "manage_members": false,
+         *         "delete": false,
+         *         "list_members": false,
+         *         "join": false,
+         *         "request_join": false,
+         *         "leave": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "example",
          *       "name": "main.cpp",
@@ -3743,7 +3861,7 @@ export interface components {
          *     }
          */
         OrganizationModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["OrganizationPermissionsModel"];
             /** Format: uuid */
             id: string;
             login: string;
@@ -3764,9 +3882,15 @@ export interface components {
          * @example {
          *       "organizations": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "manage": false,
+         *             "manage_members": false,
+         *             "delete": false,
+         *             "list_members": false,
+         *             "join": false,
+         *             "request_join": false,
+         *             "leave": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "example",
          *           "name": "main.cpp",
@@ -3791,9 +3915,15 @@ export interface components {
          * @description Result of get organization.
          * @example {
          *       "organization": {
-         *         "capabilities": [
-         *           "view"
-         *         ],
+         *         "permissions": {
+         *           "manage": false,
+         *           "manage_members": false,
+         *           "delete": false,
+         *           "list_members": false,
+         *           "join": false,
+         *           "request_join": false,
+         *           "leave": false
+         *         },
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "login": "example",
          *         "name": "main.cpp",
@@ -3825,9 +3955,10 @@ export interface components {
         /**
          * @description Organization member data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
@@ -3836,7 +3967,7 @@ export interface components {
          *     }
          */
         OrganizationMemberModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3852,9 +3983,10 @@ export interface components {
          * @example {
          *       "members": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
@@ -3877,9 +4009,11 @@ export interface components {
         /**
          * @description Team data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "manage": false,
+         *         "delete": false,
+         *         "leave": false
+         *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "name": "main.cpp",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3888,7 +4022,7 @@ export interface components {
          *     }
          */
         TeamModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["TeamPermissionsModel"];
             /** Format: uuid */
             id: string;
             name: string;
@@ -3905,9 +4039,11 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "manage": false,
+         *             "delete": false,
+         *             "leave": false
+         *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "name": "main.cpp",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3931,9 +4067,11 @@ export interface components {
          * @description Result of get team.
          * @example {
          *       "team": {
-         *         "capabilities": [
-         *           "view"
-         *         ],
+         *         "permissions": {
+         *           "manage": false,
+         *           "delete": false,
+         *           "leave": false
+         *         },
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "name": "main.cpp",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3959,9 +4097,10 @@ export interface components {
         /**
          * @description Team member data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
@@ -3970,7 +4109,7 @@ export interface components {
          *     }
          */
         TeamMemberModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3986,9 +4125,10 @@ export interface components {
          * @example {
          *       "members": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
@@ -4011,9 +4151,10 @@ export interface components {
         /**
          * @description Contest team data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_name": "example",
@@ -4023,7 +4164,7 @@ export interface components {
          *     }
          */
         ContestTeamModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             contest_id: string;
             /** Format: uuid */
@@ -4040,9 +4181,10 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_name": "example",
@@ -4059,9 +4201,10 @@ export interface components {
         /**
          * @description Problem team data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_name": "example",
@@ -4071,7 +4214,7 @@ export interface components {
          *     }
          */
         ProblemTeamModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             problem_id: string;
             /** Format: uuid */
@@ -4088,9 +4231,10 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_name": "example",
@@ -4107,9 +4251,10 @@ export interface components {
         /**
          * @description Problem member data.
          * @example {
-         *       "capabilities": [
-         *         "view"
-         *       ],
+         *       "permissions": {
+         *         "change_role": false,
+         *         "remove": false
+         *       },
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
@@ -4118,7 +4263,7 @@ export interface components {
          *     }
          */
         ProblemMemberModel: {
-            readonly capabilities: string[];
+            permissions: components["schemas"]["MemberPermissionsModel"];
             /** Format: uuid */
             problem_id: string;
             /** Format: uuid */
@@ -4134,9 +4279,10 @@ export interface components {
          * @example {
          *       "members": [
          *         {
-         *           "capabilities": [
-         *             "view"
-         *           ],
+         *           "permissions": {
+         *             "change_role": false,
+         *             "remove": false
+         *           },
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
@@ -5297,6 +5443,12 @@ export type UpdateUserRequestModel = components['schemas']['UpdateUserRequestMod
 export type PaginationModel = components['schemas']['PaginationModel'];
 export type ProblemSampleModel = components['schemas']['ProblemSampleModel'];
 export type ProblemTemplateModel = components['schemas']['ProblemTemplateModel'];
+export type OrganizationPermissionsModel = components['schemas']['OrganizationPermissionsModel'];
+export type TeamPermissionsModel = components['schemas']['TeamPermissionsModel'];
+export type ProblemPermissionsModel = components['schemas']['ProblemPermissionsModel'];
+export type ContestPermissionsModel = components['schemas']['ContestPermissionsModel'];
+export type ContestProblemPermissionsModel = components['schemas']['ContestProblemPermissionsModel'];
+export type MemberPermissionsModel = components['schemas']['MemberPermissionsModel'];
 export type ProblemModel = components['schemas']['ProblemModel'];
 export type ProblemsListItemModel = components['schemas']['ProblemsListItemModel'];
 export type ListProblemsResponseModel = components['schemas']['ListProblemsResponseModel'];

@@ -40,8 +40,8 @@ type Services struct {
 	Blogs     BlogsUC
 	BlogReads BlogsReader
 
-	NATS         jetstream.JetStream
-	Capabilities CapabilityProjector
+	NATS        jetstream.JetStream
+	Permissions PermissionLoader
 }
 
 type CoreServer struct {

@@ -356,7 +356,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
                           </Text>
                         </Table.Td>
                         <Table.Td>
-                          {m.capabilities.includes("remove") && (
+                          {m.permissions.remove && (
                             <Tooltip label="Удалить из организации">
                               <ActionIcon
                                 color="red"

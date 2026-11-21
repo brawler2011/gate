@@ -101,6 +101,40 @@ func (s *IntegrationTestSuite) TestAccessMatrix() {
 		s.Equal(tc.want, string(got), "%s (columns: guest, outsider, org member, problem viewer, team member, participant, org admin, owner, site admin)", tc.name)
 	}
 
+	// Embedded permissions must agree with the commands above: '-' unreadable, '1' allowed, '0' denied.
+	s.Run("embedded permissions", func() {
+		bit := func(ok bool) byte {
+			if ok {
+				return '1'
+			}
+			return '0'
+		}
+		editProblem, manageContest, removeMember := make([]byte, len(actors)), make([]byte, len(actors)), make([]byte, len(actors))
+		for i, a := range actors {
+			ctx := s.ctx
+			if a.id != uuid.Nil {
+				ctx = withTestUser(ctx, a.id)
+			}
+			editProblem[i], manageContest[i], removeMember[i] = '-', '-', '-'
+			if p, err := s.client.GetProblem(ctx, corev1.GetProblemParams{ID: problem}); err == nil {
+				editProblem[i] = bit(p.Problem.Permissions.Edit)
+			}
+			if c, err := s.client.GetContest(ctx, corev1.GetContestParams{OrgLogin: "matrix", ContestLogin: "matrix"}); err == nil {
+				manageContest[i] = bit(c.Contest.Permissions.Manage)
+			}
+			if list, err := s.client.ListOrganizationMembers(ctx, corev1.ListOrganizationMembersParams{Login: "matrix"}); err == nil {
+				for _, m := range list.Members {
+					if m.UserID == target {
+						removeMember[i] = bit(m.Permissions.Remove)
+					}
+				}
+			}
+		}
+		s.Equal("---01-111", string(editProblem), "problem edit")
+		s.Equal("----10111", string(manageContest), "contest manage")
+		s.Equal("--0-0-111", string(removeMember), "organization member remove")
+	})
+
 	s.Run("problem list", func() {
 		got := make([]byte, len(actors))
 		for i, a := range actors {

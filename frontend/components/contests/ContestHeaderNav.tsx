@@ -4,7 +4,7 @@ import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import {useSession} from "@/contexts/SessionContext";
-import {PermissionChecker, type ContestRoleResponse} from "@/lib/permissions";
+import {type ContestRoleResponse} from "@/lib/permissions";
 
 import type {ContestModel, UserModel} from "@/contracts/core/v1/schema";
 
@@ -26,8 +26,6 @@ export const ContestHeaderNav = ({
 
   const org = orgLogin || contest.organization_login;
   const contestBase = `/${org}/${contest.login}`;
-
-  const checker = new PermissionChecker();
 
   const getActiveTabKey = (): string => {
     if (!pathname) {
@@ -60,25 +58,23 @@ export const ContestHeaderNav = ({
   const activeTab = getActiveTabKey();
   const items: AdaptiveTabItem[] = [];
 
-  if (checker.canViewContest(contest)) {
-    items.push({
-      key: "tasks",
-      label: "Задачи",
-      href: contestBase,
-      icon: IconPuzzle,
-      active: activeTab === "tasks",
-    });
+  items.push({
+    key: "tasks",
+    label: "Задачи",
+    href: contestBase,
+    icon: IconPuzzle,
+    active: activeTab === "tasks",
+  });
 
-    items.push({
-      key: "messages",
-      label: "Сообщения",
-      href: `${contestBase}/messages`,
-      icon: IconMessageDots,
-      active: activeTab === "messages",
-    });
-  }
+  items.push({
+    key: "messages",
+    label: "Сообщения",
+    href: `${contestBase}/messages`,
+    icon: IconMessageDots,
+    active: activeTab === "messages",
+  });
 
-  if (checker.canSubmitSolution(contest)) {
+  if (contest.permissions.submit) {
     items.push({
       key: "submit",
       label: "Послать решение",
@@ -88,7 +84,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canViewProblems(contest) && user?.id && contest.enable_drafts) {
+  if (contest.permissions.view_problems && user?.id && contest.enable_drafts) {
     items.push({
       key: "drafts",
       label: "Черновики",
@@ -98,7 +94,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canViewMySubmissions(contest) && user?.id) {
+  if (contest.permissions.list_own_submissions && user?.id) {
     items.push({
       key: "mysubmissions",
       label: "Мои посылки",
@@ -108,7 +104,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canViewAllSubmissions(contest)) {
+  if (contest.permissions.list_submissions) {
     items.push({
       key: "allsubmissions",
       label: "Все посылки",
@@ -118,7 +114,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canViewMonitor(contest)) {
+  if (contest.permissions.view_scoreboard) {
     items.push({
       key: "monitor",
       label: "Монитор",
@@ -128,7 +124,7 @@ export const ContestHeaderNav = ({
     });
   }
 
-  if (checker.canManageContest(contest)) {
+  if (contest.permissions.manage) {
     items.push({
       key: "settings",
       label: "Настройки",

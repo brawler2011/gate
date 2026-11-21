@@ -595,7 +595,7 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyCo
 	if err != nil {
 		return nil, err
 	}
-	return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{Role: string(a.Role())}, contest.ID)
+	return &corev1.GetMyContestRoleResponseModel{Role: string(a.Role())}, nil
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.ListContestSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {

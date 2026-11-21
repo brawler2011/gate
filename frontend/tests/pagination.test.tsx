@@ -62,7 +62,7 @@ describe("List pagination through production components", () => {
     mockApi((url) => {
       if (url.pathname.endsWith("/members")) {
         const page = Number(url.searchParams.get("page"));
-        return Response.json({members: [{capabilities: ["change_role", "remove"], user_id: `user-${page}`, username: `user-${page}`, contest_role: "participant"}],
+        return Response.json({members: [{permissions: {change_role: true, remove: true}, user_id: `user-${page}`, username: `user-${page}`, contest_role: "participant"}],
           pagination: pagination(page)});
       }
       return Response.json({requests: [], teams: []});
@@ -118,7 +118,7 @@ describe("List pagination through production components", () => {
       }
       return Response.json({});
     });
-    const problem = {capabilities: ["relink_package", "remove", "reorder"], problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;
+    const problem = {permissions: {submit: false, manage: true, edit_problem: false}, problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;
     const view = renderWithProviders(<ProblemsSection orgLogin="org" contestLogin="round" initialProblems={[problem]} />);
     fireEvent.click(view.getByRole("button", {name: "Заменить пакет Example"}));
     await waitFor(() => expect(view.getByRole("button", {name: "Ещё"})).toBeTruthy());
@@ -134,8 +134,12 @@ describe("List pagination through production components", () => {
     await waitFor(() => expect(submitted).toBe("package-1"));
   });
 
-  it("uses organization capabilities without fetching member pages", async () => {
-    const fetch = mockApi(() => Response.json({organization: {capabilities: ["manage_members"]}}));
+  it("uses organization permissions without fetching member pages", async () => {
+    const permissions = {
+      manage: false, manage_members: true, delete: false, list_members: false,
+      join: false, request_join: false, leave: false,
+    };
+    const fetch = mockApi(() => Response.json({organization: {permissions}}));
     expect(await canManageOrgMembers("org")).toBe(true);
     expect(fetch.mock.calls).toHaveLength(1);
   });
@@ -149,7 +153,7 @@ describe("List pagination through production components", () => {
       }
       const page = Number(url.searchParams.get("page"));
       return Response.json({members: removed && page === 3 ? [] : [{
-        capabilities: ["change_role", "remove"], user_id: `user-${page}`, username: `user-${page}`, role: "viewer", created_at: "2026-01-01",
+        permissions: {change_role: true, remove: true}, user_id: `user-${page}`, username: `user-${page}`, role: "viewer", created_at: "2026-01-01",
       }], pagination: pagination(page, removed ? 100 : 101)});
     });
     const view = renderWithProviders(<ProblemMembersManagement problemId="problem" />);

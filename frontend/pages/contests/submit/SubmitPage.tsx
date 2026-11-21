@@ -3,7 +3,6 @@ import {useParams, Navigate} from "react-router-dom";
 
 import {QueryState} from "@/components/shared/QueryState";
 import {useContestData} from "@/hooks/useContestData";
-import {PermissionChecker} from "@/lib/permissions";
 
 import {SubmitSubmissionClient} from "./SubmitSubmissionClient";
 
@@ -17,8 +16,7 @@ const Page = (): ReactNode => {
     return <QueryState error={routeQuery.error} />;
   }
   const {response, user} = routeQuery.data;
-  const checker = new PermissionChecker();
-  if (!checker.canSubmitSolution(response.contest)) {
+  if (!response.contest.permissions.submit) {
     return <Navigate to={`/${slug}/${contestLogin}`} replace />;
   }
   return (
