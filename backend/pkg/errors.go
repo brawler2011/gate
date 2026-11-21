@@ -76,6 +76,30 @@ var (
 	ErrRequestResolved        = NewCode("request_resolved", CodeConflict)
 	ErrInviteOnly             = NewCode("invite_only", CodeForbidden)
 	ErrNotOrgMember           = NewCode("not_org_member", CodeInvalid)
+	// A verification, password reset or email change link that is unknown or expired.
+	ErrLinkInvalid                 = NewCode("link_invalid", CodeInvalid)
+	ErrAccountExpired              = NewCode("account_expired", CodeUnauthenticated)
+	ErrTemporaryAccountUnavailable = NewCode("temporary_account_unavailable", CodeConflict)
+	ErrOwnAccount                  = NewCode("own_account", CodeInvalid)
+	ErrNoEmail                     = NewCode("no_email", CodeInvalid)
+	ErrUnsupportedImage            = NewCode("unsupported_image", CodeInvalid)
+	ErrOwnerOnly                   = NewCode("owner_only", CodeForbidden)
+	ErrPrimaryOwnerRequired        = NewCode("primary_owner_required", CodeConflict)
+	ErrOwnerRoleFixed              = NewCode("owner_role_fixed", CodeInvalid)
+	ErrOwnRole                     = NewCode("own_role", CodeInvalid)
+	ErrStatementsHidden            = NewCode("statements_hidden", CodeForbidden)
+	ErrContestNotStarted           = NewCode("contest_not_started", CodeForbidden)
+	ErrContestEnded                = NewCode("contest_ended", CodeConflict)
+	ErrClarificationsDisabled      = NewCode("clarifications_disabled", CodeForbidden)
+	ErrScoreboardFrozen            = NewCode("scoreboard_frozen", CodeForbidden)
+	// Params: limit.
+	ErrLimitReached       = NewCode("limit_reached", CodeConflict)
+	ErrUnknownLanguage    = NewCode("unknown_language", CodeInvalid)
+	ErrLanguageNotAllowed = NewCode("language_not_allowed", CodeInvalid)
+	ErrPackageNotReady    = NewCode("package_not_ready", CodeInvalid)
+	ErrStaleRevision      = NewCode("stale_revision", CodeConflict)
+	ErrOperationRunning   = NewCode("operation_running", CodeConflict)
+	ErrBuildFinished      = NewCode("build_finished", CodeConflict)
 
 	// Field validation; params carry the violated bounds (min, max).
 	ErrRequired       = NewCode("required", CodeInvalid)
@@ -84,6 +108,9 @@ var (
 	ErrReserved       = NewCode("reserved", CodeInvalid)
 	ErrRange          = NewCode("range", CodeInvalid)
 	ErrEndBeforeStart = NewCode("end_before_start", CodeInvalid)
+	ErrDuplicate      = NewCode("duplicate", CodeInvalid)
+	// Params: max, in bytes.
+	ErrTooLarge = NewCode("too_large", CodeInvalid)
 )
 
 // NewCode registers a specific code whose status is that of kind.

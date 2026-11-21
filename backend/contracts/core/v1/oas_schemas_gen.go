@@ -3057,38 +3057,62 @@ func (s DownloadProblemPackageOK) Read(p []byte) (n int, err error) {
 type ErrorCode string
 
 const (
-	ErrorCodeInvalid                ErrorCode = "invalid"
-	ErrorCodeUnauthenticated        ErrorCode = "unauthenticated"
-	ErrorCodeForbidden              ErrorCode = "forbidden"
-	ErrorCodeNotFound               ErrorCode = "not_found"
-	ErrorCodeConflict               ErrorCode = "conflict"
-	ErrorCodePayloadTooLarge        ErrorCode = "payload_too_large"
-	ErrorCodeRateLimited            ErrorCode = "rate_limited"
-	ErrorCodeInternal               ErrorCode = "internal"
-	ErrorCodeNotImplemented         ErrorCode = "not_implemented"
-	ErrorCodeConcurrentUpdate       ErrorCode = "concurrent_update"
-	ErrorCodeInUse                  ErrorCode = "in_use"
-	ErrorCodeAlreadyMember          ErrorCode = "already_member"
-	ErrorCodeRequestPending         ErrorCode = "request_pending"
-	ErrorCodeUsernameTaken          ErrorCode = "username_taken"
-	ErrorCodeEmailTaken             ErrorCode = "email_taken"
-	ErrorCodeOrganizationLoginTaken ErrorCode = "organization_login_taken"
-	ErrorCodeContestLoginTaken      ErrorCode = "contest_login_taken"
-	ErrorCodeTeamSlugTaken          ErrorCode = "team_slug_taken"
-	ErrorCodeProblemShortNameTaken  ErrorCode = "problem_short_name_taken"
-	ErrorCodeProblemInContest       ErrorCode = "problem_in_contest"
-	ErrorCodeEmailNotVerified       ErrorCode = "email_not_verified"
-	ErrorCodeWrongPassword          ErrorCode = "wrong_password"
-	ErrorCodeInvitationPending      ErrorCode = "invitation_pending"
-	ErrorCodeRequestResolved        ErrorCode = "request_resolved"
-	ErrorCodeInviteOnly             ErrorCode = "invite_only"
-	ErrorCodeNotOrgMember           ErrorCode = "not_org_member"
-	ErrorCodeRequired               ErrorCode = "required"
-	ErrorCodeLength                 ErrorCode = "length"
-	ErrorCodeFormat                 ErrorCode = "format"
-	ErrorCodeReserved               ErrorCode = "reserved"
-	ErrorCodeRange                  ErrorCode = "range"
-	ErrorCodeEndBeforeStart         ErrorCode = "end_before_start"
+	ErrorCodeInvalid                     ErrorCode = "invalid"
+	ErrorCodeUnauthenticated             ErrorCode = "unauthenticated"
+	ErrorCodeForbidden                   ErrorCode = "forbidden"
+	ErrorCodeNotFound                    ErrorCode = "not_found"
+	ErrorCodeConflict                    ErrorCode = "conflict"
+	ErrorCodePayloadTooLarge             ErrorCode = "payload_too_large"
+	ErrorCodeRateLimited                 ErrorCode = "rate_limited"
+	ErrorCodeInternal                    ErrorCode = "internal"
+	ErrorCodeNotImplemented              ErrorCode = "not_implemented"
+	ErrorCodeConcurrentUpdate            ErrorCode = "concurrent_update"
+	ErrorCodeInUse                       ErrorCode = "in_use"
+	ErrorCodeAlreadyMember               ErrorCode = "already_member"
+	ErrorCodeRequestPending              ErrorCode = "request_pending"
+	ErrorCodeUsernameTaken               ErrorCode = "username_taken"
+	ErrorCodeEmailTaken                  ErrorCode = "email_taken"
+	ErrorCodeOrganizationLoginTaken      ErrorCode = "organization_login_taken"
+	ErrorCodeContestLoginTaken           ErrorCode = "contest_login_taken"
+	ErrorCodeTeamSlugTaken               ErrorCode = "team_slug_taken"
+	ErrorCodeProblemShortNameTaken       ErrorCode = "problem_short_name_taken"
+	ErrorCodeProblemInContest            ErrorCode = "problem_in_contest"
+	ErrorCodeEmailNotVerified            ErrorCode = "email_not_verified"
+	ErrorCodeWrongPassword               ErrorCode = "wrong_password"
+	ErrorCodeInvitationPending           ErrorCode = "invitation_pending"
+	ErrorCodeRequestResolved             ErrorCode = "request_resolved"
+	ErrorCodeInviteOnly                  ErrorCode = "invite_only"
+	ErrorCodeNotOrgMember                ErrorCode = "not_org_member"
+	ErrorCodeLinkInvalid                 ErrorCode = "link_invalid"
+	ErrorCodeAccountExpired              ErrorCode = "account_expired"
+	ErrorCodeTemporaryAccountUnavailable ErrorCode = "temporary_account_unavailable"
+	ErrorCodeOwnAccount                  ErrorCode = "own_account"
+	ErrorCodeNoEmail                     ErrorCode = "no_email"
+	ErrorCodeUnsupportedImage            ErrorCode = "unsupported_image"
+	ErrorCodeOwnerOnly                   ErrorCode = "owner_only"
+	ErrorCodePrimaryOwnerRequired        ErrorCode = "primary_owner_required"
+	ErrorCodeOwnerRoleFixed              ErrorCode = "owner_role_fixed"
+	ErrorCodeOwnRole                     ErrorCode = "own_role"
+	ErrorCodeStatementsHidden            ErrorCode = "statements_hidden"
+	ErrorCodeContestNotStarted           ErrorCode = "contest_not_started"
+	ErrorCodeContestEnded                ErrorCode = "contest_ended"
+	ErrorCodeClarificationsDisabled      ErrorCode = "clarifications_disabled"
+	ErrorCodeScoreboardFrozen            ErrorCode = "scoreboard_frozen"
+	ErrorCodeLimitReached                ErrorCode = "limit_reached"
+	ErrorCodeUnknownLanguage             ErrorCode = "unknown_language"
+	ErrorCodeLanguageNotAllowed          ErrorCode = "language_not_allowed"
+	ErrorCodePackageNotReady             ErrorCode = "package_not_ready"
+	ErrorCodeStaleRevision               ErrorCode = "stale_revision"
+	ErrorCodeOperationRunning            ErrorCode = "operation_running"
+	ErrorCodeBuildFinished               ErrorCode = "build_finished"
+	ErrorCodeRequired                    ErrorCode = "required"
+	ErrorCodeLength                      ErrorCode = "length"
+	ErrorCodeFormat                      ErrorCode = "format"
+	ErrorCodeReserved                    ErrorCode = "reserved"
+	ErrorCodeRange                       ErrorCode = "range"
+	ErrorCodeEndBeforeStart              ErrorCode = "end_before_start"
+	ErrorCodeDuplicate                   ErrorCode = "duplicate"
+	ErrorCodeTooLarge                    ErrorCode = "too_large"
 )
 
 // AllValues returns all ErrorCode values.
@@ -3120,12 +3144,36 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeRequestResolved,
 		ErrorCodeInviteOnly,
 		ErrorCodeNotOrgMember,
+		ErrorCodeLinkInvalid,
+		ErrorCodeAccountExpired,
+		ErrorCodeTemporaryAccountUnavailable,
+		ErrorCodeOwnAccount,
+		ErrorCodeNoEmail,
+		ErrorCodeUnsupportedImage,
+		ErrorCodeOwnerOnly,
+		ErrorCodePrimaryOwnerRequired,
+		ErrorCodeOwnerRoleFixed,
+		ErrorCodeOwnRole,
+		ErrorCodeStatementsHidden,
+		ErrorCodeContestNotStarted,
+		ErrorCodeContestEnded,
+		ErrorCodeClarificationsDisabled,
+		ErrorCodeScoreboardFrozen,
+		ErrorCodeLimitReached,
+		ErrorCodeUnknownLanguage,
+		ErrorCodeLanguageNotAllowed,
+		ErrorCodePackageNotReady,
+		ErrorCodeStaleRevision,
+		ErrorCodeOperationRunning,
+		ErrorCodeBuildFinished,
 		ErrorCodeRequired,
 		ErrorCodeLength,
 		ErrorCodeFormat,
 		ErrorCodeReserved,
 		ErrorCodeRange,
 		ErrorCodeEndBeforeStart,
+		ErrorCodeDuplicate,
+		ErrorCodeTooLarge,
 	}
 }
 
@@ -3184,6 +3232,50 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorCodeNotOrgMember:
 		return []byte(s), nil
+	case ErrorCodeLinkInvalid:
+		return []byte(s), nil
+	case ErrorCodeAccountExpired:
+		return []byte(s), nil
+	case ErrorCodeTemporaryAccountUnavailable:
+		return []byte(s), nil
+	case ErrorCodeOwnAccount:
+		return []byte(s), nil
+	case ErrorCodeNoEmail:
+		return []byte(s), nil
+	case ErrorCodeUnsupportedImage:
+		return []byte(s), nil
+	case ErrorCodeOwnerOnly:
+		return []byte(s), nil
+	case ErrorCodePrimaryOwnerRequired:
+		return []byte(s), nil
+	case ErrorCodeOwnerRoleFixed:
+		return []byte(s), nil
+	case ErrorCodeOwnRole:
+		return []byte(s), nil
+	case ErrorCodeStatementsHidden:
+		return []byte(s), nil
+	case ErrorCodeContestNotStarted:
+		return []byte(s), nil
+	case ErrorCodeContestEnded:
+		return []byte(s), nil
+	case ErrorCodeClarificationsDisabled:
+		return []byte(s), nil
+	case ErrorCodeScoreboardFrozen:
+		return []byte(s), nil
+	case ErrorCodeLimitReached:
+		return []byte(s), nil
+	case ErrorCodeUnknownLanguage:
+		return []byte(s), nil
+	case ErrorCodeLanguageNotAllowed:
+		return []byte(s), nil
+	case ErrorCodePackageNotReady:
+		return []byte(s), nil
+	case ErrorCodeStaleRevision:
+		return []byte(s), nil
+	case ErrorCodeOperationRunning:
+		return []byte(s), nil
+	case ErrorCodeBuildFinished:
+		return []byte(s), nil
 	case ErrorCodeRequired:
 		return []byte(s), nil
 	case ErrorCodeLength:
@@ -3195,6 +3287,10 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeRange:
 		return []byte(s), nil
 	case ErrorCodeEndBeforeStart:
+		return []byte(s), nil
+	case ErrorCodeDuplicate:
+		return []byte(s), nil
+	case ErrorCodeTooLarge:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3282,6 +3378,72 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 	case ErrorCodeNotOrgMember:
 		*s = ErrorCodeNotOrgMember
 		return nil
+	case ErrorCodeLinkInvalid:
+		*s = ErrorCodeLinkInvalid
+		return nil
+	case ErrorCodeAccountExpired:
+		*s = ErrorCodeAccountExpired
+		return nil
+	case ErrorCodeTemporaryAccountUnavailable:
+		*s = ErrorCodeTemporaryAccountUnavailable
+		return nil
+	case ErrorCodeOwnAccount:
+		*s = ErrorCodeOwnAccount
+		return nil
+	case ErrorCodeNoEmail:
+		*s = ErrorCodeNoEmail
+		return nil
+	case ErrorCodeUnsupportedImage:
+		*s = ErrorCodeUnsupportedImage
+		return nil
+	case ErrorCodeOwnerOnly:
+		*s = ErrorCodeOwnerOnly
+		return nil
+	case ErrorCodePrimaryOwnerRequired:
+		*s = ErrorCodePrimaryOwnerRequired
+		return nil
+	case ErrorCodeOwnerRoleFixed:
+		*s = ErrorCodeOwnerRoleFixed
+		return nil
+	case ErrorCodeOwnRole:
+		*s = ErrorCodeOwnRole
+		return nil
+	case ErrorCodeStatementsHidden:
+		*s = ErrorCodeStatementsHidden
+		return nil
+	case ErrorCodeContestNotStarted:
+		*s = ErrorCodeContestNotStarted
+		return nil
+	case ErrorCodeContestEnded:
+		*s = ErrorCodeContestEnded
+		return nil
+	case ErrorCodeClarificationsDisabled:
+		*s = ErrorCodeClarificationsDisabled
+		return nil
+	case ErrorCodeScoreboardFrozen:
+		*s = ErrorCodeScoreboardFrozen
+		return nil
+	case ErrorCodeLimitReached:
+		*s = ErrorCodeLimitReached
+		return nil
+	case ErrorCodeUnknownLanguage:
+		*s = ErrorCodeUnknownLanguage
+		return nil
+	case ErrorCodeLanguageNotAllowed:
+		*s = ErrorCodeLanguageNotAllowed
+		return nil
+	case ErrorCodePackageNotReady:
+		*s = ErrorCodePackageNotReady
+		return nil
+	case ErrorCodeStaleRevision:
+		*s = ErrorCodeStaleRevision
+		return nil
+	case ErrorCodeOperationRunning:
+		*s = ErrorCodeOperationRunning
+		return nil
+	case ErrorCodeBuildFinished:
+		*s = ErrorCodeBuildFinished
+		return nil
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired
 		return nil
@@ -3299,6 +3461,12 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeEndBeforeStart:
 		*s = ErrorCodeEndBeforeStart
+		return nil
+	case ErrorCodeDuplicate:
+		*s = ErrorCodeDuplicate
+		return nil
+	case ErrorCodeTooLarge:
+		*s = ErrorCodeTooLarge
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

@@ -196,7 +196,7 @@ func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login st
 		_, err := uc.repo.GetMember(ctx, orgID, caller.Id)
 		if err != nil {
 			if errors.Is(err, pkg.ErrNotFound) {
-				return nil, pkg.Wrap(pkg.ErrForbidden, nil, "must be a member of organization")
+				return nil, pkg.Wrap(pkg.ErrNotOrgMember, nil, "must be a member of organization")
 			}
 			return nil, fmt.Errorf("get member: %w", err)
 		}
@@ -295,7 +295,7 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 			continue
 		}
 		if err := identitymodel.UsernameValidate(candidate); err != nil {
-			return nil, pkg.Wrap(pkg.ErrInvalid, err, fmt.Sprintf("generated username %q is invalid", candidate))
+			return nil, pkg.AtField("/prefix", err)
 		}
 
 		pwd, err := pkg.GeneratePassword(10)
@@ -483,7 +483,7 @@ func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin s
 			return err
 		}
 		if inv.OrganizationID != org.ID {
-			return pkg.ErrInvalid
+			return pkg.ErrNotFound
 		}
 		return tx.UpdateInvitationStatus(ctx, invitationID, organizationsmodel.RequestStatusCanceled)
 	})
@@ -503,7 +503,7 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 			return pkg.ErrForbidden
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
-			return pkg.ErrConflict
+			return pkg.ErrRequestResolved
 		}
 		if err := tx.UpdateInvitationStatus(ctx, inv.ID, organizationsmodel.RequestStatusAccepted); err != nil {
 			return err
@@ -526,7 +526,7 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 			return pkg.ErrForbidden
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
-			return pkg.ErrConflict
+			return pkg.ErrRequestResolved
 		}
 		return tx.UpdateInvitationStatus(ctx, inv.ID, organizationsmodel.RequestStatusDeclined)
 	})
@@ -703,7 +703,7 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 			return err
 		}
 		if req.OrganizationID != org.ID {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
 			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
@@ -765,7 +765,7 @@ func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin 
 			return err
 		}
 		if req.OrganizationID != org.ID {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
 			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")

@@ -277,11 +277,11 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 		}
 
 		if currentMember.Role == contestsmodel.ContestRoleOwner {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "cannot change role from owner")
+			return pkg.Wrap(pkg.ErrOwnerRoleFixed, nil, "cannot change role from owner")
 		}
 
 		if role == contestsmodel.ContestRoleOwner {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "cannot change role to owner")
+			return pkg.Wrap(pkg.ErrOwnerRoleFixed, nil, "cannot change role to owner")
 		}
 
 		err = tx.UpdateContestMember(ctx, contestId, userId, role)
@@ -696,7 +696,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return err
 		}
 		if req.ContestID != contest.ID {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
 			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
@@ -769,7 +769,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 			return err
 		}
 		if req.ContestID != contest.ID {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
 			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")

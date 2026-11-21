@@ -240,7 +240,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		languages := []string{}
 		for _, id := range req.Languages {
 			if _, ok := h.languages.Langs[id]; !ok {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "unknown language configuration "+id)
+				return pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration "+id, map[string]any{"id": id})
 			}
 			if !slices.Contains(languages, id) {
 				languages = append(languages, id)
@@ -591,7 +591,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 	user := accessmodel.UserFromContext(ctx)
 
 	if params.UserID == user.Id {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "cannot update own role")
+		return pkg.Wrap(pkg.ErrOwnRole, nil, "cannot update own role")
 	}
 
 	roleStr := string(params.Role)

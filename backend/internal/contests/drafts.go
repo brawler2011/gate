@@ -44,8 +44,11 @@ func NewDraftsUseCase(transactions DraftTransactions, reads DraftReads, permissi
 }
 
 func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
-	if len(creation.Code) == 0 || len(creation.Code) > maxDraftCodeSize {
-		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid draft code size")
+	if len(creation.Code) == 0 {
+		return uuid.Nil, pkg.Wrap(pkg.ErrRequired, nil, "draft code is empty")
+	}
+	if len(creation.Code) > maxDraftCodeSize {
+		return uuid.Nil, pkg.Invalid(pkg.ErrTooLarge, "draft code is too large", map[string]any{"max": maxDraftCodeSize})
 	}
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -73,7 +76,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 				return err
 			}
 			if !manager {
-				return pkg.Wrap(pkg.ErrInvalid, nil, "contest has ended; new drafts cannot be created")
+				return pkg.Wrap(pkg.ErrContestEnded, nil, "contest has ended; new drafts cannot be created")
 			}
 		}
 		count, err := tx.GetDraftsCount(ctx, creation.ContestID, user.Id)
@@ -81,7 +84,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 			return err
 		}
 		if count >= maxDraftsPerUser {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "maximum number of drafts reached (limit: 50)")
+			return pkg.Invalid(pkg.ErrLimitReached, "maximum number of drafts reached", map[string]any{"limit": maxDraftsPerUser})
 		}
 		id, err = tx.CreateDraft(ctx, user.Id, creation)
 		return err
@@ -110,7 +113,7 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 			return err
 		}
 		if draft.ContestID != contestID {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "draft does not belong to contest")
+			return pkg.Wrap(pkg.ErrNotFound, nil, "draft does not belong to contest")
 		}
 		if draft.UserID != user.Id {
 			manager, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)

@@ -188,7 +188,7 @@ func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID 
 		return dbError("claim temporary user", err)
 	}
 	if affected != 1 {
-		return pkg.Wrap(pkg.ErrConflict, nil, "temporary account is expired or already claimed")
+		return pkg.Wrap(pkg.ErrTemporaryAccountUnavailable, nil, "temporary account is expired or already claimed")
 	}
 	return nil
 }

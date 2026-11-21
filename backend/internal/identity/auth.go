@@ -250,7 +250,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
 	}
 	if user.IsExpired() {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrAccountExpired, nil, "account has expired")
 	}
 	if !user.IsEmailVerified {
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrEmailNotVerified, nil, "email not verified")
@@ -342,7 +342,7 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 		if touch {
 			_ = uc.authRepo.DeleteSession(ctx, sessionID)
 		}
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
+		return accessmodel.User{}, pkg.Wrap(pkg.ErrAccountExpired, nil, "account has expired")
 	}
 
 	return user, nil
@@ -369,14 +369,14 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailVerification)
 	if err != nil {
-		return accessmodel.User{}, uuid.Nil, pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired verification link")
+		return accessmodel.User{}, uuid.Nil, pkg.OnNotFound(err, pkg.ErrLinkInvalid, "invalid or expired verification link")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return accessmodel.User{}, uuid.Nil, err
 		}
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, nil, "verification link has expired")
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrLinkInvalid, nil, "verification link has expired")
 	}
 
 	err = store.SetUserEmailVerified(ctx, tok.UserID, true)
@@ -488,14 +488,14 @@ func (uc *AuthUseCase) resetPasswordWithin(ctx context.Context, store IdentityTx
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypePasswordReset)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired reset token")
+		return pkg.OnNotFound(err, pkg.ErrLinkInvalid, "invalid or expired reset token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return err
 		}
-		return pkg.Wrap(pkg.ErrInvalid, nil, "reset token has expired")
+		return pkg.Wrap(pkg.ErrLinkInvalid, nil, "reset token has expired")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -543,7 +543,7 @@ func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 			return err
 		}
 		if current.PasswordHash != user.PasswordHash {
-			return pkg.Wrap(pkg.ErrConflict, nil, "password changed concurrently")
+			return pkg.Wrap(pkg.ErrConcurrentUpdate, nil, "password changed concurrently")
 		}
 		if err := store.UpdateUserPassword(ctx, userID, string(hashed)); err != nil {
 			return err
@@ -605,7 +605,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 			return err
 		}
 		if current.PasswordHash != user.PasswordHash {
-			return pkg.Wrap(pkg.ErrConflict, nil, "password changed concurrently")
+			return pkg.Wrap(pkg.ErrConcurrentUpdate, nil, "password changed concurrently")
 		}
 		user = current
 		return replaceAuthTokenWithin(ctx, store, identitymodel.CreateAuthTokenParams{
@@ -646,14 +646,14 @@ func (uc *AuthUseCase) confirmEmailChangeWithin(ctx context.Context, store Ident
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailChange)
 	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired email change token")
+		return pkg.OnNotFound(err, pkg.ErrLinkInvalid, "invalid or expired email change token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return err
 		}
-		return pkg.Wrap(pkg.ErrInvalid, nil, "email change token has expired")
+		return pkg.Wrap(pkg.ErrLinkInvalid, nil, "email change token has expired")
 	}
 
 	var payload emailChangePayload

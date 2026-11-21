@@ -37,7 +37,7 @@ func RequireGrantOrgRole(in m.PolicyInput, c m.OrganizationContext, change m.Rol
 		return err
 	}
 	if (old == 3 || next == 3) && !containsOwner(change.BeforeOwners, in.Actor.Id) {
-		return pkg.ErrConflict
+		return pkg.ErrOwnerOnly
 	}
 	return checkOwnerChange(in, change.Target, old == 3, next == 3, change.BeforeOwners, change.AfterOwners)
 }
@@ -197,7 +197,7 @@ func checkOwnerChange(in m.PolicyInput, target m.User, wasOwner, becomesOwner bo
 	}
 	// Removing a primary owner requires assigning a replacement.
 	if before.PrimaryID != uuid.Nil && after.PrimaryID == uuid.Nil {
-		return pkg.ErrConflict
+		return pkg.ErrPrimaryOwnerRequired
 	}
 	return nil
 }
@@ -241,7 +241,7 @@ func PlanOrganizationOwnerTransfer(in m.PolicyInput, c m.OrganizationContext, be
 		return m.OwnerState{}, err
 	}
 	if !containsOwner(before, in.Actor.Id) {
-		return m.OwnerState{}, pkg.ErrConflict
+		return m.OwnerState{}, pkg.ErrOwnerOnly
 	}
 	return planOwnerTransfer(in, before, target, removeID)
 }

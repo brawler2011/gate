@@ -19,12 +19,15 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 	}
 
 	solutionSize := int64(len(req.Submission))
-	if solutionSize == 0 || solutionSize > maxSolutionSize {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid solution size")
+	if solutionSize == 0 {
+		return nil, pkg.AtField("/submission", pkg.Invalid(pkg.ErrRequired, "solution is empty", nil))
+	}
+	if solutionSize > maxSolutionSize {
+		return nil, pkg.AtField("/submission", pkg.Invalid(pkg.ErrTooLarge, "solution is too large", map[string]any{"max": maxSolutionSize}))
 	}
 
 	if _, ok := h.languages.Langs[params.Language]; !ok {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "unknown language configuration")
+		return nil, pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration", map[string]any{"id": params.Language})
 	}
 
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
@@ -32,7 +35,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, err
 	}
 	if !contest.TypedSettings().AllowsLanguage(params.Language) {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "language configuration is not allowed in this contest")
+		return nil, pkg.Invalid(pkg.ErrLanguageNotAllowed, "language configuration is not allowed in this contest", map[string]any{"id": params.Language})
 	}
 
 	solutionCreation := &submissionsmodel.SubmissionCreation{

@@ -59,8 +59,22 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	if req == nil || req.Title == "" || req.Description == "" || req.Text == "" || req.PreviewImage.File == nil {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "title, description, text, and preview_image are required")
+	if req == nil {
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
+	}
+	required := func(pointer string, missing bool) error {
+		if missing {
+			return pkg.AtField(pointer, pkg.Invalid(pkg.ErrRequired, pointer[1:]+" is required", nil))
+		}
+		return nil
+	}
+	if err := pkg.Fields(
+		required("/title", req.Title == ""),
+		required("/description", req.Description == ""),
+		required("/text", req.Text == ""),
+		required("/preview_image", req.PreviewImage.File == nil),
+	); err != nil {
+		return nil, err
 	}
 
 	file := req.PreviewImage

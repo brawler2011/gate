@@ -86,8 +86,11 @@ func (uc *DraftUseCase) SaveDraft(ctx context.Context, id uuid.UUID, expected in
 	if err != nil {
 		return model.MutationResult{}, err
 	}
-	if d.ProblemID != id || expected != d.Revision {
+	if d.ProblemID != id {
 		return model.MutationResult{}, pkg.ErrInvalid
+	}
+	if expected != d.Revision {
+		return model.MutationResult{}, pkg.ErrStaleRevision
 	}
 	d.TrimStatements()
 	k, err := uc.key(p.OrganizationID, id, "save", key, d)

@@ -37,7 +37,7 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return model.MutationResult{}, dbError("enqueue build", err)
 	}
 	if revision != expected {
-		return model.MutationResult{}, pkg.ErrConflict
+		return model.MutationResult{}, pkg.ErrStaleRevision
 	}
 	org, err := q.ProblemOrganizationID(ctx, id)
 	if err != nil {
@@ -289,7 +289,7 @@ func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey
 		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	if b.State != "queued" && b.State != "running" {
-		return model.MutationResult{}, pkg.ErrConflict
+		return model.MutationResult{}, pkg.ErrBuildFinished
 	}
 	if err := q.CancelBuildRow(ctx, id); err != nil {
 		return model.MutationResult{}, dbError("cancel build", err)

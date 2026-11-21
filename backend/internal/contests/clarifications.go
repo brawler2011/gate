@@ -39,7 +39,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 
 		settings := contestsmodel.MapToContestSettings(contest.Settings)
 		if settings.AllowClarifications != nil && !*settings.AllowClarifications {
-			return pkg.Wrap(pkg.ErrForbidden, nil, "clarifications are disabled for this contest")
+			return pkg.Wrap(pkg.ErrClarificationsDisabled, nil, "clarifications are disabled for this contest")
 		}
 
 		clarification, err = tx.CreateClarification(ctx, user.Id, input)

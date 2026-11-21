@@ -104,7 +104,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 		return uuid.Nil, pkg.ErrUnauthenticated
 	}
 	if input == nil || strings.TrimSpace(input.Title) == "" {
-		return uuid.Nil, pkg.ErrInvalid
+		return uuid.Nil, pkg.AtField("/title", pkg.Invalid(pkg.ErrRequired, "title is required", nil))
 	}
 	org := input.OrganizationID
 	if org == uuid.Nil {
@@ -113,7 +113,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 			return uuid.Nil, err
 		}
 		if len(organizations) == 0 {
-			return uuid.Nil, pkg.ErrInvalid
+			return uuid.Nil, pkg.Wrap(pkg.ErrNotOrgMember, nil, "user has no organization")
 		}
 		org = organizations[0].ID
 	}
@@ -124,7 +124,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	if strings.HasPrefix(input.TemplateID, "builtin:") {
 		data, err := templates.GetBuiltinTemplateZip(input.TemplateID)
 		if err != nil {
-			return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "unknown builtin template")
+			return uuid.Nil, pkg.Wrap(pkg.ErrNotFound, err, "unknown builtin template")
 		}
 		plan, err = uc.parseImport(ctx, bytes.NewReader(data), id, 1)
 		if err != nil {
@@ -134,7 +134,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	} else {
 		tid, err := uuid.Parse(input.TemplateID)
 		if err != nil {
-			return uuid.Nil, pkg.ErrInvalid
+			return uuid.Nil, pkg.Wrap(pkg.ErrNotFound, err, "unknown template")
 		}
 		template, err := uc.authorize(ctx, tid, false)
 		if err != nil {
