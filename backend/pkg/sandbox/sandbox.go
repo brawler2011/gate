@@ -231,13 +231,14 @@ func statusToString(status string) Status {
 	}
 }
 
-// CompilePDF limits the PDF by limits.Output and the reported output and log by limits.Diagnostic.
+// CompilePDF limits the PDF by limits.Output and the reported log tail by limits.Diagnostic.
 func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileRunLimits) ([]byte, error) {
+	latex := "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex >/dev/null"
 	results, err := s.client.run(ctx, request{Cmd: []cmd{{
-		Args:          []string{"/bin/sh", "-c", "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex && pdflatex -interaction=nonstopmode -halt-on-error booklet.tex"},
+		// The error is at the end of the log, so only its tail leaves the sandbox.
+		Args:          []string{"/bin/sh", "-c", fmt.Sprintf("{ %s && %s; } || { tail -c %d booklet.log; exit 1; }", latex, latex, int64(limits.Diagnostic))},
 		Files:         []*cmdFile{memoryFile(""), collector("stdout", int64(limits.Diagnostic), false), collector("stderr", int64(limits.Diagnostic), false)},
 		CopyIn:        map[string]cmdFile{"booklet.tex": *memoryFile(texSource), "olymp.sty": *memoryFile(string(booklet.OlympSty))},
-		CopyOut:       []string{"booklet.log"},
 		CopyOutCached: []string{"booklet.pdf"},
 		CPULimit:      safeUint64(limits.CPU.Nanoseconds()),
 		ClockLimit:    safeUint64(limits.Wall.Nanoseconds()),
@@ -253,12 +254,8 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileR
 	pdfID := res.FileIDs["booklet.pdf"]
 	defer s.client.release(pdfID)
 	if res.Status != resultAccepted {
-		logSnippet := res.Files["booklet.log"]
-		if len(logSnippet) > int(limits.Diagnostic) {
-			logSnippet = logSnippet[len(logSnippet)-int(limits.Diagnostic):]
-		}
-		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nOutput:\n%s\nLog:\n%s",
-			res.Status, res.ExitStatus, res.Files["stdout"], logSnippet)
+		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nLog:\n%s\n%s",
+			res.Status, res.ExitStatus, res.Files["stdout"], res.Files["stderr"])
 	}
 	if pdfID == "" {
 		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")

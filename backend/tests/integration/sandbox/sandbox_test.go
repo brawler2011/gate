@@ -581,6 +581,13 @@ Test legend. Условие задачи на русском языке.
 			t.Fatal("booklet uses bitmap Type 3 fonts")
 		}
 	})
+
+	t.Run("broken booklet reports the log tail", func(t *testing.T) {
+		_, err := sb.CompilePDF(ctx, "\\documentclass{article}\\begin{document}\\undefinedmacro\\end{document}", limits.Booklet)
+		if err == nil || !strings.Contains(err.Error(), "Undefined control sequence") || len(err.Error()) > 3*int(limits.Booklet.Diagnostic) {
+			t.Fatalf("got %v", err)
+		}
+	})
 }
 
 type program struct {
