@@ -3,6 +3,8 @@ package contests
 import (
 	"context"
 	"fmt"
+
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -12,13 +14,13 @@ import (
 )
 
 type AnnouncementsUseCase struct {
-	transactor  ContestEventsTransactions
-	reads       AnnouncementReads
-	permissions Permissions
+	transactor ContestEventsTransactions
+	reads      AnnouncementReads
+	access     access.Loader
 }
 
-func NewAnnouncementsUseCase(transactor ContestEventsTransactions, reads AnnouncementReads, permissions Permissions) *AnnouncementsUseCase {
-	return &AnnouncementsUseCase{transactor: transactor, reads: reads, permissions: permissions}
+func NewAnnouncementsUseCase(transactor ContestEventsTransactions, reads AnnouncementReads, loader access.Loader) *AnnouncementsUseCase {
+	return &AnnouncementsUseCase{transactor: transactor, reads: reads, access: loader}
 }
 
 func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
@@ -34,7 +36,7 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 		return nil, err
 	}
 	var announcement *contestsmodel.ContestAnnouncement
-	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
+	err = withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ContestManage, func(tx ContestEventsTxStore, _ access.ContestAccess) error {
 		var err error
 		announcement, err = tx.CreateAnnouncement(ctx, user.Id, input)
 		if err != nil {
@@ -74,7 +76,7 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 }
 
 func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error {
-	return withinContestEvents(ctx, uc.transactor, contestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
+	return withinContestEvents(ctx, uc.transactor, contestID, accessmodel.ContestManage, func(tx ContestEventsTxStore, _ access.ContestAccess) error {
 		if err := tx.DeleteAnnouncement(ctx, id, contestID); err != nil {
 			return err
 		}

@@ -2,9 +2,12 @@ package contests
 
 import (
 	"context"
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -89,10 +92,12 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	repo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
 
-	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: repo, OutboxRepo: outboxRepo}}, nil, nil)
-
 	contestID := uuid.New()
 	authorID := uuid.New()
+	loader := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contestsmodel.Contest{ID: contestID}, Now: time.Now()}}}
+	loader.Grant(contestID, authorID, string(accessmodel.ContestModerator))
+	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: repo, OutboxRepo: outboxRepo}}, nil, nil)
+
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser})
 
 	_, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{

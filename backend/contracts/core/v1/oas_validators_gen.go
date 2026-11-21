@@ -578,6 +578,34 @@ func (s CreateOrganizationJoinPolicy) Validate() error {
 	}
 }
 
+func (s CreateProblemMemberRole) Validate() error {
+	switch s {
+	case "owner":
+		return nil
+	case "admin":
+		return nil
+	case "editor":
+		return nil
+	case "viewer":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreateProblemTeamRole) Validate() error {
+	switch s {
+	case "admin":
+		return nil
+	case "editor":
+		return nil
+	case "viewer":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *DashboardContestModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -712,13 +740,7 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "unsupported_image":
 		return nil
-	case "owner_only":
-		return nil
-	case "primary_owner_required":
-		return nil
-	case "owner_role_fixed":
-		return nil
-	case "own_role":
+	case "owner_required":
 		return nil
 	case "statements_hidden":
 		return nil
@@ -3265,7 +3287,9 @@ func (s ProblemMemberModelRole) Validate() error {
 	switch s {
 	case "owner":
 		return nil
-	case "moderator":
+	case "admin":
+		return nil
+	case "editor":
 		return nil
 	case "viewer":
 		return nil
@@ -3312,7 +3336,9 @@ func (s ProblemRoleQuery) Validate() error {
 	switch s {
 	case "owner":
 		return nil
-	case "moderator":
+	case "admin":
+		return nil
+	case "editor":
 		return nil
 	case "viewer":
 		return nil
@@ -3400,13 +3426,13 @@ func (s *ProblemTeamModel) Validate() error {
 		})
 	}
 	if err := func() error {
-		if err := s.Permission.Validate(); err != nil {
+		if err := s.Role.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "permission",
+			Name:  "role",
 			Error: err,
 		})
 	}
@@ -3416,13 +3442,13 @@ func (s *ProblemTeamModel) Validate() error {
 	return nil
 }
 
-func (s ProblemTeamModelPermission) Validate() error {
+func (s ProblemTeamModelRole) Validate() error {
 	switch s {
 	case "admin":
 		return nil
-	case "write":
+	case "editor":
 		return nil
-	case "read":
+	case "viewer":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -4142,6 +4168,19 @@ func (s UpdateOrganizationRequestModelJoinPolicy) Validate() error {
 	case "by_request":
 		return nil
 	case "invite_only":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateProblemTeamRole) Validate() error {
+	switch s {
+	case "admin":
+		return nil
+	case "editor":
+		return nil
+	case "viewer":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

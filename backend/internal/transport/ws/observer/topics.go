@@ -44,36 +44,26 @@ func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 	now := m.ReadTime(ctx)
 	e.configuration = topicConfigurationAt(c, now)
 	e.topics = map[string]topicProjection{}
+	// Each audience is projected for a representative actor; the policy is pure, so no grants are read.
 	for _, audience := range []string{"public", "participants", "managers", "own"} {
-		actor := m.Guest
-		fact := m.ContestContext{ID: c.ID, StartTime: c.StartTime, EndTime: c.EndTime, MonitorScope: m.ContestScope(c.Settings.MonitorScope), SubmissionsListScope: m.ContestScope(c.Settings.SubmissionsListScope), SubmissionsReviewScope: m.ContestScope(c.Settings.SubmissionsReviewScope), SubmissionDetailsScope: m.ContestScope(c.Settings.SubmissionDetailsScope), HideStatements: c.Settings.HideStatements, Visibility: m.Visibility(c.Visibility), ParticipationMode: m.ParticipationMode(c.Settings.ParticipationMode), Organization: m.OrganizationContext{ID: c.OrganizationID, JoinPolicy: m.JoinOpen}}
-		if audience != "public" {
-			actor = m.User{Id: uuid.New(), Role: m.UserRoleUser}
-			fact.DirectRole = m.ContestParticipant
-		}
-		if audience == "managers" {
-			fact.DirectRole = m.ContestModerator
-		}
-		if audience == "own" {
+		actor, role := m.Guest, m.ContestRole("")
+		switch audience {
+		case "participants":
+			actor, role = m.User{Id: uuid.New(), Role: m.UserRoleUser}, m.ContestParticipant
+		case "managers":
+			actor, role = m.User{Id: uuid.New(), Role: m.UserRoleUser}, m.ContestModerator
+		case "own":
 			if meta.UserId == nil {
 				continue
 			}
-			actor.Id = *meta.UserId
+			actor, role = m.User{Id: *meta.UserId, Role: m.UserRoleUser}, m.ContestParticipant
 		}
-		in := m.PolicyInput{Actor: actor, Now: now}
-		if err := access.ApplyContestLifecycle(in, &fact); err != nil {
-			return err
-		}
-		allowed := func(a m.ContestAction) bool { return access.RequireContest(in, fact, a) == nil }
-		fact.Submission = m.SubmissionContext{ContestID: c.ID, OwnerID: uuid.New()}
-		if audience == "own" {
-			fact.Submission.OwnerID = actor.Id
-		}
-		permissions := &m.ContestPermissions{ManageContest: allowed(m.ActionManageContest), GetOtherUserSubmission: allowed(m.ActionGetOtherUserSubmission), GetOwnSubmission: allowed(m.ActionGetOwnSubmission), GetSubmissionDetails: allowed(m.ActionGetSubmissionDetails), ListOwnSubmissions: allowed(m.ActionListOwnSubmissions)}
+		a := access.ContestAccess{Actor: actor, Facts: access.ContestFacts{Contest: c, Role: role, Now: now}}
+		allowed := a.Can
 		projection := topicProjection{}
-		if audience == "own" || allowed(m.ActionListUsersSubmissions) {
-			view := submissions.SubmissionView(&c, meta.UserId, meta.CreatedAt, actor.Id, permissions, in.Now)
-			if audience != "own" && audience != "managers" && c.IsFrozenAt(in.Now) {
+		if audience == "own" || allowed(m.ContestListSubmissions) {
+			view := submissions.SubmissionView(a, meta.UserId, meta.CreatedAt)
+			if audience != "own" && audience != "managers" && c.IsFrozenAt(now) {
 				view.Frozen = true
 				view.Source = false
 				view.Details = false
@@ -86,11 +76,11 @@ func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 				projection.submissions = append(projection.submissions, payload)
 			}
 		}
-		if audience != "own" && allowed(m.ActionGetMonitor) {
+		if audience != "own" && allowed(m.ContestViewScoreboard) {
 			if len(e.scoreboardPublic) > 0 {
 				projection.scoreboard = append(projection.scoreboard, e.scoreboardPublic)
 			}
-			if allowed(m.ActionViewLiveScoreboard) && len(e.scoreboardUnfrozen) > 0 {
+			if allowed(m.ContestManage) && len(e.scoreboardUnfrozen) > 0 {
 				projection.scoreboard = append(projection.scoreboard, e.scoreboardUnfrozen)
 			}
 		}

@@ -1838,13 +1838,14 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProblemIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
-        - name: permission
-          description: "Permission level to grant."
+        - name: role
+          description: "Role the team grants its members."
           in: query
           required: false
           schema:
             type: string
-            default: read
+            enum: [admin, editor, viewer]
+            default: viewer
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -1869,12 +1870,13 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProblemIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
-        - name: permission
-          description: "Permission level to grant."
+        - name: role
+          description: "Role the team grants its members."
           in: query
           required: true
           schema:
             type: string
+            enum: [admin, editor, viewer]
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -1911,6 +1913,7 @@ paths:
           required: false
           schema:
             type: string
+            enum: [owner, admin, editor, viewer]
             default: viewer
       responses:
         default:
@@ -3124,7 +3127,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [owner, moderator, viewer]
+        enum: [owner, admin, editor, viewer]
     ContestRoleQuery:
       name: role
       description: Role to assign to the contest member.
@@ -3997,10 +4000,7 @@ components:
         - own_account
         - no_email
         - unsupported_image
-        - owner_only
-        - primary_owner_required
-        - owner_role_fixed
-        - own_role
+        - owner_required
         - statements_hidden
         - contest_not_started
         - contest_ended
@@ -4144,7 +4144,6 @@ components:
         id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         organization_login: example
-        created_by: 123e4567-e89b-42d3-a456-426614174000
         visibility: example
         title: Test problem
         time_limit: 1000
@@ -4158,7 +4157,6 @@ components:
         - id
         - organization_id
         - organization_login
-        - created_by
         - visibility
         - title
         - time_limit
@@ -4181,9 +4179,6 @@ components:
           format: uuid
         organization_login:
           type: string
-        created_by:
-          type: string
-          format: uuid
         visibility:
           type: string
         title:
@@ -4305,7 +4300,6 @@ components:
           id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           organization_login: example
-          created_by: 123e4567-e89b-42d3-a456-426614174000
           visibility: example
           title: Test problem
           time_limit: 1000
@@ -4477,7 +4471,6 @@ components:
         enable_drafts: true
         enable_upsolving: true
         languages: []
-        created_by: 123e4567-e89b-42d3-a456-426614174000
         created_at: '2026-01-01T12:00:00Z'
         updated_at: '2026-01-01T12:00:00Z'
       type: object
@@ -4501,7 +4494,6 @@ components:
         - enable_drafts
         - enable_upsolving
         - languages
-        - created_by
         - created_at
         - updated_at
       properties:
@@ -4550,11 +4542,6 @@ components:
             - frozen
             - unfrozen
           description: Freeze mode status
-        created_by:
-          type: string
-          format: uuid
-        owner:
-          $ref: "#/components/schemas/UserModel"
         created_at:
           type: string
           format: date-time
@@ -4611,7 +4598,6 @@ components:
           enable_drafts: true
           enable_upsolving: true
           languages: []
-          created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
         pagination:
@@ -4653,7 +4639,6 @@ components:
           enable_drafts: true
           enable_upsolving: true
           languages: []
-          created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
         pagination:
@@ -4746,7 +4731,6 @@ components:
           enable_drafts: true
           enable_upsolving: true
           languages: []
-          created_by: 123e4567-e89b-42d3-a456-426614174000
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
         problems:
@@ -6498,7 +6482,7 @@ components:
         team_id: 123e4567-e89b-42d3-a456-426614174000
         team_name: example
         team_slug: example
-        permission: read
+        role: viewer
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
@@ -6507,7 +6491,7 @@ components:
         - team_id
         - team_name
         - team_slug
-        - permission
+        - role
         - created_at
       properties:
         capabilities:
@@ -6526,9 +6510,9 @@ components:
           type: string
         team_slug:
           type: string
-        permission:
+        role:
           type: string
-          enum: [admin, write, read]
+          enum: [admin, editor, viewer]
         created_at:
           type: string
           format: date-time
@@ -6541,7 +6525,7 @@ components:
           team_id: 123e4567-e89b-42d3-a456-426614174000
           team_name: example
           team_slug: example
-          permission: read
+          role: viewer
           created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
@@ -6585,7 +6569,7 @@ components:
           type: string
         role:
           type: string
-          enum: [owner, moderator, viewer]
+          enum: [owner, admin, editor, viewer]
         created_at:
           type: string
           format: date-time

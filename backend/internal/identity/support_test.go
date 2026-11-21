@@ -7,6 +7,7 @@ import (
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 
 	access "github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -24,7 +25,7 @@ func newMockContestsRepo() *mockContestsRepo {
 }
 
 type organizationTestStore struct {
-	*access.PermissionsUseCase
+	accesstest.Loader
 	OrganizationsRepo
 	identityUsersStore
 }
@@ -36,19 +37,17 @@ func setupPermissionsFixture() *permissionsFixture {
 	teamsRepo := newMockTeamsRepo()
 	problemsRepo := newMockProblemsRepo()
 
-	permUC := access.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
-
 	f := &permissionsFixture{
 		usersUC:   usersUC,
 		contests:  contestsRepo,
 		orgs:      orgsRepo,
 		teams:     teamsRepo,
 		problems:  problemsRepo,
-		permUC:    permUC,
 		orgID:     uuid.New(),
 		contestID: uuid.New(),
 		problemID: uuid.New(),
 	}
+	f.loader = accesstest.Loader{Organizations: map[uuid.UUID]access.OrganizationFacts{f.orgID: {ID: f.orgID, JoinPolicy: accessmodel.JoinByRequest}}}
 	orgsRepo.organizations["test-org"] = organizationsmodel.Organization{
 		ID:    f.orgID,
 		Login: "test-org",
@@ -89,20 +88,20 @@ func (m *mockContestsRepo) ListUserContestMemberships(ctx context.Context, userI
 		if mem.UserID == userID {
 			list = append(list, contestsmodel.UserContestMembership{
 				ContestID: mem.ContestID,
-				Role:      mem.Role,
+				Role:      mem.ContestRole,
 			})
 		}
 	}
 	return list, nil
 }
 
-func (m *mockContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error {
+func (m *mockContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error {
 	key := contestID.String() + ":" + userID.String()
 	if _, exists := m.members[key]; !exists {
 		m.members[key] = contestsmodel.ContestMember{
-			ContestID: contestID,
-			UserID:    userID,
-			Role:      role,
+			ContestID:   contestID,
+			UserID:      userID,
+			ContestRole: role,
 		}
 	}
 	return nil
@@ -137,7 +136,7 @@ type permissionsFixture struct {
 	orgs      *mockOrgsRepo
 	teams     *mockTeamsRepo
 	problems  *mockProblemsRepo
-	permUC    *access.PermissionsUseCase
+	loader    accesstest.Loader
 	orgID     uuid.UUID
 	contestID uuid.UUID
 	problemID uuid.UUID
@@ -168,7 +167,7 @@ func (m *mockOrgsRepo) GetOrganizationByLogin(ctx context.Context, login string)
 	}, nil
 }
 
-func (m *mockOrgsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error {
+func (m *mockOrgsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error {
 	m.members[orgID.String()+":"+userID.String()] = organizationsmodel.OrganizationMember{
 		OrganizationID: orgID,
 		UserID:         userID,

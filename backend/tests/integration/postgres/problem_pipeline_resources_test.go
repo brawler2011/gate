@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/judging"
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems"
@@ -32,12 +31,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )
-
-type allowAll struct{}
-
-func (allowAll) CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
-	return true, nil
-}
 
 type fixedProblem struct{ org uuid.UUID }
 
@@ -74,11 +67,11 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	}
 	uploads := &problems.DraftUseCase{
 		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10},
-		Repo:        repo, Problems: fixedProblem{org}, Permissions: allowAll{}, Store: services.store, Bucket: "objects",
+		Repo:        repo, Problems: fixedProblem{org}, Access: postgres.NewAccess(pool), Store: services.store, Bucket: "objects",
 		TempDir: work, UploadTTL: 5 * time.Minute, BuildOptions: options,
 		Languages: &sandbox.Config{Langs: services.langs},
 	}
-	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
+	return &pipelineHarness{ctx: ctx,
 		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads,
 		programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
 }

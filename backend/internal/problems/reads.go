@@ -28,13 +28,11 @@ func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *problemsmod
 	if err != nil {
 		return nil, err
 	}
-	user := accessmodel.UserFromContext(ctx)
-	copy.ViewerID = &user.Id
 	return uc.repo.ListProblems(ctx, &copy)
 }
 
 func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemMember], error) {
-	if err := access.Problem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
+	if _, err := access.Problem(ctx, uc.access, id, accessmodel.ProblemManage); err != nil {
 		return nil, err
 	}
 	request, err := request.Normalize()
@@ -49,7 +47,7 @@ func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID,
 }
 
 func (uc *ProblemsUseCase) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
-	if err := access.Problem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
+	if _, err := access.Problem(ctx, uc.access, id, accessmodel.ProblemManage); err != nil {
 		return nil, err
 	}
 	return uc.repo.GetProblemTeams(ctx, id)

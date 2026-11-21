@@ -3,6 +3,8 @@ package problems
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 
@@ -12,19 +14,19 @@ import (
 )
 
 type ProblemTxStore interface {
-	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
+	access.Loader
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-	CanProblem(context.Context, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
+	GetProblemMember(context.Context, uuid.UUID, uuid.UUID) (problemsmodel.ProblemMember, error)
+	GetProblemTeam(context.Context, uuid.UUID, uuid.UUID) (problemsmodel.ProblemTeam, error)
 	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)
 	UpdateProblem(context.Context, uuid.UUID, *problemsmodel.ProblemUpdate) error
 	DeleteProblem(context.Context, uuid.UUID) error
-	AddProblemTeam(context.Context, uuid.UUID, uuid.UUID, problemsmodel.ProblemPermission) error
-	UpdateProblemTeamPermission(context.Context, uuid.UUID, uuid.UUID, problemsmodel.ProblemPermission) error
+	AddProblemTeam(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemRole) error
+	UpdateProblemTeamRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemRole) error
 	RemoveProblemTeam(context.Context, uuid.UUID, uuid.UUID) error
-	UpdateProblemMemberRole(context.Context, uuid.UUID, uuid.UUID, problemsmodel.ProblemRole) error
+	UpdateProblemMemberRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemRole) error
 	RemoveProblemMember(context.Context, uuid.UUID, uuid.UUID) error
-	CreateProblem(ctx context.Context, params *problemsmodel.CreateProblemParams) error
 	CreateProblemMember(ctx context.Context, params *problemsmodel.CreateProblemMemberParams) error
 }
 

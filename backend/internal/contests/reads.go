@@ -60,13 +60,16 @@ func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, login, 
 	return uc.contestRepo.ListOrganizationContests(ctx, login, search, page, size)
 }
 
+// Competitors and scoreboard viewers see the roster.
 func (uc *ContestsUseCase) authorizeRoster(ctx context.Context, contest uuid.UUID) error {
-	// Participants and scoreboard viewers see the roster.
-	allowed, err := uc.permissions.CanContest(ctx, contest, accessmodel.ActionListOwnSubmissions)
-	if err != nil || allowed {
+	a, err := access.Contest(ctx, uc.access, contest, accessmodel.ContestView)
+	if err != nil {
 		return err
 	}
-	return access.Contest(ctx, uc.permissions, contest, accessmodel.ActionGetMonitor)
+	if !a.Can(accessmodel.ContestListOwnSubmissions) && !a.Can(accessmodel.ContestViewScoreboard) {
+		return pkg.ErrForbidden
+	}
+	return nil
 }
 
 func (uc *ContestsUseCase) GetContestTeams(ctx context.Context, contest uuid.UUID) ([]contestsmodel.ContestTeam, error) {

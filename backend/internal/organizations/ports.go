@@ -35,10 +35,6 @@ type OrganizationsRepo interface {
 	ListJoinRequests(ctx context.Context, orgID uuid.UUID, status *string) ([]organizationsmodel.OrganizationJoinRequest, error)
 }
 
-type PermissionsUC interface {
-	CanOrganization(ctx context.Context, orgID uuid.UUID, action accessmodel.OrgAction) (bool, error)
-}
-
 type TeamsRepo interface {
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error)
 

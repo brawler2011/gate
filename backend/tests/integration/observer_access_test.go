@@ -34,21 +34,21 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	org := s.createOrganization("ws-"+suffix, "Observer", orgOwner.Id)
 	contestID := uuid.New()
 	start := time.Now().Add(-time.Hour)
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &owner.Id, Login: "ws-" + suffix, Title: "Observer", Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start}))
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, Login: "ws-" + suffix, Title: "Observer", Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start}, owner.Id))
 	frozen := contestsmodel.FreezeStatusFrozen
 	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: contestsmodel.ContestSettingsPatch{FreezeStatus: &frozen}}))
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	tx := pgstore.NewIdentityTransactions(s.dbPool)
 	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx, nil, nil)
-	permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
-	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissions)
-	hub := observer.NewHub(100, s.contestsRepo, contests, pgstore.NewPolicyFactsRepo(s.dbPool))
+	loader := pgstore.NewAccess(s.dbPool)
+	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), loader)
+	hub := observer.NewHub(100, s.contestsRepo, contests)
 	contestHub := observer.NewContestsHub(100)
-	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth, middleware.ResponseErrorHandler(slog.Default())), auth, permissions, s.contestsRepo, pgstore.NewPolicyFactsRepo(s.dbPool)).Handler())
+	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth, middleware.ResponseErrorHandler(slog.Default())), auth, loader, s.contestsRepo).Handler())
 	defer server.Close()
 	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix, Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
-	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, contestID, team.ID, contestsmodel.ContestRoleModerator))
+	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, contestID, team.ID, accessmodel.ContestModerator))
 	var seq uint64
 	for _, source := range []string{"global admin", "contest owner", "organization admin", "organization owner", "direct moderator", "team moderator", "participant", "stranger"} {
 		s.Run(source, func() {
@@ -65,13 +65,13 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			}
 			switch source {
 			case "organization admin":
-				s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, organizationsmodel.OrgRoleAdmin))
+				s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, accessmodel.OrganizationAdmin))
 			case "direct moderator":
-				s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: user.Id, Role: contestsmodel.ContestRoleModerator}))
+				s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: user.Id, Role: accessmodel.ContestModerator}))
 			case "participant":
-				s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: user.Id, Role: contestsmodel.ContestRoleParticipant}))
+				s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: user.Id, Role: accessmodel.ContestParticipant}))
 			case "team moderator":
-				s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, user.Id, organizationsmodel.TeamRoleMember))
+				s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, user.Id, accessmodel.TeamMember))
 			}
 			sessionID := uuid.New()
 			s.Require().NoError(authRepo.CreateSession(s.ctx, sessionID, user.Id, time.Now().Add(40*time.Minute)))
@@ -105,12 +105,12 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			} else {
 				s.Require().InDelta(200, msg.Payload["state"], 0)
 			}
-			access, accessErr := permissions.GetContestPermissions(accessmodel.WithUser(s.ctx, accessmodel.User{Id: user.Id}), contestID)
+			granted, accessErr := access.Contest(accessmodel.WithUser(s.ctx, user), loader, contestID, accessmodel.ContestView)
 			s.Require().NoError(accessErr)
-			if access.GetMonitor && source != "participant" {
+			if granted.Can(accessmodel.ContestViewScoreboard) && source != "participant" {
 				s.Require().NoError(conn.ReadJSON(&msg))
 				s.Require().Equal(false, msg.Payload["unfrozen"])
-				if access.ManageContest {
+				if granted.Can(accessmodel.ContestManage) {
 					s.Require().NoError(conn.ReadJSON(&msg))
 					s.Require().Equal(true, msg.Payload["unfrozen"])
 				}
@@ -133,7 +133,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			}
 			s.Require().NoError(replay.Close())
 			if source == "direct moderator" {
-				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, contestsmodel.ContestRoleParticipant))
+				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, accessmodel.ContestParticipant))
 				_, _, closed := conn.ReadMessage()
 				s.Require().True(websocket.IsCloseError(closed, websocket.CloseTryAgainLater), "%v", closed)
 				var response *http.Response

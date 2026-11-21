@@ -34,7 +34,7 @@ type concurrencyFixture struct {
 	contest, problem uuid.UUID
 	users            [3]uuid.UUID
 	start            time.Time
-	permissions      *access.PermissionsUseCase
+	loader           access.Loader
 	blockers         blockerPool
 }
 
@@ -55,16 +55,16 @@ func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
 	}
 	end := f.start.Add(3 * time.Hour)
 	repo := postgres.NewContestsRepo(f.pool)
-	require.NoError(t, repo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: f.contest, OrganizationID: org, OwnerID: &f.users[0], Title: "Concurrent", Login: uuid.NewString(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &f.start, EndTime: &end}))
+	require.NoError(t, dbfixtures.CreateContest(ctx, f.pool, contestsmodel.CreateContestParams{ID: f.contest, OrganizationID: org, Title: "Concurrent", Login: uuid.NewString(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &f.start, EndTime: &end}, f.users[0]))
 	for _, user := range f.users[1:] {
-		require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: contestsmodel.ContestRoleParticipant}))
+		require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: accessmodel.ContestParticipant}))
 	}
-	err := dbfixtures.InsertProblem(ctx, f.pool, dbfixtures.ProblemSpec{ID: f.problem, OrganizationID: org, Title: "Problem", ShortName: "a"})
+	err := dbfixtures.InsertProblem(ctx, f.pool, dbfixtures.ProblemSpec{ID: f.problem, OrganizationID: org, Owner: f.users[0], Title: "Problem", ShortName: "a"})
 	require.NoError(t, err)
 	pack, err := dbfixtures.InsertPackage(ctx, f.pool, f.problem, org, time.Time{})
 	require.NoError(t, err)
 	require.NoError(t, repo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: pack}))
-	f.permissions = access.NewPermissionsUseCase(repo, postgres.NewUsersRepo(f.pool), postgres.NewProblemsRepo(f.pool), postgres.NewTeamsRepo(f.pool), postgres.NewOrganizationsRepo(f.pool))
+	f.loader = postgres.NewAccess(f.pool)
 	f.blockers = newBlockerPool(t)
 	return f
 }
@@ -77,7 +77,7 @@ func (f *concurrencyFixture) userContext(i int) context.Context {
 	return accessmodel.WithUser(f.ctx, accessmodel.User{Id: f.users[i], Role: role})
 }
 func (f *concurrencyFixture) submissionUC(tx submissions.SubmissionTransactions) *submissions.SubmissionsUseCase {
-	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), postgres.NewContestsRepo(f.pool), postgres.NewProblemsRepo(f.pool), tx, f.permissions)
+	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), tx, f.loader)
 }
 func (f *concurrencyFixture) create(tx submissions.SubmissionTransactions, user int) (uuid.UUID, error) {
 	return f.submissionUC(tx).CreateSubmission(f.userContext(user), &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.users[user], Solution: "print(1)", Language: "python3"})
@@ -257,7 +257,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 				case "block submission":
 					return uc.BlockSubmission(f.userContext(0), f.contest, job.SubmissionID, nil)
 				default:
-					return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
+					return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.loader).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
 				}
 			})
 			f.blockers.waitBlocked(t, f.ctx, 2)
@@ -292,7 +292,7 @@ func TestCreationRacesProblemBlock(t *testing.T) {
 		return err
 	})
 	block := asyncConcurrent(func() error {
-		return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
+		return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.loader).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
 	})
 	f.blockers.waitBlocked(t, f.ctx, 2)
 	require.NoError(t, release(true))
@@ -344,10 +344,14 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	for _, result := range results {
 		awaitConcurrent(t, result)
 	}
-	untouched, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, created)
+	// A serializable retry takes a fresh snapshot, so each bulk command rejudges the late submission at most once.
+	late, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, created)
 	require.NoError(t, err)
-	require.EqualValues(t, 1, untouched.Generation)
-	require.EqualValues(t, 1, untouched.Revision)
+	require.LessOrEqual(t, late.Generation, int64(3))
+	require.Equal(t, late.Generation, late.Revision)
+	var lateJobs int64
+	require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT count(*) FROM judge_jobs WHERE submission_id=$1", created).Scan(&lateJobs))
+	require.Equal(t, late.Generation, lateJobs)
 	sentinel := errors.New("rollback bulk rejudge")
 	err = postgres.NewSubmissionTransactions(f.pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
 		changed, err := tx.ResetSubmissionsState(f.ctx, submissionsmodel.RejudgeFilter{ContestID: f.contest})
@@ -392,7 +396,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 			return barrier()
 		})
 	})
-	uc := contests.NewDraftsUseCase(postgres.NewDraftTransactions(f.pool), postgres.NewDraftsRepo(f.pool), f.permissions)
+	uc := contests.NewDraftsUseCase(postgres.NewDraftTransactions(f.pool), postgres.NewDraftsRepo(f.pool), f.loader)
 	create := func(user int) error {
 		_, err := uc.CreateDraft(f.userContext(user), &contestsmodel.ContestDraftCreation{ContestID: f.contest, Code: "print(1)"})
 		return err

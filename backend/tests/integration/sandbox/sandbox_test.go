@@ -19,9 +19,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
-	"gopkg.in/yaml.v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/yaml.v3"
 )
 
 func TestIntegrationSandbox(t *testing.T) {

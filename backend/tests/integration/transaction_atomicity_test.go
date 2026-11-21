@@ -11,7 +11,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 )
 
@@ -25,15 +25,9 @@ func (s *IntegrationTestSuite) TestTransactionsWithinRollback() {
 			id := uuid.New()
 			ctx, cancel := context.WithCancel(s.ctx)
 			defer cancel()
+			s.Require().NoError(dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org.ID, Owner: owner.Id, Title: "Rollback", ShortName: mode}))
 			callback := func(tx problems.ProblemTxStore) error {
-				err := tx.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
-					ID:             id,
-					OrganizationID: org.ID,
-					Title:          "Rollback",
-					ShortName:      mode,
-					Visibility:     problemsmodel.ProblemVisibilityPrivate,
-				})
-				if err != nil {
+				if err := tx.DeleteProblem(ctx, id); err != nil {
 					return err
 				}
 				if mode == "panic" {
@@ -55,7 +49,7 @@ func (s *IntegrationTestSuite) TestTransactionsWithinRollback() {
 			var count int
 			err := s.dbPool.QueryRow(checkCtx, `SELECT count(*) FROM problems WHERE id=$1`, id).Scan(&count)
 			s.Require().NoError(err)
-			s.Zero(count, "uncommitted rows must be rolled back")
+			s.Equal(1, count, "the uncommitted delete must be rolled back")
 			s.Zero(s.dbPool.Stat().AcquiredConns(), "rollback must release the connection")
 		})
 	}

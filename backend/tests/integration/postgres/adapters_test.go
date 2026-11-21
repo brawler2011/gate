@@ -130,15 +130,24 @@ func getTestPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+// helperCreateOrg also creates the organization's owner; helperOrgOwner returns it.
 func helperCreateOrg(t *testing.T, ctx context.Context, pool *pgxpool.Pool, login, name string) uuid.UUID {
 	t.Helper()
 	orgID := uuid.New()
-	_, err := pool.Exec(ctx,
-		`INSERT INTO organizations (id, login, name) VALUES ($1, $2, $3)`,
-		orgID, login, name,
+	_, err := pool.Exec(ctx, `WITH u AS (INSERT INTO users (id, username, password_hash) VALUES ($4, $5, 'unused') RETURNING id),
+o AS (INSERT INTO organizations (id, login, name) VALUES ($1, $2, $3) RETURNING id)
+INSERT INTO organization_members (organization_id, user_id, role) SELECT o.id, u.id, 'owner' FROM o, u`,
+		orgID, login, name, uuid.New(), "owner_"+strings.ReplaceAll(uuid.NewString(), "-", "")[:20],
 	)
 	require.NoError(t, err)
 	return orgID
+}
+
+func helperOrgOwner(t *testing.T, ctx context.Context, pool *pgxpool.Pool, org uuid.UUID) uuid.UUID {
+	t.Helper()
+	var owner uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx, `SELECT user_id FROM organization_members WHERE organization_id = $1 AND role = 'owner' LIMIT 1`, org).Scan(&owner))
+	return owner
 }
 
 func helperCreatePackage(t *testing.T, ctx context.Context, pool *pgxpool.Pool, problemID, orgID uuid.UUID) uuid.UUID {
@@ -238,13 +247,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	title := "Test Problem " + suffix
 	shortName := "p_" + suffix
 
-	err := repo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
-		ID:             probID,
-		OrganizationID: orgID,
-		Title:          title,
-		ShortName:      shortName,
-		Visibility:     problemsmodel.ProblemVisibilityPublic,
-	})
+	err := dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: probID, OrganizationID: orgID, Owner: helperOrgOwner(t, ctx, pool, orgID), Visibility: "public", Title: title, ShortName: shortName})
 	require.NoError(t, err)
 
 	prob, err := repo.GetProblemById(ctx, probID)
@@ -305,14 +308,14 @@ func TestContestsRepo_Integration(t *testing.T) {
 	contestID := uuid.New()
 	login := "contest_" + suffix
 	title := "Contest Title " + suffix
-	err := repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
+	err := dbfixtures.CreateContest(ctx, pool, contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: orgID,
 		Title:          title,
 		Login:          login,
 		Description:    "Description for contest",
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-	})
+	}, helperOrgOwner(t, ctx, pool, orgID))
 	require.NoError(t, err)
 
 	c, err := repo.GetContest(ctx, contestID)
@@ -339,13 +342,13 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.True(t, errors.Is(err, pkg.ErrConflict), "expected ErrConflict on duplicate contest login, got: %v", err)
 
 	// Missing contest organizations map to ErrBadInput.
-	err = repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
+	err = dbfixtures.CreateContest(ctx, pool, contestsmodel.CreateContestParams{
 		ID:             uuid.New(),
 		OrganizationID: uuid.New(),
 		Title:          "Orphan Contest",
 		Login:          "orphan_" + suffix,
 		Visibility:     contestsmodel.ContestVisibilityPublic,
-	})
+	}, helperOrgOwner(t, ctx, pool, orgID))
 	require.Error(t, err)
 	require.ErrorContains(t, err, "violates foreign key constraint")
 
@@ -407,15 +410,11 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	contestID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO contests (id, organization_id, visibility, title, login, description)
-		 VALUES ($1, $2, 'public', 'Sub Contest', $3, 'desc')`,
-		contestID, orgID, "sub_c_"+suffix,
-	)
+	err = dbfixtures.InsertContest(ctx, pool, dbfixtures.ContestSpec{ID: contestID, OrganizationID: orgID, Owner: userID, Login: "sub_c_" + suffix, Title: "Sub Contest", Visibility: "public"})
 	require.NoError(t, err)
 
 	problemID := uuid.New()
-	err = dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, Title: "Sub Problem", ShortName: "sub_p_" + suffix})
+	err = dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, Owner: helperOrgOwner(t, ctx, pool, orgID), Title: "Sub Problem", ShortName: "sub_p_" + suffix})
 	require.NoError(t, err)
 
 	pkgID := helperCreatePackage(t, ctx, pool, problemID, orgID)

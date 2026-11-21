@@ -9,7 +9,7 @@ import (
 	"context"
 	"time"
 
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
 
@@ -19,9 +19,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddOrganizationMemberParams struct {
-	OrganizationID uuid.UUID                           `json:"organization_id"`
-	UserID         uuid.UUID                           `json:"user_id"`
-	Role           organizationsmodel.OrganizationRole `json:"role"`
+	OrganizationID uuid.UUID                    `json:"organization_id"`
+	UserID         uuid.UUID                    `json:"user_id"`
+	Role           accessmodel.OrganizationRole `json:"role"`
 }
 
 func (q *Queries) AddOrganizationMember(ctx context.Context, arg AddOrganizationMemberParams) error {
@@ -100,29 +100,6 @@ DELETE FROM organizations WHERE id = $1
 func (q *Queries) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteOrganization, id)
 	return err
-}
-
-const getAuthorizationOrganizationMember = `-- name: GetAuthorizationOrganizationMember :one
-SELECT organization_id, user_id, role, created_at FROM organization_members
-WHERE organization_id = $1 AND user_id = $2
-FOR SHARE
-`
-
-type GetAuthorizationOrganizationMemberParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	UserID         uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) GetAuthorizationOrganizationMember(ctx context.Context, arg GetAuthorizationOrganizationMemberParams) (OrganizationMember, error) {
-	row := q.db.QueryRow(ctx, getAuthorizationOrganizationMember, arg.OrganizationID, arg.UserID)
-	var i OrganizationMember
-	err := row.Scan(
-		&i.OrganizationID,
-		&i.UserID,
-		&i.Role,
-		&i.CreatedAt,
-	)
-	return i, err
 }
 
 const getLatestUserOrganizationID = `-- name: GetLatestUserOrganizationID :one
@@ -267,12 +244,12 @@ ORDER BY om.created_at
 `
 
 type ListOrganizationMembersRow struct {
-	OrganizationID uuid.UUID                           `json:"organization_id"`
-	UserID         uuid.UUID                           `json:"user_id"`
-	Role           organizationsmodel.OrganizationRole `json:"role"`
-	CreatedAt      time.Time                           `json:"created_at"`
-	Username       string                              `json:"username"`
-	Email          *string                             `json:"email"`
+	OrganizationID uuid.UUID                    `json:"organization_id"`
+	UserID         uuid.UUID                    `json:"user_id"`
+	Role           accessmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                    `json:"created_at"`
+	Username       string                       `json:"username"`
+	Email          *string                      `json:"email"`
 }
 
 func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error) {
@@ -319,12 +296,12 @@ type ListOrganizationMembersPageParams struct {
 }
 
 type ListOrganizationMembersPageRow struct {
-	OrganizationID uuid.UUID                           `json:"organization_id"`
-	UserID         uuid.UUID                           `json:"user_id"`
-	Role           organizationsmodel.OrganizationRole `json:"role"`
-	CreatedAt      time.Time                           `json:"created_at"`
-	Username       string                              `json:"username"`
-	Email          *string                             `json:"email"`
+	OrganizationID uuid.UUID                    `json:"organization_id"`
+	UserID         uuid.UUID                    `json:"user_id"`
+	Role           accessmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                    `json:"created_at"`
+	Username       string                       `json:"username"`
+	Email          *string                      `json:"email"`
 }
 
 func (q *Queries) ListOrganizationMembersPage(ctx context.Context, arg ListOrganizationMembersPageParams) ([]ListOrganizationMembersPageRow, error) {
@@ -486,12 +463,12 @@ WHERE id = $1
 `
 
 type UpdateOrganizationParams struct {
-	ID          uuid.UUID `json:"id"`
-	Login       *string   `json:"login"`
-	Name        *string   `json:"name"`
-	Description *string   `json:"description"`
-	AvatarUrl   *string   `json:"avatar_url"`
-	JoinPolicy  *string   `json:"join_policy"`
+	ID          uuid.UUID               `json:"id"`
+	Login       *string                 `json:"login"`
+	Name        *string                 `json:"name"`
+	Description *string                 `json:"description"`
+	AvatarUrl   *string                 `json:"avatar_url"`
+	JoinPolicy  *accessmodel.JoinPolicy `json:"join_policy"`
 }
 
 func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error {
@@ -513,9 +490,9 @@ WHERE organization_id = $1 AND user_id = $2
 `
 
 type UpdateOrganizationMemberRoleParams struct {
-	OrganizationID uuid.UUID                           `json:"organization_id"`
-	UserID         uuid.UUID                           `json:"user_id"`
-	Role           organizationsmodel.OrganizationRole `json:"role"`
+	OrganizationID uuid.UUID                    `json:"organization_id"`
+	UserID         uuid.UUID                    `json:"user_id"`
+	Role           accessmodel.OrganizationRole `json:"role"`
 }
 
 func (q *Queries) UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error {

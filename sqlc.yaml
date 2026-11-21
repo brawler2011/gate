@@ -127,11 +127,6 @@ sql:
               package: "contestsmodel"
               type: "FreezeStatus"
               pointer: true
-          - db_type: "contest_role"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/contests/model"
-              package: "contestsmodel"
-              type: "ContestRole"
           - db_type: "state"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -148,66 +143,66 @@ sql:
               package: "events"
               type: "OutboxEventType"
 
-          - db_type: "problem_role"
-            nullable: false
+          - db_type: "contest_role"
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/problems/model"
-              package: "problemsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
+              type: "ContestRole"
+          - db_type: "contest_role"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
+              type: "ContestRole"
+              pointer: true
+          - db_type: "problem_role"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "ProblemRole"
-
           - db_type: "problem_role"
             nullable: true
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/problems/model"
-              package: "problemsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "ProblemRole"
               pointer: true
-
-          - db_type: "problem_permission"
-            nullable: false
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/problems/model"
-              package: "problemsmodel"
-              type: "ProblemPermission"
-
-          - db_type: "problem_permission"
-            nullable: true
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/problems/model"
-              package: "problemsmodel"
-              type: "ProblemPermission"
-              pointer: true
-
           - db_type: "organization_role"
-            nullable: false
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
-              package: "organizationsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "OrganizationRole"
-
           - db_type: "organization_role"
             nullable: true
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
-              package: "organizationsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "OrganizationRole"
               pointer: true
-
           - db_type: "team_role"
-            nullable: false
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
-              package: "organizationsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "TeamRole"
-
           - db_type: "team_role"
             nullable: true
             go_type:
-              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
-              package: "organizationsmodel"
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
               type: "TeamRole"
               pointer: true
-
+          - db_type: "join_policy"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
+              type: "JoinPolicy"
+          - db_type: "join_policy"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/access/model"
+              package: "accessmodel"
+              type: "JoinPolicy"
+              pointer: true
           - db_type: "contest_visibility"
             nullable: true
             go_type:

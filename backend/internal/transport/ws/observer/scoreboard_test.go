@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -100,7 +99,7 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 	for _, manager := range []bool{false, true} {
 		t.Run(map[bool]string{false: "spectator", true: "manager"}[manager], func(t *testing.T) {
 			f := newWSFixture(t)
-			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: manager}
+			f.stub.permissions = contestPermissions{GetMonitor: true, ManageContest: manager}
 			f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
@@ -123,7 +122,7 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 				require.Equal(t, true, live["unfrozen"])
 				require.InDelta(t, 1, live["scoreboard"].(map[string]any)["items"].([]any)[0].(map[string]any)["problems_solved"], 0)
 			}
-			f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{} })
+			f.stub.change(func() { f.stub.permissions = contestPermissions{} })
 			f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), SubmissionEventMeta: f.meta(uuid.New())})
 			requireClose(t, conn, websocket.ClosePolicyViolation)
 		})
@@ -166,7 +165,7 @@ func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
 			end := time.Now().Add(300 * time.Millisecond)
 			f.stub.contest.EndTime = &end
 			f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatus(status), SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
-			f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+			f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
 			f.hub.scoreboard = source
@@ -184,7 +183,7 @@ func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
 
 func TestMonitorAudienceDoesNotPublishModeratorOnlySubmissions(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopeModerator, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	source := &scoreboardStub{accessStub: f.stub}
 	f.hub.contests = source

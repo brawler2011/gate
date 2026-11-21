@@ -13,13 +13,13 @@ import (
 )
 
 type PackageUseCase struct {
-	Repo        PackagesRepo
-	Content     *PackageContent
-	Permissions ProblemPermissions
+	Repo    PackagesRepo
+	Content *PackageContent
+	Access  access.Loader
 }
 
 func (uc *PackageUseCase) ListPackages(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[model.ProblemPackage], error) {
-	if err := access.Problem(ctx, uc.Permissions, id, accessmodel.ActionViewProblem); err != nil {
+	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemView); err != nil {
 		return nil, err
 	}
 	request, err := request.Normalize()
@@ -33,7 +33,7 @@ func (uc *PackageUseCase) ListPackages(ctx context.Context, id uuid.UUID, reques
 	return &paging.List[model.ProblemPackage]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, count)}, nil
 }
 func (uc *PackageUseCase) DownloadPackage(ctx context.Context, id, pid uuid.UUID) (io.ReadCloser, error) {
-	if err := access.Problem(ctx, uc.Permissions, id, accessmodel.ActionViewProblem); err != nil {
+	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemView); err != nil {
 		return nil, err
 	}
 	descriptor, err := uc.Content.Repo.GetPackageDescriptor(ctx, pid)

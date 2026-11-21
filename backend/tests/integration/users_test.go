@@ -16,6 +16,7 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
@@ -224,29 +225,15 @@ func (s *IntegrationTestSuite) createUser(username string, role accessmodel.User
 }
 
 func (s *IntegrationTestSuite) createOrganization(login string, name string, ownerID uuid.UUID) *organizationsmodel.Organization {
-	org, err := s.organizationsRepo.CreateOrganization(s.ctx, &organizationsmodel.CreateOrganizationInput{
-		Login: login,
-		Name:  name,
-	})
+	id := uuid.New()
+	s.Require().NoError(dbfixtures.InsertOrganization(s.ctx, s.dbPool, id, login, name, ownerID))
+	org, err := s.organizationsRepo.GetOrganizationByID(s.ctx, id)
 	s.Require().NoError(err)
-
-	err = s.organizationsRepo.AddMember(s.ctx, org.ID, ownerID, organizationsmodel.OrgRoleOwner)
-	s.Require().NoError(err)
-
 	return org
 }
 
-func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login string, name string) *organizationsmodel.Organization {
-	_, err := s.dbPool.Exec(s.ctx,
-		"INSERT INTO organizations (id, login, name, description) VALUES ($1, $2, $3, $4)",
-		id, login, name, "")
-	s.Require().NoError(err)
-
-	return &organizationsmodel.Organization{
-		ID:    id,
-		Login: login,
-		Name:  name,
-	}
+func (s *IntegrationTestSuite) createContest(p contestsmodel.CreateContestParams, owner uuid.UUID) error {
+	return dbfixtures.CreateContest(s.ctx, s.dbPool, p, owner)
 }
 
 func (s *IntegrationTestSuite) createDummyProblemPackage(problemID uuid.UUID, orgID uuid.UUID) uuid.UUID {

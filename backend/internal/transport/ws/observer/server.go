@@ -9,6 +9,7 @@ import (
 	"time"
 
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
+	"github.com/brawler2011/gate/backend/internal/access"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -23,12 +24,11 @@ type Observer struct {
 	hub         *Hub
 	contestsHub *ContestsHub
 	auth        AuthUC
-	permissions PermissionsUC
+	access      access.Loader
 	contests    ContestReader
-	revisions   RevisionReader
 }
 
-func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestReader, revisions ...RevisionReader) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, loader access.Loader, contests ContestReader) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{
@@ -36,12 +36,8 @@ func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handle
 		hub:         hub,
 		contestsHub: contestsHub,
 		auth:        auth,
-		permissions: permissions,
+		access:      loader,
 		contests:    contests,
-	}
-
-	if len(revisions) > 0 {
-		observer.revisions = revisions[0]
 	}
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
 	mux.HandleFunc("/ws/contests", observer.HandleContests)

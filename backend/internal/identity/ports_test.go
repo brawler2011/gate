@@ -21,11 +21,11 @@ type OrganizationsRepo interface {
 	UpdateOrganization(ctx context.Context, id uuid.UUID, input *organizationsmodel.UpdateOrganizationInput) error
 	DeleteOrganization(ctx context.Context, id uuid.UUID) error
 
-	AddMember(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error
+	AddMember(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error
 	GetMember(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.OrganizationMember, error)
 	ListMembersPage(ctx context.Context, orgID uuid.UUID, request paging.Request) ([]organizationsmodel.OrganizationMember, int32, error)
 	ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
-	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error
+	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role accessmodel.OrganizationRole) error
 	RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error)
@@ -52,10 +52,10 @@ type ProblemsRepo interface {
 	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
 	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error)
-	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
+	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error
+	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error
 	RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error
-	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error
+	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 }
@@ -68,10 +68,10 @@ type TeamsRepo interface {
 	UpdateTeam(ctx context.Context, id uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 
-	AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
+	AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error)
-	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
+	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
 	GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]organizationsmodel.Team, error)

@@ -3,7 +3,7 @@ package contests_test
 import (
 	"context"
 
-	"github.com/brawler2011/gate/backend/internal/access"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -14,7 +14,6 @@ import (
 )
 
 type ContestsRepo interface {
-	ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (access.PackageContext, error)
 	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error
@@ -26,7 +25,7 @@ type ContestsRepo interface {
 
 	CreateContestMember(ctx context.Context, c *contestsmodel.CreateContestMemberParams) error
 	GetContestMember(ctx context.Context, c *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error)
-	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
+	UpdateContestMember(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error
 	DeleteContestMember(ctx context.Context, userId uuid.UUID, contestId uuid.UUID) error
 
 	CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error
@@ -37,8 +36,8 @@ type ContestsRepo interface {
 
 	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestProblem, error)
 	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestTeam, error)
-	CreateContestTeam(ctx context.Context, contestID, teamID uuid.UUID, role contestsmodel.ContestRole) error
-	UpdateContestTeamRole(ctx context.Context, contestID, teamID uuid.UUID, role contestsmodel.ContestRole) error
+	CreateContestTeam(ctx context.Context, contestID, teamID uuid.UUID, role accessmodel.ContestRole) error
+	UpdateContestTeamRole(ctx context.Context, contestID, teamID uuid.UUID, role accessmodel.ContestRole) error
 	DeleteContestTeam(ctx context.Context, contestID, teamID uuid.UUID) error
 
 	UpsertContestProblemResult(ctx context.Context, params *contestsmodel.UpsertContestProblemResultParams) error
@@ -51,7 +50,7 @@ type ContestsRepo interface {
 	GetContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 	ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]contestsmodel.ContestUserProblemBlock, error)
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]contestsmodel.UserContestMembership, error)
-	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error
+	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error
 
 	CreateContestJoinRequest(ctx context.Context, input *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
 	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
@@ -85,12 +84,12 @@ type ProblemsUC interface {
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 
-	AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error
+	AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission accessmodel.ProblemRole) error
+	UpdateProblemTeamRole(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission accessmodel.ProblemRole) error
 	RemoveProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID) error
 
-	CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error
-	UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error
+	CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role accessmodel.ProblemRole) error
+	UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role accessmodel.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error
 }
 

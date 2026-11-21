@@ -162,57 +162,57 @@ func (s *IntegrationTestSuite) initApp() {
 	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService, s.limiter)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
-	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
+	loader := pgstore.NewAccess(s.dbPool)
 	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
 	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas, time.Minute)
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}
-	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T())}
-	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, packagesRepo)
-	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
-	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
+	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Access: loader, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T())}
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, loader, packagesRepo)
+	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: loader}
+	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), loader)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, pgstore.NewSubmissionTransactions(s.dbPool), loader)
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)
 
-	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
-	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool), permissionsUC)
+	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, loader, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, loader, pgstore.NewTeamTransactions(s.dbPool))
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
 
 	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), testStorage, "avatars")
 
-	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool), pgstore.NewDraftsRepo(s.dbPool), permissionsUC)
+	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool), pgstore.NewDraftsRepo(s.dbPool), loader)
 
 	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
-	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), announcementsRepo, permissionsUC)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), announcementsRepo, loader)
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, permissionsUC)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, permissionsUC, nil, s.usersRepo)
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, loader)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, loader, nil)
 
 	coreServer := handlers.NewCoreServer(handlers.Services{
-		Auth:               authUC,
-		Users:              usersUC,
-		UserReads:          s.usersRepo,
-		Avatars:            avatarsUC,
-		Organizations:      organizationsUC,
-		Teams:              teamsUC,
-		Contests:           contestsUC,
-		ContestPermissions: permissionsUC,
-		ContestDetails:     contestDetails,
-		Drafts:             draftsUC,
-		Announcements:      announcementsUC,
-		Clarifications:     clarificationsUC,
-		Problems:           problemsUC,
-		ProblemDrafts:      draftUC,
-		Packages:           packagesUC,
-		Submissions:        submissionsUC,
-		Notifications:      notificationsUC,
-		NotificationReads:  notificationsRepo,
-		Blogs:              blogsUC,
-		BlogReads:          blogsRepo,
-		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
+		Auth:              authUC,
+		Users:             usersUC,
+		UserReads:         s.usersRepo,
+		Avatars:           avatarsUC,
+		Organizations:     organizationsUC,
+		Teams:             teamsUC,
+		Contests:          contestsUC,
+		Access:            loader,
+		ContestDetails:    contestDetails,
+		Drafts:            draftsUC,
+		Announcements:     announcementsUC,
+		Clarifications:    clarificationsUC,
+		Problems:          problemsUC,
+		ProblemDrafts:     draftUC,
+		Packages:          packagesUC,
+		Submissions:       submissionsUC,
+		Notifications:     notificationsUC,
+		NotificationReads: notificationsRepo,
+		Blogs:             blogsUC,
+		BlogReads:         blogsRepo,
+		Capabilities:      access.NewCapabilities(loader),
 	}, false)
 	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	s.Require().NoError(err)

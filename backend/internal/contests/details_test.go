@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -35,19 +37,6 @@ func (s *detailStore) GetProblemById(context.Context, uuid.UUID) (problemsmodel.
 	return problemsmodel.Problem{Title: "Problem", TimeLimitMs: 1000}, nil
 }
 
-type detailPermissions struct{ view, problems, manage bool }
-
-func (p detailPermissions) CanContest(_ context.Context, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	switch action {
-	case accessmodel.ActionManageContest:
-		return p.manage, nil
-	case accessmodel.ActionGetContestProblem:
-		return p.problems, nil
-	default:
-		return p.view, nil
-	}
-}
-
 type detailStatements struct {
 	calls     int
 	fileCalls int
@@ -72,66 +61,68 @@ func (c *detailCompiler) CompilePDF(context.Context, string) ([]byte, error) {
 	return []byte("pdf"), nil
 }
 
+func detailAccess(contest contestsmodel.Contest, actor uuid.UUID, role accessmodel.ContestRole) *accesstest.Loader {
+	l := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contest.ID: {Contest: contest, Now: time.Now()}}}
+	l.Grant(contest.ID, actor, string(role))
+	return l
+}
+
 func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 	for _, tc := range []struct {
-		name                                 string
-		hidden, manage, allowed, beforeStart bool
-		statement, pdf                       bool
+		name                string
+		hidden, beforeStart bool
+		role                accessmodel.ContestRole
+		problem             error
+		statement           bool
+		booklet             error
 	}{
-		{name: "participant", allowed: true, statement: true, pdf: true},
-		{name: "hidden participant", hidden: true, allowed: true},
-		{name: "hidden manager", hidden: true, manage: true, allowed: true, statement: true, pdf: true},
-		{name: "before start", allowed: true, beforeStart: true, statement: true},
-		{name: "outsider"},
+		{name: "participant", role: accessmodel.ContestParticipant, statement: true},
+		{name: "hidden participant", hidden: true, role: accessmodel.ContestParticipant, booklet: pkg.ErrStatementsHidden},
+		{name: "hidden moderator", hidden: true, role: accessmodel.ContestModerator, statement: true},
+		{name: "before start", beforeStart: true, role: accessmodel.ContestParticipant, problem: pkg.ErrForbidden, booklet: pkg.ErrContestNotStarted},
+		{name: "outsider", problem: pkg.ErrNotFound, booklet: pkg.ErrNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			start := time.Now().Add(-time.Hour)
 			if tc.beforeStart {
 				start = time.Now().Add(time.Hour)
 			}
-			store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, Settings: contestsmodel.ContestSettings{HideStatements: tc.hidden}}, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
+			contest := contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start, Settings: contestsmodel.ContestSettings{HideStatements: tc.hidden}}
+			store := &detailStore{contest: contest, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
 			statements, compiler := &detailStatements{}, &detailCompiler{}
-			reader := NewDetailsReader(store, statements, detailPermissions{view: true, problems: tc.allowed, manage: tc.manage}, compiler, nil)
-			ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
+			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+			reader := NewDetailsReader(store, statements, detailAccess(contest, actor.Id, tc.role), compiler)
+			ctx := accessmodel.WithUser(context.Background(), actor)
+
 			result, err := reader.GetContestProblemDetails(ctx, "org", "contest", store.link.ProblemID)
-			if tc.allowed {
-				require.NoError(t, err)
+			require.ErrorIs(t, err, tc.problem)
+			if tc.problem == nil {
 				require.Equal(t, tc.statement, result.Statement != nil)
 				require.Equal(t, tc.statement, len(result.Assets) == 1)
-			} else {
-				require.ErrorIs(t, err, pkg.ErrForbidden)
 			}
-			if tc.statement {
-				require.Equal(t, 1, statements.calls)
-			} else {
-				require.Zero(t, statements.calls)
-			}
+			require.Equal(t, tc.statement, statements.calls == 1)
+
 			file, contentType, err := reader.OpenProblemAsset(ctx, "org", "contest", store.link.ProblemID, "abc")
 			if tc.statement {
 				require.NoError(t, err)
 				require.NoError(t, file.Close())
 				require.Equal(t, "image/png", contentType)
-				require.Equal(t, 1, statements.fileCalls)
 				require.Equal(t, "abc", statements.fileHash)
 			} else {
-				require.ErrorIs(t, err, pkg.ErrForbidden)
+				require.Error(t, err)
 				require.Zero(t, statements.fileCalls)
 			}
+
 			_, err = reader.ReadBooklet(ctx, "org", "contest", "ru")
-			if tc.pdf {
-				require.NoError(t, err)
-				require.Equal(t, 1, compiler.calls)
-			} else {
-				require.ErrorIs(t, err, pkg.ErrForbidden)
-				require.Zero(t, compiler.calls)
-			}
+			require.ErrorIs(t, err, tc.booklet)
+			require.Equal(t, tc.booklet == nil, compiler.calls == 1)
 		})
 	}
 }
 
 func TestContestListUsesFlatProjection(t *testing.T) {
-	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New()}, link: contestsmodel.ContestProblem{Title: "Projected", TimeLimitMs: 1234, MemoryLimitMb: 512}}
-	reader := NewDetailsReader(store, nil, detailPermissions{view: true, problems: true}, nil, nil)
+	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic}, link: contestsmodel.ContestProblem{Title: "Projected", TimeLimitMs: 1234, MemoryLimitMb: 512}}
+	reader := NewDetailsReader(store, nil, detailAccess(store.contest, uuid.Nil, ""), nil)
 	result, err := reader.GetContestDetails(context.Background(), "org", "contest")
 	require.NoError(t, err)
 	require.Len(t, result.Problems, 1)

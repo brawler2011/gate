@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -17,8 +18,7 @@ import (
 )
 
 type ContestEventsTxStore interface {
-	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
-	CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	access.Loader
 	CreateAnnouncement(ctx context.Context, authorID uuid.UUID, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
 	DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error
 	CreateClarification(ctx context.Context, userID uuid.UUID, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
@@ -43,6 +43,7 @@ type CommandTxStore interface {
 	GetContestJoinRequestByID(context.Context, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
 	GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
+	ListContestOwners(context.Context, uuid.UUID) ([]uuid.UUID, error)
 	CreateContestJoinRequest(context.Context, *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
 
 	UpdateContest(context.Context, contestsmodel.ContestUpdateInput) error
@@ -51,15 +52,16 @@ type CommandTxStore interface {
 	UpdateContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	DeleteContestProblem(context.Context, contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(context.Context, uuid.UUID, []contestsmodel.ContestProblemReorderItem) error
-	UpdateContestMember(context.Context, uuid.UUID, uuid.UUID, string) error
+	UpdateContestMember(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
+	GetContestTeam(context.Context, uuid.UUID, uuid.UUID) (contestsmodel.ContestTeam, error)
+	ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (contestsmodel.PackageRef, error)
 	DeleteContestMember(context.Context, uuid.UUID, uuid.UUID) error
 	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)
-	CreateContestTeam(context.Context, uuid.UUID, uuid.UUID, contestsmodel.ContestRole) error
-	UpdateContestTeamRole(context.Context, uuid.UUID, uuid.UUID, contestsmodel.ContestRole) error
+	CreateContestTeam(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
+	UpdateContestTeamRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
 	DeleteContestTeam(context.Context, uuid.UUID, uuid.UUID) error
 
-	CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error)
-	CanOrganization(context.Context, uuid.UUID, accessmodel.OrgAction) (bool, error)
+	access.Loader
 	ScoreboardStore
 	eventdata.Writer
 	CreateContest(context.Context, *contestsmodel.CreateContestParams) error
@@ -74,6 +76,5 @@ type CommandTxStore interface {
 }
 
 type CommandTransactions interface {
-	Prepare(context.Context) (context.Context, error)
 	Within(context.Context, func(CommandTxStore) error) error
 }

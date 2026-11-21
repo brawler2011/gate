@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -64,11 +66,10 @@ type Execer interface {
 
 // Zero Visibility means private.
 type ProblemSpec struct {
-	ID, OrganizationID uuid.UUID
-	OwnerID            *uuid.UUID
-	Visibility         string
-	Title, ShortName   string
-	CreatedAt          time.Time
+	ID, OrganizationID, Owner uuid.UUID
+	Visibility                string
+	Title, ShortName          string
+	CreatedAt                 time.Time
 }
 
 func InsertProblem(ctx context.Context, db Execer, spec ProblemSpec) error {
@@ -78,13 +79,65 @@ func InsertProblem(ctx context.Context, db Execer, spec ProblemSpec) error {
 	if spec.CreatedAt.IsZero() {
 		spec.CreatedAt = time.Now()
 	}
-	if _, err := db.Exec(ctx, `INSERT INTO problems(id,organization_id,owner_id,visibility,created_at) VALUES($1,$2,$3,$4,$5)`,
-		spec.ID, spec.OrganizationID, spec.OwnerID, spec.Visibility, spec.CreatedAt); err != nil {
+	if _, err := db.Exec(ctx, `WITH p AS (INSERT INTO problems(id,organization_id,visibility,created_at) VALUES($1,$2,$3,$4) RETURNING id)
+INSERT INTO problem_members(problem_id,user_id,role) SELECT id,$5,'owner' FROM p`,
+		spec.ID, spec.OrganizationID, spec.Visibility, spec.CreatedAt, spec.Owner); err != nil {
 		return fmt.Errorf("problem: %w", err)
 	}
 	if _, err := db.Exec(ctx, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
 VALUES($1,$2,$3,$4,'pass-fail',1000,256)`, spec.ID, spec.OrganizationID, spec.Title, spec.ShortName); err != nil {
 		return fmt.Errorf("draft: %w", err)
+	}
+	return nil
+}
+
+// Resources keep a permanent owner, so each insert adds the owner in the same statement.
+func InsertOrganization(ctx context.Context, db Execer, id uuid.UUID, login, name string, owner uuid.UUID) error {
+	if _, err := db.Exec(ctx, `WITH o AS (INSERT INTO organizations(id,login,name) VALUES($1,$2,$3) RETURNING id)
+INSERT INTO organization_members(organization_id,user_id,role) SELECT id,$4,'owner' FROM o`, id, login, name, owner); err != nil {
+		return fmt.Errorf("organization: %w", err)
+	}
+	return nil
+}
+
+// Zero Visibility means private.
+type ContestSpec struct {
+	ID, OrganizationID, Owner uuid.UUID
+	Login, Title, Visibility  string
+	Start, End                *time.Time
+}
+
+func InsertContest(ctx context.Context, db Execer, spec ContestSpec) error {
+	if spec.Visibility == "" {
+		spec.Visibility = "private"
+	}
+	if spec.Title == "" {
+		spec.Title = spec.Login
+	}
+	if _, err := db.Exec(ctx, `WITH c AS (INSERT INTO contests(id,organization_id,login,title,visibility,start_time,end_time) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id)
+INSERT INTO contest_members(contest_id,user_id,role) SELECT id,$8,'owner' FROM c`,
+		spec.ID, spec.OrganizationID, spec.Login, spec.Title, spec.Visibility, spec.Start, spec.End, spec.Owner); err != nil {
+		return fmt.Errorf("contest: %w", err)
+	}
+	return nil
+}
+
+// CreateContest stores p with owner as its first owner.
+func CreateContest(ctx context.Context, db Execer, p contestsmodel.CreateContestParams, owner uuid.UUID) error {
+	if err := InsertContest(ctx, db, ContestSpec{ID: p.ID, OrganizationID: p.OrganizationID, Owner: owner, Login: p.Login, Title: p.Title,
+		Visibility: string(p.Visibility), Start: p.StartTime, End: p.EndTime}); err != nil {
+		return err
+	}
+	if _, err := db.Exec(ctx, `UPDATE contests SET description=$2 WHERE id=$1`, p.ID, p.Description); err != nil {
+		return fmt.Errorf("contest description: %w", err)
+	}
+	return nil
+}
+
+// InsertUser stores a plain user that can hold resource roles.
+func InsertUser(ctx context.Context, db Execer, id uuid.UUID) error {
+	if _, err := db.Exec(ctx, `INSERT INTO users(id,username,password_hash) VALUES($1,$2,'unused')`, id, "user_"+strings.ReplaceAll(id.String(), "-", "")[:20]); err != nil {
+		return fmt.Errorf("user: %w", err)
 	}
 	return nil
 }

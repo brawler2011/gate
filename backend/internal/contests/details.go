@@ -9,7 +9,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/booklet"
@@ -17,7 +16,6 @@ import (
 )
 
 type ContestDetails struct {
-	Owner    *identitymodel.UserProfile
 	Contest  contestsmodel.Contest
 	Problems []contestsmodel.ContestProblem
 }
@@ -38,67 +36,41 @@ type StatementSource interface {
 type BookletCompiler interface {
 	CompilePDF(context.Context, string) ([]byte, error)
 }
-type ContestOwners interface {
-	GetUserProfileByID(context.Context, uuid.UUID) (identitymodel.UserProfile, error)
-}
 type DetailsReader struct {
-	users       ContestOwners
-	contests    ContestDetailsStore
-	statements  StatementSource
-	permissions Permissions
-	compiler    BookletCompiler
+	contests   ContestDetailsStore
+	statements StatementSource
+	access     access.Loader
+	compiler   BookletCompiler
 }
 
-func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, permissions Permissions, compiler BookletCompiler, users ContestOwners) *DetailsReader {
-	return &DetailsReader{users: users, contests: contests, statements: statements, permissions: permissions, compiler: compiler}
+func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, loader access.Loader, compiler BookletCompiler) *DetailsReader {
+	return &DetailsReader{contests: contests, statements: statements, access: loader, compiler: compiler}
 }
-func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string, action accessmodel.ContestAction) (contestsmodel.Contest, error) {
+func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string, action accessmodel.ContestAction) (access.ContestAccess, error) {
 	contest, err := r.contests.GetContestByOrgLoginAndContestLogin(ctx, org, login)
 	if err != nil {
-		return contest, err
+		return access.ContestAccess{}, err
 	}
-	return contest, access.Contest(ctx, r.permissions, contest.ID, action)
+	return access.Contest(ctx, r.access, contest.ID, action)
 }
 func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string) (*ContestDetails, error) {
-	contest, err := r.authorizedContest(ctx, org, login, accessmodel.ActionGetContest)
+	a, err := r.authorizedContest(ctx, org, login, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
 	}
-	allowed, err := r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionGetContestProblem)
-	if err != nil {
-		return nil, err
-	}
-	result := &ContestDetails{Contest: contest}
-	if contest.OwnerID != nil {
-		owner, err := r.users.GetUserProfileByID(ctx, *contest.OwnerID)
-		if err != nil {
-			return nil, err
-		}
-		result.Owner = &owner
-	}
-	if allowed {
-		result.Problems, err = r.contests.GetContestProblems(ctx, contest.ID)
+	result := &ContestDetails{Contest: a.Facts.Contest}
+	if a.Can(accessmodel.ContestViewProblems) {
+		result.Problems, err = r.contests.GetContestProblems(ctx, a.Facts.Contest.ID)
 	}
 	return result, err
 }
 func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
-	contest, err := r.authorizedContest(ctx, org, login, accessmodel.ActionGetContestProblem)
+	a, err := r.authorizedContest(ctx, org, login, accessmodel.ContestViewProblems)
 	if err != nil {
 		return contestsmodel.ContestProblem{}, false, err
 	}
-	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: contest.ID, ProblemId: id})
-	if err != nil {
-		return contestsmodel.ContestProblem{}, false, err
-	}
-	if !contest.Settings.HideStatements {
-		return link, true, nil
-	}
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return link, false, nil
-	}
-	manager, err := r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionManageContest)
-	return link, manager, err
+	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: a.Facts.Contest.ID, ProblemId: id})
+	return link, a.Can(accessmodel.ContestViewStatements), err
 }
 func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login string, id uuid.UUID) (*ContestProblemDetails, error) {
 	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
@@ -126,28 +98,19 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string,
 	return r.statements.OpenImage(ctx, link.PackageID, sha256)
 }
 func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin, language string) ([]byte, error) {
-
-	contest, err := r.authorizedContest(ctx, orgLogin, contestLogin, accessmodel.ActionGetContestProblem)
+	a, err := r.authorizedContest(ctx, orgLogin, contestLogin, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
 	}
-
-	var isManager bool
-	user := accessmodel.UserFromContext(ctx)
-	if !user.IsGuest() {
-		isManager, err = r.permissions.CanContest(ctx, contest.ID, accessmodel.ActionManageContest)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if !isManager {
-		if contest.Settings.HideStatements {
-			return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
-		}
-		if contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
+	contest := a.Facts.Contest
+	if !a.Can(accessmodel.ContestViewProblems) {
+		if contest.StartTime != nil && a.Facts.Now.Before(*contest.StartTime) {
 			return nil, pkg.Wrap(pkg.ErrContestNotStarted, nil, "contest has not started yet")
 		}
+		return nil, pkg.ErrForbidden
+	}
+	if !a.Can(accessmodel.ContestViewStatements) {
+		return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
 	}
 
 	problems, err := r.contests.GetContestProblems(ctx, contest.ID)

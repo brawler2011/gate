@@ -19,7 +19,6 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 	descending := params.Descending.Or(true)
 
 	filter := &problemsmodel.ProblemsFilter{
-		ViewerID:   &user.Id,
 		Page:       params.Page.Or(1),
 		PageSize:   params.PageSize.Or(50),
 		Search:     searchStr,
@@ -127,26 +126,11 @@ func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListPro
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
-	permission := problemsmodel.ProblemPermissionRead
-	if params.Permission.IsSet() && params.Permission.Value != "" {
-		permission = problemsmodel.ProblemPermission(params.Permission.Value)
-	}
-
-	err := h.Problems.AddProblemTeam(ctx, params.ID, params.TeamID, permission)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Problems.AddProblemTeam(ctx, params.ID, params.TeamID, accessmodel.ProblemRole(params.Role.Or(corev1.CreateProblemTeamRoleViewer)))
 }
 
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
-	err := h.Problems.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, problemsmodel.ProblemPermission(params.Permission))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Problems.UpdateProblemTeamRole(ctx, params.ID, params.TeamID, accessmodel.ProblemRole(params.Role))
 }
 
 func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
@@ -168,9 +152,9 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
-	role := problemsmodel.ProblemRoleViewer
+	role := accessmodel.ProblemViewer
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = problemsmodel.ProblemRole(params.Role.Value)
+		role = accessmodel.ProblemRole(params.Role.Value)
 	}
 
 	err := h.Problems.CreateProblemMember(ctx, params.ID, params.UserID, role)
@@ -182,7 +166,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 }
 
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
-	err := h.Problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, problemsmodel.ProblemRole(params.Role))
+	err := h.Problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, accessmodel.ProblemRole(params.Role))
 	if err != nil {
 		return err
 	}

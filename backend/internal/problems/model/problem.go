@@ -3,6 +3,8 @@ package problemsmodel
 import (
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	"github.com/brawler2011/gate/backend/pkg/points"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -79,24 +81,14 @@ type Image struct {
 }
 
 const (
-	ProblemVisibilityPrivate  = "private"
-	ProblemVisibilityPublic   = "public"
-	ProblemVisibilityUnlisted = "unlisted"
-)
-
-type ProblemRole string
-
-const (
-	ProblemRoleOwner     ProblemRole = "owner"
-	ProblemRoleModerator ProblemRole = "moderator"
-	ProblemRoleViewer    ProblemRole = "viewer"
+	ProblemVisibilityPrivate = "private"
+	ProblemVisibilityPublic  = "public"
 )
 
 type Problem struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
 	OrganizationLogin string
-	OwnerID           *uuid.UUID
 	Visibility        string
 	Title             string
 	ShortName         string
@@ -110,7 +102,7 @@ type Problem struct {
 type ProblemMember struct {
 	ProblemID uuid.UUID
 	UserID    uuid.UUID
-	Role      ProblemRole
+	Role      accessmodel.ProblemRole
 	Username  string
 	Email     string
 	CreatedAt time.Time
@@ -142,12 +134,9 @@ type CreateProblemParams struct {
 	Title          string
 	ShortName      string
 	Visibility     string
-	OwnerID        *uuid.UUID
 }
 
 type ProblemsFilter struct {
-	// ViewerID restricts rows to read access; nil is reserved for trusted internal lists.
-	ViewerID       *uuid.UUID
 	Page           int32
 	PageSize       int32
 	OrganizationID *uuid.UUID
@@ -165,14 +154,13 @@ type ProblemsList struct {
 
 type ProblemUpdate struct {
 	Visibility *string
-	OwnerID    *uuid.UUID
 	IsTemplate *bool
 }
 
 type CreateProblemMemberParams struct {
 	ProblemID uuid.UUID
 	UserID    uuid.UUID
-	Role      ProblemRole
+	Role      accessmodel.ProblemRole
 }
 
 type DashboardProblem struct {

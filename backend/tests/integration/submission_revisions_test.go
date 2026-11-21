@@ -43,8 +43,8 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 		Title: "Revision", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	contest := uuid.New()
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-		ID: contest, OrganizationID: org.ID, OwnerID: &user.Id, Title: "Revision", Login: "revision-" + suffix, Visibility: contestsmodel.ContestVisibilityPublic}))
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
+		ID: contest, OrganizationID: org.ID, Title: "Revision", Login: "revision-" + suffix, Visibility: contestsmodel.ContestVisibilityPublic}, user.Id))
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	creation := &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem.ID, UserId: user.Id, Language: "cpp17", Solution: "int main(){}"}
 	first, err := repo.CreateSubmission(s.ctx, creation)

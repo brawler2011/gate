@@ -9,28 +9,51 @@ import (
 	"context"
 	"time"
 
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
 
 const addProblemTeam = `-- name: AddProblemTeam :exec
-INSERT INTO problem_teams (problem_id, team_id, permission)
-VALUES ($1, $2, $3)
+INSERT INTO problem_teams (problem_id, team_id, organization_id, role)
+SELECT p.id, $1::uuid, p.organization_id, $2::problem_role
+FROM problems p WHERE p.id = $3::uuid
 `
 
 type AddProblemTeamParams struct {
-	ProblemID  uuid.UUID                       `json:"problem_id"`
-	TeamID     uuid.UUID                       `json:"team_id"`
-	Permission problemsmodel.ProblemPermission `json:"permission"`
+	TeamID    uuid.UUID               `json:"team_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
+	ProblemID uuid.UUID               `json:"problem_id"`
 }
 
 func (q *Queries) AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) error {
-	_, err := q.db.Exec(ctx, addProblemTeam, arg.ProblemID, arg.TeamID, arg.Permission)
+	_, err := q.db.Exec(ctx, addProblemTeam, arg.TeamID, arg.Role, arg.ProblemID)
 	return err
 }
 
+const getProblemTeam = `-- name: GetProblemTeam :one
+SELECT problem_id, team_id, organization_id, role, created_at FROM problem_teams WHERE problem_id = $1 AND team_id = $2
+`
+
+type GetProblemTeamParams struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	TeamID    uuid.UUID `json:"team_id"`
+}
+
+func (q *Queries) GetProblemTeam(ctx context.Context, arg GetProblemTeamParams) (ProblemTeam, error) {
+	row := q.db.QueryRow(ctx, getProblemTeam, arg.ProblemID, arg.TeamID)
+	var i ProblemTeam
+	err := row.Scan(
+		&i.ProblemID,
+		&i.TeamID,
+		&i.OrganizationID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listProblemTeams = `-- name: ListProblemTeams :many
-SELECT pt.problem_id, pt.team_id, pt.permission, pt.created_at, t.name as team_name, t.slug as team_slug
+SELECT pt.problem_id, pt.team_id, pt.organization_id, pt.role, pt.created_at, t.name as team_name, t.slug as team_slug
 FROM problem_teams pt
 JOIN teams t ON pt.team_id = t.id
 WHERE pt.problem_id = $1
@@ -38,12 +61,13 @@ ORDER BY pt.created_at
 `
 
 type ListProblemTeamsRow struct {
-	ProblemID  uuid.UUID                       `json:"problem_id"`
-	TeamID     uuid.UUID                       `json:"team_id"`
-	Permission problemsmodel.ProblemPermission `json:"permission"`
-	CreatedAt  time.Time                       `json:"created_at"`
-	TeamName   string                          `json:"team_name"`
-	TeamSlug   string                          `json:"team_slug"`
+	ProblemID      uuid.UUID               `json:"problem_id"`
+	TeamID         uuid.UUID               `json:"team_id"`
+	OrganizationID uuid.UUID               `json:"organization_id"`
+	Role           accessmodel.ProblemRole `json:"role"`
+	CreatedAt      time.Time               `json:"created_at"`
+	TeamName       string                  `json:"team_name"`
+	TeamSlug       string                  `json:"team_slug"`
 }
 
 func (q *Queries) ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]ListProblemTeamsRow, error) {
@@ -58,7 +82,8 @@ func (q *Queries) ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]
 		if err := rows.Scan(
 			&i.ProblemID,
 			&i.TeamID,
-			&i.Permission,
+			&i.OrganizationID,
+			&i.Role,
 			&i.CreatedAt,
 			&i.TeamName,
 			&i.TeamSlug,
@@ -88,19 +113,19 @@ func (q *Queries) RemoveProblemTeam(ctx context.Context, arg RemoveProblemTeamPa
 	return err
 }
 
-const updateProblemTeamPermission = `-- name: UpdateProblemTeamPermission :exec
+const updateProblemTeamRole = `-- name: UpdateProblemTeamRole :exec
 UPDATE problem_teams
-SET permission = $3
+SET role = $3
 WHERE problem_id = $1 AND team_id = $2
 `
 
-type UpdateProblemTeamPermissionParams struct {
-	ProblemID  uuid.UUID                       `json:"problem_id"`
-	TeamID     uuid.UUID                       `json:"team_id"`
-	Permission problemsmodel.ProblemPermission `json:"permission"`
+type UpdateProblemTeamRoleParams struct {
+	ProblemID uuid.UUID               `json:"problem_id"`
+	TeamID    uuid.UUID               `json:"team_id"`
+	Role      accessmodel.ProblemRole `json:"role"`
 }
 
-func (q *Queries) UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error {
-	_, err := q.db.Exec(ctx, updateProblemTeamPermission, arg.ProblemID, arg.TeamID, arg.Permission)
+func (q *Queries) UpdateProblemTeamRole(ctx context.Context, arg UpdateProblemTeamRoleParams) error {
+	_, err := q.db.Exec(ctx, updateProblemTeamRole, arg.ProblemID, arg.TeamID, arg.Role)
 	return err
 }

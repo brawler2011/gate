@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -59,26 +60,6 @@ func (r *diagnosticOutboxRepo) CreateEvent(_ context.Context, event *eventdata.C
 	return nil
 }
 
-type diagnosticContests struct{ ContestsUC }
-
-func (diagnosticContests) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
-	return contestsmodel.Contest{}, nil
-}
-
-func (diagnosticContests) GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
-	return contestsmodel.ContestProblem{}, nil
-}
-
-func (diagnosticContests) GetProblemBlockStatusForUser(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error) {
-	return nil, nil
-}
-
-type diagnosticProblems struct{ ProblemsUC }
-
-func (diagnosticProblems) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
-	return problemsmodel.Problem{}, nil
-}
-
 type diagnosticTransactor struct {
 	commitErr error
 	buf       *bytes.Buffer
@@ -105,8 +86,10 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			submissionID := uuid.New()
 			repo := &diagnosticSubmissionsRepo{submission: submissionsmodel.Submission{ID: submissionID, ContestID: &contestID, CreatedAt: time.Now().Add(-24 * time.Hour)}}
 			outbox := &diagnosticOutboxRepo{}
-			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{submissionCommandStore: repo, OutboxRepo: outbox}}, allowSubmissionPermissions{})
 			viewerID := uuid.New()
+			loader := accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contestsmodel.Contest{ID: contestID}, Now: time.Now()}}}
+			loader.Grant(contestID, viewerID, string(accessmodel.ContestModerator))
+			uc := NewSubmissionsUseCase(repo, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{Loader: loader, submissionCommandStore: repo, OutboxRepo: outbox}}, loader)
 			ctx := accessmodel.WithUser(requestid.With(context.Background(), "request-123"), accessmodel.User{Id: viewerID, Role: accessmodel.UserRoleUser})
 			var err error
 			if rejudge {
@@ -139,5 +122,3 @@ func (r *diagnosticOutboxRepo) Record(ctx context.Context, event eventdata.Event
 func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
 	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }
-
-func (t diagnosticTransactor) Prepare(ctx context.Context) (context.Context, error) { return ctx, nil }

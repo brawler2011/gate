@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	"github.com/google/uuid"
-
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -47,16 +44,14 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 		if emptyScopeRow(row.Resource) {
 			continue
 		}
-		var resource sqlc.GetContestByIDRow
+		var resource struct {
+			sqlc.Contest
+			OrgLogin string `json:"org_login"`
+		}
 		if err := json.Unmarshal(row.Resource, &resource); err != nil {
 			return nil, 0, dbError("decode scoped contest", err)
 		}
-		items = append(items, mapGetContestByIDRow(resource))
+		items = append(items, mapContest(resource.Contest, resource.OrgLogin))
 	}
 	return items, total, nil
-}
-
-func readViewerID(ctx context.Context) *uuid.UUID {
-	id := accessmodel.UserFromContext(ctx).Id
-	return &id
 }

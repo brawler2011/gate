@@ -125,7 +125,13 @@ func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.Mutation
 }
 
 func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.MutationResult, error) {
-	tx, err := beginReadCommitted(ctx, r.pool)
+	return authorizedMutation(func() (model.MutationResult, error) {
+		return r.finalizeUploadDraftOnce(ctx, k, id, expected, objects, apply)
+	})
+}
+
+func (r *ProblemDraftsRepo) finalizeUploadDraftOnce(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.MutationResult, error) {
+	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
@@ -144,6 +150,9 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	}
 	if operation.Token != k.Token {
 		return model.MutationResult{}, pkg.ErrConflict
+	}
+	if err := authorizeEdit(ctx, q, id); err != nil {
+		return model.MutationResult{}, err
 	}
 	revision, err := q.LockProblemDraft(ctx, id)
 	if err != nil {

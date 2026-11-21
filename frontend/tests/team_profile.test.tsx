@@ -26,7 +26,7 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   enable_upsolving: true,
   participation_mode: "open",
   languages: [],
-  created_by: "user", created_at: "2026-10-01", updated_at: "2026-10-01", ...schedule,
+  created_at: "2026-10-01", updated_at: "2026-10-01", ...schedule,
 });
 
 describe("Team profile through the production page", () => {

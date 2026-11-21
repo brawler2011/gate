@@ -108,8 +108,8 @@ func int32PtrToInt32(ptr *int32) int32 {
 	return *ptr
 }
 
-func GetContestResponseDTO(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, owner *identitymodel.UserProfile) *corev1.GetContestResponseModel {
-	resp := &corev1.GetContestResponseModel{Contest: ContestDTO(contest, owner), Problems: make([]corev1.ContestProblemListItemModel, len(problems))}
+func GetContestResponseDTO(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem) *corev1.GetContestResponseModel {
+	resp := &corev1.GetContestResponseModel{Contest: ContestDTO(contest), Problems: make([]corev1.ContestProblemListItemModel, len(problems))}
 	for i, p := range problems {
 		resp.Problems[i] = ContestProblemsListItemDTO(p)
 	}
@@ -123,7 +123,7 @@ func ListContestsResponseDTO(contestsList *contestsmodel.ContestsList) *corev1.L
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(contest, nil)
+		resp.Contests[i] = ContestDTO(contest)
 	}
 
 	return &resp
@@ -181,13 +181,8 @@ func SubmissionsListToDTO(submissionsList *submissionsmodel.SubmissionsList) *co
 	return &resp
 }
 
-func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev1.ContestModel {
+func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 	title := c.Title
-
-	var createdBy uuid.UUID
-	if c.OwnerID != nil {
-		createdBy = *c.OwnerID
-	}
 
 	visibility := string(c.Visibility)
 	s := c.Settings
@@ -211,16 +206,10 @@ func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev
 		ParticipationMode:      corev1.ContestModelParticipationMode(s.ParticipationMode),
 		HideStatements:         s.HideStatements,
 		Languages:              append([]string{}, s.Languages...),
-		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,
 		StartTime:              timePtrToOptNilDateTime(c.StartTime),
 		EndTime:                timePtrToOptNilDateTime(c.EndTime),
-	}
-
-	if owner != nil {
-		ownerModel := userProfileDTO(*owner)
-		model.Owner = corev1.NewOptUserModel(ownerModel)
 	}
 
 	return model
@@ -282,17 +271,12 @@ func ListProblemsResponseDTO(problemsList *problemsmodel.ProblemsList) *corev1.L
 }
 
 func ProblemDTO(p problemsmodel.Problem) *corev1.ProblemModel {
-	createdBy := uuid.Nil
-	if p.OwnerID != nil {
-		createdBy = *p.OwnerID
-	}
 	return &corev1.ProblemModel{Capabilities: []string{},
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
 		Title:             strings.TrimSpace(p.Title),
 		Visibility:        p.Visibility,
-		CreatedBy:         createdBy,
 		TimeLimit:         safeInt32(p.TimeLimitMs),
 		MemoryLimit:       safeInt32(p.MemoryLimitMb),
 		IsTemplate:        p.IsTemplate,
@@ -767,7 +751,7 @@ func ListUserContestsResponseDTO(contestsList *contestsmodel.ContestsList) *core
 	}
 
 	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(contest, nil)
+		resp.Contests[i] = ContestDTO(contest)
 	}
 
 	return &resp
@@ -809,12 +793,12 @@ func listContestTeamsDTO(teams []contestsmodel.ContestTeam) *corev1.ListContestT
 
 func problemTeamDTO(pt problemsmodel.ProblemTeam) corev1.ProblemTeamModel {
 	return corev1.ProblemTeamModel{Capabilities: []string{},
-		ProblemID:  pt.ProblemID,
-		TeamID:     pt.TeamID,
-		TeamName:   pt.TeamName,
-		TeamSlug:   pt.TeamSlug,
-		Permission: corev1.ProblemTeamModelPermission(pt.Permission),
-		CreatedAt:  pt.CreatedAt,
+		ProblemID: pt.ProblemID,
+		TeamID:    pt.TeamID,
+		TeamName:  pt.TeamName,
+		TeamSlug:  pt.TeamSlug,
+		Role:      corev1.ProblemTeamModelRole(pt.Role),
+		CreatedAt: pt.CreatedAt,
 	}
 }
 
@@ -857,7 +841,7 @@ func DashboardContestDTO(c contestsmodel.DashboardContest) corev1.DashboardConte
 		OrganizationID:     c.OrganizationID,
 		OrganizationName:   c.OrganizationName,
 		OrganizationLogin:  c.OrganizationLogin,
-		UserRole:           c.UserRole,
+		UserRole:           string(c.UserRole),
 		StartTime:          timePtrToOptNilDateTime(c.StartTime),
 		EndTime:            timePtrToOptNilDateTime(c.EndTime),
 		LastSubmissionTime: timePtrToOptNilDateTime(c.LastSubmissionTime),

@@ -3,10 +3,9 @@ package submissions
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 
@@ -17,6 +16,7 @@ import (
 )
 
 type submissionTestStore struct {
+	accesstest.Loader
 	submissionCommandStore
 	OutboxRepo
 	contests.ScoreboardStore
@@ -35,19 +35,6 @@ func (submissionTestStore) GetContestProblem(context.Context, contestsmodel.Cont
 }
 func (submissionTestStore) GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error) {
 	return nil, nil
-}
-
-type allowSubmissionPermissions struct{}
-
-func (allowSubmissionPermissions) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
-}
-func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
-}
-
-func (submissionTestStore) CanContest(context.Context, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	return true, nil
 }
 
 type OutboxRepo interface {

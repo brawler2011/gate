@@ -3727,7 +3727,7 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Role.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
+				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil
 		}); err != nil {
@@ -3814,16 +3814,16 @@ func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblem
 		}
 	}
 	{
-		// Encode "permission" parameter.
+		// Encode "role" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "permission",
+			Name:    "role",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Permission.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
+			if val, ok := params.Role.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil
 		}); err != nil {
@@ -12974,15 +12974,15 @@ func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblem
 		}
 	}
 	{
-		// Encode "permission" parameter.
+		// Encode "role" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "permission",
+			Name:    "role",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Permission))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}

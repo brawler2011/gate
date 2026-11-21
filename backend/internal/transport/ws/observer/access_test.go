@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -25,19 +27,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// contestPermissions describes a scenario; accessStub turns it into the role and scopes that grant it.
+type contestPermissions struct {
+	GetContest, ListOwnSubmissions, GetMonitor, ListUsersSubmissions bool
+	ManageContest, GetOtherUserSubmission, GetSubmissionDetails      bool
+}
+
 type accessStub struct {
+	accesstest.Loader
 	AuthUC
-	PermissionsUC
 	ContestReader
 	Scoreboard
 	mu            sync.Mutex
 	user          accessmodel.User
-	permissions   accessmodel.ContestPermissions
+	permissions   contestPermissions
 	contest       contestsmodel.Contest
 	authErr       error
 	permissionErr error
 	contestErr    error
 	onPermissions func()
+	// facts, when set, replaces the flag translation below.
+	facts *access.ContestFacts
 }
 
 func (m *accessStub) Authenticate(context.Context, uuid.UUID) (accessmodel.User, error) {
@@ -46,15 +56,56 @@ func (m *accessStub) Authenticate(context.Context, uuid.UUID) (accessmodel.User,
 	return m.user, m.authErr
 }
 
-func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+func (m *accessStub) Actor(context.Context, uuid.UUID) (accessmodel.User, error) {
 	m.mu.Lock()
-	p, err, hook := m.permissions, m.permissionErr, m.onPermissions
+	defer m.mu.Unlock()
+	return m.user, nil
+}
+
+func (m *accessStub) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+	m.mu.Lock()
+	p, err, hook, c, fixed := m.permissions, m.permissionErr, m.onPermissions, m.contest, m.facts
 	m.onPermissions = nil
 	m.mu.Unlock()
 	if hook != nil {
 		hook()
 	}
-	return &p, err
+	if err != nil {
+		return nil, err
+	}
+	if fixed != nil {
+		return map[uuid.UUID]access.ContestFacts{c.ID: *fixed}, nil
+	}
+	scope := func(granted bool) contestsmodel.ContestScope {
+		if granted {
+			return contestsmodel.ScopePublic
+		}
+		return contestsmodel.ScopeModerator
+	}
+	var role accessmodel.ContestRole
+	switch {
+	case p.ManageContest:
+		role = accessmodel.ContestModerator
+	case p.ListOwnSubmissions:
+		role = accessmodel.ContestParticipant
+	}
+	c.Visibility = contestsmodel.ContestVisibilityPrivate
+	// Under the policy every audience grant implies seeing the contest.
+	if p.GetContest || p.GetMonitor || p.ListUsersSubmissions || p.GetOtherUserSubmission || p.GetSubmissionDetails {
+		c.Visibility = contestsmodel.ContestVisibilityPublic
+	}
+	c.Settings.ParticipationMode = contestsmodel.ParticipationModeInviteOnly
+	c.Settings.MonitorScope = scope(p.GetMonitor)
+	c.Settings.SubmissionsListScope = scope(p.ListUsersSubmissions)
+	c.Settings.SubmissionsReviewScope = scope(p.GetOtherUserSubmission)
+	c.Settings.SubmissionDetailsScope = scope(p.GetSubmissionDetails)
+	facts := map[uuid.UUID]access.ContestFacts{}
+	for _, id := range ids {
+		if id == c.ID {
+			facts[id] = access.ContestFacts{Contest: c, Role: role, Now: time.Now()}
+		}
+	}
+	return facts, nil
 }
 
 func (m *accessStub) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
@@ -76,7 +127,7 @@ type wsFixture struct {
 
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
-	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
+	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: contestPermissions{GetContest: true, ListOwnSubmissions: true}}
 	f := &wsFixture{stub: stub, hub: NewHub(100, stub, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub, middleware.ResponseErrorHandler(slog.Default())), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
@@ -187,10 +238,10 @@ func TestHandshake(t *testing.T) {
 			auth        bool
 			suffix      string
 			err         error
-			permissions accessmodel.ContestPermissions
+			permissions contestPermissions
 			status      int
 		}{
-			{name: "guest without audience", status: 403},
+			{name: "guest without audience", status: 401},
 			{name: "malformed contest", auth: true, suffix: "&contestId=bad", status: 400},
 			{name: "malformed since", auth: true, suffix: "&since=bad", status: 400},
 			{name: "empty since", auth: true, suffix: "&since=", status: 400},
@@ -198,7 +249,7 @@ func TestHandshake(t *testing.T) {
 			{name: "missing contest", auth: true, err: pkg.ErrNotFound, status: 403},
 			{name: "private stranger", auth: true, status: 403},
 			{name: "database error", auth: true, err: errors.New("db unavailable"), status: 500},
-			{name: "allowed", auth: true, permissions: accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}, status: 101},
+			{name: "allowed", auth: true, permissions: contestPermissions{GetContest: true, GetMonitor: true}, status: 101},
 		} {
 			t.Run(kind+"/"+test.name, func(t *testing.T) {
 				f := newWSFixture(t)
@@ -229,7 +280,7 @@ func TestHandshake(t *testing.T) {
 
 func TestSubmissionHistoryQueueLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ListOwnSubmissions: true}
+	f.stub.permissions = contestPermissions{GetMonitor: true, ListOwnSubmissions: true}
 	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	other := uuid.New()
 	meta := f.meta(other)
@@ -258,7 +309,7 @@ func TestSubmissionHistoryQueueLiveAndRevocation(t *testing.T) {
 	payload := readPayload(t, conn)
 	require.InDelta(t, float64(submissionsmodel.Accepted), payload["state"], 0)
 	require.NotContains(t, payload, "frozen")
-	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{} })
+	f.stub.change(func() { f.stub.permissions = contestPermissions{} })
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, completed)
 	requireClose(t, conn, 1008)
 }
@@ -271,14 +322,14 @@ func TestDeliveryRevalidates(t *testing.T) {
 			change func(*accessStub)
 		}{
 			{"session revoked", 1008, func(m *accessStub) { m.authErr = pkg.ErrUnauthenticated }},
-			{"membership revoked", 1008, func(m *accessStub) { m.permissions = accessmodel.ContestPermissions{} }},
+			{"membership revoked", 1008, func(m *accessStub) { m.permissions = contestPermissions{} }},
 			{"contest deleted", 1008, func(m *accessStub) { m.permissionErr = pkg.ErrNotFound }},
 			{"permissions database error", 1011, func(m *accessStub) { m.permissionErr = errors.New("db") }},
 			{"session database error", 1011, func(m *accessStub) { m.authErr = errors.New("db") }},
 		} {
 			t.Run(kind+"/"+test.name, func(t *testing.T) {
 				f := newWSFixture(t)
-				f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+				f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 				conn := f.connect(t, f.path(kind))
 				f.stub.change(func() { test.change(f.stub) })
 				if kind == "submissions" {
@@ -294,7 +345,7 @@ func TestDeliveryRevalidates(t *testing.T) {
 
 func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
+	f.stub.permissions = contestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
 	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	conn := f.connect(t, f.path("submissions"))
 	meta := f.meta(uuid.New())
@@ -304,7 +355,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	require.Equal(t, "code", readPayload(t, conn)["source"])
 	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	require.InDelta(t, float64(7), readPayload(t, conn)["number"], 0)
-	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
+	f.stub.change(func() { f.stub.permissions = contestPermissions{GetMonitor: true} })
 	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
@@ -338,7 +389,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 
 func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, ManageContest: true}
+	f.stub.permissions = contestPermissions{GetContest: true, ManageContest: true}
 	other := uuid.New()
 	event := &contestsmodel.ContestClarificationCreatedEvent{ContestID: f.stub.contest.ID, UserID: other, ID: uuid.New(), Question: "private"}
 	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
@@ -381,7 +432,7 @@ func TestCatchUpAccessLoss(t *testing.T) {
 			for _, code := range []int{1008, 1011} {
 				t.Run(fmt.Sprintf("%s/%s/%d", kind, phase, code), func(t *testing.T) {
 					f := newWSFixture(t)
-					f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+					f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 					publish := func() {
 						if kind == "submissions" {
 							f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New(), State: 200})
@@ -440,7 +491,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			f := newWSFixture(t)
-			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: test.moderator, ListOwnSubmissions: test.own}
+			f.stub.permissions = contestPermissions{GetMonitor: true, ManageContest: test.moderator, ListOwnSubmissions: test.own}
 			end := time.Now().Add(30 * time.Minute)
 			boundary := end.Add(-time.Hour)
 			f.stub.contest.EndTime = &end
@@ -473,7 +524,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 
 func TestPublicGuestAudience(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	conn, resp, err := f.dial(t, f.path("submissions"), false)
 	require.NoError(t, err)
@@ -484,47 +535,28 @@ func TestPublicGuestAudience(t *testing.T) {
 	require.NotContains(t, payload, "state")
 }
 
-type revisionStub struct {
-	mu    sync.Mutex
-	value int64
-	err   error
-}
-
-func (r *revisionStub) AccessRevision(context.Context) (int64, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.value, r.err
-}
-func TestIdleRevisionInvalidation(t *testing.T) {
-	for _, failure := range []bool{false, true} {
-		t.Run(fmt.Sprint(failure), func(t *testing.T) {
-			f := newWSFixture(t)
-			r := &revisionStub{value: 1}
-			server := httptest.NewServer(NewObserver(f.hub, f.contests, middleware.AuthMiddleware(f.stub, middleware.ResponseErrorHandler(slog.Default())), f.stub, f.stub, f.stub, r).Handler())
-			defer server.Close()
-			conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+f.path("submissions"), http.Header{"Cookie": {"session_id=" + f.session.String()}})
-			require.NoError(t, err)
-			require.NoError(t, resp.Body.Close())
-			defer conn.Close()
-			r.mu.Lock()
-			if failure {
-				r.err = errors.New("revision channel unavailable")
-			} else {
-				r.value++
-			}
-			r.mu.Unlock()
-			expected := websocket.CloseTryAgainLater
-			if failure {
-				expected = websocket.CloseInternalServerErr
-			}
-			requireClose(t, conn, expected)
-		})
-	}
+func TestUpsolverGetsPublicAudience(t *testing.T) {
+	f := newWSFixture(t)
+	end := time.Now().Add(-time.Minute)
+	c := f.stub.contest
+	c.EndTime = &end
+	c.Settings.EnableUpsolving = true
+	c.Settings.ParticipationMode = contestsmodel.ParticipationModeInviteOnly
+	c.Settings.MonitorScope = contestsmodel.ScopePublic
+	c.Settings.SubmissionsListScope = contestsmodel.ScopeParticipant
+	f.stub.contest.Settings, f.stub.contest.EndTime = c.Settings, c.EndTime
+	f.stub.facts = &access.ContestFacts{Contest: c, Now: time.Now()}
+	conn := f.connect(t, f.path("submissions"))
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	own := uuid.New()
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: own, State: 200, SubmissionEventMeta: f.meta(f.stub.user.Id)})
+	// Participant-scoped submissions of others must not reach an upsolver, so the first frame is its own.
+	require.Equal(t, own.String(), readPayload(t, conn)["id"])
 }
 
 func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 	f.stub.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
 	f.stub.change(func() {
@@ -544,7 +576,7 @@ func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 
 func TestInvalidSessionNeverDowngradesToPublicGuest(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
 	f.stub.authErr = pkg.ErrUnauthenticated
 	conn, response, err := f.dial(t, f.path("submissions"), true)
 	require.Error(t, err)

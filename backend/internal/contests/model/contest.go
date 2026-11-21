@@ -14,22 +14,13 @@ import (
 type ContestVisibility = string
 
 const (
-	ContestVisibilityPublic   ContestVisibility = "public"
-	ContestVisibilityPrivate  ContestVisibility = "private"
-	ContestVisibilityUnlisted ContestVisibility = "unlisted"
-)
-
-type ContestRole = string
-
-const (
-	ContestRoleOwner       ContestRole = "owner"
-	ContestRoleModerator   ContestRole = "moderator"
-	ContestRoleParticipant ContestRole = "participant"
+	ContestVisibilityPublic  ContestVisibility = "public"
+	ContestVisibilityPrivate ContestVisibility = "private"
 )
 
 type UserContestMembership struct {
 	ContestID uuid.UUID
-	Role      ContestRole
+	Role      accessmodel.ContestRole
 }
 
 type FreezeStatus string
@@ -62,7 +53,6 @@ const PenaltyPerAttempt int32 = 20
 type CreateContestParams struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	OwnerID        *uuid.UUID
 	Visibility     ContestVisibility
 	Title          string
 	Login          string
@@ -73,7 +63,6 @@ type CreateContestParams struct {
 
 type CreateContestInput struct {
 	OrganizationID uuid.UUID
-	OwnerID        *uuid.UUID
 	Title          string
 	Login          string
 	Description    string
@@ -137,7 +126,6 @@ type ContestUpdateInput struct {
 	StartTimeSet bool
 	EndTime      *time.Time
 	EndTimeSet   bool
-	OwnerID      *uuid.UUID
 }
 
 type ContestProblemGet struct {
@@ -182,32 +170,6 @@ type ContestPermissionGet struct {
 	UserId    uuid.UUID
 }
 
-var roleHierarchy = map[ContestRole]int{
-	ContestRoleOwner:       3,
-	ContestRoleModerator:   2,
-	ContestRoleParticipant: 1,
-}
-
-func IsValidContestRole(role ContestRole) bool {
-	_, ok := roleHierarchy[role]
-	return ok
-}
-
-func RoleGraterOrEquals(r1 ContestRole, r2 ContestRole) bool {
-	h1, ok1 := roleHierarchy[r1]
-	h2, ok2 := roleHierarchy[r2]
-
-	if !ok1 || !ok2 {
-		return false
-	}
-
-	return h1 >= h2
-}
-
-func RoleGreaterOrEquals(r1 ContestRole, r2 ContestRole) bool {
-	return RoleGraterOrEquals(r1, r2)
-}
-
 type CreateContestMemberInput struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID
@@ -217,7 +179,7 @@ type CreateContestMemberInput struct {
 type CreateContestMemberParams struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID
-	Role      ContestRole
+	Role      accessmodel.ContestRole
 }
 
 type ContestUserProblemBlock struct {
@@ -241,7 +203,6 @@ type Contest struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
 	OrganizationLogin string
-	OwnerID           *uuid.UUID
 	Visibility        ContestVisibility
 	Title             string
 	Login             string
@@ -279,7 +240,7 @@ type ContestMember struct {
 	ContestID   uuid.UUID
 	Username    string
 	Role        accessmodel.UserRole
-	ContestRole ContestRole
+	ContestRole accessmodel.ContestRole
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -456,6 +417,11 @@ type DashboardContest struct {
 	OrganizationID     uuid.UUID
 	OrganizationName   string
 	OrganizationLogin  string
-	UserRole           string
+	UserRole           accessmodel.ContestRole
 	LastSubmissionTime *time.Time
+}
+
+// PackageRef identifies the package a contest problem pins.
+type PackageRef struct {
+	ID, ProblemID uuid.UUID
 }

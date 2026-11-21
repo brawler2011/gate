@@ -15,7 +15,7 @@ func (s *IntegrationTestSuite) TestInvitationResponseUsesAuthenticatedRecipient(
 	org := s.createOrganization("invitation-response", "Invitation response", owner.Id)
 	for _, operation := range []string{"accept", "decline"} {
 		s.Run(operation, func() {
-			invitation, err := s.organizationsRepo.CreateInvitation(s.ctx, &organizationsmodel.CreateOrganizationInvitationInput{OrganizationID: org.ID, UserID: recipient.Id, InviterID: owner.Id, Role: organizationsmodel.OrgRoleMember})
+			invitation, err := s.organizationsRepo.CreateInvitation(s.ctx, &organizationsmodel.CreateOrganizationInvitationInput{OrganizationID: org.ID, UserID: recipient.Id, InviterID: owner.Id, Role: accessmodel.OrganizationMember})
 			s.Require().NoError(err)
 			call := func(user accessmodel.User) error {
 				if operation == "accept" {

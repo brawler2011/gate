@@ -31,12 +31,11 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 			s.Run(startState+"_"+endState, func() {
 				id := uuid.New()
 				login := "dates-" + startState + "-" + endState
-				err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-					ID: id, OrganizationID: org.ID, OwnerID: &owner.Id,
-					Title: "Original title", Login: login, Description: "Keep description",
+				err := s.createContest(contestsmodel.CreateContestParams{
+					ID: id, OrganizationID: org.ID, Title: "Original title", Login: login, Description: "Keep description",
 					Visibility: contestsmodel.ContestVisibilityPublic,
 					StartTime:  &start, EndTime: &end,
-				})
+				}, owner.Id)
 				s.Require().NoError(err)
 				body := map[string]interface{}{"title": "Updated title"}
 				expectedStart, expectedEnd := &start, &end
@@ -100,7 +99,6 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 					}
 				}
 				s.True(stored.Settings.EnableDrafts)
-				s.Equal(&owner.Id, stored.OwnerID)
 				s.Equal(contestsmodel.ContestVisibilityPublic, stored.Visibility)
 				s.Equal(http.StatusForbidden, patch(outsider.Id, `{"start_time":null,"end_time":null}`))
 				s.Equal(http.StatusBadRequest, patch(owner.Id, `{"start_time":"2026-01-02T10:00:00Z","end_time":"2026-01-01T10:00:00Z"}`))
@@ -136,10 +134,10 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 		s.Run(tc.name, func() {
 			id := uuid.New()
 			login := "settings-" + tc.name
-			s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-				ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Settings", Login: login,
+			s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
+				ID: id, OrganizationID: org.ID, Title: "Settings", Login: login,
 				Description: "Original", Visibility: contestsmodel.ContestVisibilityPublic,
-			}))
+			}, owner.Id))
 			frozen := contestsmodel.FreezeStatusFrozen
 			s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{
 				FreezeStatus: &frozen, FreezeDurationMinutes: new(int32(30)), FreezeDurationSet: true,
@@ -168,10 +166,10 @@ func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
 	org := s.createOrganization("freeze-"+uuid.NewString()[:8], "Freeze status", owner.Id)
 	id := uuid.New()
 	login := "null-freeze-status"
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
-		ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Freeze status", Login: login,
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
+		ID: id, OrganizationID: org.ID, Title: "Freeze status", Login: login,
 		Visibility: contestsmodel.ContestVisibilityPublic,
-	}))
+	}, owner.Id))
 	frozen := contestsmodel.FreezeStatusFrozen
 	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{FreezeStatus: &frozen}}))
 

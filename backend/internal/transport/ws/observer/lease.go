@@ -3,106 +3,69 @@ package observer
 import (
 	"context"
 	"fmt"
-	"time"
 
-	m "github.com/brawler2011/gate/backend/internal/access/model"
-
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/google/uuid"
 )
 
-type RevisionReader interface {
-	AccessRevision(context.Context) (int64, error)
-}
-type audienceAuthorizer interface {
-	AuthorizeContestAudience(context.Context, uuid.UUID, string, uuid.UUID) error
-}
-
-// Fix audience and revision before selecting history; every delivery and idle check validates the lease.
+// admit fixes the audience before selecting history; every delivery and idle check recomputes it,
+// so a revoked grant closes the subscription at the next event.
 func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contestEvents bool) (func() error, error) {
 	signature := func() (string, error) {
-		ctx := m.WithReadTime(ctx, time.Now().UTC())
-		var revision int64
-		if s.revisions != nil {
-			var err error
-			revision, err = s.revisions.AccessRevision(ctx)
-			if err != nil {
-				return "", err
-			}
-		}
-		user, p, err := s.currentAccess(ctx, filter)
+		user, a, err := s.currentAccess(ctx, filter)
 		if err != nil {
 			return "", err
 		}
-		if p == nil {
-			if !user.IsAdmin() {
-				return "", pkg.ErrForbidden
-			}
-			return fmt.Sprint(revision, user), nil
+		if a == nil {
+			return fmt.Sprint(user.Id, user.Role), nil
 		}
+		can := a.Can
 		if contestEvents {
-			if !p.GetContest {
+			if !can(accessmodel.ContestView) {
 				return "", pkg.ErrForbidden
 			}
-		} else if !submissionAccess(user, p, filter) {
+		} else if !submissionAccess(user, a, filter) {
 			return "", pkg.ErrForbidden
 		}
 		audience := "public"
-		if p.ListOwnSubmissions {
+		if a.Participates() {
 			audience = "participants"
 		}
-		if p.ManageContest {
+		if can(accessmodel.ContestManage) {
 			audience = "managers"
 		}
-		if authorize, ok := s.permissions.(audienceAuthorizer); ok {
-			if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, audience, uuid.Nil); err != nil {
-				return "", err
-			}
-		}
 		topics := []string{}
-		if contestEvents || p.ListUsersSubmissions || p.GetMonitor {
+		if contestEvents || can(accessmodel.ContestListSubmissions) || can(accessmodel.ContestViewScoreboard) {
 			topics = append(topics, contestTopic(*filter.ContestId, audience))
 		}
-		if p.ListOwnSubmissions && !p.ManageContest {
-			if authorize, ok := s.permissions.(audienceAuthorizer); ok {
-				if err := authorize.AuthorizeContestAudience(ctx, *filter.ContestId, "own", user.Id); err != nil {
-					return "", err
-				}
-			}
+		if can(accessmodel.ContestListOwnSubmissions) && !can(accessmodel.ContestManage) {
 			topics = append(topics, ownTopic(*filter.ContestId, user.Id))
 		}
-		if filter.UserId != nil && *filter.UserId != user.Id && !p.ListUsersSubmissions && !p.GetMonitor {
+		if filter.UserId != nil && *filter.UserId != user.Id && !can(accessmodel.ContestListSubmissions) && !can(accessmodel.ContestViewScoreboard) {
 			return "", pkg.ErrForbidden
 		}
+		// Events are projected from the contest reader, so the lease must bind the same configuration.
 		c, err := s.contests.GetContest(ctx, *filter.ContestId)
 		if err != nil {
 			return "", err
 		}
+		configuration := topicConfiguration(c)
 		// Bind only on admission; verification never changes queued audiences.
 		if filter.Topics == nil {
 			filter.Topics = topics
 			filter.audience = audience
 			filter.viewer = user.Id
-			filter.configuration = topicConfiguration(c)
+			filter.configuration = configuration
 		}
-		if s.revisions != nil {
-			current, err := s.revisions.AccessRevision(ctx)
-			if err != nil {
-				return "", err
-			}
-			if current != revision {
-				return "", pkg.ErrConflict
-			}
-		}
-		// Recheck credentials at delivery: session revocation need not change resource revisions.
-		currentActor, err := s.sessionActor(ctx)
+		// Recheck credentials after the grants: a session can be revoked while they load.
+		current, err := s.sessionActor(ctx)
 		if err != nil {
 			return "", err
 		}
-		if currentActor.Id != user.Id || currentActor.Role != user.Role {
+		if current.Id != user.Id || current.Role != user.Role {
 			return "", pkg.ErrUnauthenticated
 		}
-		return fmt.Sprintf("%d/%s/%v/%s", revision, user.Id, *p, topicConfiguration(c)), nil
+		return fmt.Sprintf("%s/%s/%s/%v", user.Id, audience, configuration, topics), nil
 	}
 	initial, err := signature()
 	if err != nil {

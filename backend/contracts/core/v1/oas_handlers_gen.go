@@ -3708,9 +3708,9 @@ func (s *Server) handleCreateProblemTeamRequest(args [1]string, argsEscaped bool
 					In:   "query",
 				}: params.TeamID,
 				{
-					Name: "permission",
+					Name: "role",
 					In:   "query",
-				}: params.Permission,
+				}: params.Role,
 			},
 			Raw: r,
 		}
@@ -14464,9 +14464,9 @@ func (s *Server) handleUpdateProblemTeamRequest(args [1]string, argsEscaped bool
 					In:   "query",
 				}: params.TeamID,
 				{
-					Name: "permission",
+					Name: "role",
 					In:   "query",
-				}: params.Permission,
+				}: params.Role,
 			},
 			Raw: r,
 		}

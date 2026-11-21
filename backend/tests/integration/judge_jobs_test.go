@@ -5,9 +5,10 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"sync"
 	"time"
+
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
@@ -19,7 +20,6 @@ import (
 	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
 	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -50,12 +50,12 @@ func (s *IntegrationTestSuite) newJobSubmission() (uuid.UUID, uuid.UUID, uuid.UU
 	user := s.createUser("job_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("job-"+suffix, "Jobs", user.Id)
 	problem, contest := uuid.New(), uuid.New()
-	s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{ID: problem, OrganizationID: org.ID, Title: "Job", ShortName: "job", Visibility: problemsmodel.ProblemVisibilityPrivate, OwnerID: &user.Id}))
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: contest, OrganizationID: org.ID, Title: "Jobs", Login: "jobs", Visibility: contestsmodel.ContestVisibilityPublic}))
+	s.Require().NoError(dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org.ID, Owner: user.Id, Title: "Job", ShortName: "job"}))
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: contest, OrganizationID: org.ID, Title: "Jobs", Login: "jobs", Visibility: contestsmodel.ContestVisibilityPublic}, s.createUser("job_owner_"+suffix, accessmodel.UserRoleUser).Id))
 	pack, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problem, org.ID, time.Time{})
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: pack}))
-	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user.Id, Role: contestsmodel.ContestRoleParticipant}))
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user.Id, Role: accessmodel.ContestParticipant}))
 	submission, err := pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user.Id, Language: "python3", Solution: "print(1)"})
 	s.Require().NoError(err)
 	return submission, contest, problem, user.Id

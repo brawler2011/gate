@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -60,9 +62,9 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 		}
 	}
 
-	joinPolicy := organizationsmodel.OrgJoinPolicyByRequest
+	joinPolicy := accessmodel.JoinByRequest
 	if params.JoinPolicy.IsSet() {
-		joinPolicy = organizationsmodel.OrganizationJoinPolicy(params.JoinPolicy.Value)
+		joinPolicy = accessmodel.JoinPolicy(params.JoinPolicy.Value)
 	}
 
 	input := &organizationsmodel.CreateOrganizationInput{
@@ -100,9 +102,9 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 		return err
 	}
 
-	var joinPolicy *organizationsmodel.OrganizationJoinPolicy
+	var joinPolicy *accessmodel.JoinPolicy
 	if req.JoinPolicy.IsSet() {
-		jp := organizationsmodel.OrganizationJoinPolicy(req.JoinPolicy.Value)
+		jp := accessmodel.JoinPolicy(req.JoinPolicy.Value)
 		joinPolicy = &jp
 	}
 
@@ -158,7 +160,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 
 	input := &organizationsmodel.AddOrganizationMemberInput{
 		UserID: params.UserID,
-		Role:   organizationsmodel.OrganizationRole(params.Role),
+		Role:   accessmodel.OrganizationRole(params.Role),
 	}
 
 	err := h.Organizations.AddMemberByLogin(ctx, params.Login, input)
@@ -227,7 +229,7 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
-	role := organizationsmodel.OrganizationRole(req.Role)
+	role := accessmodel.OrganizationRole(req.Role)
 	if !validateOrganizationRole(string(role)) {
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 	}
@@ -331,9 +333,9 @@ func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params c
 }
 
 func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req corev1.OptApproveOrganizationJoinRequestModel, params corev1.ApproveOrganizationJoinRequestParams) error {
-	role := organizationsmodel.OrgRoleMember
+	role := accessmodel.OrganizationMember
 	if req.IsSet() && req.Value.Role.IsSet() {
-		role = organizationsmodel.OrganizationRole(req.Value.Role.Value)
+		role = accessmodel.OrganizationRole(req.Value.Role.Value)
 		if !validateOrganizationRole(string(role)) {
 			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 		}

@@ -25,7 +25,6 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
@@ -200,7 +199,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		owner := s.createUser("align_role_own", accessmodel.UserRoleUser)
 		other := s.createUser("align_role_tgt", accessmodel.UserRoleUser)
 		org := s.createOrganization("align-role-org", "Role Org", owner.Id)
-		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, other.Id, organizationsmodel.OrgRoleMember))
+		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, other.Id, accessmodel.OrganizationMember))
 
 		// Organization membership rejects roles from other domains.
 		badOrgReq := httptest.NewRequest(http.MethodPost,
@@ -235,14 +234,13 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusBadRequest, badTeamRec.Code, "invalid team role must return 400")
 
 		contestID := uuid.New()
-		err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+		err = s.createContest(contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
-			OwnerID:        &owner.Id,
 			Title:          "Role Contest",
 			Login:          "align-contest",
 			Visibility:     contestsmodel.ContestVisibilityPublic,
-		})
+		}, owner.Id)
 		s.Require().NoError(err)
 
 		// Contest membership rejects problem roles.

@@ -94,7 +94,11 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 }
 
 func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error) {
-	rows, err := r.q.ScopeTeams(ctx, sqlc.ScopeTeamsParams{ViewerID: &userID, Now: accessmodel.ReadTime(ctx), OrganizationID: filter.OrganizationID, Search: filter.Search, PageSize: filter.PageSize, PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize)})
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.q.ScopeTeams(ctx, sqlc.ScopeTeamsParams{ViewerID: viewer, All: all, OrganizationID: filter.OrganizationID, Search: filter.Search, PageSize: filter.PageSize, PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize)})
 	if err != nil {
 		return nil, 0, dbError("list teams", err)
 	}
@@ -144,7 +148,7 @@ func (r *TeamsRepo) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *TeamsRepo) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error {
+func (r *TeamsRepo) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error {
 	if err := r.q.AddTeamMember(ctx, sqlc.AddTeamMemberParams{
 		TeamID: teamID,
 		UserID: userID,
@@ -167,7 +171,7 @@ func (r *TeamsRepo) GetTeamMember(ctx context.Context, teamID, userID uuid.UUID)
 	return &organizationsmodel.TeamMember{
 		TeamID:    member.TeamID,
 		UserID:    member.UserID,
-		Role:      organizationsmodel.TeamRole(member.Role),
+		Role:      accessmodel.TeamRole(member.Role),
 		CreatedAt: member.CreatedAt,
 	}, nil
 }
@@ -192,7 +196,7 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID, reque
 		result[i] = organizationsmodel.TeamMember{
 			TeamID:    m.TeamID,
 			UserID:    m.UserID,
-			Role:      organizationsmodel.TeamRole(m.Role),
+			Role:      accessmodel.TeamRole(m.Role),
 			Username:  m.Username,
 			Email:     email,
 			CreatedAt: m.CreatedAt,
@@ -206,7 +210,7 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID, reque
 	return result, safeInt32(count), nil
 }
 
-func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error {
+func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error {
 	if err := r.q.UpdateTeamMemberRole(ctx, sqlc.UpdateTeamMemberRoleParams{
 		TeamID: teamID,
 		UserID: userID,
@@ -263,12 +267,20 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.U
 	if err != nil {
 		return nil, 0, err
 	}
-	return scopeContests(ctx, r.q, sqlc.ScopeContestsParams{TeamID: &teamID, ViewerID: &viewerID, Now: accessmodel.ReadTime(ctx), PageSize: request.PageSize, PageOffset: request.Offset()})
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	return scopeContests(ctx, r.q, sqlc.ScopeContestsParams{TeamID: &teamID, ViewerID: viewer, All: all, PageSize: request.PageSize, PageOffset: request.Offset()})
 }
 func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error) {
 	request, err := request.Normalize()
 	if err != nil {
 		return nil, 0, err
 	}
-	return scopeProblems(ctx, r.q, sqlc.ScopeProblemsParams{TeamID: &teamID, ViewerID: &viewerID, Now: accessmodel.ReadTime(ctx), Descending: true, PageSize: request.PageSize, PageOffset: request.Offset()})
+	viewer, all, err := (Access{q: r.q}).visibility(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	return scopeProblems(ctx, r.q, sqlc.ScopeProblemsParams{TeamID: &teamID, ViewerID: viewer, All: all, Descending: true, PageSize: request.PageSize, PageOffset: request.Offset()})
 }
