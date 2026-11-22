@@ -50,7 +50,7 @@ func TestIntegrationCalibration(t *testing.T) {
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"0", "1"}, []string{probes[0].CPUs, probes[1].CPUs})
 
-	m, err := calibration.Measure(ctx, sandbox.NewSandbox(client, cfg), files, dbfixtures.BuildLimits(t).Compile, 2, 1)
+	m, err := calibration.Measure(ctx, sandbox.NewSandbox(client, cfg), files, dbfixtures.BuildLimits(t).Compile, []int{0, 1}, 1)
 	require.NoError(t, err)
 	for _, profile := range calibration.Profiles {
 		runs := m[profile]

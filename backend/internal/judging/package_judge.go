@@ -110,6 +110,7 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	p := pkg.Format.Problem
+	calib := j.Calibration()
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
 	if err != nil {
@@ -121,7 +122,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if len(output) > maxTestDetailSize {
 			output = output[:maxTestDetailSize]
 		}
-		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}}, nil
+		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}, Calibration: calib}, nil
 	}
 	defer j.releaseExecutable(sol)
 	// An optional checker decides the verdict after the interactor accepts.
@@ -146,7 +147,6 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	if err := progress.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, err
 	}
-	calib := j.Calibration()
 	tests := collectFlatTests(pkg.Format.Problem)
 	results := make([]TestResult, 0, len(tests))
 	hasFailureDetails := false

@@ -74,7 +74,7 @@ type Run struct {
 type Measurements map[string][]Run
 
 // Measure runs each profile on all cores at once, repeats times, as judging loads them.
-func Measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransport, compile sandbox.FileRunLimits, cores, repeats int) (Measurements, error) {
+func Measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransport, compile sandbox.FileRunLimits, cores []int, repeats int) (Measurements, error) {
 	m := Measurements{}
 	for _, profile := range Profiles {
 		source, err := programs.ReadFile("programs/" + profile + ".c")
@@ -97,10 +97,11 @@ func Measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransp
 
 var runLimits = sandbox.FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 256 * bytesize.MiB, Processes: 1, Output: bytesize.KiB, Diagnostic: bytesize.KiB}
 
-func measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransport, exe sandbox.Executable, cores, repeats int) ([]Run, error) {
-	var mu sync.Mutex
+func measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransport, exe sandbox.Executable, cores []int, repeats int) ([]Run, error) {
 	var runs []Run
 	for range repeats {
+		var mu sync.Mutex
+		var round []Run
 		g, ctx := errgroup.WithContext(ctx)
 		for range cores {
 			g.Go(func() error {
@@ -114,7 +115,7 @@ func measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransp
 					return fmt.Errorf("status %s, stderr %q", r.Status, r.Stderr)
 				}
 				mu.Lock()
-				runs = append(runs, Run{CPU: cpu, Time: r.Time})
+				round = append(round, Run{CPU: cpu, Time: r.Time})
 				mu.Unlock()
 				return nil
 			})
@@ -122,8 +123,25 @@ func measure(ctx context.Context, sb *sandbox.Sandbox, files *sandbox.FileTransp
 		if err := g.Wait(); err != nil {
 			return nil, err //nolint:wrapcheck // describes the run
 		}
+		if err := checkRound(round, cores); err != nil {
+			return nil, err
+		}
+		runs = append(runs, round...)
 	}
 	return runs, nil
+}
+
+// checkRound requires one run on each core: a late request can land on a core that already finished its run.
+func checkRound(round []Run, cores []int) error {
+	got := make([]int, len(round))
+	for i, r := range round {
+		got[i] = r.CPU
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, cores) {
+		return fmt.Errorf("a round ran on CPUs %v, want one run on each of %v", got, cores)
+	}
+	return nil
 }
 
 func release(files *sandbox.FileTransport, id string) {

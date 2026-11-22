@@ -90,14 +90,12 @@ func (m *Monitor) Run(ctx context.Context) error {
 	reasons = append(reasons, m.pinned(ctx)...)
 	reasons = append(reasons, m.Host.Activity(ctx, m.Cores, sampleWindow, true)...)
 	var calib calibration.Calibration
+	var baseline counters
 	if len(reasons) == 0 {
 		var unfit []string
-		calib, unfit = m.Benchmark(ctx)
+		calib, baseline, unfit = m.calibrate(ctx)
 		reasons = append(reasons, unfit...)
-	}
-	// After the benchmark, so the first Admit also sees throttling during it.
-	baseline, err := m.Host.counters(m.Cores)
-	if err != nil {
+	} else if _, err := m.Host.counters(m.Cores); err != nil {
 		reasons = append(reasons, err.Error())
 	}
 	if ctx.Err() != nil {
@@ -130,6 +128,20 @@ func (m *Monitor) Run(ctx context.Context) error {
 	}
 	<-ctx.Done()
 	return nil
+}
+
+// calibrate runs the benchmark; throttling or steal during it would skew k, so it fails.
+func (m *Monitor) calibrate(ctx context.Context) (calibration.Calibration, counters, []string) {
+	before, err := m.Host.counters(m.Cores)
+	if err != nil {
+		return calibration.Calibration{}, nil, []string{err.Error()}
+	}
+	calib, reasons := m.Benchmark(ctx)
+	after, err := m.Host.counters(m.Cores)
+	if err != nil {
+		return calib, nil, append(reasons, err.Error())
+	}
+	return calib, after, append(reasons, after.changed(before)...)
 }
 
 // pinned checks that go-judge runs one program per judge core at a time, each on its own core:

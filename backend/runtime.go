@@ -253,7 +253,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		}
 		bench := d.cfg.Judge.Benchmark
 		benchmark := func(ctx context.Context) (calibration.Calibration, []string) {
-			m, err := calibration.Measure(ctx, sandbox.NewSandbox(sandboxClient, judgeImage.Config), fileTransport, problemPolicy.Limits.Compile, len(cores), bench.Repeats)
+			m, err := calibration.Measure(ctx, sandbox.NewSandbox(sandboxClient, judgeImage.Config), fileTransport, problemPolicy.Limits.Compile, cores, bench.Repeats)
 			if err != nil {
 				return calibration.Calibration{}, []string{fmt.Sprintf("benchmark: %v", err)}
 			}

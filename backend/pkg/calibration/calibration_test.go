@@ -44,6 +44,12 @@ func TestEvaluate(t *testing.T) {
 	assert.InDelta(t, 1.00985, k, 1e-4)
 }
 
+func TestCheckRound(t *testing.T) {
+	require.NoError(t, checkRound([]Run{{CPU: 3}, {CPU: 2}}, []int{2, 3}))
+	require.Error(t, checkRound([]Run{{CPU: 2}, {CPU: 2}}, []int{2, 3}), "a late request reused a core")
+	require.Error(t, checkRound([]Run{{CPU: 2}, {CPU: 4}}, []int{2, 3}))
+}
+
 func TestEvaluateRejects(t *testing.T) {
 	noisy := uniform(nil, 200*ms, 200*ms, 210*ms)
 	slowCore := uniform(nil, 200*ms)
