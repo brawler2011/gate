@@ -56,8 +56,7 @@ func (m *Monitor) Ready() bool {
 	return ok
 }
 
-// Admit reads the judge cores' counters, well under a millisecond, and closes judging
-// if a hypervisor stole time from them or they were throttled since the last call.
+// Admit closes judging if a hypervisor stole time from the judge cores or they were throttled since the last call.
 func (m *Monitor) Admit(ctx context.Context) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -2,6 +2,7 @@ package hostcheck
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -102,6 +103,14 @@ func (cc *coreCounters) readCPPC(dir string) error {
 	return nil
 }
 
+// cppcDelta handles counters that wrap at 32 bits, as the kernel's cppc_cpufreq does.
+func cppcDelta(now, before uint64) uint64 {
+	if now >= before || before > math.MaxUint32 {
+		return now - before
+	}
+	return (now - before) & math.MaxUint32
+}
+
 func readUint(path string) (uint64, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -114,7 +123,6 @@ func readUint(path string) (uint64, error) {
 	return n, nil
 }
 
-// changed reports steal, throttling and frequency drift between two readings.
 func (after counters) changed(before counters) []string {
 	var f findings
 	for c, a := range after {
@@ -129,7 +137,11 @@ func (after counters) changed(before counters) []string {
 		if a.hasThrottles && a.throttles > b.throttles {
 			f.add("cpu%d was thermally throttled %d times", c, a.throttles-b.throttles)
 		}
-		ref, del := a.reference-b.reference, a.delivered-b.delivered
+		if a.hasCPPC && a.expected != b.expected {
+			f.add("cpu%d: frequency limits changed", c)
+			continue
+		}
+		ref, del := cppcDelta(a.reference, b.reference), cppcDelta(a.delivered, b.delivered)
 		if a.hasCPPC && ref >= minReferenceCycles {
 			ratio := float64(del) / float64(ref) / a.expected
 			if ratio < 1-maxFrequencyDrift || ratio > 1+maxFrequencyDrift {

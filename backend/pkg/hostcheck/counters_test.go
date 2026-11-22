@@ -1,6 +1,7 @@
 package hostcheck
 
 import (
+	"fmt"
 	"log/slog"
 	"maps"
 	"testing"
@@ -36,7 +37,7 @@ func TestCountersChanged(t *testing.T) {
 		"throttled":  {map[string]string{"sys/devices/system/cpu/cpu2/acpi_cppc/feedback_ctrs": "ref:3000000000 del:2800000000"}, "ran at 90.0%"},
 		"boosted":    {map[string]string{"sys/devices/system/cpu/cpu2/acpi_cppc/feedback_ctrs": "ref:3000000000 del:3400000000"}, "ran at 120.0%"},
 		"stolen":     {map[string]string{"proc/stat": "cpu2 10 0 10 1000 0 0 0 4 0 0\n"}, "4 jiffies stolen"},
-		"lower freq": {map[string]string{"sys/devices/system/cpu/cpu2/acpi_cppc/feedback_ctrs": "ref:3000000000 del:2500000000", "sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq": "1500000"}, ""},
+		"lower freq": {map[string]string{"sys/devices/system/cpu/cpu2/acpi_cppc/feedback_ctrs": "ref:3000000000 del:1500000000", "sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq": "1500000"}, "frequency limits changed"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			after, err := counterHost(t, tc.files).counters([]int{2})
@@ -49,6 +50,26 @@ func TestCountersChanged(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCPPC32BitWrap(t *testing.T) {
+	ctrs := func(ref, del uint64) map[string]string {
+		return map[string]string{"sys/devices/system/cpu/cpu2/acpi_cppc/feedback_ctrs": fmt.Sprintf("ref:%d del:%d", ref, del)}
+	}
+	before, err := counterHost(t, ctrs(4_294_000_000, 4_294_000_000)).counters([]int{2})
+	require.NoError(t, err)
+	// Both wrapped: 2,000,000 reference and 1,600,000 delivered cycles, a 20% slowdown.
+	after, err := counterHost(t, ctrs(1_032_704, 632_704)).counters([]int{2})
+	require.NoError(t, err)
+	got := after.changed(before)
+	require.Len(t, got, 1)
+	assert.Contains(t, got[0], "ran at 80.0%")
+	// Only reference wrapped, at full speed.
+	before, err = counterHost(t, ctrs(4_294_000_000, 1_000_000_000)).counters([]int{2})
+	require.NoError(t, err)
+	after, err = counterHost(t, ctrs(1_032_704, 1_002_000_000)).counters([]int{2})
+	require.NoError(t, err)
+	assert.Empty(t, after.changed(before))
 }
 
 func TestIntelThrottleCount(t *testing.T) {
