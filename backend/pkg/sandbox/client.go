@@ -51,7 +51,6 @@ type cmd struct {
 	CopyOut       []string           `json:"copyOut,omitempty"`
 	CopyOutCached []string           `json:"copyOutCached,omitempty"`
 	CopyOutMax    uint64             `json:"copyOutMax,omitempty"`
-	CPUSetLimit   string             `json:"cpuSetLimit,omitempty"`
 }
 
 type pipeIndex struct {

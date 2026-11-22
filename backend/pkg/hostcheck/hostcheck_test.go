@@ -1,6 +1,7 @@
 package hostcheck
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,6 +64,7 @@ func TestSettings(t *testing.T) {
 		"governor":             {set: map[string]string{"sys/devices/system/cpu/cpu2/cpufreq/scaling_governor": "powersave"}, want: "cpu2: governor is powersave"},
 		"frequency range":      {set: map[string]string{"sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq": "400000"}, want: "cpu3: frequency is not fixed"},
 		"no cpufreq":           {drop: []string{"sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq"}, want: "cannot read"},
+		"empty frequencies":    {set: map[string]string{"sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq": "", "sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq": ""}, want: "invalid frequency"},
 		"not isolated":         {set: map[string]string{"sys/devices/system/cpu/isolated": "3"}, want: "cpu2 is not isolated"},
 		"no nohz_full":         {set: map[string]string{"sys/devices/system/cpu/nohz_full": "(null)"}, want: "is not in nohz_full"},
 		"irq default":          {set: map[string]string{"proc/irq/default_smp_affinity": "00000000,00000007"}, want: "new IRQs may go to cpu2"},
@@ -101,8 +103,9 @@ func TestActivity(t *testing.T) {
 	}
 	parse := func(t *testing.T, statText, irqText string) sample {
 		t.Helper()
-		h := writeHost(t, Host{Sys: "sys", Proc: "proc"}, map[string]string{"proc/stat": statText, "proc/interrupts": irqText})
-		s, err := h.sample()
+		h := writeHost(t, Host{Sys: "sys", Proc: "proc"}, map[string]string{"proc/stat": statText})
+		h.Interrupts = func(context.Context) ([]byte, error) { return []byte(irqText), nil }
+		s, err := h.sample(t.Context(), []int{2, 3})
 		require.NoError(t, err)
 		return s
 	}
@@ -129,4 +132,18 @@ func TestActivity(t *testing.T) {
 	}
 	offline := compare(idle, idle, []int{5}, true)
 	assert.Equal(t, []string{"cpu5 is not in /proc/stat"}, offline)
+}
+
+// Container runtimes mask /proc/interrupts as an empty file, which must not pass as quiet.
+func TestUnreadableInterruptsFail(t *testing.T) {
+	for name, text := range map[string]string{
+		"masked":         "",
+		"no judge core":  "  CPU0 CPU1\n 60: 1 0 nvme\n",
+		"short row":      "  CPU0 CPU2\n 60: 1\n",
+		"invalid count":  "  CPU0 CPU2\n 60: 1 x nvme\n",
+		"no device IRQs": "  CPU0 CPU2\nLOC: 1 1 timer\n",
+	} {
+		_, err := parseInterrupts(text, []int{2})
+		assert.Error(t, err, name)
+	}
 }

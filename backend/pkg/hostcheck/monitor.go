@@ -2,7 +2,9 @@ package hostcheck
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -18,9 +20,9 @@ const (
 type Monitor struct {
 	Host  Host
 	Cores []int
-	// Pinned returns the CPU list a program sees when go-judge runs it on cpu.
-	Pinned func(ctx context.Context, cpu string) (string, error)
-	Logger *slog.Logger
+	// RunCPUs runs n overlapping programs in go-judge and returns the CPU list each may use.
+	RunCPUs func(ctx context.Context, n int) ([]string, error)
+	Logger  *slog.Logger
 
 	mu      sync.Mutex
 	checked bool
@@ -58,16 +60,21 @@ func (m *Monitor) Run(ctx context.Context) error {
 	return nil
 }
 
+// pinned checks that go-judge runs exactly one program per judge core, each on its own core.
 func (m *Monitor) pinned(ctx context.Context) []string {
+	lists, err := m.RunCPUs(ctx, len(m.Cores))
+	if err != nil {
+		return []string{fmt.Sprintf("run in go-judge: %v", err)}
+	}
 	var f findings
-	for _, c := range m.Cores {
-		cpu := strconv.Itoa(c)
-		got, err := m.Pinned(ctx, cpu)
-		if err != nil {
-			f.add("run on cpu%d in go-judge: %v", c, err)
-		} else if got != cpu {
-			f.add("go-judge run on cpu%d may use CPUs %s", c, got)
-		}
+	want := make([]string, len(m.Cores))
+	for i, c := range m.Cores {
+		want[i] = strconv.Itoa(c)
+	}
+	slices.Sort(lists)
+	slices.Sort(want)
+	if !slices.Equal(lists, want) {
+		f.add("go-judge ran %d overlapping programs on CPUs %v, want one on each judge core", len(lists), lists)
 	}
 	return f
 }

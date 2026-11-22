@@ -31,9 +31,9 @@ type JudgeWorker struct {
 	// Jobs wait in NATS while the host is not ready to judge.
 	ready  func() bool
 	logger *slog.Logger
-	mu          sync.Mutex
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
+	mu     sync.Mutex
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 func NewJudgeWorker(
@@ -129,6 +129,13 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			}
 
 			for msg := range msgs.Messages() {
+				// The host may have failed its checks while Fetch waited.
+				if !w.ready() {
+					if err := msg.NakWithDelay(5 * time.Second); err != nil {
+						logger.Error("failed to return message while not ready", "operation", "nats_nak", "error", err)
+					}
+					continue
+				}
 				w.handleMessage(ctx, msg, logger)
 			}
 		}

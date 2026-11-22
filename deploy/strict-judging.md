@@ -72,7 +72,7 @@ go-judge requests exactly the judge cores:
 
 ```yaml
 worker:
-  strategy: {type: Recreate}
+  strategy: Recreate
   resources:
     requests: {cpu: 500m, memory: 2Gi}
     limits: {cpu: 500m, memory: 2Gi}

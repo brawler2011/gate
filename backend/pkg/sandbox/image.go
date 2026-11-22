@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // manifestDir is where the judge image mounts its manifest inside the sandbox (judge/mount.yaml).
@@ -58,7 +60,7 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 }
 
 func readImage(ctx context.Context, client *Client) (Image, error) {
-	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name, "") })
+	return parseImage(func(name string) ([]byte, error) { return client.ReadFile(ctx, manifestDir+"/"+name) })
 }
 
 func parseImage(read func(name string) ([]byte, error)) (Image, error) {
@@ -84,30 +86,41 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	return Image{Identity: identity, Config: cfg}, nil
 }
 
-// AllowedCPUs returns the CPU list a program sees when go-judge runs it on cpuset.
-func (c *Client) AllowedCPUs(ctx context.Context, cpuset string) (string, error) {
-	status, err := c.readFile(ctx, "/proc/self/status", cpuset)
-	if err != nil {
-		return "", err
+// RunCPUs runs n overlapping programs, so each takes its own go-judge run loop, and returns the CPU list each may use.
+func (c *Client) RunCPUs(ctx context.Context, n int) ([]string, error) {
+	lists := make([]string, n)
+	g, ctx := errgroup.WithContext(ctx)
+	for i := range lists {
+		g.Go(func() error {
+			status, err := c.cat(ctx, "/proc/self/status", "sleep 0.5; ")
+			if err != nil {
+				return err
+			}
+			for line := range strings.Lines(string(status)) {
+				if list, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
+					lists[i] = strings.TrimSpace(list)
+					return nil
+				}
+			}
+			return errors.New("no Cpus_allowed_list in /proc/self/status")
+		})
 	}
-	for line := range strings.Lines(string(status)) {
-		if list, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
-			return strings.TrimSpace(list), nil
-		}
-	}
-	return "", errors.New("no Cpus_allowed_list in /proc/self/status")
+	return lists, g.Wait() //nolint:wrapcheck // run errors describe themselves
 }
 
-// readFile runs on any of go-judge's CPUs when cpuset is empty.
-func (c *Client) readFile(ctx context.Context, path, cpuset string) ([]byte, error) {
+// ReadFile reads a file as programs in the sandbox see it.
+func (c *Client) ReadFile(ctx context.Context, path string) ([]byte, error) {
+	return c.cat(ctx, path, "")
+}
+
+func (c *Client) cat(ctx context.Context, path, before string) ([]byte, error) {
 	results, err := c.run(ctx, request{Cmd: []cmd{{
-		Args:        []string{"/bin/cat", path},
+		Args:        []string{"/bin/bash", "-c", before + `exec cat "$0"`, path},
 		Files:       []*cmdFile{memoryFile(""), collector("stdout", manifestFileLimit, false), collector("stderr", 4096, false)},
 		CPULimit:    safeUint64(time.Second.Nanoseconds()),
 		MemoryLimit: 64 << 20,
-		ProcLimit:   1,
+		ProcLimit:   2,
 		Env:         []string{"PATH=/usr/bin:/bin"},
-		CPUSetLimit: cpuset,
 	}}})
 	if err != nil {
 		return nil, err

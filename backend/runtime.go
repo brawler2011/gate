@@ -245,7 +245,8 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		if err != nil {
 			return nil, nil, err
 		}
-		hostMonitor = &hostcheck.Monitor{Host: hostcheck.Real, Cores: cores, Pinned: sandboxClient.AllowedCPUs, Logger: d.logger}
+		host := hostcheck.Host{Sys: "/sys", Proc: "/proc", Interrupts: func(ctx context.Context) ([]byte, error) { return sandboxClient.ReadFile(ctx, "/proc/interrupts") }}
+		hostMonitor = &hostcheck.Monitor{Host: host, Cores: cores, RunCPUs: sandboxClient.RunCPUs, Logger: d.logger}
 		ready = hostMonitor.Ready
 	}
 	readyNow := func() bool { ok, _ := ready(); return ok }

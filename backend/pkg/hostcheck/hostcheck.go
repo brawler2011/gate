@@ -3,6 +3,7 @@ package hostcheck
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -16,10 +17,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Host is where sysfs and procfs are mounted.
-type Host struct{ Sys, Proc string }
-
-var Real = Host{Sys: "/sys", Proc: "/proc"}
+type Host struct {
+	// Where sysfs and procfs are mounted.
+	Sys, Proc string
+	// Container runtimes mask /proc/interrupts, so it is read where it is not.
+	Interrupts func(context.Context) ([]byte, error)
+}
 
 // Placeholder until the strict-mode PoC measures real noise.
 const maxBusyPercent = 2
@@ -48,6 +51,19 @@ func (f *findings) list(path string) []int {
 		f.add("%s: %v", path, err)
 	}
 	return list
+}
+
+func (f *findings) frequency(path string) (uint64, bool) {
+	s, ok := f.read(path)
+	if !ok {
+		return 0, false
+	}
+	n, err := strconv.ParseUint(s, 10, 64)
+	if err != nil || n == 0 {
+		f.add("invalid frequency in %s: %q", path, s)
+		return 0, false
+	}
+	return n, true
 }
 
 func exists(path string) bool {
@@ -84,10 +100,10 @@ func (h Host) Settings(cores []int) []string {
 		if v, ok := f.read(filepath.Join(dir, "cpufreq/scaling_governor")); ok && v != "performance" {
 			f.add("cpu%d: governor is %s, not performance", c, v)
 		}
-		lo, okLo := f.read(filepath.Join(dir, "cpufreq/scaling_min_freq"))
-		hi, okHi := f.read(filepath.Join(dir, "cpufreq/scaling_max_freq"))
+		lo, okLo := f.frequency(filepath.Join(dir, "cpufreq/scaling_min_freq"))
+		hi, okHi := f.frequency(filepath.Join(dir, "cpufreq/scaling_max_freq"))
 		if okLo && okHi && lo != hi {
-			f.add("cpu%d: frequency is not fixed: %s-%s kHz", c, lo, hi)
+			f.add("cpu%d: frequency is not fixed: %d-%d kHz", c, lo, hi)
 		}
 		if !slices.Contains(isolated, c) {
 			f.add("cpu%d is not isolated (isolcpus)", c)
@@ -184,7 +200,7 @@ func ProcessAffinity(cores []int) []string {
 
 // Activity samples the cores for window: steal and device interrupts always fail, and with idle so does any work.
 func (h Host) Activity(ctx context.Context, cores []int, window time.Duration, idle bool) []string {
-	before, err := h.sample()
+	before, err := h.sample(ctx, cores)
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -193,7 +209,7 @@ func (h Host) Activity(ctx context.Context, cores []int, window time.Duration, i
 		return []string{ctx.Err().Error()}
 	case <-time.After(window):
 	}
-	after, err := h.sample()
+	after, err := h.sample(ctx, cores)
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -205,7 +221,7 @@ type sample struct {
 	irqs map[string]map[int]uint64 // device IRQ -> cpu -> count
 }
 
-func (h Host) sample() (sample, error) {
+func (h Host) sample(ctx context.Context, cores []int) (sample, error) {
 	s := sample{stat: map[int][]uint64{}, irqs: map[string]map[int]uint64{}}
 	stat, err := os.ReadFile(filepath.Join(h.Proc, "stat"))
 	if err != nil {
@@ -229,19 +245,26 @@ func (h Host) sample() (sample, error) {
 			s.stat[c] = append(s.stat[c], n)
 		}
 	}
-	interrupts, err := os.ReadFile(filepath.Join(h.Proc, "interrupts"))
+	interrupts, err := h.Interrupts(ctx)
 	if err != nil {
 		return s, fmt.Errorf("read /proc/interrupts: %w", err)
 	}
-	lines := strings.Split(string(interrupts), "\n")
-	var columns []int
-	for _, name := range strings.Fields(lines[0]) {
+	s.irqs, err = parseInterrupts(string(interrupts), cores)
+	return s, err
+}
+
+// parseInterrupts returns the device IRQ counts on cores, failing when any is missing.
+func parseInterrupts(text string, cores []int) (map[string]map[int]uint64, error) {
+	lines := strings.Split(text, "\n")
+	column := map[int]int{}
+	for i, name := range strings.Fields(lines[0]) {
 		c, err := strconv.Atoi(strings.TrimPrefix(name, "CPU"))
 		if err != nil {
-			return s, fmt.Errorf("parse /proc/interrupts header %q", lines[0])
+			return nil, fmt.Errorf("parse /proc/interrupts header %q", lines[0])
 		}
-		columns = append(columns, c)
+		column[c] = i
 	}
+	irqs := map[string]map[int]uint64{}
 	for _, line := range lines[1:] {
 		label, rest, ok := strings.Cut(line, ":")
 		label = strings.TrimSpace(label)
@@ -250,17 +273,26 @@ func (h Host) sample() (sample, error) {
 			continue
 		}
 		counts := strings.Fields(rest)
-		s.irqs[label] = map[int]uint64{}
-		for i, c := range columns {
+		irqs[label] = map[int]uint64{}
+		for _, c := range cores {
+			i, ok := column[c]
+			if !ok {
+				return nil, fmt.Errorf("cpu%d is not in /proc/interrupts", c)
+			}
 			if i >= len(counts) {
-				break
+				return nil, fmt.Errorf("parse /proc/interrupts line %q", strings.TrimSpace(line))
 			}
-			if n, err := strconv.ParseUint(counts[i], 10, 64); err == nil {
-				s.irqs[label][c] = n
+			n, err := strconv.ParseUint(counts[i], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parse /proc/interrupts line %q", strings.TrimSpace(line))
 			}
+			irqs[label][c] = n
 		}
 	}
-	return s, nil
+	if len(irqs) == 0 {
+		return nil, errors.New("no device interrupts in /proc/interrupts")
+	}
+	return irqs, nil
 }
 
 func compare(before, after sample, cores []int, idle bool) []string {
