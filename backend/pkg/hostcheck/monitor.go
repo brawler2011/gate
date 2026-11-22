@@ -8,10 +8,14 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
 const (
-	sampleWindow    = time.Second
+	sampleWindow = time.Second
+	// Probes run for 500 ms; one that starts sooner after the first ran beside it.
+	probeOverlap    = 400 * time.Millisecond
 	recheckInterval = time.Hour
 )
 
@@ -20,9 +24,9 @@ const (
 type Monitor struct {
 	Host  Host
 	Cores []int
-	// RunCPUs runs n overlapping programs in go-judge and returns the CPU list each may use.
-	RunCPUs func(ctx context.Context, n int) ([]string, error)
-	Logger  *slog.Logger
+	// Probes sends n programs to go-judge at once.
+	Probes func(ctx context.Context, n int) ([]sandbox.Probe, error)
+	Logger *slog.Logger
 
 	mu      sync.Mutex
 	checked bool
@@ -60,21 +64,27 @@ func (m *Monitor) Run(ctx context.Context) error {
 	return nil
 }
 
-// pinned checks that go-judge runs exactly one program per judge core, each on its own core.
+// pinned checks that go-judge runs one program per judge core at a time, each on its own core:
+// of one probe more than there are cores, the first ones cover the cores and the last waits.
 func (m *Monitor) pinned(ctx context.Context) []string {
-	lists, err := m.RunCPUs(ctx, len(m.Cores))
+	n := len(m.Cores)
+	probes, err := m.Probes(ctx, n+1)
 	if err != nil {
 		return []string{fmt.Sprintf("run in go-judge: %v", err)}
 	}
+	slices.SortFunc(probes, func(a, b sandbox.Probe) int { return a.Start.Compare(b.Start) })
 	var f findings
-	want := make([]string, len(m.Cores))
+	got := make([]string, n)
+	want := make([]string, n)
 	for i, c := range m.Cores {
-		want[i] = strconv.Itoa(c)
+		got[i], want[i] = probes[i].CPUs, strconv.Itoa(c)
 	}
-	slices.Sort(lists)
-	slices.Sort(want)
-	if !slices.Equal(lists, want) {
-		f.add("go-judge ran %d overlapping programs on CPUs %v, want one on each judge core", len(lists), lists)
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		f.add("go-judge ran programs at once on CPUs %v, want one on each judge core %v", got, want)
+	}
+	if probes[n].Start.Sub(probes[0].Start) < probeOverlap {
+		f.add("go-judge runs more than %d programs at once", n)
 	}
 	return f
 }

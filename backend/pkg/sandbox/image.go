@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -86,26 +87,38 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	return Image{Identity: identity, Config: cfg}, nil
 }
 
-// RunCPUs runs n overlapping programs, so each takes its own go-judge run loop, and returns the CPU list each may use.
-func (c *Client) RunCPUs(ctx context.Context, n int) ([]string, error) {
-	lists := make([]string, n)
+// Probe is a program go-judge ran: when it started and which CPUs it could use.
+type Probe struct {
+	Start time.Time
+	CPUs  string
+}
+
+// Probes sends n programs at once; each runs for half a second, so the ones go-judge runs together overlap.
+func (c *Client) Probes(ctx context.Context, n int) ([]Probe, error) {
+	probes := make([]Probe, n)
 	g, ctx := errgroup.WithContext(ctx)
-	for i := range lists {
+	for i := range probes {
 		g.Go(func() error {
-			status, err := c.cat(ctx, "/proc/self/status", "sleep 0.5; ")
+			out, err := c.cat(ctx, "/proc/self/status", "date +%s%N; sleep 0.5; ")
 			if err != nil {
 				return err
 			}
-			for line := range strings.Lines(string(status)) {
+			start, status, _ := strings.Cut(string(out), "\n")
+			ns, err := strconv.ParseInt(start, 10, 64)
+			if err != nil {
+				return fmt.Errorf("parse probe start %q: %w", start, err)
+			}
+			probes[i].Start = time.Unix(0, ns)
+			for line := range strings.Lines(status) {
 				if list, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
-					lists[i] = strings.TrimSpace(list)
+					probes[i].CPUs = strings.TrimSpace(list)
 					return nil
 				}
 			}
 			return errors.New("no Cpus_allowed_list in /proc/self/status")
 		})
 	}
-	return lists, g.Wait() //nolint:wrapcheck // run errors describe themselves
+	return probes, g.Wait() //nolint:wrapcheck // run errors describe themselves
 }
 
 // ReadFile reads a file as programs in the sandbox see it.
