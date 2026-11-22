@@ -17,6 +17,7 @@ import (
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/hostcheck"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
@@ -55,7 +56,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	tap, err := js.CreateOrUpdateConsumer(s.ctx, pkg.SubmissionsStreamName, jetstream.ConsumerConfig{Durable: "diagnostic_tap", FilterSubject: "submissions.created", AckPolicy: jetstream.AckExplicitPolicy})
 	s.Require().NoError(err)
 	calls := make(chan diagnosticJudgingCall, 10)
-	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1, func() bool { return true })
+	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1, hostcheck.Open{})
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
 	dispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(js))

@@ -236,6 +236,11 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
 	s.EqualValues(2, next.Generation)
 }
 
+type switchGate struct{ open atomic.Bool }
+
+func (g *switchGate) Ready() bool                { return g.open.Load() }
+func (g *switchGate) Admit(context.Context) bool { return g.open.Load() }
+
 func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 	sub, _, _, _ := s.newJobSubmission()
 	js, _ := newNATSJetStream(s.T())
@@ -251,8 +256,8 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 		return tx.Record(s.ctx, eventdata.Event{AggregateID: sub, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: sub, JobID: job.ID, Generation: job.Generation}})
 	}))
 	app := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(s.dbPool), pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, judgeworker.NewEventPublisher(js))
-	var ready atomic.Bool
-	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1, ready.Load)
+	gate := &switchGate{}
+	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1, gate)
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
 	publisher := pubsub.NewSubmissionCreatedPublisher(js)
@@ -266,7 +271,7 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 	defer func() { cancel(); running.Wait() }()
 	_, err = tap.Next(jetstream.FetchMaxWait(3 * time.Second))
 	s.Require().ErrorIs(err, nats.ErrTimeout, "a worker that is not ready must leave the job queued")
-	ready.Store(true)
+	gate.open.Store(true)
 	message, err := tap.Next(jetstream.FetchMaxWait(15 * time.Second))
 	s.Require().NoError(err)
 	var completed submissionsmodel.SubmissionCompletedEvent

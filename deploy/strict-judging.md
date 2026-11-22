@@ -5,8 +5,10 @@
 A cloud VM will not pass: use bare metal, or a laptop on AC power.
 
 Until every check passes, the worker takes no judging or build jobs, reports not ready on
-`/ready`, and logs each failed check. Jobs wait in the queues. The checks run again every hour,
-and any failure pauses judging until the worker restarts.
+`/ready`, and logs each failed check. Jobs wait in the queues. Before each job the worker reads the
+judge cores' steal time and throttle signal: Intel's `thermal_throttle` counters, or the effective
+frequency from ACPI CPPC (`acpi_cppc/feedback_ctrs`). A core with neither fails. The other checks run
+again every hour. Any failure pauses judging until the worker restarts.
 
 ## Kernel
 

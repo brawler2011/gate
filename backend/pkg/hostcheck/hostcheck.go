@@ -216,34 +216,44 @@ func (h Host) Activity(ctx context.Context, cores []int, window time.Duration, i
 	return compare(before, after, cores, idle)
 }
 
-type sample struct {
-	stat map[int][]uint64          // cpu -> /proc/stat jiffies
-	irqs map[string]map[int]uint64 // device IRQ -> cpu -> count
-}
-
-func (h Host) sample(ctx context.Context, cores []int) (sample, error) {
-	s := sample{stat: map[int][]uint64{}, irqs: map[string]map[int]uint64{}}
-	stat, err := os.ReadFile(filepath.Join(h.Proc, "stat"))
+// stat returns each CPU's /proc/stat jiffies: user nice system idle iowait irq softirq steal.
+func (h Host) stat() (map[int][]uint64, error) {
+	data, err := os.ReadFile(filepath.Join(h.Proc, "stat"))
 	if err != nil {
-		return s, fmt.Errorf("read /proc/stat: %w", err)
+		return nil, fmt.Errorf("read /proc/stat: %w", err)
 	}
-	for line := range strings.Lines(string(stat)) {
+	stat := map[int][]uint64{}
+	for line := range strings.Lines(string(data)) {
 		fields := strings.Fields(line)
 		if len(fields) < 9 || !strings.HasPrefix(fields[0], "cpu") || fields[0] == "cpu" {
 			continue
 		}
 		c, err := strconv.Atoi(strings.TrimPrefix(fields[0], "cpu"))
 		if err != nil {
-			return s, fmt.Errorf("parse /proc/stat line %q", strings.TrimSpace(line))
+			return nil, fmt.Errorf("parse /proc/stat line %q", strings.TrimSpace(line))
 		}
-		// user nice system idle iowait irq softirq steal; guest time is already in user.
+		// Guest time is already in user.
 		for _, v := range fields[1:9] {
 			n, err := strconv.ParseUint(v, 10, 64)
 			if err != nil {
-				return s, fmt.Errorf("parse /proc/stat line %q", strings.TrimSpace(line))
+				return nil, fmt.Errorf("parse /proc/stat line %q", strings.TrimSpace(line))
 			}
-			s.stat[c] = append(s.stat[c], n)
+			stat[c] = append(stat[c], n)
 		}
+	}
+	return stat, nil
+}
+
+type sample struct {
+	stat map[int][]uint64          // cpu -> /proc/stat jiffies
+	irqs map[string]map[int]uint64 // device IRQ -> cpu -> count
+}
+
+func (h Host) sample(ctx context.Context, cores []int) (sample, error) {
+	s := sample{}
+	var err error
+	if s.stat, err = h.stat(); err != nil {
+		return s, err
 	}
 	interrupts, err := h.Interrupts(ctx)
 	if err != nil {

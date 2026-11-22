@@ -23,17 +23,24 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
+// Gate holds jobs in NATS while the host is unfit to judge.
+type Gate interface {
+	// Ready is cheap enough for idle loops.
+	Ready() bool
+	// Admit checks the host right before a job.
+	Admit(ctx context.Context) bool
+}
+
 type JudgeWorker struct {
 	js          jetstream.JetStream
 	judgeUC     JudgeUseCase
 	consumer    jetstream.Consumer
 	workerCount int
-	// Jobs wait in NATS while the host is not ready to judge.
-	ready  func() bool
-	logger *slog.Logger
-	mu     sync.Mutex
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	gate        Gate
+	logger      *slog.Logger
+	mu          sync.Mutex
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 func NewJudgeWorker(
@@ -41,7 +48,7 @@ func NewJudgeWorker(
 	js jetstream.JetStream,
 	judgeUC JudgeUseCase,
 	workerCount int,
-	ready func() bool,
+	gate Gate,
 ) (*JudgeWorker, error) {
 	const (
 		streamName    = "SUBMISSIONS"
@@ -65,7 +72,7 @@ func NewJudgeWorker(
 		judgeUC:     judgeUC,
 		consumer:    consumer,
 		workerCount: workerCount,
-		ready:       ready,
+		gate:        gate,
 		logger:      slog.Default().With("component", "judge_worker"),
 	}, nil
 }
@@ -111,7 +118,7 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			logger.Info("worker stopping")
 			return
 		default:
-			if !w.ready() {
+			if !w.gate.Ready() {
 				select {
 				case <-ctx.Done():
 				case <-time.After(time.Second):
@@ -129,8 +136,7 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			}
 
 			for msg := range msgs.Messages() {
-				// The host may have failed its checks while Fetch waited.
-				if !w.ready() {
+				if !w.gate.Admit(ctx) {
 					if err := msg.NakWithDelay(5 * time.Second); err != nil {
 						logger.Error("failed to return message while not ready", "operation", "nats_nak", "error", err)
 					}
