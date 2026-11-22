@@ -258,7 +258,7 @@ func waitBuild(t *testing.T, h *pipelineHarness, id uuid.UUID, states ...string)
 func (h *pipelineHarness) runWorker(t *testing.T) context.CancelFunc {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	worker := &builder.Worker{Pipeline: h.pipeline(), Parallelism: 1, Lease: h.options.Lease, Poll: 100 * time.Millisecond}
+	worker := &builder.Worker{Pipeline: h.pipeline(), Parallelism: 1, Lease: h.options.Lease, Poll: 100 * time.Millisecond, Ready: func() bool { return true }}
 	done := make(chan error, 1)
 	go func() { done <- worker.Run(ctx) }()
 	t.Cleanup(func() {

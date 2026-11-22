@@ -18,6 +18,8 @@ type Worker struct {
 	Parallelism int
 	Lease       time.Duration
 	Poll        time.Duration
+	// Builds wait while the host is not ready to judge, since they judge solutions too.
+	Ready func() bool
 }
 
 func (w *Worker) Run(ctx context.Context) error {
@@ -35,8 +37,10 @@ func (w *Worker) Run(ctx context.Context) error {
 				if ctx.Err() != nil {
 					return
 				}
-				if err := w.runNext(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					w.Pipeline.Logger.ErrorContext(ctx, "build worker iteration failed", "error", err)
+				if w.Ready() {
+					if err := w.runNext(ctx); err != nil && !errors.Is(err, context.Canceled) {
+						w.Pipeline.Logger.ErrorContext(ctx, "build worker iteration failed", "error", err)
+					}
 				}
 				select {
 				case <-ctx.Done():

@@ -16,6 +16,7 @@ email:
 inbox:
   retention: 168h
 judge:
+  mode: dirty
   workers: 4
 problems:
   work_dir: backend/data/problem-work

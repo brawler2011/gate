@@ -7,8 +7,10 @@ spec:
   selector:
     matchLabels: {app.kubernetes.io/name: worker}
   strategy:
-    type: RollingUpdate
+    type: {{ .Values.worker.strategy }}
+    {{- if eq .Values.worker.strategy "RollingUpdate" }}
     rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+    {{- end }}
   template:
     metadata:
       labels: {app.kubernetes.io/name: worker}
@@ -23,10 +25,10 @@ spec:
       {{- end }}
       terminationGracePeriodSeconds: 40
       initContainers:
-        # go-judge runs as many programs at once as the worker resolves from go_judge.parallelism.
-        - name: judge-parallelism
+        # go-judge takes its parallelism and cores from the worker's config.
+        - name: judge-args
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
-          args: [-config=/etc/gate/config.yaml, -judge-parallelism=/run/judge/parallelism]
+          args: [-config=/etc/gate/config.yaml, -judge-args=/run/judge/args]
           env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
           # Detect under go-judge's CPU limits, which the value sizes.
           resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
@@ -37,7 +39,7 @@ spec:
         - name: go-judge
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
           restartPolicy: Always
-          command: [/opt/runtime/bin/bash, -c, 'exec /opt/go-judge -mount-conf=/opt/mount.yaml -parallelism="$(cat /run/judge/parallelism)" "$@"', go-judge]
+          command: [/opt/runtime/bin/bash, -c, 'exec /opt/go-judge -mount-conf=/opt/mount.yaml $(cat /run/judge/args) "$@"', go-judge]
           # Only this pod may access sandbox execution.
           args: [-http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache, -no-fallback]
           # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
@@ -55,7 +57,15 @@ spec:
           env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
           ports:
             - {name: http, containerPort: 8080}
-          {{- include "gate.backendProbes" . | nindent 10 }}
+          # Not ready while strict mode finds the host unfit; jobs then wait in the queues.
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            failureThreshold: 6
           resources: {{- toYaml .Values.worker.resources | nindent 12 }}
           volumeMounts:
             - {name: config, mountPath: /etc/gate, readOnly: true}

@@ -5,10 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // manifestDir is where the judge image mounts its manifest inside the sandbox (judge/mount.yaml).
@@ -56,7 +61,7 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 }
 
 func readImage(ctx context.Context, client *Client) (Image, error) {
-	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name) })
+	return parseImage(func(name string) ([]byte, error) { return client.ReadFile(ctx, manifestDir+"/"+name) })
 }
 
 func parseImage(read func(name string) ([]byte, error)) (Image, error) {
@@ -82,13 +87,52 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	return Image{Identity: identity, Config: cfg}, nil
 }
 
-func (c *Client) readFile(ctx context.Context, path string) ([]byte, error) {
+// Probe is a program go-judge ran: when it started and which CPUs it could use.
+type Probe struct {
+	Start time.Time
+	CPUs  string
+}
+
+// Probes sends n programs at once; each runs for half a second, so the ones go-judge runs together overlap.
+func (c *Client) Probes(ctx context.Context, n int) ([]Probe, error) {
+	probes := make([]Probe, n)
+	g, ctx := errgroup.WithContext(ctx)
+	for i := range probes {
+		g.Go(func() error {
+			out, err := c.cat(ctx, "/proc/self/status", "date +%s%N; sleep 0.5; ")
+			if err != nil {
+				return err
+			}
+			start, status, _ := strings.Cut(string(out), "\n")
+			ns, err := strconv.ParseInt(start, 10, 64)
+			if err != nil {
+				return fmt.Errorf("parse probe start %q: %w", start, err)
+			}
+			probes[i].Start = time.Unix(0, ns)
+			for line := range strings.Lines(status) {
+				if list, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
+					probes[i].CPUs = strings.TrimSpace(list)
+					return nil
+				}
+			}
+			return errors.New("no Cpus_allowed_list in /proc/self/status")
+		})
+	}
+	return probes, g.Wait() //nolint:wrapcheck // run errors describe themselves
+}
+
+// ReadFile reads a file as programs in the sandbox see it.
+func (c *Client) ReadFile(ctx context.Context, path string) ([]byte, error) {
+	return c.cat(ctx, path, "")
+}
+
+func (c *Client) cat(ctx context.Context, path, before string) ([]byte, error) {
 	results, err := c.run(ctx, request{Cmd: []cmd{{
-		Args:        []string{"/bin/cat", path},
+		Args:        []string{"/bin/bash", "-c", before + `exec cat "$0"`, path},
 		Files:       []*cmdFile{memoryFile(""), collector("stdout", manifestFileLimit, false), collector("stderr", 4096, false)},
 		CPULimit:    safeUint64(time.Second.Nanoseconds()),
 		MemoryLimit: 64 << 20,
-		ProcLimit:   1,
+		ProcLimit:   2,
 		Env:         []string{"PATH=/usr/bin:/bin"},
 	}}})
 	if err != nil {

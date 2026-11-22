@@ -16,6 +16,8 @@ api:
 
 worker:
   replicas: 1
+  # Strict judging needs Recreate: the new pod cannot get the old pod's exclusive cores.
+  strategy: RollingUpdate
   resources:
     requests: {cpu: 250m, memory: 256Mi}
     limits: {memory: 2Gi}

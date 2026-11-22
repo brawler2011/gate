@@ -15,6 +15,7 @@ email:
 inbox:
   retention: 168h
 judge:
+  mode: dirty
   manifest_dir: /etc/judge
   workers: 4
 problems:

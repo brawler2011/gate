@@ -28,10 +28,12 @@ type JudgeWorker struct {
 	judgeUC     JudgeUseCase
 	consumer    jetstream.Consumer
 	workerCount int
-	logger      *slog.Logger
-	mu          sync.Mutex
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
+	// Jobs wait in NATS while the host is not ready to judge.
+	ready  func() bool
+	logger *slog.Logger
+	mu     sync.Mutex
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 func NewJudgeWorker(
@@ -39,6 +41,7 @@ func NewJudgeWorker(
 	js jetstream.JetStream,
 	judgeUC JudgeUseCase,
 	workerCount int,
+	ready func() bool,
 ) (*JudgeWorker, error) {
 	const (
 		streamName    = "SUBMISSIONS"
@@ -62,6 +65,7 @@ func NewJudgeWorker(
 		judgeUC:     judgeUC,
 		consumer:    consumer,
 		workerCount: workerCount,
+		ready:       ready,
 		logger:      slog.Default().With("component", "judge_worker"),
 	}, nil
 }
@@ -107,6 +111,13 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			logger.Info("worker stopping")
 			return
 		default:
+			if !w.ready() {
+				select {
+				case <-ctx.Done():
+				case <-time.After(time.Second):
+				}
+				continue
+			}
 			msgs, err := w.consumer.Fetch(1, jetstream.FetchMaxWait(5*time.Second))
 			if err != nil {
 				if errors.Is(err, jetstream.ErrNoMessages) || errors.Is(err, context.DeadlineExceeded) {
@@ -118,6 +129,13 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			}
 
 			for msg := range msgs.Messages() {
+				// The host may have failed its checks while Fetch waited.
+				if !w.ready() {
+					if err := msg.NakWithDelay(5 * time.Second); err != nil {
+						logger.Error("failed to return message while not ready", "operation", "nats_nak", "error", err)
+					}
+					continue
+				}
 				w.handleMessage(ctx, msg, logger)
 			}
 		}
