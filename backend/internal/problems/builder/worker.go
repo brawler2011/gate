@@ -18,8 +18,10 @@ type Worker struct {
 	Parallelism int
 	Lease       time.Duration
 	Poll        time.Duration
-	// Builds wait while the host is not ready to judge, since they judge solutions too.
-	Ready func() bool
+	// Builds wait while the host is unfit to judge, since they judge solutions too.
+	Gate interface {
+		Admit(ctx context.Context) bool
+	}
 }
 
 func (w *Worker) Run(ctx context.Context) error {
@@ -37,7 +39,7 @@ func (w *Worker) Run(ctx context.Context) error {
 				if ctx.Err() != nil {
 					return
 				}
-				if w.Ready() {
+				if w.Gate.Admit(ctx) {
 					if err := w.runNext(ctx); err != nil && !errors.Is(err, context.Canceled) {
 						w.Pipeline.Logger.ErrorContext(ctx, "build worker iteration failed", "error", err)
 					}

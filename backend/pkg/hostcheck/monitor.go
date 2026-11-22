@@ -19,7 +19,13 @@ const (
 	recheckInterval = time.Hour
 )
 
-// Monitor keeps judging closed until the host passes its checks, and closes it for good when a recheck fails:
+// Open lets a worker take jobs without host checks, as dirty mode does.
+type Open struct{}
+
+func (Open) Ready() bool                { return true }
+func (Open) Admit(context.Context) bool { return true }
+
+// Monitor keeps judging closed until the host passes its checks, and closes it for good when a later check fails:
 // a restart re-verifies the host, so a contest never runs on two configurations.
 type Monitor struct {
 	Host  Host
@@ -31,10 +37,11 @@ type Monitor struct {
 	mu      sync.Mutex
 	checked bool
 	reasons []string
+	last    counters
 }
 
-// Ready reports whether the worker may take judging and build jobs, and if not, why.
-func (m *Monitor) Ready() (bool, []string) {
+// Status reports whether the worker may take judging and build jobs, and if not, why.
+func (m *Monitor) Status() (bool, []string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if !m.checked {
@@ -43,22 +50,66 @@ func (m *Monitor) Ready() (bool, []string) {
 	return len(m.reasons) == 0, m.reasons
 }
 
+// Ready is the cheap check for idle loops; Admit is the one before taking a job.
+func (m *Monitor) Ready() bool {
+	ok, _ := m.Status()
+	return ok
+}
+
+// Admit reads the judge cores' counters, well under a millisecond, and closes judging
+// if a hypervisor stole time from them or they were throttled since the last call.
+func (m *Monitor) Admit(ctx context.Context) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.checked || len(m.reasons) > 0 {
+		return false
+	}
+	now, err := m.Host.counters(m.Cores)
+	if err != nil {
+		m.fail(ctx, []string{err.Error()})
+		return false
+	}
+	reasons := now.changed(m.last)
+	m.last = now
+	m.fail(ctx, reasons)
+	return len(reasons) == 0
+}
+
 func (m *Monitor) Run(ctx context.Context) error {
 	reasons := append(m.Host.Settings(m.Cores), ProcessAffinity(m.Cores)...)
 	reasons = append(reasons, m.pinned(ctx)...)
 	reasons = append(reasons, m.Host.Activity(ctx, m.Cores, sampleWindow, true)...)
-	m.report(ctx, reasons)
+	baseline, err := m.Host.counters(m.Cores)
+	if err != nil {
+		reasons = append(reasons, err.Error())
+	}
+	if ctx.Err() != nil {
+		return nil
+	}
+	m.mu.Lock()
+	m.checked, m.last = true, baseline
+	m.fail(ctx, reasons)
+	m.mu.Unlock()
+	if len(reasons) == 0 {
+		m.Logger.InfoContext(ctx, "strict judging host checks passed", "cpus", m.Cores)
+	}
 	ticker := time.NewTicker(recheckInterval)
 	defer ticker.Stop()
-	for len(reasons) == 0 {
+	for m.Ready() {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
 		}
 		// Cores may be busy judging now, so only steal and interrupts count.
-		reasons = append(m.Host.Settings(m.Cores), m.Host.Activity(ctx, m.Cores, sampleWindow, false)...)
-		m.report(ctx, reasons)
+		reasons := append(m.Host.Settings(m.Cores), m.Host.Activity(ctx, m.Cores, sampleWindow, false)...)
+		if ctx.Err() != nil {
+			return nil
+		}
+		m.mu.Lock()
+		m.fail(ctx, reasons)
+		m.mu.Unlock()
+		m.Admit(ctx)
 	}
 	<-ctx.Done()
 	return nil
@@ -89,17 +140,9 @@ func (m *Monitor) pinned(ctx context.Context) []string {
 	return f
 }
 
-func (m *Monitor) report(ctx context.Context, reasons []string) {
-	if ctx.Err() != nil {
-		return
-	}
-	m.mu.Lock()
-	m.checked, m.reasons = true, reasons
-	m.mu.Unlock()
-	if len(reasons) == 0 {
-		m.Logger.InfoContext(ctx, "strict judging host checks passed", "cpus", m.Cores)
-		return
-	}
+// fail closes judging for good; the caller holds mu.
+func (m *Monitor) fail(ctx context.Context, reasons []string) {
+	m.reasons = append(m.reasons, reasons...)
 	for _, r := range reasons {
 		m.Logger.ErrorContext(ctx, "strict judging host check failed, judging paused until restart", "reason", r)
 	}

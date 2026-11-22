@@ -25,6 +25,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/hostcheck"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
@@ -258,7 +259,7 @@ func waitBuild(t *testing.T, h *pipelineHarness, id uuid.UUID, states ...string)
 func (h *pipelineHarness) runWorker(t *testing.T) context.CancelFunc {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	worker := &builder.Worker{Pipeline: h.pipeline(), Parallelism: 1, Lease: h.options.Lease, Poll: 100 * time.Millisecond, Ready: func() bool { return true }}
+	worker := &builder.Worker{Pipeline: h.pipeline(), Parallelism: 1, Lease: h.options.Lease, Poll: 100 * time.Millisecond, Gate: hostcheck.Open{}}
 	done := make(chan error, 1)
 	go func() { done <- worker.Run(ctx) }()
 	t.Cleanup(func() {

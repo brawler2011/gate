@@ -238,7 +238,11 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		return nil, nil, err
 	}
 	d.logger.Info("go-judge parallelism", slog.Int("parallelism", parallelism), slog.String("judge_mode", string(d.cfg.Judge.Mode)))
-	ready := func() (bool, []string) { return true, nil }
+	status := func() (bool, []string) { return true, nil }
+	var gate interface {
+		Ready() bool
+		Admit(ctx context.Context) bool
+	} = hostcheck.Open{}
 	var hostMonitor *hostcheck.Monitor
 	if d.cfg.Judge.Mode == config.JudgeStrict {
 		cores, err := d.cfg.Judge.Cores()
@@ -247,12 +251,11 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		}
 		host := hostcheck.Host{Sys: "/sys", Proc: "/proc", Interrupts: func(ctx context.Context) ([]byte, error) { return sandboxClient.ReadFile(ctx, "/proc/interrupts") }}
 		hostMonitor = &hostcheck.Monitor{Host: host, Cores: cores, Probes: sandboxClient.Probes, Logger: d.logger}
-		ready = hostMonitor.Ready
+		status, gate = hostMonitor.Status, hostMonitor
 	}
-	readyNow := func() bool { ok, _ := ready(); return ok }
 	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
 	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Logger: d.logger}
-	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Ready: readyNow}
+	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Gate: gate}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
@@ -261,7 +264,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, Cache: cache, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
 		packageJudge, judgeworker.NewEventPublisher(d.natsJS))
-	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers, readyNow)
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers, gate)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create judge worker: %w", err)
 	}
@@ -308,7 +311,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	if hostMonitor != nil {
 		services = append(services, newService("judging host monitor", hostMonitor.Run, noStop))
 	}
-	return services, ready, nil
+	return services, status, nil
 }
 
 func workerHealthHandler(ready func() (bool, []string)) http.Handler {
