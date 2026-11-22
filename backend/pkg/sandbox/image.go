@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -56,7 +58,7 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 }
 
 func readImage(ctx context.Context, client *Client) (Image, error) {
-	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name) })
+	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name, "") })
 }
 
 func parseImage(read func(name string) ([]byte, error)) (Image, error) {
@@ -82,7 +84,22 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	return Image{Identity: identity, Config: cfg}, nil
 }
 
-func (c *Client) readFile(ctx context.Context, path string) ([]byte, error) {
+// AllowedCPUs returns the CPU list a program sees when go-judge runs it on cpuset.
+func (c *Client) AllowedCPUs(ctx context.Context, cpuset string) (string, error) {
+	status, err := c.readFile(ctx, "/proc/self/status", cpuset)
+	if err != nil {
+		return "", err
+	}
+	for line := range strings.Lines(string(status)) {
+		if list, ok := strings.CutPrefix(line, "Cpus_allowed_list:"); ok {
+			return strings.TrimSpace(list), nil
+		}
+	}
+	return "", errors.New("no Cpus_allowed_list in /proc/self/status")
+}
+
+// readFile runs on any of go-judge's CPUs when cpuset is empty.
+func (c *Client) readFile(ctx context.Context, path, cpuset string) ([]byte, error) {
 	results, err := c.run(ctx, request{Cmd: []cmd{{
 		Args:        []string{"/bin/cat", path},
 		Files:       []*cmdFile{memoryFile(""), collector("stdout", manifestFileLimit, false), collector("stderr", 4096, false)},
@@ -90,6 +107,7 @@ func (c *Client) readFile(ctx context.Context, path string) ([]byte, error) {
 		MemoryLimit: 64 << 20,
 		ProcLimit:   1,
 		Env:         []string{"PATH=/usr/bin:/bin"},
+		CPUSetLimit: cpuset,
 	}}})
 	if err != nil {
 		return nil, err

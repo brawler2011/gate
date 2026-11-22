@@ -55,7 +55,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	tap, err := js.CreateOrUpdateConsumer(s.ctx, pkg.SubmissionsStreamName, jetstream.ConsumerConfig{Durable: "diagnostic_tap", FilterSubject: "submissions.created", AckPolicy: jetstream.AckExplicitPolicy})
 	s.Require().NoError(err)
 	calls := make(chan diagnosticJudgingCall, 10)
-	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1)
+	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1, func() bool { return true })
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
 	dispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(js))

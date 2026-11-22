@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/cpus"
@@ -37,18 +39,46 @@ type GoJudge struct {
 	// Where go-judge sees problems.work_dir; it reads test files from there by path.
 	WorkDir string `yaml:"work_dir"`
 	// Programs go-judge runs at once, and one build's concurrent steps; 0 means the physical cores available.
+	// Strict mode requires 0: judge.cpus decides.
 	Parallelism *int `yaml:"parallelism"`
 }
 
-func (g GoJudge) ResolveParallelism() (int, error) {
-	if *g.Parallelism > 0 {
-		return *g.Parallelism, nil
+// Parallelism is how many programs go-judge runs at once.
+func (c Config) Parallelism() (int, error) {
+	if c.Judge.Mode == JudgeStrict {
+		cores, err := c.Judge.Cores()
+		return len(cores), err
+	}
+	if *c.GoJudge.Parallelism > 0 {
+		return *c.GoJudge.Parallelism, nil
 	}
 	n, err := cpus.Physical()
 	if err != nil {
 		return 0, fmt.Errorf("detect go_judge.parallelism: %w", err)
 	}
 	return n, nil
+}
+
+// GoJudgeArgs are the go-judge flags the worker's settings imply.
+func (c Config) GoJudgeArgs() ([]string, error) {
+	n, err := c.Parallelism()
+	if err != nil {
+		return nil, err
+	}
+	args := []string{"-parallelism=" + strconv.Itoa(n)}
+	if c.Judge.Mode == JudgeStrict {
+		cores, err := c.Judge.Cores()
+		if err != nil {
+			return nil, err
+		}
+		// One go-judge run loop per listed cpuset, so list single cores.
+		list := make([]string, len(cores))
+		for i, core := range cores {
+			list[i] = strconv.Itoa(core)
+		}
+		args = append(args, "-cpuset="+strings.Join(list, ","))
+	}
+	return args, nil
 }
 
 type Storage struct {
@@ -70,10 +100,30 @@ type Inbox struct {
 	Retention time.Duration `yaml:"retention"`
 }
 
+type JudgeMode string
+
+const (
+	// JudgeDirty shares the CPU with everything else and re-runs a TLE before it stands.
+	JudgeDirty JudgeMode = "dirty"
+	// JudgeStrict judges only on verified dedicated cores (deploy/strict-judging.md).
+	JudgeStrict JudgeMode = "strict"
+)
+
 type Judge struct {
-	Workers int `yaml:"workers"`
+	Mode JudgeMode `yaml:"mode"`
+	// Strict mode: the kernel CPU list go-judge runs programs on, one at a time per core.
+	CPUs    string `yaml:"cpus"`
+	Workers int    `yaml:"workers"`
 	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
+}
+
+func (j Judge) Cores() ([]int, error) {
+	cores, err := cpus.ParseList(j.CPUs)
+	if err != nil {
+		return nil, fmt.Errorf("judge.cpus: %w", err)
+	}
+	return cores, nil
 }
 
 type Mode string
@@ -147,6 +197,16 @@ func (c Config) Validate(mode Mode) error {
 		v.check(filepath.IsAbs(c.GoJudge.WorkDir), "go_judge.work_dir", "must be an absolute path")
 		v.check(c.Judge.Workers >= 1, "judge.workers", "must be at least 1")
 		v.check(c.GoJudge.Parallelism != nil && *c.GoJudge.Parallelism >= 0, "go_judge.parallelism", "must be set, 0 to detect physical cores")
+		cores, err := c.Judge.Cores()
+		switch c.Judge.Mode {
+		case JudgeDirty:
+			v.check(c.Judge.CPUs == "", "judge.cpus", "is only for strict mode")
+		case JudgeStrict:
+			v.check(err == nil && len(cores) > 0, "judge.cpus", "must be a non-empty CPU list")
+			v.check(c.GoJudge.Parallelism == nil || *c.GoJudge.Parallelism == 0, "go_judge.parallelism", "must be 0 in strict mode, judge.cpus decides")
+		default:
+			v.fail("judge.mode", "must be %q or %q", JudgeDirty, JudgeStrict)
+		}
 	}
 	if mode == ModeAPI {
 		v.required("judge.manifest_dir", c.Judge.ManifestDir)

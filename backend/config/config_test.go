@@ -61,6 +61,9 @@ func TestInvalidConfigNamesField(t *testing.T) {
 		{"unknown email provider", "provider: resend", "provider: smtp", "email.provider"},
 		{"no judge workers", "workers: 1", "workers: 0", "judge.workers"},
 		{"no go-judge parallelism", "  parallelism: 0\n", "", "go_judge.parallelism"},
+		{"unknown judge mode", "mode: dirty", "mode: fast", "judge.mode"},
+		{"cpus in dirty mode", "mode: dirty", "mode: dirty\n  cpus: 2-3", "judge.cpus"},
+		{"strict without cpus", "mode: dirty", "mode: strict", "judge.cpus"},
 		{"lease too short", "lease: 30s", "lease: 1s", "problems.lease"},
 		{"no wall factor", "wall_factor: 3", "wall_factor: 0", "problems.limits.wall_factor"},
 		{"compile diagnostic too large", "diagnostic: 64KiB", "diagnostic: 65KiB", "problems.limits.compile.diagnostic"},
@@ -73,6 +76,19 @@ func TestInvalidConfigNamesField(t *testing.T) {
 			assert.Contains(t, err.Error(), c.field+":")
 		})
 	}
+}
+
+func TestStrictModeTakesParallelismFromCPUs(t *testing.T) {
+	setSecrets(t)
+	strict := strings.NewReplacer("mode: dirty", "mode: strict\n  cpus: 2-3")
+	require.NoError(t, loadModified(t, strict.Replace))
+	// A range would make one go-judge run loop share both cores.
+	args, err := Config{Judge: Judge{Mode: JudgeStrict, CPUs: "2-3"}}.GoJudgeArgs()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"-parallelism=2", "-cpuset=2,3"}, args)
+	err = loadModified(t, func(s string) string { return strings.Replace(strict.Replace(s), "parallelism: 0", "parallelism: 2", 1) })
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "go_judge.parallelism:")
 }
 
 func TestMissingSecretNamesVariable(t *testing.T) {

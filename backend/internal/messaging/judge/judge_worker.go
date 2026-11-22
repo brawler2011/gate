@@ -28,7 +28,9 @@ type JudgeWorker struct {
 	judgeUC     JudgeUseCase
 	consumer    jetstream.Consumer
 	workerCount int
-	logger      *slog.Logger
+	// Jobs wait in NATS while the host is not ready to judge.
+	ready  func() bool
+	logger *slog.Logger
 	mu          sync.Mutex
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
@@ -39,6 +41,7 @@ func NewJudgeWorker(
 	js jetstream.JetStream,
 	judgeUC JudgeUseCase,
 	workerCount int,
+	ready func() bool,
 ) (*JudgeWorker, error) {
 	const (
 		streamName    = "SUBMISSIONS"
@@ -62,6 +65,7 @@ func NewJudgeWorker(
 		judgeUC:     judgeUC,
 		consumer:    consumer,
 		workerCount: workerCount,
+		ready:       ready,
 		logger:      slog.Default().With("component", "judge_worker"),
 	}, nil
 }
@@ -107,6 +111,13 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			logger.Info("worker stopping")
 			return
 		default:
+			if !w.ready() {
+				select {
+				case <-ctx.Done():
+				case <-time.After(time.Second):
+				}
+				continue
+			}
 			msgs, err := w.consumer.Fetch(1, jetstream.FetchMaxWait(5*time.Second))
 			if err != nil {
 				if errors.Is(err, jetstream.ErrNoMessages) || errors.Is(err, context.DeadlineExceeded) {

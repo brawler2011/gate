@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -44,6 +44,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/email"
+	"github.com/brawler2011/gate/backend/pkg/hostcheck"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -182,13 +183,13 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		}
 		logger.Info("read judge image manifest", slog.String("judge_image_digest", judgeImage.Identity.Digest))
 		languages = judgeImage.Config
-		workers, err := workerServices(shared, sandboxClient, judgeImage)
+		workers, ready, err := workerServices(shared, sandboxClient, judgeImage)
 		if err != nil {
 			return err
 		}
 		services = append(services, workers...)
 		if !mode.API() {
-			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
+			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(ready), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
 		}
 	}
 	if mode.API() {
@@ -220,36 +221,48 @@ type sharedDeps struct {
 	problemDrafts *pgstore.ProblemDraftsRepo
 }
 
-func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sandbox.Image) ([]appService, error) {
+// The returned ready reports whether the worker takes judging and build jobs.
+func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sandbox.Image) ([]appService, func() (bool, []string), error) {
 	problemPolicy := d.cfg.Problems
 	fileTransport, err := sandbox.NewFileTransport(d.cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cache, err := diskcache.Open(filepath.Join(problemPolicy.WorkDir, "cache"), int64(problemPolicy.CacheBytes))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	parallelism, err := d.cfg.GoJudge.ResolveParallelism()
+	parallelism, err := d.cfg.Parallelism()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	d.logger.Info("go-judge parallelism", slog.Int("parallelism", parallelism))
+	d.logger.Info("go-judge parallelism", slog.Int("parallelism", parallelism), slog.String("judge_mode", string(d.cfg.Judge.Mode)))
+	ready := func() (bool, []string) { return true, nil }
+	var hostMonitor *hostcheck.Monitor
+	if d.cfg.Judge.Mode == config.JudgeStrict {
+		cores, err := d.cfg.Judge.Cores()
+		if err != nil {
+			return nil, nil, err
+		}
+		hostMonitor = &hostcheck.Monitor{Host: hostcheck.Real, Cores: cores, Pinned: sandboxClient.AllowedCPUs, Logger: d.logger}
+		ready = hostMonitor.Ready
+	}
+	readyNow := func() bool { ok, _ := ready(); return ok }
 	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
 	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Logger: d.logger}
-	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
+	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Ready: readyNow}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
-	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, Logger: d.logger}
+	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, RerunTLE: d.cfg.Judge.Mode == config.JudgeDirty, Logger: d.logger}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, Cache: cache, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
 		packageJudge, judgeworker.NewEventPublisher(d.natsJS))
-	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers)
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers, readyNow)
 	if err != nil {
-		return nil, fmt.Errorf("create judge worker: %w", err)
+		return nil, nil, fmt.Errorf("create judge worker: %w", err)
 	}
 	judgeRecovery := judging.NewJudgeRecovery(
 		judgeJobs,
@@ -262,7 +275,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	bookletResponder := booklet.NewResponder(d.natsJS.Conn(), sandbox.NewSandbox(sandboxClient, judgeImage.Config), problemPolicy.Limits.Booklet)
 
 	noStop := func(context.Context) error { return nil }
-	return []appService{
+	services := []appService{
 		newService("problem build worker", buildWorker.Run, noStop),
 		newService("problem object GC", problemGC.Run, noStop),
 		newService(
@@ -290,14 +303,26 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 			noStop,
 		),
 		newService("booklet responder", bookletResponder.Run, noStop),
-	}, nil
+	}
+	if hostMonitor != nil {
+		services = append(services, newService("judging host monitor", hostMonitor.Run, noStop))
+	}
+	return services, ready, nil
 }
 
-func workerHealthHandler() http.Handler {
+func workerHealthHandler(ready func() (bool, []string)) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","message":"Worker is running"}`))
+	})
+	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, _ *http.Request) {
+		ok, reasons := ready()
+		w.Header().Set("Content-Type", "application/json")
+		if !ok {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"ready": ok, "reasons": reasons})
 	})
 	return mux
 }
@@ -554,18 +579,18 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	return services, closeAPI, nil
 }
 
-// writeJudgeParallelism lets the go-judge container start with the parallelism the worker resolves.
-func writeJudgeParallelism(configFile, envFile, path string) error {
+// writeJudgeArgs lets the go-judge container start with the flags the worker's config implies.
+func writeJudgeArgs(configFile, envFile, path string) error {
 	cfg, err := loadConfig(configFile, envFile, config.ModeWorker)
 	if err != nil {
 		return err
 	}
-	n, err := cfg.GoJudge.ResolveParallelism()
+	args, err := cfg.GoJudgeArgs()
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, []byte(strconv.Itoa(n)), 0o600); err != nil {
-		return fmt.Errorf("write go-judge parallelism: %w", err)
+	if err := os.WriteFile(path, []byte(strings.Join(args, " ")), 0o600); err != nil {
+		return fmt.Errorf("write go-judge args: %w", err)
 	}
 	return nil
 }

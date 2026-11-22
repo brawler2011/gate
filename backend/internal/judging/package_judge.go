@@ -29,7 +29,9 @@ type PackageJudge struct {
 	Limits model.BuildLimits
 	// Packages are read by go-judge from the worker's disk cache.
 	WorkDir sandbox.SharedDir
-	Logger  *slog.Logger
+	// A shared CPU can slow a run past its limit, so a TLE runs again before it stands.
+	RerunTLE bool
+	Logger   *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -174,32 +176,33 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	if err != nil {
 		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
-	result := TestResult{TestNumber: test.TestIndex}
-	var output string
-	if interactor != nil {
-		r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, j.Limits.Auxiliary)
-		if err != nil {
-			return result, err
+	run := func() (TestResult, string, error) {
+		result := TestResult{TestNumber: test.TestIndex}
+		if interactor != nil {
+			r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, j.Limits.Auxiliary)
+			if err != nil {
+				return result, "", err
+			}
+			result.Verdict, result.Message, result.Score = string(r.Status), r.Message, r.Score
+			result.Time, result.Memory = r.SolutionResult.Time.Nanoseconds(), r.SolutionResult.Memory
+			return result, r.OutputID, nil
 		}
-		defer j.release(r.OutputID)
-		output = r.OutputID
-		result.Verdict = string(r.Status)
-		result.Message = r.Message
-		result.Time = r.SolutionResult.Time.Nanoseconds()
-		result.Memory = r.SolutionResult.Memory
-		result.Score = r.Score
-	} else {
 		r, err := sb.RunSolution(ctx, sol, lang, input, sandbox.Streams{Input: p.InputFile, Output: p.OutputFile}, limits)
 		if err != nil {
-			return result, err
+			return result, "", err
 		}
-		defer j.release(r.OutputID)
-		output = r.OutputID
-		result.Verdict = string(r.Status)
-		result.Message = string(r.Stderr)
-		result.Time = r.Time.Nanoseconds()
-		result.Memory = r.Memory
+		result.Verdict, result.Message, result.Time, result.Memory = string(r.Status), string(r.Stderr), r.Time.Nanoseconds(), r.Memory
+		return result, r.OutputID, nil
 	}
+	result, output, err := run()
+	if err == nil && j.RerunTLE && result.Verdict == string(sandbox.StatusTLE) {
+		j.release(output)
+		result, output, err = run()
+	}
+	if err != nil {
+		return result, err
+	}
+	defer j.release(output)
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
 		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
 		if err != nil {

@@ -12,14 +12,14 @@ import (
 
 func main() {
 	slog.SetDefault(logging.New(os.Stdout))
-	var configFile, envFile, modeName, parallelismFile string
+	var configFile, envFile, modeName, judgeArgsFile string
 	var migrate bool
 
 	flag.StringVar(&configFile, "config", "", "path to the YAML config file")
 	flag.StringVar(&envFile, "env", "", "path to an environment file with secrets for local runs")
 	flag.StringVar(&modeName, "mode", string(config.ModeAll), "what to run: all, api (HTTP and WebSocket) or worker (judging, problem builds, booklets)")
 	flag.BoolVar(&migrate, "migrate", false, "apply the schema, resetting all data if it changed, and exit")
-	flag.StringVar(&parallelismFile, "judge-parallelism", "", "write the resolved go_judge.parallelism to this file and exit")
+	flag.StringVar(&judgeArgsFile, "judge-args", "", "write the go-judge flags the config implies to this file and exit")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
@@ -42,8 +42,8 @@ func main() {
 		os.Exit(2)
 	case migrate:
 		err = runMigrations(configFile, envFile)
-	case parallelismFile != "":
-		err = writeJudgeParallelism(configFile, envFile, parallelismFile)
+	case judgeArgsFile != "":
+		err = writeJudgeArgs(configFile, envFile, judgeArgsFile)
 	default:
 		err = runApp(configFile, envFile, mode)
 	}

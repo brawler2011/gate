@@ -17,6 +17,8 @@ email:
 inbox:
   retention: 168h
 judge:
+  # The VPS is a shared vCPU (deploy/strict-judging.md).
+  mode: dirty
   manifest_dir: /etc/judge
   # Avoid CPU contention that would skew judging time limits.
   workers: 1

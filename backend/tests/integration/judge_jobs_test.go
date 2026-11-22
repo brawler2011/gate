@@ -249,7 +249,7 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 		return tx.Record(s.ctx, eventdata.Event{AggregateID: sub, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: sub, JobID: job.ID, Generation: job.Generation}})
 	}))
 	app := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(s.dbPool), pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, judgeworker.NewEventPublisher(js))
-	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1)
+	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1, func() bool { return true })
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
 	publisher := pubsub.NewSubmissionCreatedPublisher(js)
