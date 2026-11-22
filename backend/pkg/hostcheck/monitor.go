@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
@@ -32,12 +33,22 @@ type Monitor struct {
 	Cores []int
 	// Probes sends n programs to go-judge at once.
 	Probes func(ctx context.Context, n int) ([]sandbox.Probe, error)
-	Logger *slog.Logger
+	// Benchmark runs once the host passes the other checks; k never changes afterwards.
+	Benchmark func(ctx context.Context) (calibration.Calibration, []string)
+	Logger    *slog.Logger
 
-	mu      sync.Mutex
-	checked bool
-	reasons []string
-	last    counters
+	mu          sync.Mutex
+	checked     bool
+	reasons     []string
+	last        counters
+	calibration calibration.Calibration
+}
+
+// Calibration is valid once the monitor is ready.
+func (m *Monitor) Calibration() calibration.Calibration {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.calibration
 }
 
 // Status reports whether the worker may take judging and build jobs, and if not, why.
@@ -78,19 +89,24 @@ func (m *Monitor) Run(ctx context.Context) error {
 	reasons := append(m.Host.Settings(m.Cores), ProcessAffinity(m.Cores)...)
 	reasons = append(reasons, m.pinned(ctx)...)
 	reasons = append(reasons, m.Host.Activity(ctx, m.Cores, sampleWindow, true)...)
-	baseline, err := m.Host.counters(m.Cores)
-	if err != nil {
+	var calib calibration.Calibration
+	var baseline counters
+	if len(reasons) == 0 {
+		var unfit []string
+		calib, baseline, unfit = m.calibrate(ctx)
+		reasons = append(reasons, unfit...)
+	} else if _, err := m.Host.counters(m.Cores); err != nil {
 		reasons = append(reasons, err.Error())
 	}
 	if ctx.Err() != nil {
 		return nil
 	}
 	m.mu.Lock()
-	m.checked, m.last = true, baseline
+	m.checked, m.last, m.calibration = true, baseline, calib
 	m.fail(ctx, reasons)
 	m.mu.Unlock()
 	if len(reasons) == 0 {
-		m.Logger.InfoContext(ctx, "strict judging host checks passed", "cpus", m.Cores)
+		m.Logger.InfoContext(ctx, "strict judging host checks passed", "cpus", m.Cores, "k", calib.K, "benchmark", calib.Benchmark)
 	}
 	ticker := time.NewTicker(recheckInterval)
 	defer ticker.Stop()
@@ -112,6 +128,20 @@ func (m *Monitor) Run(ctx context.Context) error {
 	}
 	<-ctx.Done()
 	return nil
+}
+
+// calibrate runs the benchmark; throttling or steal during it would skew k, so it fails.
+func (m *Monitor) calibrate(ctx context.Context) (calibration.Calibration, counters, []string) {
+	before, err := m.Host.counters(m.Cores)
+	if err != nil {
+		return calibration.Calibration{}, nil, []string{err.Error()}
+	}
+	calib, reasons := m.Benchmark(ctx)
+	after, err := m.Host.counters(m.Cores)
+	if err != nil {
+		return calib, nil, append(reasons, err.Error())
+	}
+	return calib, after, append(reasons, after.changed(before)...)
 }
 
 // pinned checks that go-judge runs one program per judge core at a time, each on its own core:

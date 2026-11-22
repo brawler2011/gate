@@ -20,6 +20,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems/archive"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 	"golang.org/x/sys/unix"
@@ -50,6 +51,8 @@ type Pipeline struct {
 	Programs  *sandbox.ProgramCache
 	// Programs one build runs at once.
 	Parallelism int
+	// Scales solution time limits to this host and reported times back to the reference machine.
+	Calibration func() calibration.Calibration
 	Logger      *slog.Logger
 }
 type Failure struct {
@@ -364,7 +367,7 @@ func (e *execution) compile(ctx context.Context) error {
 }
 func (e *execution) solutionLimits() sandbox.FileRunLimits {
 	d := e.build.Snapshot.Draft
-	return e.build.Snapshot.Limits.Solution(time.Duration(d.TimeLimitMs)*time.Millisecond, bytesize.Size(d.MemoryLimitMb)*bytesize.MiB)
+	return e.build.Snapshot.Limits.Solution(e.pipeline.Calibration().Limit(time.Duration(d.TimeLimitMs)*time.Millisecond), bytesize.Size(d.MemoryLimitMb)*bytesize.MiB)
 }
 
 type testResult struct {
@@ -553,14 +556,14 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inp
 			return result, err
 		}
 		defer e.release(r.OutputID)
-		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), r.SolutionResult.Time.Nanoseconds()
+		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), e.pipeline.Calibration().Normalize(r.SolutionResult.Time).Nanoseconds()
 	} else {
 		r, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
 		if err != nil {
 			return result, err
 		}
 		defer e.release(r.OutputID)
-		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), r.Time.Nanoseconds()
+		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), e.pipeline.Calibration().Normalize(r.Time).Nanoseconds()
 	}
 	if s.Draft.Checker != nil && result.Verdict == string(sandbox.StatusOK) {
 		checker := e.compiled["checker"]

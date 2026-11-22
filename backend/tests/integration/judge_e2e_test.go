@@ -28,6 +28,7 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -117,7 +118,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: judgeParallelism(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
@@ -128,7 +129,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	packages, workDir := judgeCache(t)
 	reads := &countingStorage{Storage: store, reads: map[string]int{}}
 	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
-		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Limits: limits, WorkDir: workDir, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Limits: limits, WorkDir: workDir, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 			&judging.PackageLoader{Store: reads, Bucket: bucket, Cache: packages, Packages: drafts, Limits: limits},
 			executor, judgeworker.NewEventPublisher(js))
@@ -286,9 +287,9 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 
 	h.limits = dbfixtures.BuildLimits(t)
 	programs := sandbox.NewProgramCache(diskCache(t), client, files, image)
-	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Parallelism: judgeParallelism(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packages, workDir := judgeCache(t)
-	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Limits: h.limits, WorkDir: workDir, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Limits: h.limits, WorkDir: workDir, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,
 		&judging.PackageLoader{Store: store, Bucket: bucket, Cache: packages, Packages: h.drafts, Limits: h.limits},
 		executor, judgeworker.NewEventPublisher(js))

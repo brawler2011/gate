@@ -867,7 +867,11 @@ CREATE TABLE submissions (
     revision bigint DEFAULT 1 NOT NULL,
     generation bigint DEFAULT 1 NOT NULL,
     package_id uuid,
+    -- Strict mode: the time limit factor and the benchmark that measured it.
+    judge_k double precision,
+    judge_benchmark text,
     CONSTRAINT submissions_generation_check CHECK ((generation > 0)),
+    CONSTRAINT submissions_calibration_check CHECK (((judge_k IS NULL) = (judge_benchmark IS NULL))),
     CONSTRAINT submissions_pkey PRIMARY KEY (id),
     CONSTRAINT submissions_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE SET NULL,
     CONSTRAINT submissions_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,

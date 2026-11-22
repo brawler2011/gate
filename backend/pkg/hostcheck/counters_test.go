@@ -1,11 +1,15 @@
 package hostcheck
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,6 +94,18 @@ func TestNoThrottleSignalFails(t *testing.T) {
 	h := writeHost(t, Host{Sys: "sys", Proc: "proc"}, map[string]string{"proc/stat": "cpu2 1 1 1 1 1 1 1 0\n"})
 	_, err := h.counters([]int{2})
 	assert.ErrorContains(t, err, "neither thermal_throttle nor acpi_cppc")
+}
+
+func TestThrottlingDuringBenchmarkFails(t *testing.T) {
+	h := counterHost(t, nil)
+	m := &Monitor{Host: h, Cores: []int{2}, Benchmark: func(context.Context) (calibration.Calibration, []string) {
+		require.NoError(t, os.WriteFile(filepath.Join(h.Proc, "stat"), []byte("cpu2 10 0 10 1000 0 0 0 2 0 0\n"), 0o600))
+		return calibration.Calibration{K: 1.1, Benchmark: "b"}, nil
+	}}
+	_, baseline, reasons := m.calibrate(t.Context())
+	assert.Equal(t, []string{"cpu2: 2 jiffies stolen by the hypervisor"}, reasons)
+	// The baseline is the post-benchmark reading, so the first Admit compares against it.
+	assert.Equal(t, uint64(2), baseline[2].steal)
 }
 
 func TestAdmitClosesForGood(t *testing.T) {

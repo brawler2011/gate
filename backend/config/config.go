@@ -6,10 +6,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/cpus"
 	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/yaml.v3"
@@ -112,8 +114,10 @@ const (
 type Judge struct {
 	Mode JudgeMode `yaml:"mode"`
 	// Strict mode: the kernel CPU list go-judge runs programs on, one at a time per core.
-	CPUs    string `yaml:"cpus"`
-	Workers int    `yaml:"workers"`
+	CPUs string `yaml:"cpus"`
+	// Strict mode: the calibration run at startup.
+	Benchmark calibration.Settings `yaml:"benchmark"`
+	Workers   int                  `yaml:"workers"`
 	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
 }
@@ -201,9 +205,18 @@ func (c Config) Validate(mode Mode) error {
 		switch c.Judge.Mode {
 		case JudgeDirty:
 			v.check(c.Judge.CPUs == "", "judge.cpus", "is only for strict mode")
+			b := c.Judge.Benchmark
+			v.check(b.Repeats == 0 && b.MaxSpread == 0 && b.MaxDisagreement == 0 && b.Reference == nil, "judge.benchmark", "is only for strict mode")
 		case JudgeStrict:
 			v.check(err == nil && len(cores) > 0, "judge.cpus", "must be a non-empty CPU list")
 			v.check(c.GoJudge.Parallelism == nil || *c.GoJudge.Parallelism == 0, "go_judge.parallelism", "must be 0 in strict mode, judge.cpus decides")
+			b := c.Judge.Benchmark
+			v.check(b.Repeats >= 3, "judge.benchmark.repeats", "must be at least 3")
+			v.check(b.MaxSpread > 0 && b.MaxSpread < 1, "judge.benchmark.max_spread", "must be between 0 and 1")
+			v.check(b.MaxDisagreement > 0 && b.MaxDisagreement < 1, "judge.benchmark.max_disagreement", "must be between 0 and 1")
+			for profile, d := range b.Reference {
+				v.check(slices.Contains(calibration.Profiles, profile) && d > 0, "judge.benchmark.reference", fmt.Sprintf("has unknown profile or non-positive time %q", profile))
+			}
 		default:
 			v.fail("judge.mode", "must be %q or %q", JudgeDirty, JudgeStrict)
 		}

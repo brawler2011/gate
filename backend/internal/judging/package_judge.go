@@ -15,6 +15,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
@@ -31,6 +32,8 @@ type PackageJudge struct {
 	WorkDir sandbox.SharedDir
 	// A shared CPU can slow a run past its limit, so a TLE runs again before it stands.
 	RerunTLE bool
+	// Scales time limits to this host and reported times back to the reference machine.
+	Calibration func() calibration.Calibration
 	Logger   *slog.Logger
 }
 
@@ -107,6 +110,7 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	p := pkg.Format.Problem
+	calib := j.Calibration()
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
 	if err != nil {
@@ -118,7 +122,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if len(output) > maxTestDetailSize {
 			output = output[:maxTestDetailSize]
 		}
-		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}}, nil
+		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}, Calibration: calib}, nil
 	}
 	defer j.releaseExecutable(sol)
 	// An optional checker decides the verdict after the interactor accepts.
@@ -150,7 +154,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if err := progress.PublishTestStarted(ctx, submissionID, safeInt32(test.TestIndex), meta); err != nil {
 			return nil, err
 		}
-		result, err := j.test(ctx, sb, pkg, sol, lang, checker, interactor, test, !hasFailureDetails)
+		result, err := j.test(ctx, sb, pkg, sol, lang, checker, interactor, test, calib, !hasFailureDetails)
 		if err != nil {
 			return nil, err
 		}
@@ -162,11 +166,13 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 			break
 		}
 	}
-	return NewVerdictCalculator(p.Type, p).Calculate(results), nil
+	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict.Calibration = calib
+	return verdict, nil
 }
-func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, details bool) (TestResult, error) {
+func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, calib calibration.Calibration, details bool) (TestResult, error) {
 	p := pkg.Format.Problem
-	limits := j.Limits.Solution(time.Duration(p.Limits.TimeMs)*time.Millisecond, bytesize.Size(p.Limits.MemoryMb)*bytesize.MiB)
+	limits := j.Limits.Solution(calib.Limit(time.Duration(p.Limits.TimeMs)*time.Millisecond), bytesize.Size(p.Limits.MemoryMb)*bytesize.MiB)
 	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
 	input, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, inputPath))
 	if err != nil {
@@ -184,14 +190,14 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 				return result, "", err
 			}
 			result.Verdict, result.Message, result.Score = string(r.Status), r.Message, r.Score
-			result.Time, result.Memory = r.SolutionResult.Time.Nanoseconds(), r.SolutionResult.Memory
+			result.Time, result.Memory = calib.Normalize(r.SolutionResult.Time).Nanoseconds(), r.SolutionResult.Memory
 			return result, r.OutputID, nil
 		}
 		r, err := sb.RunSolution(ctx, sol, lang, input, sandbox.Streams{Input: p.InputFile, Output: p.OutputFile}, limits)
 		if err != nil {
 			return result, "", err
 		}
-		result.Verdict, result.Message, result.Time, result.Memory = string(r.Status), string(r.Stderr), r.Time.Nanoseconds(), r.Memory
+		result.Verdict, result.Message, result.Time, result.Memory = string(r.Status), string(r.Stderr), calib.Normalize(r.Time).Nanoseconds(), r.Memory
 		return result, r.OutputID, nil
 	}
 	result, output, err := run()

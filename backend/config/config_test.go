@@ -64,6 +64,8 @@ func TestInvalidConfigNamesField(t *testing.T) {
 		{"unknown judge mode", "mode: dirty", "mode: fast", "judge.mode"},
 		{"cpus in dirty mode", "mode: dirty", "mode: dirty\n  cpus: 2-3", "judge.cpus"},
 		{"strict without cpus", "mode: dirty", "mode: strict", "judge.cpus"},
+		{"strict without benchmark", "mode: dirty", "mode: strict\n  cpus: 2", "judge.benchmark.repeats"},
+		{"unknown benchmark profile", "mode: dirty", "mode: strict\n  cpus: 2\n  benchmark: {repeats: 5, max_spread: 0.02, max_disagreement: 0.05, reference: {fpu: 1s}}", "judge.benchmark.reference"},
 		{"lease too short", "lease: 30s", "lease: 1s", "problems.lease"},
 		{"no wall factor", "wall_factor: 3", "wall_factor: 0", "problems.limits.wall_factor"},
 		{"compile diagnostic too large", "diagnostic: 64KiB", "diagnostic: 65KiB", "problems.limits.compile.diagnostic"},
@@ -80,7 +82,7 @@ func TestInvalidConfigNamesField(t *testing.T) {
 
 func TestStrictModeTakesParallelismFromCPUs(t *testing.T) {
 	setSecrets(t)
-	strict := strings.NewReplacer("mode: dirty", "mode: strict\n  cpus: 2-3")
+	strict := strings.NewReplacer("mode: dirty", "mode: strict\n  cpus: 2-3\n  benchmark: {repeats: 5, max_spread: 0.02, max_disagreement: 0.05}")
 	require.NoError(t, loadModified(t, strict.Replace))
 	// A range would make one go-judge run loop share both cores.
 	args, err := Config{Judge: Judge{Mode: JudgeStrict, CPUs: "2-3"}}.GoJudgeArgs()

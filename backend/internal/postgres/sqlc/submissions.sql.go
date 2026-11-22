@@ -559,20 +559,23 @@ func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandid
 
 const updateSubmission = `-- name: UpdateSubmission :one
 WITH previous AS (
-  SELECT id, state FROM submissions WHERE id = $4::uuid FOR UPDATE
+  SELECT id, state FROM submissions WHERE id = $6::uuid FOR UPDATE
 )
 UPDATE submissions s
 SET state = $1, score = $2, test_details = $3,
+    judge_k = $4, judge_benchmark = $5,
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
 `
 
 type UpdateSubmissionParams struct {
-	State       submissionsmodel.State `json:"state"`
-	Score       points.Value           `json:"score"`
-	TestDetails []byte                 `json:"test_details"`
-	ID          uuid.UUID              `json:"id"`
+	State          submissionsmodel.State `json:"state"`
+	Score          points.Value           `json:"score"`
+	TestDetails    []byte                 `json:"test_details"`
+	JudgeK         *float64               `json:"judge_k"`
+	JudgeBenchmark *string                `json:"judge_benchmark"`
+	ID             uuid.UUID              `json:"id"`
 }
 
 type UpdateSubmissionRow struct {
@@ -586,6 +589,8 @@ func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionPara
 		arg.State,
 		arg.Score,
 		arg.TestDetails,
+		arg.JudgeK,
+		arg.JudgeBenchmark,
 		arg.ID,
 	)
 	var i UpdateSubmissionRow

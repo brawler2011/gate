@@ -137,7 +137,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 		failedTest = &ft
 	}
 
-	if err := uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: verdict.State, Score: verdict.Score, TimeStat: verdict.MaxTime, MemoryStat: verdict.MaxMemory, FailedTest: failedTest, TestDetails: verdict.TestDetails}); err != nil {
+	if err := uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: verdict.State, Score: verdict.Score, TimeStat: verdict.MaxTime, MemoryStat: verdict.MaxMemory, FailedTest: failedTest, TestDetails: verdict.TestDetails, Calibration: verdict.Calibration}); err != nil {
 		return err
 	}
 
