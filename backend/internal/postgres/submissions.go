@@ -77,12 +77,16 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 		return submissionsmodel.SubmissionChange{}, dbError("marshal test details", err)
 	}
 
-	change, err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
+	params := sqlc.UpdateSubmissionParams{
 		State:       update.State,
 		Score:       update.Score,
 		TestDetails: detailsBytes,
 		ID:          id,
-	})
+	}
+	if c := update.Calibration; c.Benchmark != "" {
+		params.JudgeK, params.JudgeBenchmark = &c.K, &c.Benchmark
+	}
+	change, err := r.queries.UpdateSubmission(ctx, params)
 	if err != nil {
 		return submissionsmodel.SubmissionChange{}, dbError("update submission", err)
 	}

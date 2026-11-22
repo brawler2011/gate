@@ -67,7 +67,25 @@ go_judge:
 judge:
   mode: strict
   cpus: 2-7
+  benchmark:
+    repeats: 5
+    max_spread: 0.02
+    max_disagreement: 0.05
+    reference: {}
 ```
+
+## Calibration
+
+Once the other checks pass, the worker runs four benchmark programs (`backend/pkg/calibration`) on
+all judge cores at once, `repeats` times. Each profile's CPU time must vary by at most `max_spread`,
+both on a single core and between cores. Comparing each profile with `reference` gives a speed
+factor `k`. If the profiles disagree by more than `max_disagreement`, the host is different hardware
+rather than a slower reference. Otherwise solution time limits are multiplied by `k`, reported times
+are divided by it, and every submission records `k` and the benchmark id. `k` changes only on
+restart.
+
+On the reference machine, leave `reference` empty. The worker then fails and logs the measured
+medians to copy into it.
 
 Chart values: every container in the worker pod needs equal requests and limits, so the pod is Guaranteed.
 go-judge requests exactly the judge cores:

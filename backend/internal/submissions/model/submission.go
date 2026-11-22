@@ -3,6 +3,7 @@ package submissionsmodel
 import (
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/points"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -60,6 +61,8 @@ type SubmissionUpdate struct {
 	MemoryStat  int32
 	FailedTest  *int32
 	TestDetails *SubmissionTestDetails
+	// Recorded only when a benchmark calibrated the host.
+	Calibration calibration.Calibration
 }
 
 type SubmissionCreation struct {

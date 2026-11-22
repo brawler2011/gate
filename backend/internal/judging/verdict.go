@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/points"
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -53,6 +54,7 @@ type FinalVerdict struct {
 	Message     string
 	FailedTest  *int // first failing test in fail-fast mode
 	TestDetails *submissionsmodel.SubmissionTestDetails
+	Calibration calibration.Calibration
 }
 
 type VerdictCalculator struct {

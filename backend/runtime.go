@@ -42,6 +42,7 @@ import (
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/hostcheck"
@@ -243,24 +244,34 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		Ready() bool
 		Admit(ctx context.Context) bool
 	} = hostcheck.Open{}
+	calib := calibration.Uncalibrated
 	var hostMonitor *hostcheck.Monitor
 	if d.cfg.Judge.Mode == config.JudgeStrict {
 		cores, err := d.cfg.Judge.Cores()
 		if err != nil {
 			return nil, nil, err
 		}
+		bench := d.cfg.Judge.Benchmark
+		benchmark := func(ctx context.Context) (calibration.Calibration, []string) {
+			m, err := calibration.Measure(ctx, sandbox.NewSandbox(sandboxClient, judgeImage.Config), fileTransport, problemPolicy.Limits.Compile, len(cores), bench.Repeats)
+			if err != nil {
+				return calibration.Calibration{}, []string{fmt.Sprintf("benchmark: %v", err)}
+			}
+			k, unfit := bench.Evaluate(m)
+			return calibration.Calibration{K: k, Benchmark: calibration.ID(judgeImage.Identity.Digest)}, unfit
+		}
 		host := hostcheck.Host{Sys: "/sys", Proc: "/proc", Interrupts: func(ctx context.Context) ([]byte, error) { return sandboxClient.ReadFile(ctx, "/proc/interrupts") }}
-		hostMonitor = &hostcheck.Monitor{Host: host, Cores: cores, Probes: sandboxClient.Probes, Logger: d.logger}
-		status, gate = hostMonitor.Status, hostMonitor
+		hostMonitor = &hostcheck.Monitor{Host: host, Cores: cores, Probes: sandboxClient.Probes, Benchmark: benchmark, Logger: d.logger}
+		status, gate, calib = hostMonitor.Status, hostMonitor, hostMonitor.Calibration
 	}
 	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
-	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Logger: d.logger}
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Calibration: calib, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Gate: gate}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
-	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, RerunTLE: d.cfg.Judge.Mode == config.JudgeDirty, Logger: d.logger}
+	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, RerunTLE: d.cfg.Judge.Mode == config.JudgeDirty, Calibration: calib, Logger: d.logger}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, Cache: cache, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
 		packageJudge, judgeworker.NewEventPublisher(d.natsJS))

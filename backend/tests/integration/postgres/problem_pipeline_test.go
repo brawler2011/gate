@@ -16,6 +16,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -101,7 +102,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)
@@ -160,7 +161,7 @@ func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsR
 	t.Helper()
 	limits := dbfixtures.BuildLimits(t)
 	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
-		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", *d), *d)
 	require.NoError(t, err)
 	*d, err = repo.GetDraft(ctx, d.ProblemID)

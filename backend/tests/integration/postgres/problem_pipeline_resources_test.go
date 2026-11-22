@@ -25,6 +25,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/hostcheck"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -79,7 +80,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
 	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client,
-		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Parallelism: 2, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {

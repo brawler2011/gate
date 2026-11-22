@@ -69,6 +69,7 @@ WITH previous AS (
 )
 UPDATE submissions s
 SET state = @state, score = @score, test_details = @test_details,
+    judge_k = sqlc.narg(judge_k), judge_benchmark = sqlc.narg(judge_benchmark),
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;
