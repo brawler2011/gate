@@ -83,7 +83,7 @@ func (l *Limiter) LoginFailure(ctx context.Context, identifier string) error {
 			e.Hits, e.BlockedUntil, retry = nil, now.Add(loginCooldown), loginCooldown
 			return e.BlockedUntil
 		}
-		e.Hits = append(e.Hits, now)
+		e.Hits = record(e.Hits, now)
 		return now.Add(loginWindow)
 	})
 	return limited(retry, err)
@@ -119,7 +119,7 @@ func (l *Limiter) take(ctx context.Context, store Store, key string, quotas []Qu
 			}
 		}
 		if retry == 0 {
-			e.Hits = append(e.Hits, now)
+			e.Hits = record(e.Hits, now)
 		}
 		if len(e.Hits) == 0 {
 			return time.Time{}
@@ -131,13 +131,22 @@ func (l *Limiter) take(ctx context.Context, store Store, key string, quotas []Qu
 
 // since returns the hits after cutoff.
 func since(hits []time.Time, cutoff time.Time) []time.Time {
-	i, _ := slices.BinarySearchFunc(hits, cutoff, func(hit, cutoff time.Time) int {
-		if hit.After(cutoff) {
+	return hits[after(hits, cutoff):]
+}
+
+// A request that waited for the lock may be older than hits recorded meanwhile.
+func record(hits []time.Time, now time.Time) []time.Time {
+	return slices.Insert(hits, after(hits, now), now)
+}
+
+func after(hits []time.Time, t time.Time) int {
+	i, _ := slices.BinarySearchFunc(hits, t, func(hit, t time.Time) int {
+		if hit.After(t) {
 			return 1
 		}
 		return -1
 	})
-	return hits[i:]
+	return i
 }
 
 func limited(retry time.Duration, err error) error {

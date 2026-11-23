@@ -69,6 +69,21 @@ func TestSlidingWindowExpiryAndIsolation(t *testing.T) {
 	requireLimited(t, l.Allow(ctx, "a", q), 30*time.Second)
 }
 
+func TestDelayedHitKeepsOrder(t *testing.T) {
+	l, c := testLimiter()
+	ctx := context.Background()
+	start := c.at
+	q := Quota{2, time.Minute}
+	c.set(start.Add(10 * time.Second))
+	require.NoError(t, l.Allow(ctx, "a", q))
+	// A request stamped earlier reaches the store after a newer hit.
+	c.set(start)
+	require.NoError(t, l.Allow(ctx, "a", q))
+	c.set(start.Add(65 * time.Second))
+	require.NoError(t, l.Allow(ctx, "a", q))
+	requireLimited(t, l.Allow(ctx, "a", q), 5*time.Second)
+}
+
 func TestConcurrentQuota(t *testing.T) {
 	l := New(nil)
 	var accepted atomic.Int32
