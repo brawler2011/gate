@@ -10,15 +10,6 @@ postgres:
   # Set to reach the service from the host (development).
   nodePort: null
 
-redis:
-  image: redis:7.2.4-alpine
-  storage: 1Gi
-  resources:
-    requests: {cpu: 50m, memory: 64Mi}
-    limits: {memory: 640Mi}
-  maxMemory: 512mb
-  nodePort: null
-
 nats:
   image: nats:2.10-alpine
   storage: 5Gi

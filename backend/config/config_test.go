@@ -14,7 +14,7 @@ import (
 func setSecrets(t *testing.T) {
 	t.Helper()
 	for k, v := range map[string]string{
-		"POSTGRES_DSN": "postgres://db:5432/app", "REDIS_URL": "redis://redis:6379/0", "NATS_URL": "nats://nats:4222",
+		"POSTGRES_DSN": "postgres://db:5432/app", "NATS_URL": "nats://nats:4222",
 		"S3_ACCESS_KEY": "key", "S3_SECRET_KEY": "secret", "RESEND_API_KEY": "re_key",
 	} {
 		t.Setenv(k, v)

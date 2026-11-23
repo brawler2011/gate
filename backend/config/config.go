@@ -154,7 +154,6 @@ func (m Mode) Worker() bool { return m != ModeAPI }
 // Secrets come only from the environment.
 type Secrets struct {
 	PostgresDSN  string `env:"POSTGRES_DSN"`
-	RedisURL     string `env:"REDIS_URL"`
 	NatsURL      string `env:"NATS_URL"`
 	S3AccessKey  string `env:"S3_ACCESS_KEY"`
 	S3SecretKey  string `env:"S3_SECRET_KEY"`
@@ -238,7 +237,6 @@ func (c Config) Validate(mode Mode) error {
 	c.Problems.validate(&v)
 
 	v.required("POSTGRES_DSN", c.Secrets.PostgresDSN)
-	v.required("REDIS_URL", c.Secrets.RedisURL)
 	v.required("NATS_URL", c.Secrets.NatsURL)
 	v.required("S3_ACCESS_KEY", c.Secrets.S3AccessKey)
 	v.required("S3_SECRET_KEY", c.Secrets.S3SecretKey)

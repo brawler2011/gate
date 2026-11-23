@@ -33,12 +33,6 @@ func runMigrations(configFile, envFile string) error {
 	}
 	defer db.Close()
 
-	redisClient, err := pkg.NewRedisClient(cfg.Secrets.RedisURL)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = redisClient.Close() }()
-
 	natsConn, err := pkg.NewNatsConn(cfg.Secrets.NatsURL)
 	if err != nil {
 		return err
@@ -56,7 +50,7 @@ func runMigrations(configFile, envFile string) error {
 		Region:    defaultS3Region,
 	})
 
-	reset, err := datareset.Apply(context.Background(), datareset.Stores{DB: db, Redis: redisClient, S3: store, JetStream: js}, migrations)
+	reset, err := datareset.Apply(context.Background(), datareset.Stores{DB: db, S3: store, JetStream: js}, migrations)
 	if err != nil {
 		return err
 	}

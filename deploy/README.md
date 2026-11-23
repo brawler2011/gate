@@ -4,7 +4,7 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 
 | Release | Chart | Contents | Upgrades |
 |---|---|---|---|
-| `gate-infra` | `charts/gate-infra` | PostgreSQL, Redis, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
+| `gate-infra` | `charts/gate-infra` | PostgreSQL, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
 | `gate` | `charts/gate` | API and worker Deployments, migration Job, Traefik routes | every release |
 
 API and worker deployments scale independently through `api.replicas` and
@@ -67,7 +67,7 @@ check to restore writes; deleting objects may not immediately shrink volume file
 | `SSH_HOST`, `SSH_USER`, `SSH_KEY` | repository secrets | SSH access as the deploy user |
 | `SSH_KNOWN_HOSTS` | `prod` variable | the server's host key as `gate-server <type> <key>` (the deploy pins it under that alias) |
 | `KUBECONFIG` | `prod` secret | `~deployer/.kube/config` from the server (`server: https://127.0.0.1:6443`, reached through the tunnel). It grants cluster-admin. |
-| `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | `prod` secrets | random strings; `deploy/secrets.sh` escapes them in connection URLs |
+| `POSTGRES_PASSWORD` | `prod` secrets | random strings; `deploy/secrets.sh` escapes them in connection URLs |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | `prod` secrets | random strings; SeaweedFS and the backend share them |
 | `RESEND_API_KEY` | `prod` secret | Resend API key for email |
 

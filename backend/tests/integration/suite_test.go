@@ -20,7 +20,6 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
-	"github.com/alicebob/miniredis/v2"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	access "github.com/brawler2011/gate/backend/internal/access"
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
@@ -42,7 +41,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ogen-go/ogen/validate"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
@@ -90,7 +88,7 @@ type IntegrationTestSuite struct {
 	objectStore       *storage.S3Storage
 	bucket            string
 	problemDrafts     *pgstore.ProblemDraftsRepo
-	rateRedis         *miniredis.Miniredis
+	rateClock         *rateClock
 	limiter           *ratelimit.Limiter
 }
 
@@ -148,10 +146,9 @@ func runIsolated(t *testing.T, name string, fn func(*IntegrationTestSuite)) {
 }
 
 func (s *IntegrationTestSuite) initApp() {
-	s.rateRedis = miniredis.RunT(s.T())
-	rateClient := redis.NewClient(&redis.Options{Addr: s.rateRedis.Addr(), MaxRetries: -1})
-	s.T().Cleanup(func() { _ = rateClient.Close() })
-	s.limiter = ratelimit.New(rateClient)
+	s.rateClock = &rateClock{}
+	s.limiter = ratelimit.New(pgstore.NewRateLimits(s.dbPool))
+	s.limiter.Clock = s.rateClock.now
 	s.usersRepo = pgstore.NewUsersRepo(s.dbPool)
 	s.contestsRepo = pgstore.NewContestsRepo(s.dbPool)
 	s.organizationsRepo = pgstore.NewOrganizationsRepo(s.dbPool)
