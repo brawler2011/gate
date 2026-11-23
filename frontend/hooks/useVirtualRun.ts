@@ -7,8 +7,8 @@ import {api} from "@/lib/api";
 import type {VirtualRunModel} from "@/contracts/core/v1/schema";
 
 // useVirtualRun returns the caller's virtual run and refreshes contest data the moment it ends.
-// pending: the caller's run is not known yet.
-type VirtualRunState = {run: VirtualRunModel | null; replaying: boolean; pending: boolean};
+// pending: the lookup is in flight; known: it succeeded, so replaying can be trusted.
+type VirtualRunState = {run: VirtualRunModel | null; replaying: boolean; pending: boolean; known: boolean};
 
 export const useVirtualRun = (orgLogin: string, contestLogin: string): VirtualRunState => {
   const {user} = useSession();
@@ -30,5 +30,8 @@ export const useVirtualRun = (orgLogin: string, contestLogin: string): VirtualRu
     }, Math.min(endsAt - Date.now() + 1, 2147483647));
     return () => clearTimeout(timer);
   }, [client, endsAt]);
-  return {run, replaying: run !== null && endsAt > now, pending: Boolean(user) && query.isPending};
+  return {
+    run, replaying: run !== null && endsAt > now,
+    pending: Boolean(user) && query.isPending, known: !user || query.isSuccess,
+  };
 };

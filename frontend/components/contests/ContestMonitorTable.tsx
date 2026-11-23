@@ -39,7 +39,8 @@ export const ContestMonitorTable = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [showRealMonitor, setShowRealMonitor] = useState(false);
   const [showVirtual, setShowVirtual] = useState(false);
-  const {replaying, pending} = useVirtualRun(orgLogin, contestLogin);
+  const {replaying, pending, known} = useVirtualRun(orgLogin, contestLogin);
+  const polled = !known || replaying || showVirtual;
   // Live updates carry official rows at the present moment, so replayed and virtual views poll instead.
   const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
     params: {
@@ -49,8 +50,8 @@ export const ContestMonitorTable = ({
   }, {
     enabled: !pending,
     placeholderData: keepPreviousData,
-    meta: {unfrozen: showRealMonitor, polled: replaying || showVirtual},
-    refetchInterval: replaying || showVirtual ? 30_000 : false,
+    meta: {unfrozen: showRealMonitor, polled},
+    refetchInterval: polled ? 30_000 : false,
   });
   useEffect(() => {
     if (scoreboard.error) {
