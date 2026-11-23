@@ -62,10 +62,10 @@ func TestProblemsRepo_ListProblemsDescendingParameter(t *testing.T) {
 				Descending:     tc.descending,
 			})
 			require.ErrorIs(t, err, context.Canceled)
-			require.Len(t, db.args, 11)
+			require.Len(t, db.args, 10)
 			require.Equal(t, tc.wantDescending, db.args[0])
-			require.Equal(t, int64(0), db.args[9])
-			require.Equal(t, int32(10), db.args[10])
+			require.Equal(t, int64(0), db.args[8])
+			require.Equal(t, int32(10), db.args[9])
 		})
 	}
 }

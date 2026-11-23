@@ -79,10 +79,6 @@ type ProblemsUC interface {
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 
-	AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission accessmodel.ProblemRole) error
-	UpdateProblemTeamRole(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission accessmodel.ProblemRole) error
-	RemoveProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID) error
-
 	CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role accessmodel.ProblemRole) error
 	UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role accessmodel.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error

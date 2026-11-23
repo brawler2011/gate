@@ -43,7 +43,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	contestHub := observer.NewContestsHub()
 	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth, middleware.ResponseErrorHandler(slog.Default())), auth, loader, s.contestsRepo).Handler())
 	defer server.Close()
-	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix, Privacy: organizationsmodel.TeamPrivacyClosed})
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix})
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, contestID, team.ID, accessmodel.ContestModerator))
 	for _, source := range []string{"global admin", "contest owner", "organization admin", "organization owner", "direct moderator", "team moderator", "participant", "stranger"} {

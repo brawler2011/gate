@@ -198,10 +198,10 @@ func (q *Queries) LoadProblemAccess(ctx context.Context, arg LoadProblemAccessPa
 }
 
 const loadTeamAccess = `-- name: LoadTeamAccess :many
-SELECT t.id, t.organization_id, t.privacy, COALESCE(a.role::text, '')::text AS role,
-    EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $1::uuid) AS member
+SELECT t.id, t.organization_id, COALESCE(tm.role::text, '')::text AS role, COALESCE(om.role::text, '')::text AS organization_role
 FROM teams t
-LEFT JOIN team_access a ON a.team_id = t.id AND a.user_id = $1::uuid
+LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = $1::uuid
+LEFT JOIN organization_members om ON om.organization_id = t.organization_id AND om.user_id = $1::uuid
 WHERE t.id = ANY($2::uuid[])
 `
 
@@ -211,11 +211,10 @@ type LoadTeamAccessParams struct {
 }
 
 type LoadTeamAccessRow struct {
-	ID             uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Privacy        string    `json:"privacy"`
-	Role           string    `json:"role"`
-	Member         bool      `json:"member"`
+	ID               uuid.UUID `json:"id"`
+	OrganizationID   uuid.UUID `json:"organization_id"`
+	Role             string    `json:"role"`
+	OrganizationRole string    `json:"organization_role"`
 }
 
 func (q *Queries) LoadTeamAccess(ctx context.Context, arg LoadTeamAccessParams) ([]LoadTeamAccessRow, error) {
@@ -230,9 +229,8 @@ func (q *Queries) LoadTeamAccess(ctx context.Context, arg LoadTeamAccessParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
-			&i.Privacy,
 			&i.Role,
-			&i.Member,
+			&i.OrganizationRole,
 		); err != nil {
 			return nil, err
 		}

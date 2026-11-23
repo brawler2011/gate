@@ -9,7 +9,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
@@ -44,7 +43,6 @@ type TeamsRepo interface {
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error)
 
 	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error)
-	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error)
 }
 
 type UsersRepo interface {

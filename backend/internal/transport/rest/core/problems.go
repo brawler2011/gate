@@ -129,32 +129,6 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 	return nil
 }
 
-func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	teams, err := h.Problems.GetProblemTeams(ctx, params.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return projectResponse(h, ctx, listProblemTeamsDTO(teams))
-}
-
-func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
-	return h.Problems.AddProblemTeam(ctx, params.ID, params.TeamID, accessmodel.ProblemRole(params.Role.Or(corev1.CreateProblemTeamRoleViewer)))
-}
-
-func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
-	return h.Problems.UpdateProblemTeamRole(ctx, params.ID, params.TeamID, accessmodel.ProblemRole(params.Role))
-}
-
-func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
-	err := h.Problems.RemoveProblemTeam(ctx, params.ID, params.TeamID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
 	members, err := h.Problems.ListProblemMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {

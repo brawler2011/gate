@@ -7,7 +7,6 @@ import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
 import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
 import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
 import {api, unwrap} from "@/lib/api";
-import {canManageOrgMembers} from "@/lib/permissions";
 import NotFound from "@/pages/NotFoundPage";
 
 import classes from "./styles.module.css";
@@ -33,8 +32,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   );
   const org = data.organization;
 
-  const canManage = await canManageOrgMembers(org.login);
-  return {section, org, canManage};
+  return {section, org, canManage: org.permissions.manage};
 }) satisfies LoaderFunction;
 
 const SECTIONS = {

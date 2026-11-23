@@ -97,15 +97,14 @@ WITH visible AS (
     AND ($4::uuid IS NULL OR p.organization_id = $4::uuid)
     AND ($5::text = '' OR p.title ILIKE '%' || $5::text || '%')
     AND ($6::text = '' OR p.visibility::text = $6::text)
-    AND ($7::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_teams link WHERE link.problem_id = p.id AND link.team_id = $7::uuid))
-    AND ($8::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = $8::uuid AND own.role = 'owner'))
-    AND ($9::boolean IS NULL OR p.is_template = $9::boolean)
+    AND ($7::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = $7::uuid AND own.role = 'owner'))
+    AND ($8::boolean IS NULL OR p.is_template = $8::boolean)
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
   SELECT id, organization_id, visibility, is_template, created_at, updated_at, title, short_name, time_limit_ms, memory_limit_mb, org_login, org_name FROM visible p ORDER BY CASE WHEN $1::boolean THEN p.created_at END DESC,
     CASE WHEN NOT $1::boolean THEN p.created_at END ASC,
     CASE WHEN $1::boolean THEN p.id END DESC,
     CASE WHEN NOT $1::boolean THEN p.id END ASC
-  LIMIT $11::int OFFSET $10::bigint
+  LIMIT $10::int OFFSET $9::bigint
 )
 SELECT total.total_items, to_jsonb(page) AS resource
 FROM total LEFT JOIN page ON TRUE
@@ -122,7 +121,6 @@ type ScopeProblemsParams struct {
 	OrganizationID *uuid.UUID `json:"organization_id"`
 	Search         string     `json:"search"`
 	Visibility     string     `json:"visibility"`
-	TeamID         *uuid.UUID `json:"team_id"`
 	OwnerID        *uuid.UUID `json:"owner_id"`
 	IsTemplate     *bool      `json:"is_template"`
 	PageOffset     int64      `json:"page_offset"`
@@ -143,7 +141,6 @@ func (q *Queries) ScopeProblems(ctx context.Context, arg ScopeProblemsParams) ([
 		arg.OrganizationID,
 		arg.Search,
 		arg.Visibility,
-		arg.TeamID,
 		arg.OwnerID,
 		arg.IsTemplate,
 		arg.PageOffset,
@@ -169,13 +166,12 @@ func (q *Queries) ScopeProblems(ctx context.Context, arg ScopeProblemsParams) ([
 
 const scopeTeams = `-- name: ScopeTeams :many
 WITH visible AS (
-  SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.parent_team_id, t.created_at, t.updated_at FROM teams t
-  LEFT JOIN team_access a ON a.team_id = t.id AND a.user_id = $1::uuid
-  WHERE ($1::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (t.privacy = 'closed' OR a.role IS NOT NULL) OR $2::boolean)
+  SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.created_at, t.updated_at FROM teams t
+  WHERE ($1::uuid <> '00000000-0000-0000-0000-000000000000'::uuid OR $2::boolean)
     AND ($3::uuid IS NULL OR t.organization_id = $3::uuid)
     AND ($4::text = '' OR t.name ILIKE '%' || $4::text || '%')
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
-  SELECT id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at FROM visible t ORDER BY t.created_at DESC, t.id DESC
+  SELECT id, organization_id, name, slug, description, created_at, updated_at FROM visible t ORDER BY t.created_at DESC, t.id DESC
   LIMIT $6::int OFFSET $5::bigint
 )
 SELECT total.total_items, to_jsonb(page) AS resource

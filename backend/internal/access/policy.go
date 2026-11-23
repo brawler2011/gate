@@ -26,10 +26,12 @@ func OrganizationAllows(actor m.User, f OrganizationFacts, action m.Organization
 		return true
 	case m.OrganizationListMembers:
 		return r >= 1
-	case m.OrganizationManage, m.OrganizationManageMembers:
+	case m.OrganizationCreate, m.OrganizationInvite:
 		return r >= 2
-	case m.OrganizationDelete:
+	case m.OrganizationManage, m.OrganizationManageMembers:
 		return r >= 3
+	case m.OrganizationDelete:
+		return r >= 4
 	case m.OrganizationJoin:
 		return user && f.Role == "" && f.JoinPolicy == m.JoinOpen
 	case m.OrganizationRequestJoin:
@@ -40,18 +42,24 @@ func OrganizationAllows(actor m.User, f OrganizationFacts, action m.Organization
 	return false
 }
 
+// teamRole lets organization administrators act as maintainers of every team.
+func teamRole(actor m.User, f TeamFacts) m.TeamRole {
+	if rank(actor, f.OrganizationRole) >= m.Rank(m.OrganizationAdmin) {
+		return m.TeamMaintainer
+	}
+	return f.Role
+}
+
 func TeamAllows(actor m.User, f TeamFacts, action m.TeamAction) bool {
-	r := rank(actor, f.Role)
+	r := rank(actor, teamRole(actor, f))
 	user := !actor.IsGuest()
 	switch action {
 	case m.TeamView:
-		return user && (r >= 1 || !f.Secret)
-	case m.TeamManage:
+		return user
+	case m.TeamManage, m.TeamDelete:
 		return r >= 2
-	case m.TeamDelete:
-		return r >= 3
 	case m.TeamLeave:
-		return user && f.Member
+		return user && f.Role != ""
 	}
 	return false
 }

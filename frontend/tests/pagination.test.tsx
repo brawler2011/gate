@@ -7,7 +7,7 @@ import {ParticipantsSection} from "@/components/contests/ParticipantsSection";
 import {ProblemsSection} from "@/components/contests/ProblemsSection";
 import {ProblemMembersManagement} from "@/components/problems/ProblemMembersManagement";
 import {WorkshopPackagesTab} from "@/components/workshop/WorkshopPackagesTab";
-import {canManageOrgMembers} from "@/lib/permissions";
+import {getOrgPermissions} from "@/lib/permissions";
 
 import {cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
 
@@ -136,10 +136,10 @@ describe("List pagination through production components", () => {
   it("uses organization permissions without fetching member pages", async () => {
     const permissions = {
       manage: false, manage_members: true, delete: false, list_members: false,
-      join: false, request_join: false, leave: false,
+      create: false, invite: false, join: false, request_join: false, leave: false,
     };
     const fetch = mockApi(() => Response.json({organization: {permissions}}));
-    expect(await canManageOrgMembers("org")).toBe(true);
+    expect((await getOrgPermissions("org"))?.manage_members).toBe(true);
     expect(fetch.mock.calls).toHaveLength(1);
   });
 

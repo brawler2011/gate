@@ -81,7 +81,7 @@ func (uc *ContestsUseCase) CreateContest(
 		EndTime:        c.EndTime,
 	}
 
-	err := access.WithinOrganization(ctx, uc.transactions, c.OrganizationID, accessmodel.OrganizationManage, func(tx CommandTxStore, org access.OrganizationAccess) error {
+	err := access.WithinOrganization(ctx, uc.transactions, c.OrganizationID, accessmodel.OrganizationCreate, func(tx CommandTxStore, org access.OrganizationAccess) error {
 		if err := tx.CreateContest(ctx, params); err != nil {
 			return fmt.Errorf("create contest: %w", err)
 		}

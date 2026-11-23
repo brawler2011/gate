@@ -83,7 +83,6 @@ var endpointPolicies = map[string]level{
 	"UpdateTeamMemberRole": authenticated,
 	"RemoveTeamMember":     authenticated,
 	"ListTeamContests":     authenticated,
-	"ListTeamProblems":     authenticated,
 
 	"CreateProblem":         authenticated,
 	"ListProblemTemplates":  authenticated,
@@ -175,10 +174,6 @@ var endpointPolicies = map[string]level{
 	"CreateProblemMember":    authenticated,
 	"UpdateProblemMember":    authenticated,
 	"DeleteProblemMember":    authenticated,
-	"ListProblemTeams":       authenticated,
-	"CreateProblemTeam":      authenticated,
-	"UpdateProblemTeam":      authenticated,
-	"DeleteProblemTeam":      authenticated,
 }
 
 func authorizeOperation(ctx context.Context, operationID string) error {

@@ -158,13 +158,6 @@ func permissionFills(response any, ids *access.PermissionIDs, parent ...uuid.UUI
 				return s.ContestMember(v.ContestID, v.UserID, m.ContestRole(v.ContestRole))
 			})
 		}
-	case *corev1.ListProblemTeamsResponseModel:
-		for i := range r.Teams {
-			v := &r.Teams[i]
-			member(&ids.Problems, v.ProblemID, &v.Permissions, func(s *access.PermissionSet) (access.MemberPermissions, error) {
-				return s.ProblemTeam(v.ProblemID, m.ProblemRole(v.Role))
-			})
-		}
 	case *corev1.ListContestTeamsResponseModel:
 		for i := range r.Teams {
 			v := &r.Teams[i]

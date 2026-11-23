@@ -126,10 +126,11 @@ func (uc *OrganizationsUseCase) DeleteOrganizationByLogin(ctx context.Context, l
 	})
 }
 
+// AddMember skips the user's consent, so only site administrators may use it.
 func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *organizationsmodel.AddOrganizationMemberInput) error {
 	return access.WithinOrganization(ctx, uc.transactor, input.OrganizationID, accessmodel.OrganizationManageMembers, func(tx OrganizationTxStore, a access.OrganizationAccess) error {
-		if err := a.ChangeMember(input.UserID, "", input.Role); err != nil {
-			return err
+		if !a.Actor.IsAdmin() {
+			return pkg.ErrForbidden
 		}
 		if _, err := tx.GetUserById(ctx, input.UserID); err != nil {
 			return err
@@ -337,8 +338,8 @@ func (uc *OrganizationsUseCase) InviteMember(
 
 	var invitation *organizationsmodel.OrganizationInvitation
 	var pendingNotifications []notificationsmodel.Notification
-	err = access.WithinOrganization(ctx, uc.transactor, org.ID, accessmodel.OrganizationManageMembers, func(tx OrganizationTxStore, a access.OrganizationAccess) error {
-		if err := a.ChangeMember(targetUserID, "", role); err != nil {
+	err = access.WithinOrganization(ctx, uc.transactor, org.ID, accessmodel.OrganizationInvite, func(tx OrganizationTxStore, a access.OrganizationAccess) error {
+		if err := a.Invite(targetUserID, role); err != nil {
 			return err
 		}
 		_, err := tx.GetUserById(ctx, targetUserID)
@@ -420,7 +421,7 @@ func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin st
 	if err != nil {
 		return nil, err
 	}
-	if _, err := access.Organization(ctx, uc.access, org.ID, accessmodel.OrganizationManageMembers); err != nil {
+	if _, err := access.Organization(ctx, uc.access, org.ID, accessmodel.OrganizationInvite); err != nil {
 		return nil, err
 	}
 
@@ -434,13 +435,16 @@ func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin s
 		return err
 	}
 
-	return access.WithinOrganization(ctx, uc.transactor, org.ID, accessmodel.OrganizationManageMembers, func(tx OrganizationTxStore, _ access.OrganizationAccess) error {
+	return access.WithinOrganization(ctx, uc.transactor, org.ID, accessmodel.OrganizationInvite, func(tx OrganizationTxStore, a access.OrganizationAccess) error {
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
 		}
 		if inv.OrganizationID != org.ID {
 			return pkg.ErrNotFound
+		}
+		if err := a.Invite(inv.UserID, inv.Role); err != nil {
+			return err
 		}
 		return tx.UpdateInvitationStatus(ctx, invitationID, organizationsmodel.RequestStatusCanceled)
 	})

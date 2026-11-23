@@ -5,7 +5,6 @@ import {OrgTeamsTab} from "@/components/orgs/OrgTeamsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {canManageOrgMembers} from "@/lib/permissions";
 import {problemMessage} from "@/lib/problemText";
 
 import type {ReactNode} from "react";
@@ -33,7 +32,6 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   );
   const org = orgData.organization;
 
-  const showMembersTab = await canManageOrgMembers(org.login);
   const {data: teamsData, error: teamsErr, response: teamsResponse} = await api.GET("/teams", {
     params: {
       query: {
@@ -49,12 +47,12 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
       message: problemMessage(teamsErr),
     }
     : null;
-  return {org, showMembersTab, teamsError, teamsData};
+  return {org, teamsError, teamsData};
 }) satisfies LoaderFunction;
 
 const OrgTeamsPage = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {org, showMembersTab, teamsError, teamsData} = data;
+  const {org, teamsError, teamsData} = data;
   const teams = teamsData?.teams ?? [];
   return (
     <Container size="lg" py="lg">
@@ -62,7 +60,7 @@ const OrgTeamsPage = (): ReactNode => {
       {teamsError ? (
         <ErrorDisplay error={teamsError} />
       ) : (
-        <OrgTeamsTab teams={teams} orgLogin={org.login} orgId={org.id} canManage={showMembersTab} />
+        <OrgTeamsTab teams={teams} orgLogin={org.login} orgId={org.id} canManage={org.permissions.create} />
       )}
     </Container>
   );

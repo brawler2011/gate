@@ -81,7 +81,7 @@ describe("Production entity management", () => {
         ...removed ? [] : [{permissions: {change_role: true, remove: true}, user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}],
       ], pagination: {page: 1, page_size: 50, total_items: removed ? 1 : 2, total_pages: 1}});
     });
-    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
+    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" canManageMembers />);
     await waitFor(() => expect(view.getByText("@alice")).toBeTruthy());
     expect(within(view.getByText("@owner").closest("tr")!).queryByRole("button")).toBeNull();
     await act(async () => {
@@ -142,7 +142,7 @@ describe("Production entity management", () => {
       return Response.json({members: changed && action === "approve" ? [{permissions: {change_role: true, remove: true}, user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : [],
         pagination: {page: 1, page_size: 50, total_items: 1, total_pages: 1}});
     });
-    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
+    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" canManageMembers />);
     fireEvent.click(view.getByRole("tab", {name: new RegExp(action === "cancel" ? "Приглашения" : "Заявки")}));
     await waitFor(() => expect(view.getByText(action === "cancel" ? "@invited" : "@alice")).toBeTruthy());
     await act(async () => {
@@ -221,7 +221,7 @@ describe("Production entity management", () => {
       }
       return Response.json({invitations: invited ? [invited] : []});
     });
-    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
+    const view = renderWithProviders(<OrgMembersManagement orgLogin="org" canManageMembers />);
     fireEvent.click(view.getByRole("button", {name: "Пригласить"}));
     const input = await view.findByPlaceholderText("Введите имя пользователя...");
     fireEvent.focus(input);

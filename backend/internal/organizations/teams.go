@@ -9,7 +9,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -26,7 +25,7 @@ func NewTeamsUseCase(repo TeamsRepo, loader access.Loader, transactor TeamTransa
 
 func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error) {
 	var team *organizationsmodel.Team
-	err := access.WithinOrganization(ctx, uc.transactor, input.OrganizationID, accessmodel.OrganizationManage, func(tx TeamTxStore, org access.OrganizationAccess) error {
+	err := access.WithinOrganization(ctx, uc.transactor, input.OrganizationID, accessmodel.OrganizationCreate, func(tx TeamTxStore, org access.OrganizationAccess) error {
 		var err error
 		team, err = tx.CreateTeam(ctx, input)
 		if err != nil {
@@ -145,19 +144,4 @@ func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID uuid.UUID, r
 		return nil, err
 	}
 	return &paging.List[contestsmodel.Contest]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
-}
-
-func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error) {
-	if _, err := uc.GetTeam(ctx, teamID); err != nil {
-		return nil, err
-	}
-	request, err := request.Normalize()
-	if err != nil {
-		return nil, err
-	}
-	items, total, err := uc.repo.GetTeamProblems(ctx, teamID, accessmodel.UserFromContext(ctx).Id, request)
-	if err != nil {
-		return nil, err
-	}
-	return &paging.List[problemsmodel.Problem]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }

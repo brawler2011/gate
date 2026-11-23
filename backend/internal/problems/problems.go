@@ -40,41 +40,6 @@ func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) erro
 	})
 }
 
-func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, role accessmodel.ProblemRole) error {
-	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
-		if err := a.ChangeTeam("", role); err != nil {
-			return err
-		}
-		return tx.AddProblemTeam(ctx, problemID, teamID, role)
-	})
-}
-
-func (uc *ProblemsUseCase) UpdateProblemTeamRole(ctx context.Context, problemID, teamID uuid.UUID, role accessmodel.ProblemRole) error {
-	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
-		link, err := tx.GetProblemTeam(ctx, problemID, teamID)
-		if err != nil {
-			return err
-		}
-		if err := a.ChangeTeam(link.Role, role); err != nil {
-			return err
-		}
-		return tx.UpdateProblemTeamRole(ctx, problemID, teamID, role)
-	})
-}
-
-func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error {
-	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
-		link, err := tx.GetProblemTeam(ctx, problemID, teamID)
-		if err != nil {
-			return err
-		}
-		if err := a.ChangeTeam(link.Role, ""); err != nil {
-			return err
-		}
-		return tx.RemoveProblemTeam(ctx, problemID, teamID)
-	})
-}
-
 func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error {
 	return access.WithinProblem(ctx, uc.transactions, problemID, accessmodel.ProblemManage, func(tx ProblemTxStore, a access.ProblemAccess) error {
 		if err := a.ChangeMember(userID, "", role); err != nil {

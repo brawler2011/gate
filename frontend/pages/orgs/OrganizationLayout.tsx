@@ -6,7 +6,7 @@ import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
-import {canManageOrgMembers} from "@/lib/permissions";
+import {canOpenOrgMembers, getOrgPermissions} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 
@@ -16,9 +16,9 @@ const OrgLayout = (): ReactNode => {
   const organization = api.useQuery("get", "/organizations/{login}", {
     params: {path: {login: slug}},
   });
-  const membership = useQuery({
-    queryKey: ["org-members-permission", slug, user?.id],
-    queryFn: () => canManageOrgMembers(slug),
+  const permissions = useQuery({
+    queryKey: ["org-permissions", slug, user?.id],
+    queryFn: () => getOrgPermissions(slug),
     enabled: Boolean(user),
   });
   if (organization.error) {
@@ -32,7 +32,13 @@ const OrgLayout = (): ReactNode => {
     <DefaultLayout
       headerUser={user}
       headerOrganization={{id: org.id, login: org.login, name: org.name}}
-      headerSecondaryNav={<OrgHeaderNav orgLogin={org.login} showMembersTab={membership.data ?? false} />}
+      headerSecondaryNav={
+        <OrgHeaderNav
+          orgLogin={org.login}
+          showMembersTab={canOpenOrgMembers(permissions.data ?? null)}
+          showSettingsTab={permissions.data?.manage ?? false}
+        />
+      }
     >
       <Outlet />
     </DefaultLayout>

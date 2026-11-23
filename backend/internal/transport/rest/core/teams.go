@@ -9,7 +9,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
@@ -45,8 +44,6 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 		Name:           req.Name,
 		Slug:           slug,
 		Description:    "",
-		Privacy:        organizationsmodel.TeamPrivacyClosed,
-		ParentTeamID:   nil,
 	}
 
 	team, err := h.Teams.CreateTeam(ctx, input)
@@ -88,7 +85,6 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 	input := &organizationsmodel.UpdateTeamInput{
 		Name:        reqName,
 		Description: reqDesc,
-		Privacy:     nil, // Privacy is not exposed by this endpoint.
 	}
 
 	err := h.Teams.UpdateTeam(ctx, params.ID, input)
@@ -164,15 +160,4 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 	contestsList := &contestsmodel.ContestsList{Contests: contests.Items, Pagination: contests.Pagination}
 
 	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
-}
-
-func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
-	problems, err := h.Teams.GetTeamProblems(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
-	if err != nil {
-		return nil, err
-	}
-
-	problemsList := &problemsmodel.ProblemsList{Problems: problems.Items, Pagination: problems.Pagination}
-
-	return projectResponse(h, ctx, ListProblemsResponseDTO(problemsList))
 }

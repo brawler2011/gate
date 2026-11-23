@@ -790,27 +790,6 @@ func listContestTeamsDTO(teams []contestsmodel.ContestTeam) *corev1.ListContestT
 	return &resp
 }
 
-func problemTeamDTO(pt problemsmodel.ProblemTeam) corev1.ProblemTeamModel {
-	return corev1.ProblemTeamModel{
-		ProblemID: pt.ProblemID,
-		TeamID:    pt.TeamID,
-		TeamName:  pt.TeamName,
-		TeamSlug:  pt.TeamSlug,
-		Role:      corev1.ProblemTeamModelRole(pt.Role),
-		CreatedAt: pt.CreatedAt,
-	}
-}
-
-func listProblemTeamsDTO(teams []problemsmodel.ProblemTeam) *corev1.ListProblemTeamsResponseModel {
-	resp := corev1.ListProblemTeamsResponseModel{
-		Teams: make([]corev1.ProblemTeamModel, len(teams)),
-	}
-	for i, team := range teams {
-		resp.Teams[i] = problemTeamDTO(team)
-	}
-	return &resp
-}
-
 func problemMemberDTO(pm problemsmodel.ProblemMember) corev1.ProblemMemberModel {
 	return corev1.ProblemMemberModel{
 		ProblemID: pm.ProblemID,

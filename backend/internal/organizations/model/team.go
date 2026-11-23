@@ -9,21 +9,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type TeamPrivacy string
-
-const (
-	TeamPrivacySecret TeamPrivacy = "secret" // Only members can see the team
-	TeamPrivacyClosed TeamPrivacy = "closed" // Anyone in org can see, but only invited can join
-)
-
 type Team struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
 	Name           string
 	Slug           string
 	Description    string
-	Privacy        TeamPrivacy
-	ParentTeamID   *uuid.UUID
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -42,14 +33,11 @@ type CreateTeamInput struct {
 	Name           string
 	Slug           string
 	Description    string
-	Privacy        TeamPrivacy
-	ParentTeamID   *uuid.UUID
 }
 
 type UpdateTeamInput struct {
 	Name        *string
 	Description *string
-	Privacy     *TeamPrivacy
 }
 
 type AddTeamMemberInput struct {

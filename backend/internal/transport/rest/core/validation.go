@@ -190,9 +190,7 @@ func validateUpdateOrganizationRequest(params *corev1.UpdateOrganizationRequestM
 }
 
 func validateOrganizationRole(role string) bool {
-	return role == string(accessmodel.OrganizationOwner) ||
-		role == string(accessmodel.OrganizationAdmin) ||
-		role == string(accessmodel.OrganizationMember)
+	return accessmodel.Rank(accessmodel.OrganizationRole(role)) > 0
 }
 
 func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {

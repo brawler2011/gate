@@ -68,7 +68,7 @@ func (l Loader) OrganizationFacts(_ context.Context, actor uuid.UUID, ids []uuid
 }
 
 func (l Loader) TeamFacts(_ context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.TeamFacts, error) {
-	return facts(l, l.Teams, actor, ids, func(f *access.TeamFacts, r string) { f.Role, f.Member = m.TeamRole(r), r != "" })
+	return facts(l, l.Teams, actor, ids, func(f *access.TeamFacts, r string) { f.Role = m.TeamRole(r) })
 }
 
 func (l Loader) ProblemFacts(_ context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ProblemFacts, error) {

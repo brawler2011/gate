@@ -12,7 +12,7 @@ import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@
 const org: OrganizationModel = {
   permissions: {
     manage: false, manage_members: false, delete: false, list_members: false,
-    join: false, request_join: false, leave: false,
+    create: false, invite: false, join: false, request_join: false, leave: false,
   },
   id: "org", login: "school", name: "School", join_policy: "by_request" as OrganizationModel["join_policy"],
   created_at: "2026-10-01", updated_at: "2026-10-01",

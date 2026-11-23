@@ -1127,26 +1127,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/problems/{id}/teams": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List problem teams */
-        get: operations["ListProblemTeams"];
-        put?: never;
-        /** Create problem team */
-        post: operations["CreateProblemTeam"];
-        /** Delete problem team */
-        delete: operations["DeleteProblemTeam"];
-        options?: never;
-        head?: never;
-        /** Update problem team */
-        patch: operations["UpdateProblemTeam"];
-        trace?: never;
-    };
     "/problems/{id}/members": {
         parameters: {
             query?: never;
@@ -1288,7 +1268,7 @@ export interface paths {
         /** List organization members */
         get: operations["ListOrganizationMembers"];
         put?: never;
-        /** Add member to organization */
+        /** Add member to organization without an invitation (site administrators only) */
         post: operations["AddOrganizationMember"];
         /** Remove member from organization */
         delete: operations["RemoveOrganizationMember"];
@@ -1587,23 +1567,6 @@ export interface paths {
         };
         /** List contests accessible by team */
         get: operations["ListTeamContests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/teams/{id}/problems": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List problems accessible by team */
-        get: operations["ListTeamProblems"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2212,6 +2175,10 @@ export interface components {
             manage_members: boolean;
             delete: boolean;
             list_members: boolean;
+            /** @description Create problems, contests and teams in the organization. */
+            create: boolean;
+            /** @description Invite users as members or maintainers. */
+            invite: boolean;
             join: boolean;
             request_join: boolean;
             leave: boolean;
@@ -4098,7 +4065,7 @@ export interface components {
             organization_id: string;
             username: string;
             /** @enum {string} */
-            role: "owner" | "admin" | "member";
+            role: "owner" | "admin" | "maintainer" | "member";
             /** Format: date-time */
             created_at: string;
         };
@@ -4321,56 +4288,6 @@ export interface components {
          */
         ListContestTeamsResponseModel: {
             teams: components["schemas"]["ContestTeamModel"][];
-        };
-        /**
-         * @description Problem team data.
-         * @example {
-         *       "permissions": {
-         *         "change_role": false,
-         *         "remove": false
-         *       },
-         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "team_name": "example",
-         *       "team_slug": "example",
-         *       "role": "viewer",
-         *       "created_at": "2026-01-01T12:00:00Z"
-         *     }
-         */
-        ProblemTeamModel: {
-            permissions: components["schemas"]["MemberPermissionsModel"];
-            /** Format: uuid */
-            problem_id: string;
-            /** Format: uuid */
-            team_id: string;
-            team_name: string;
-            team_slug: string;
-            /** @enum {string} */
-            role: "admin" | "editor" | "viewer";
-            /** Format: date-time */
-            created_at: string;
-        };
-        /**
-         * @description Paginated collection of problem teams.
-         * @example {
-         *       "teams": [
-         *         {
-         *           "permissions": {
-         *             "change_role": false,
-         *             "remove": false
-         *           },
-         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "team_name": "example",
-         *           "team_slug": "example",
-         *           "role": "viewer",
-         *           "created_at": "2026-01-01T12:00:00Z"
-         *         }
-         *       ]
-         *     }
-         */
-        ListProblemTeamsResponseModel: {
-            teams: components["schemas"]["ProblemTeamModel"][];
         };
         /**
          * @description Problem member data.
@@ -5017,7 +4934,7 @@ export interface components {
              * @default member
              * @enum {string}
              */
-            role: "owner" | "admin" | "member";
+            role: "owner" | "admin" | "maintainer" | "member";
         };
         /**
          * @description Paginated collection of organization invitations.
@@ -5096,7 +5013,7 @@ export interface components {
              * @default member
              * @enum {string}
              */
-            role: "owner" | "admin" | "member";
+            role: "owner" | "admin" | "maintainer" | "member";
         };
         /**
          * @description Paginated collection of organization join requests.
@@ -5472,7 +5389,7 @@ export interface components {
         /** @description UUID of the user. */
         UserIDQuery: string;
         /** @description Role to assign to the organization member. */
-        OrganizationRoleQuery: "owner" | "admin" | "member";
+        OrganizationRoleQuery: "owner" | "admin" | "maintainer" | "member";
         /** @description Role to assign to the team member. */
         TeamRoleQuery: "maintainer" | "member";
         /** @description Role to assign to the problem member. */
@@ -5644,8 +5561,6 @@ export type TeamMemberModel = components['schemas']['TeamMemberModel'];
 export type ListTeamMembersResponseModel = components['schemas']['ListTeamMembersResponseModel'];
 export type ContestTeamModel = components['schemas']['ContestTeamModel'];
 export type ListContestTeamsResponseModel = components['schemas']['ListContestTeamsResponseModel'];
-export type ProblemTeamModel = components['schemas']['ProblemTeamModel'];
-export type ListProblemTeamsResponseModel = components['schemas']['ListProblemTeamsResponseModel'];
 export type ProblemMemberModel = components['schemas']['ProblemMemberModel'];
 export type ListProblemMembersResponseModel = components['schemas']['ListProblemMembersResponseModel'];
 export type PostModel = components['schemas']['PostModel'];
@@ -8405,109 +8320,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    ListProblemTeams: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                id: components["parameters"]["ProblemIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListProblemTeamsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    CreateProblemTeam: {
-        parameters: {
-            query: {
-                /** @description UUID of the team. */
-                team_id: components["parameters"]["TeamIDQuery"];
-                /** @description Role the team grants its members. */
-                role?: "admin" | "editor" | "viewer";
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                id: components["parameters"]["ProblemIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    DeleteProblemTeam: {
-        parameters: {
-            query: {
-                /** @description UUID of the team. */
-                team_id: components["parameters"]["TeamIDQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                id: components["parameters"]["ProblemIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    UpdateProblemTeam: {
-        parameters: {
-            query: {
-                /** @description UUID of the team. */
-                team_id: components["parameters"]["TeamIDQuery"];
-                /** @description Role the team grants its members. */
-                role: "admin" | "editor" | "viewer";
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                id: components["parameters"]["ProblemIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     ListProblemMembers: {
         parameters: {
             query?: {
@@ -9606,35 +9418,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ListTeamProblems: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the team. */
-                id: components["parameters"]["TeamIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListProblemsResponseModel"];
                 };
             };
             default: components["responses"]["Problem"];

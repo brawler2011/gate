@@ -16,12 +16,12 @@ type OrganizationFacts struct {
 	JoinPolicy m.JoinPolicy
 }
 
+// Role is the actor's team membership; OrganizationRole is their role in the team's organization.
 type TeamFacts struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	Role           m.TeamRole
-	Member         bool
-	Secret         bool
+	ID               uuid.UUID
+	OrganizationID   uuid.UUID
+	Role             m.TeamRole
+	OrganizationRole m.OrganizationRole
 }
 
 type ProblemFacts struct {

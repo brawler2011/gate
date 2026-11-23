@@ -27,13 +27,9 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgAdmin.Id, accessmodel.OrganizationAdmin))
 
 	createdAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	create := func(orgID uuid.UUID, name string, secret bool) organizationsmodel.Team {
-		privacy := organizationsmodel.TeamPrivacyClosed
-		if secret {
-			privacy = organizationsmodel.TeamPrivacySecret
-		}
+	create := func(orgID uuid.UUID, name string) organizationsmodel.Team {
 		team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{
-			OrganizationID: orgID, Name: name, Slug: uuid.NewString(), Privacy: privacy,
+			OrganizationID: orgID, Name: name, Slug: uuid.NewString(),
 		})
 		s.Require().NoError(err)
 		_, err = s.dbPool.Exec(s.ctx, "UPDATE teams SET created_at = $2 WHERE id = $1", team.ID, createdAt)
@@ -42,15 +38,14 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 		return *team
 	}
 	closed := []organizationsmodel.Team{
-		create(org.ID, "ПреКОмАнДаПосле", false),
-		create(org.ID, "prefixALPHAsuffix", false),
-		create(org.ID, "MixedКоМAlpha", false),
-		create(org.ID, "Other name", false),
+		create(org.ID, "ПреКОмАнДаПосле"),
+		create(org.ID, "prefixALPHAsuffix"),
+		create(org.ID, "MixedКоМAlpha"),
+		create(org.ID, "Other name"),
 	}
-	secretMember := create(org.ID, "Секретная КоМанда", true)
-	secretHidden := create(org.ID, "Скрытая Команда", true)
-	other := create(otherOrg.ID, "Другая Команда", true)
-	for _, team := range append(append([]organizationsmodel.Team{}, closed...), secretMember, other) {
+	joined := create(org.ID, "Секретная КоМанда")
+	other := create(otherOrg.ID, "Другая Команда")
+	for _, team := range append(append([]organizationsmodel.Team{}, closed...), joined, other) {
 		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, member.Id, accessmodel.TeamMember))
 	}
 	// Multiple members must not duplicate list rows or inflate COUNT.
@@ -93,22 +88,16 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 	}
 
 	s.Run("visibility", func() {
-		all := append(append([]organizationsmodel.Team{}, closed...), secretMember, secretHidden)
-		visible := append(append([]organizationsmodel.Team{}, closed...), secretMember)
-		check(member.Id, &org.ID, "", 1, 100, orderedIDs(visible), len(visible))
-		check(outsider.Id, &org.ID, "", 1, 100, orderedIDs(closed), len(closed))
-		for _, user := range []uuid.UUID{owner.Id, orgAdmin.Id, admin.Id} {
+		all := append(append([]organizationsmodel.Team{}, closed...), joined)
+		for _, user := range []uuid.UUID{member.Id, outsider.Id, owner.Id, orgAdmin.Id, admin.Id} {
 			check(user, &org.ID, "", 1, 100, orderedIDs(all), len(all))
+			check(user, nil, "", 1, 100, orderedIDs(append(all, other)), len(all)+1)
 		}
-		check(member.Id, nil, "", 1, 100, orderedIDs(append(visible, other)), len(visible)+1)
-		// Unscoped lists use the same view predicate as scoped lists and details.
-		check(admin.Id, nil, "", 1, 100, orderedIDs(append(all, other)), len(all)+1)
-		check(orgAdmin.Id, nil, "", 1, 100, orderedIDs(all), len(all))
 	})
 
 	s.Run("search in both modes", func() {
 		for _, scope := range []*uuid.UUID{nil, &org.ID} {
-			cyrillic := []organizationsmodel.Team{closed[0], closed[2], secretMember}
+			cyrillic := []organizationsmodel.Team{closed[0], closed[2], joined}
 			if scope == nil {
 				cyrillic = append(cyrillic, other)
 			}
@@ -120,26 +109,24 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 			}
 			check(member.Id, scope, "КОМaLpHa", 1, 100, orderedIDs(closed[2:3]), 1)
 			check(member.Id, scope, "сле", 1, 100, orderedIDs(closed[:1]), 1)
-			short := []organizationsmodel.Team{closed[0], secretMember}
+			short := []organizationsmodel.Team{closed[0], joined}
 			if scope == nil {
 				short = append(short, other)
 			}
 			check(member.Id, scope, "р", 1, 100, orderedIDs(short), len(short))
 			check(member.Id, scope, "no such name", 1, 100, []uuid.UUID{}, 0)
-			visible := append(append([]organizationsmodel.Team{}, closed...), secretMember)
+			visible := append(append([]organizationsmodel.Team{}, closed...), joined)
 			if scope == nil {
 				visible = append(visible, other)
 			}
 			check(member.Id, scope, "%", 1, 100, orderedIDs(visible), len(visible))
 			check(member.Id, scope, "_", 1, 100, orderedIDs(visible), len(visible))
 		}
-		check(outsider.Id, &org.ID, "Скрытая", 1, 1, []uuid.UUID{}, 0)
-		check(owner.Id, &org.ID, "СКРЫТАЯ", 1, 1, []uuid.UUID{secretHidden.ID}, 1)
 	})
 
 	s.Run("stable pages and filtered total", func() {
 		for _, scope := range []*uuid.UUID{nil, &org.ID} {
-			matched := []organizationsmodel.Team{closed[0], closed[2], secretMember}
+			matched := []organizationsmodel.Team{closed[0], closed[2], joined}
 			if scope == nil {
 				matched = append(matched, other)
 			}
@@ -152,7 +139,7 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 			check(member.Id, scope, "ком", int32(len(ids)+1), 1, []uuid.UUID{}, len(ids))
 			check(member.Id, scope, "ком", math.MaxInt32, 100, []uuid.UUID{}, len(ids))
 		}
-		ids := orderedIDs(append(append([]organizationsmodel.Team{}, closed...), secretMember))
+		ids := orderedIDs(append(append([]organizationsmodel.Team{}, closed...), joined))
 		check(member.Id, &org.ID, "", 3, 2, ids[4:], len(ids))
 		check(member.Id, &org.ID, "", 4, 2, []uuid.UUID{}, len(ids))
 	})

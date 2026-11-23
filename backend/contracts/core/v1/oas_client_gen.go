@@ -30,7 +30,7 @@ type Invoker interface {
 	AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error
 	// AddOrganizationMember invokes AddOrganizationMember operation.
 	//
-	// Add member to organization.
+	// Add member to organization without an invitation (site administrators only).
 	//
 	// POST /organizations/{login}/members
 	AddOrganizationMember(ctx context.Context, params AddOrganizationMemberParams) error
@@ -226,12 +226,6 @@ type Invoker interface {
 	//
 	// POST /problems/{id}/members
 	CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error
-	// CreateProblemTeam invokes CreateProblemTeam operation.
-	//
-	// Create problem team.
-	//
-	// POST /problems/{id}/teams
-	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
 	// CreateSubmission invokes CreateSubmission operation.
 	//
 	// Create submission.
@@ -316,12 +310,6 @@ type Invoker interface {
 	//
 	// DELETE /problems/{id}/members
 	DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error
-	// DeleteProblemTeam invokes DeleteProblemTeam operation.
-	//
-	// Delete problem team.
-	//
-	// DELETE /problems/{id}/teams
-	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
 	// DeleteTeam invokes DeleteTeam operation.
 	//
 	// Delete team.
@@ -648,12 +636,6 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
-	// ListProblemTeams invokes ListProblemTeams operation.
-	//
-	// List problem teams.
-	//
-	// GET /problems/{id}/teams
-	ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error)
 	// ListProblemTemplates invokes ListProblemTemplates operation.
 	//
 	// List problem templates.
@@ -690,12 +672,6 @@ type Invoker interface {
 	//
 	// GET /teams/{id}/members
 	ListTeamMembers(ctx context.Context, params ListTeamMembersParams) (*ListTeamMembersResponseModel, error)
-	// ListTeamProblems invokes ListTeamProblems operation.
-	//
-	// List problems accessible by team.
-	//
-	// GET /teams/{id}/problems
-	ListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (*ListProblemsResponseModel, error)
 	// ListTeams invokes ListTeams operation.
 	//
 	// List teams.
@@ -888,12 +864,6 @@ type Invoker interface {
 	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
-	// UpdateProblemTeam invokes UpdateProblemTeam operation.
-	//
-	// Update problem team.
-	//
-	// PATCH /problems/{id}/teams
-	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
 	// UpdateTeam invokes UpdateTeam operation.
 	//
 	// Update team.
@@ -1037,7 +1007,7 @@ func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params Ac
 
 // AddOrganizationMember invokes AddOrganizationMember operation.
 //
-// Add member to organization.
+// Add member to organization without an invitation (site administrators only).
 //
 // POST /organizations/{login}/members
 func (c *Client) AddOrganizationMember(ctx context.Context, params AddOrganizationMemberParams) error {
@@ -3747,102 +3717,6 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 	return result, nil
 }
 
-// CreateProblemTeam invokes CreateProblemTeam operation.
-//
-// Create problem team.
-//
-// POST /problems/{id}/teams
-func (c *Client) CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error {
-	_, err := c.sendCreateProblemTeam(ctx, params)
-	return err
-}
-
-func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) (res *CreateProblemTeamOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/teams"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "team_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "team_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.UUIDToString(params.TeamID))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
-		// Encode "role" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "role",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Role.Get(); ok {
-				return e.EncodeValue(conv.StringToString(string(val)))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemTeamResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // CreateSubmission invokes CreateSubmission operation.
 //
 // Create submission.
@@ -4979,85 +4853,6 @@ func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProbl
 	}()
 
 	result, err := decodeDeleteProblemMemberResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemTeam invokes DeleteProblemTeam operation.
-//
-// Delete problem team.
-//
-// DELETE /problems/{id}/teams
-func (c *Client) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error {
-	_, err := c.sendDeleteProblemTeam(ctx, params)
-	return err
-}
-
-func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) (res *DeleteProblemTeamOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/teams"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "team_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "team_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.UUIDToString(params.TeamID))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9519,68 +9314,6 @@ func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblem
 	return result, nil
 }
 
-// ListProblemTeams invokes ListProblemTeams operation.
-//
-// List problem teams.
-//
-// GET /problems/{id}/teams
-func (c *Client) ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error) {
-	res, err := c.sendListProblemTeams(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (res *ListProblemTeamsResponseModel, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/teams"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemTeamsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // ListProblemTemplates invokes ListProblemTemplates operation.
 //
 // List problem templates.
@@ -10313,105 +10046,6 @@ func (c *Client) sendListTeamMembers(ctx context.Context, params ListTeamMembers
 	}()
 
 	result, err := decodeListTeamMembersResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListTeamProblems invokes ListTeamProblems operation.
-//
-// List problems accessible by team.
-//
-// GET /teams/{id}/problems
-func (c *Client) ListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (*ListProblemsResponseModel, error) {
-	res, err := c.sendListTeamProblems(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (res *ListProblemsResponseModel, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/teams/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/problems"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "page" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Page.Get(); ok {
-				return e.EncodeValue(conv.Int32ToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
-		// Encode "pageSize" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.PageSize.Get(); ok {
-				return e.EncodeValue(conv.Int32ToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListTeamProblemsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13214,99 +12848,6 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 	}()
 
 	result, err := decodeUpdateProblemMemberResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemTeam invokes UpdateProblemTeam operation.
-//
-// Update problem team.
-//
-// PATCH /problems/{id}/teams
-func (c *Client) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error {
-	_, err := c.sendUpdateProblemTeam(ctx, params)
-	return err
-}
-
-func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) (res *UpdateProblemTeamOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/teams"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "team_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "team_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.UUIDToString(params.TeamID))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
-		// Encode "role" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "role",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(string(params.Role)))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "PATCH", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemTeamResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

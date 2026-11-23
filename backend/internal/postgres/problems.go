@@ -107,55 +107,6 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 	return mapProblemMember(row), nil
 }
 
-func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
-	rows, err := r.queries.ListProblemTeams(ctx, problemId)
-	if err != nil {
-		return nil, dbError("get problem teams", err)
-	}
-
-	teams := make([]problemsmodel.ProblemTeam, len(rows))
-	for i, row := range rows {
-		teams[i] = mapProblemTeam(row)
-	}
-
-	return teams, nil
-}
-
-func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error {
-	err := r.queries.AddProblemTeam(ctx, sqlc.AddProblemTeamParams{
-		ProblemID: problemID,
-		TeamID:    teamID,
-		Role:      permission,
-	})
-	if err != nil {
-		return dbError("add problem team", err)
-	}
-	return nil
-}
-
-func (r *ProblemsRepo) UpdateProblemTeamRole(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error {
-	err := r.queries.UpdateProblemTeamRole(ctx, sqlc.UpdateProblemTeamRoleParams{
-		ProblemID: problemID,
-		TeamID:    teamID,
-		Role:      permission,
-	})
-	if err != nil {
-		return dbError("update problem team permission", err)
-	}
-	return nil
-}
-
-func (r *ProblemsRepo) RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error {
-	err := r.queries.RemoveProblemTeam(ctx, sqlc.RemoveProblemTeamParams{
-		ProblemID: problemID,
-		TeamID:    teamID,
-	})
-	if err != nil {
-		return dbError("remove problem team", err)
-	}
-	return nil
-}
-
 func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UUID, request paging.Request) ([]problemsmodel.ProblemMember, int32, error) {
 	request, err := request.Normalize()
 	if err != nil {
@@ -229,17 +180,6 @@ func mapProblemMember(pm sqlc.ProblemMember) problemsmodel.ProblemMember {
 	}
 }
 
-func mapProblemTeam(pt sqlc.ListProblemTeamsRow) problemsmodel.ProblemTeam {
-	return problemsmodel.ProblemTeam{
-		ProblemID: pt.ProblemID,
-		TeamID:    pt.TeamID,
-		Role:      pt.Role,
-		TeamName:  pt.TeamName,
-		TeamSlug:  pt.TeamSlug,
-		CreatedAt: pt.CreatedAt,
-	}
-}
-
 func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
 	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
 		ViewerID: userID, PageSize: limit,
@@ -284,10 +224,3 @@ func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) problemsmodel.Dashbo
 	}
 }
 
-func (r *ProblemsRepo) GetProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) (problemsmodel.ProblemTeam, error) {
-	row, err := r.queries.GetProblemTeam(ctx, sqlc.GetProblemTeamParams{ProblemID: problemID, TeamID: teamID})
-	if err != nil {
-		return problemsmodel.ProblemTeam{}, dbError("get problem team", err)
-	}
-	return problemsmodel.ProblemTeam{ProblemID: row.ProblemID, TeamID: row.TeamID, Role: row.Role, CreatedAt: row.CreatedAt}, nil
-}

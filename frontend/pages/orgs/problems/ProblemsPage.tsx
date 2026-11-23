@@ -31,35 +31,30 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     }),
   );
 
-  const [{data: problemsData, error: problemsErr, response: problemsResponse}, {data: me}] = await Promise.all([
-    api.GET("/problems", {
-      params: {
-        query: {
-          page: currentPage,
-          pageSize: 20,
-          organization_id: orgData.organization.id,
-        },
+  const {data: problemsData, error: problemsErr, response: problemsResponse} = await api.GET("/problems", {
+    params: {
+      query: {
+        page: currentPage,
+        pageSize: 20,
+        organization_id: orgData.organization.id,
       },
-    }),
-    api.GET("/users/me"),
-  ]);
+    },
+  });
   const problemsError = problemsErr
     ? {
       status: problemsResponse.status,
       message: problemMessage(problemsErr),
     }
     : null;
-  return {orgData, problemsError, problemsData, me};
+  return {orgData, problemsError, problemsData};
 }) satisfies LoaderFunction;
 
 const OrgProblemsPage = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {orgData, problemsError, problemsData, me} = data;
-  const currentUser = me?.user ?? null;
+  const {orgData, problemsError, problemsData} = data;
   const org = orgData.organization;
   const problems = problemsData?.problems ?? [];
   const problemsPagination = problemsData?.pagination ?? {page_size: 50, total_items: 0, page: 1, total_pages: 0};
-  const isAuthenticated = currentUser !== null;
   return (
     <Container size="lg" py="lg">
       <title>Задачи</title>
@@ -70,7 +65,6 @@ const OrgProblemsPage = (): ReactNode => {
           problems={problems}
           pagination={problemsPagination}
           org={org}
-          isAuthenticated={isAuthenticated}
         />
       )}
     </Container>

@@ -29,7 +29,7 @@ func (r *ProblemDraftsRepo) finalizeCreate(ctx context.Context, org, user uuid.U
 	}
 	defer rollback(ctx, tx)
 	q := sqlc.New(tx)
-	if _, err := access.Organization(ctx, commandAccess(q), org, accessmodel.OrganizationManage); err != nil {
+	if _, err := access.Organization(ctx, commandAccess(q), org, accessmodel.OrganizationCreate); err != nil {
 		return err
 	}
 	repo := &ProblemsRepo{queries: q}

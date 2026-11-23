@@ -164,7 +164,18 @@ func (a OrganizationAccess) ChangeMember(target uuid.UUID, current, next m.Organ
 }
 
 func (a TeamAccess) ChangeMember(target uuid.UUID, current, next m.TeamRole) error {
-	return changeMember(a.Actor, target, a.Can(m.TeamManage), a.Facts.Role, current, next)
+	return changeMember(a.Actor, target, a.Can(m.TeamManage), teamRole(a.Actor, a.Facts), current, next)
+}
+
+// Invite authorizes inviting target as role: maintainers invite members and maintainers, stronger roles need member management.
+func (a OrganizationAccess) Invite(target uuid.UUID, role m.OrganizationRole) error {
+	if m.Rank(role) < 1 {
+		return pkg.ErrForbidden
+	}
+	if m.Rank(role) <= m.Rank(m.OrganizationMaintainer) && a.Can(m.OrganizationInvite) {
+		return nil
+	}
+	return a.ChangeMember(target, "", role)
 }
 
 func (a ProblemAccess) ChangeMember(target uuid.UUID, current, next m.ProblemRole) error {
@@ -175,11 +186,7 @@ func (a ContestAccess) ChangeMember(target uuid.UUID, current, next m.ContestRol
 	return changeMember(a.Actor, target, a.Can(m.ContestManage), a.Facts.Role, current, next)
 }
 
-// ChangeTeam authorizes a team grant on the resource; a team is never the caller.
-func (a ProblemAccess) ChangeTeam(current, next m.ProblemRole) error {
-	return changeMember(a.Actor, uuid.Nil, a.Can(m.ProblemManage), a.Facts.Role, current, next)
-}
-
+// ChangeTeam authorizes a team grant on the contest; a team is never the caller.
 func (a ContestAccess) ChangeTeam(current, next m.ContestRole) error {
 	return changeMember(a.Actor, uuid.Nil, a.Can(m.ContestManage), a.Facts.Role, current, next)
 }
