@@ -34,14 +34,14 @@ describe("Observer visibility in production components", () => {
   };
 
   it("renders frozen submissions with absent verdict and resources", () => {
-    const view = renderView(<SubmissionsList submissions={[{...metadata, frozen: true}]} />);
-    expect(view.container.textContent).toContain("Заморожено");
+    const view = renderView(<SubmissionsList submissions={[{...metadata, result_hidden: true}]} />);
+    expect(view.container.textContent).toContain("Скрыто");
     expect(view.container.textContent).not.toContain("Неизвестно");
     expect(view.container.textContent).not.toContain(" ms");
     view.unmount();
-    const details: SubmissionModel = {...metadata, frozen: true};
+    const details: SubmissionModel = {...metadata, result_hidden: true};
     const detailView = renderView(<SubmissionDetailsContent submission={details} />);
-    expect(detailView.container.textContent).toContain("Результат скрыт до разморозки");
+    expect(detailView.container.textContent).toContain("Результат скрыт");
     expect(detailView.container.textContent).toContain("Исходный код скрыт");
     detailView.unmount();
   });
@@ -52,7 +52,7 @@ describe("Observer visibility in production components", () => {
     expect(view.container.textContent).toContain("Принято");
     expect(view.container.textContent).toContain("12 ms");
     expect(view.container.textContent).toContain("print(42)");
-    expect(view.container.textContent).not.toContain("Заморожено");
+    expect(view.container.textContent).not.toContain("Скрыто");
     view.unmount();
   });
 

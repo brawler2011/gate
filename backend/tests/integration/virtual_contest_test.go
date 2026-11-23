@@ -32,7 +32,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 		StartTime: &start, StartTimeSet: true, EndTime: &end, EndTimeSet: true}))
 	path := corev1.UpdateContestParams{OrgLogin: org.Login, ContestLogin: "virtual"}
 	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
-		AllowVirtual: corev1.NewOptBool(true), EnableUpsolving: corev1.NewOptBool(false), MonitorScope: corev1.NewOptContestScope(corev1.ContestScopePublic)}, path))
+		AllowVirtual: corev1.NewOptBool(true), EnableUpsolving: corev1.NewOptBool(false), ScoreboardDuring: corev1.NewOptContestScope(corev1.ContestScopePublic), ScoreboardAfter: corev1.NewOptContestScope(corev1.ContestScopePublic)}, path))
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
 		ContestId: contestID, ProblemId: problem.ID, PackageId: s.createDummyProblemPackage(problem.ID, org.ID)}))
 	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{

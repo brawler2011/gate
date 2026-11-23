@@ -200,10 +200,10 @@ export const SubmissionDetailsContent = ({
             </Text>
             <Group gap="xs" align="center">
               <Badge color={StateColor(submission.state)} variant="filled" size="md">
-                {submission.frozen ? "Заморожено" : ShortVerdictString(submission.state, submission.failed_test)}
+                {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test)}
               </Badge>
               <Text size="xs" c={StateColor(submission.state)} fw={500}>
-                {submission.frozen ? "Результат скрыт до разморозки" : StateString(submission.state, submission.failed_test)}
+                {submission.result_hidden ? "Результат скрыт" : StateString(submission.state, submission.failed_test)}
               </Text>
             </Group>
           </Box>
@@ -442,7 +442,7 @@ export const SubmissionDetailsContent = ({
                           : undefined
                       }
                     >
-                      <TableTd ta="center">{t.test_index}</TableTd>
+                      <TableTd ta="center">{t.test_index}{t.sample ? " (пример)" : ""}</TableTd>
                       <TableTd ta="center">
                         <Badge
                           size="sm"

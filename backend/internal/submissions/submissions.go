@@ -72,10 +72,10 @@ func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submissio
 	if sub.CreatedBy != nil {
 		author = *sub.CreatedBy
 	}
-	if requireRead && !a.CanSubmission(author, accessmodel.SubmissionView) {
+	if requireRead && !a.Submission(author, sub.Kind == submissionsmodel.KindVirtual).Open {
 		return submissionsmodel.Submission{}, pkg.ErrForbidden
 	}
-	return SubmissionView(a, sub.CreatedBy, sub.CreatedAt).Apply(sub), nil
+	return SubmissionView(a, sub.CreatedBy, sub.CreatedAt, sub.Kind).Apply(sub), nil
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
@@ -177,11 +177,21 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 		if !a.Can(action) {
 			return nil, pkg.ErrForbidden
 		}
-		if filter.State != nil && a.Facts.Contest.IsFrozenAt(a.Facts.Now) && !a.Can(accessmodel.ContestManage) && !ownOnly {
-			return nil, pkg.Wrap(pkg.ErrScoreboardFrozen, nil, "state filter is unavailable during freeze")
+		if filter.State != nil && !a.Can(accessmodel.ContestManage) {
+			if !ownOnly && a.Facts.Contest.IsFrozenAt(a.Facts.Now) {
+				return nil, pkg.Wrap(pkg.ErrScoreboardFrozen, nil, "state filter is unavailable during freeze")
+			}
+			author := uuid.New()
+			if ownOnly {
+				author = a.Actor.Id
+			}
+			if a.Submission(author, false).Results == contestsmodel.FeedbackHidden || a.Submission(author, true).Results == contestsmodel.FeedbackHidden {
+				return nil, pkg.Wrap(pkg.ErrForbidden, nil, "state filter is unavailable while results are hidden")
+			}
 		}
 		views.access = map[uuid.UUID]access.ContestAccess{*filter.ContestId: a}
-	} else if !ownOnly && !user.IsAdmin() {
+	} else if !user.IsAdmin() && (!ownOnly || filter.State != nil) {
+		// A state filter across contests would reveal results that a contest hides.
 		return nil, pkg.ErrForbidden
 	}
 

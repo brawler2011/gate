@@ -758,7 +758,9 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 		}
 		// ICPC freeze: verdicts of submissions made after the freeze stay hidden, earlier ones show whenever judged.
 		if frozen && (freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) || freezeTime == nil && rules.manualFreeze) {
-			pendingAttempts++
+			if !contest.Settings.FreezeHidesAttempts {
+				pendingAttempts++
+			}
 			continue
 		}
 		if sub.State == submissionsmodel.Saved || sub.State == submissionsmodel.GotCE {

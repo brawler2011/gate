@@ -59,3 +59,25 @@ func TestContestFreezeBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestContestFreezeLastsUntilUnfreezeTime(t *testing.T) {
+	start := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
+	end, thaw := start.Add(5*time.Hour), start.Add(7*time.Hour)
+	c := contestsmodel.Contest{StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{
+		FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60)), UnfreezeTime: &thaw}}
+	require.True(t, c.IsFrozenAt(end))
+	require.True(t, c.IsFrozenAt(thaw.Add(-time.Nanosecond)))
+	require.False(t, c.IsFrozenAt(thaw))
+}
+
+func TestFeedbackMeet(t *testing.T) {
+	for _, tc := range []struct{ a, b, want contestsmodel.FeedbackLevel }{
+		{contestsmodel.FeedbackFull, contestsmodel.FeedbackHidden, contestsmodel.FeedbackHidden},
+		{contestsmodel.FeedbackTests, contestsmodel.FeedbackFull, contestsmodel.FeedbackTests},
+		{contestsmodel.FeedbackSamples, contestsmodel.FeedbackTests, contestsmodel.FeedbackVerdict},
+		{contestsmodel.FeedbackSamples, contestsmodel.FeedbackSamples, contestsmodel.FeedbackSamples},
+	} {
+		require.Equal(t, tc.want, tc.a.Meet(tc.b), "%s and %s", tc.a, tc.b)
+		require.Equal(t, tc.want, tc.b.Meet(tc.a), "%s and %s", tc.b, tc.a)
+	}
+}

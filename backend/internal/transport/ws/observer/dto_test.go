@@ -72,7 +72,7 @@ func TestCompletedEnvelopePreservesZeroAndFormats(t *testing.T) {
 	require.NotContains(t, got.Payload, "failed_test")
 	require.Equal(t, id.String(), got.Payload["user_id"])
 	require.Equal(t, created.Format(time.RFC3339), got.Payload["created_at"])
-	for _, key := range []string{"contest_id", "problem_id", "language", "username", "frozen"} {
+	for _, key := range []string{"contest_id", "problem_id", "language", "username", "result_hidden"} {
 		require.NotContains(t, got.Payload, key)
 	}
 	failedTest := int32(3)

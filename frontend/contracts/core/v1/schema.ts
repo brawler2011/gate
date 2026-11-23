@@ -2599,10 +2599,15 @@ export interface components {
             problem: components["schemas"]["ContestProblemModel"];
         };
         /**
-         * @description Lowest audience that may see a contest view.
+         * @description Lowest audience that may see other people's results while the contest runs (*_during) or after it ends (*_after); moderators always may. scoreboard_* covers the scoreboard, submissions_* listing submissions, sources_* their code and reports_* their test reports.
          * @enum {string}
          */
         ContestScope: "public" | "participant" | "moderator";
+        /**
+         * @description What authors see about their own submissions; others never see more. hidden shows only that a submission was received; verdict adds the verdict, score, failed test, resources and compile log; tests adds a per-test table; full adds the failing test's data; samples is full restricted to sample tests.
+         * @enum {string}
+         */
+        FeedbackLevel: "hidden" | "verdict" | "samples" | "tests" | "full";
         /**
          * @description Contest data.
          * @example {
@@ -2624,10 +2629,16 @@ export interface components {
          *       "title": "Test contest",
          *       "description": "Example description",
          *       "visibility": "example",
-         *       "monitor_scope": "participant",
-         *       "submissions_list_scope": "moderator",
-         *       "submissions_review_scope": "moderator",
-         *       "submission_details_scope": "moderator",
+         *       "scoreboard_during": "participant",
+         *       "scoreboard_after": "public",
+         *       "submissions_during": "moderator",
+         *       "submissions_after": "participant",
+         *       "sources_during": "moderator",
+         *       "sources_after": "moderator",
+         *       "reports_during": "moderator",
+         *       "reports_after": "moderator",
+         *       "feedback_during": "verdict",
+         *       "feedback_after": "full",
          *       "freeze_status": "auto",
          *       "join_policy": "open",
          *       "hide_statements": false,
@@ -2652,10 +2663,23 @@ export interface components {
             title: string;
             description: string;
             visibility: string;
-            monitor_scope: components["schemas"]["ContestScope"];
-            submissions_list_scope: components["schemas"]["ContestScope"];
-            submissions_review_scope: components["schemas"]["ContestScope"];
-            submission_details_scope: components["schemas"]["ContestScope"];
+            scoreboard_during: components["schemas"]["ContestScope"];
+            scoreboard_after: components["schemas"]["ContestScope"];
+            submissions_during: components["schemas"]["ContestScope"];
+            submissions_after: components["schemas"]["ContestScope"];
+            sources_during: components["schemas"]["ContestScope"];
+            sources_after: components["schemas"]["ContestScope"];
+            reports_during: components["schemas"]["ContestScope"];
+            reports_after: components["schemas"]["ContestScope"];
+            feedback_during: components["schemas"]["FeedbackLevel"];
+            feedback_after: components["schemas"]["FeedbackLevel"];
+            /** @description Hide attempts made after the freeze instead of showing them as pending. */
+            freeze_hides_attempts: boolean;
+            /**
+             * Format: date-time
+             * @description When the scoreboard unfreezes; null unfreezes it at the contest end.
+             */
+            unfreeze_time?: string | null;
             /**
              * Format: int32
              * @description Freeze duration in minutes before contest end
@@ -2928,10 +2952,16 @@ export interface components {
          *       "title": "Test contest",
          *       "description": "Example description",
          *       "visibility": "private",
-         *       "monitor_scope": "participant",
-         *       "submissions_list_scope": "moderator",
-         *       "submissions_review_scope": "moderator",
-         *       "submission_details_scope": "moderator",
+         *       "scoreboard_during": "participant",
+         *       "scoreboard_after": "public",
+         *       "submissions_during": "moderator",
+         *       "submissions_after": "participant",
+         *       "sources_during": "moderator",
+         *       "sources_after": "moderator",
+         *       "reports_during": "moderator",
+         *       "reports_after": "moderator",
+         *       "feedback_during": "verdict",
+         *       "feedback_after": "full",
          *       "freeze_duration_minutes": 1,
          *       "freeze_status": "auto",
          *       "start_time": "2026-01-01T12:00:00Z",
@@ -2951,10 +2981,23 @@ export interface components {
             description?: string;
             /** @example private */
             visibility?: string;
-            monitor_scope?: components["schemas"]["ContestScope"];
-            submissions_list_scope?: components["schemas"]["ContestScope"];
-            submissions_review_scope?: components["schemas"]["ContestScope"];
-            submission_details_scope?: components["schemas"]["ContestScope"];
+            scoreboard_during?: components["schemas"]["ContestScope"];
+            scoreboard_after?: components["schemas"]["ContestScope"];
+            submissions_during?: components["schemas"]["ContestScope"];
+            submissions_after?: components["schemas"]["ContestScope"];
+            sources_during?: components["schemas"]["ContestScope"];
+            sources_after?: components["schemas"]["ContestScope"];
+            reports_during?: components["schemas"]["ContestScope"];
+            reports_after?: components["schemas"]["ContestScope"];
+            feedback_during?: components["schemas"]["FeedbackLevel"];
+            feedback_after?: components["schemas"]["FeedbackLevel"];
+            /** @description Hide attempts made after the freeze instead of showing them as pending. */
+            freeze_hides_attempts?: boolean;
+            /**
+             * Format: date-time
+             * @description When the scoreboard unfreezes; null unfreezes it at the contest end.
+             */
+            unfreeze_time?: string | null;
             /**
              * Format: int32
              * @description Freeze duration in minutes before contest end
@@ -3064,7 +3107,8 @@ export interface components {
              * @description Revision local to this submission.
              */
             revision: number;
-            frozen?: boolean;
+            /** @description The verdict and resources are withheld by the freeze or the contest's feedback level. */
+            result_hidden?: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3135,7 +3179,8 @@ export interface components {
          *       "test_index": 1,
          *       "verdict": "OK",
          *       "time_ms": 15,
-         *       "memory_kb": 2048
+         *       "memory_kb": 2048,
+         *       "sample": true
          *     }
          */
         TestDetailItemModel: {
@@ -3156,6 +3201,7 @@ export interface components {
              * @example 2048
              */
             memory_kb: number;
+            sample?: boolean;
         };
         /**
          * @description Failed test detail data.
@@ -3239,7 +3285,8 @@ export interface components {
          */
         SubmissionModel: {
             kind: components["schemas"]["SubmissionKind"];
-            frozen?: boolean;
+            /** @description The verdict and resources are withheld by the freeze or the contest's feedback level. */
+            result_hidden?: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -5608,6 +5655,7 @@ export type ProblemStatementModel = components['schemas']['ProblemStatementModel
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];
 export type ContestScope = components['schemas']['ContestScope'];
+export type FeedbackLevel = components['schemas']['FeedbackLevel'];
 export type ContestModel = components['schemas']['ContestModel'];
 export type ListContestsResponseModel = components['schemas']['ListContestsResponseModel'];
 export type ListUserContestsResponseModel = components['schemas']['ListUserContestsResponseModel'];

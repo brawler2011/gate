@@ -1368,18 +1368,28 @@ func (s *ContestMemberModelRole) UnmarshalText(data []byte) error {
 // Contest data.
 // Ref: #/components/schemas/ContestModel
 type ContestModel struct {
-	Permissions            ContestPermissionsModel `json:"permissions"`
-	ID                     uuid.UUID               `json:"id"`
-	Login                  string                  `json:"login"`
-	OrganizationID         uuid.UUID               `json:"organization_id"`
-	OrganizationLogin      string                  `json:"organization_login"`
-	Title                  string                  `json:"title"`
-	Description            string                  `json:"description"`
-	Visibility             string                  `json:"visibility"`
-	MonitorScope           ContestScope            `json:"monitor_scope"`
-	SubmissionsListScope   ContestScope            `json:"submissions_list_scope"`
-	SubmissionsReviewScope ContestScope            `json:"submissions_review_scope"`
-	SubmissionDetailsScope ContestScope            `json:"submission_details_scope"`
+	Permissions       ContestPermissionsModel `json:"permissions"`
+	ID                uuid.UUID               `json:"id"`
+	Login             string                  `json:"login"`
+	OrganizationID    uuid.UUID               `json:"organization_id"`
+	OrganizationLogin string                  `json:"organization_login"`
+	Title             string                  `json:"title"`
+	Description       string                  `json:"description"`
+	Visibility        string                  `json:"visibility"`
+	ScoreboardDuring  ContestScope            `json:"scoreboard_during"`
+	ScoreboardAfter   ContestScope            `json:"scoreboard_after"`
+	SubmissionsDuring ContestScope            `json:"submissions_during"`
+	SubmissionsAfter  ContestScope            `json:"submissions_after"`
+	SourcesDuring     ContestScope            `json:"sources_during"`
+	SourcesAfter      ContestScope            `json:"sources_after"`
+	ReportsDuring     ContestScope            `json:"reports_during"`
+	ReportsAfter      ContestScope            `json:"reports_after"`
+	FeedbackDuring    FeedbackLevel           `json:"feedback_during"`
+	FeedbackAfter     FeedbackLevel           `json:"feedback_after"`
+	// Hide attempts made after the freeze instead of showing them as pending.
+	FreezeHidesAttempts bool `json:"freeze_hides_attempts"`
+	// When the scoreboard unfreezes; null unfreezes it at the contest end.
+	UnfreezeTime OptNilDateTime `json:"unfreeze_time"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status.
@@ -1438,24 +1448,64 @@ func (s *ContestModel) GetVisibility() string {
 	return s.Visibility
 }
 
-// GetMonitorScope returns the value of MonitorScope.
-func (s *ContestModel) GetMonitorScope() ContestScope {
-	return s.MonitorScope
+// GetScoreboardDuring returns the value of ScoreboardDuring.
+func (s *ContestModel) GetScoreboardDuring() ContestScope {
+	return s.ScoreboardDuring
 }
 
-// GetSubmissionsListScope returns the value of SubmissionsListScope.
-func (s *ContestModel) GetSubmissionsListScope() ContestScope {
-	return s.SubmissionsListScope
+// GetScoreboardAfter returns the value of ScoreboardAfter.
+func (s *ContestModel) GetScoreboardAfter() ContestScope {
+	return s.ScoreboardAfter
 }
 
-// GetSubmissionsReviewScope returns the value of SubmissionsReviewScope.
-func (s *ContestModel) GetSubmissionsReviewScope() ContestScope {
-	return s.SubmissionsReviewScope
+// GetSubmissionsDuring returns the value of SubmissionsDuring.
+func (s *ContestModel) GetSubmissionsDuring() ContestScope {
+	return s.SubmissionsDuring
 }
 
-// GetSubmissionDetailsScope returns the value of SubmissionDetailsScope.
-func (s *ContestModel) GetSubmissionDetailsScope() ContestScope {
-	return s.SubmissionDetailsScope
+// GetSubmissionsAfter returns the value of SubmissionsAfter.
+func (s *ContestModel) GetSubmissionsAfter() ContestScope {
+	return s.SubmissionsAfter
+}
+
+// GetSourcesDuring returns the value of SourcesDuring.
+func (s *ContestModel) GetSourcesDuring() ContestScope {
+	return s.SourcesDuring
+}
+
+// GetSourcesAfter returns the value of SourcesAfter.
+func (s *ContestModel) GetSourcesAfter() ContestScope {
+	return s.SourcesAfter
+}
+
+// GetReportsDuring returns the value of ReportsDuring.
+func (s *ContestModel) GetReportsDuring() ContestScope {
+	return s.ReportsDuring
+}
+
+// GetReportsAfter returns the value of ReportsAfter.
+func (s *ContestModel) GetReportsAfter() ContestScope {
+	return s.ReportsAfter
+}
+
+// GetFeedbackDuring returns the value of FeedbackDuring.
+func (s *ContestModel) GetFeedbackDuring() FeedbackLevel {
+	return s.FeedbackDuring
+}
+
+// GetFeedbackAfter returns the value of FeedbackAfter.
+func (s *ContestModel) GetFeedbackAfter() FeedbackLevel {
+	return s.FeedbackAfter
+}
+
+// GetFreezeHidesAttempts returns the value of FreezeHidesAttempts.
+func (s *ContestModel) GetFreezeHidesAttempts() bool {
+	return s.FreezeHidesAttempts
+}
+
+// GetUnfreezeTime returns the value of UnfreezeTime.
+func (s *ContestModel) GetUnfreezeTime() OptNilDateTime {
+	return s.UnfreezeTime
 }
 
 // GetFreezeDurationMinutes returns the value of FreezeDurationMinutes.
@@ -1563,24 +1613,64 @@ func (s *ContestModel) SetVisibility(val string) {
 	s.Visibility = val
 }
 
-// SetMonitorScope sets the value of MonitorScope.
-func (s *ContestModel) SetMonitorScope(val ContestScope) {
-	s.MonitorScope = val
+// SetScoreboardDuring sets the value of ScoreboardDuring.
+func (s *ContestModel) SetScoreboardDuring(val ContestScope) {
+	s.ScoreboardDuring = val
 }
 
-// SetSubmissionsListScope sets the value of SubmissionsListScope.
-func (s *ContestModel) SetSubmissionsListScope(val ContestScope) {
-	s.SubmissionsListScope = val
+// SetScoreboardAfter sets the value of ScoreboardAfter.
+func (s *ContestModel) SetScoreboardAfter(val ContestScope) {
+	s.ScoreboardAfter = val
 }
 
-// SetSubmissionsReviewScope sets the value of SubmissionsReviewScope.
-func (s *ContestModel) SetSubmissionsReviewScope(val ContestScope) {
-	s.SubmissionsReviewScope = val
+// SetSubmissionsDuring sets the value of SubmissionsDuring.
+func (s *ContestModel) SetSubmissionsDuring(val ContestScope) {
+	s.SubmissionsDuring = val
 }
 
-// SetSubmissionDetailsScope sets the value of SubmissionDetailsScope.
-func (s *ContestModel) SetSubmissionDetailsScope(val ContestScope) {
-	s.SubmissionDetailsScope = val
+// SetSubmissionsAfter sets the value of SubmissionsAfter.
+func (s *ContestModel) SetSubmissionsAfter(val ContestScope) {
+	s.SubmissionsAfter = val
+}
+
+// SetSourcesDuring sets the value of SourcesDuring.
+func (s *ContestModel) SetSourcesDuring(val ContestScope) {
+	s.SourcesDuring = val
+}
+
+// SetSourcesAfter sets the value of SourcesAfter.
+func (s *ContestModel) SetSourcesAfter(val ContestScope) {
+	s.SourcesAfter = val
+}
+
+// SetReportsDuring sets the value of ReportsDuring.
+func (s *ContestModel) SetReportsDuring(val ContestScope) {
+	s.ReportsDuring = val
+}
+
+// SetReportsAfter sets the value of ReportsAfter.
+func (s *ContestModel) SetReportsAfter(val ContestScope) {
+	s.ReportsAfter = val
+}
+
+// SetFeedbackDuring sets the value of FeedbackDuring.
+func (s *ContestModel) SetFeedbackDuring(val FeedbackLevel) {
+	s.FeedbackDuring = val
+}
+
+// SetFeedbackAfter sets the value of FeedbackAfter.
+func (s *ContestModel) SetFeedbackAfter(val FeedbackLevel) {
+	s.FeedbackAfter = val
+}
+
+// SetFreezeHidesAttempts sets the value of FreezeHidesAttempts.
+func (s *ContestModel) SetFreezeHidesAttempts(val bool) {
+	s.FreezeHidesAttempts = val
+}
+
+// SetUnfreezeTime sets the value of UnfreezeTime.
+func (s *ContestModel) SetUnfreezeTime(val OptNilDateTime) {
+	s.UnfreezeTime = val
 }
 
 // SetFreezeDurationMinutes sets the value of FreezeDurationMinutes.
@@ -2265,7 +2355,9 @@ func (s *ContestRoleQuery) UnmarshalText(data []byte) error {
 	}
 }
 
-// Lowest audience that may see a contest view.
+// Lowest audience that may see other people's results while the contest runs (_during) or after it
+// ends (after); moderators always may. scoreboard* covers the scoreboard, submissions_* listing
+// submissions, sources_* their code and reports_* their test reports.
 // Ref: #/components/schemas/ContestScope
 type ContestScope string
 
@@ -3839,6 +3931,73 @@ func (s *FailedTestDetailModel) SetErrorMessage(val string) {
 // SetIsTruncated sets the value of IsTruncated.
 func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 	s.IsTruncated = val
+}
+
+// What authors see about their own submissions; others never see more. hidden shows only that a
+// submission was received; verdict adds the verdict, score, failed test, resources and compile log;
+// tests adds a per-test table; full adds the failing test's data; samples is full restricted to sample
+// tests.
+// Ref: #/components/schemas/FeedbackLevel
+type FeedbackLevel string
+
+const (
+	FeedbackLevelHidden  FeedbackLevel = "hidden"
+	FeedbackLevelVerdict FeedbackLevel = "verdict"
+	FeedbackLevelSamples FeedbackLevel = "samples"
+	FeedbackLevelTests   FeedbackLevel = "tests"
+	FeedbackLevelFull    FeedbackLevel = "full"
+)
+
+// AllValues returns all FeedbackLevel values.
+func (FeedbackLevel) AllValues() []FeedbackLevel {
+	return []FeedbackLevel{
+		FeedbackLevelHidden,
+		FeedbackLevelVerdict,
+		FeedbackLevelSamples,
+		FeedbackLevelTests,
+		FeedbackLevelFull,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FeedbackLevel) MarshalText() ([]byte, error) {
+	switch s {
+	case FeedbackLevelHidden:
+		return []byte(s), nil
+	case FeedbackLevelVerdict:
+		return []byte(s), nil
+	case FeedbackLevelSamples:
+		return []byte(s), nil
+	case FeedbackLevelTests:
+		return []byte(s), nil
+	case FeedbackLevelFull:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FeedbackLevel) UnmarshalText(data []byte) error {
+	switch FeedbackLevel(data) {
+	case FeedbackLevelHidden:
+		*s = FeedbackLevelHidden
+		return nil
+	case FeedbackLevelVerdict:
+		*s = FeedbackLevelVerdict
+		return nil
+	case FeedbackLevelSamples:
+		*s = FeedbackLevelSamples
+		return nil
+	case FeedbackLevelTests:
+		*s = FeedbackLevelTests
+		return nil
+	case FeedbackLevelFull:
+		*s = FeedbackLevelFull
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // One invalid value of a request body.
@@ -6803,6 +6962,52 @@ func (o OptFailedTestDetailModel) Get() (v FailedTestDetailModel, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptFailedTestDetailModel) Or(d FailedTestDetailModel) FailedTestDetailModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptFeedbackLevel returns new OptFeedbackLevel with value set to v.
+func NewOptFeedbackLevel(v FeedbackLevel) OptFeedbackLevel {
+	return OptFeedbackLevel{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFeedbackLevel is optional FeedbackLevel.
+type OptFeedbackLevel struct {
+	Value FeedbackLevel
+	Set   bool
+}
+
+// IsSet returns true if OptFeedbackLevel was set.
+func (o OptFeedbackLevel) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFeedbackLevel) Reset() {
+	var v FeedbackLevel
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFeedbackLevel) SetTo(v FeedbackLevel) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFeedbackLevel) Get() (v FeedbackLevel, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFeedbackLevel) Or(d FeedbackLevel) FeedbackLevel {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12199,17 +12404,18 @@ func (s *SubmissionKind) UnmarshalText(data []byte) error {
 // Submission data.
 // Ref: #/components/schemas/SubmissionModel
 type SubmissionModel struct {
-	Kind       SubmissionKind `json:"kind"`
-	Frozen     OptBool        `json:"frozen"`
-	ID         uuid.UUID      `json:"id"`
-	UserID     uuid.UUID      `json:"user_id"`
-	Username   string         `json:"username"`
-	Submission OptString      `json:"submission"`
-	State      OptInt32       `json:"state"`
-	Score      OptFloat64     `json:"score"`
-	Penalty    OptInt32       `json:"penalty"`
-	TimeStat   OptInt32       `json:"time_stat"`
-	MemoryStat OptInt32       `json:"memory_stat"`
+	Kind SubmissionKind `json:"kind"`
+	// The verdict and resources are withheld by the freeze or the contest's feedback level.
+	ResultHidden OptBool    `json:"result_hidden"`
+	ID           uuid.UUID  `json:"id"`
+	UserID       uuid.UUID  `json:"user_id"`
+	Username     string     `json:"username"`
+	Submission   OptString  `json:"submission"`
+	State        OptInt32   `json:"state"`
+	Score        OptFloat64 `json:"score"`
+	Penalty      OptInt32   `json:"penalty"`
+	TimeStat     OptInt32   `json:"time_stat"`
+	MemoryStat   OptInt32   `json:"memory_stat"`
 	// Identifier of the language configuration from GET /languages.
 	Language          string                        `json:"language"`
 	FailedTest        OptNilInt32                   `json:"failed_test"`
@@ -12231,9 +12437,9 @@ func (s *SubmissionModel) GetKind() SubmissionKind {
 	return s.Kind
 }
 
-// GetFrozen returns the value of Frozen.
-func (s *SubmissionModel) GetFrozen() OptBool {
-	return s.Frozen
+// GetResultHidden returns the value of ResultHidden.
+func (s *SubmissionModel) GetResultHidden() OptBool {
+	return s.ResultHidden
 }
 
 // GetID returns the value of ID.
@@ -12351,9 +12557,9 @@ func (s *SubmissionModel) SetKind(val SubmissionKind) {
 	s.Kind = val
 }
 
-// SetFrozen sets the value of Frozen.
-func (s *SubmissionModel) SetFrozen(val OptBool) {
-	s.Frozen = val
+// SetResultHidden sets the value of ResultHidden.
+func (s *SubmissionModel) SetResultHidden(val OptBool) {
+	s.ResultHidden = val
 }
 
 // SetID sets the value of ID.
@@ -12550,16 +12756,17 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 type SubmissionsListItemModel struct {
 	Kind SubmissionKind `json:"kind"`
 	// Revision local to this submission.
-	Revision   int64      `json:"revision"`
-	Frozen     OptBool    `json:"frozen"`
-	ID         uuid.UUID  `json:"id"`
-	UserID     uuid.UUID  `json:"user_id"`
-	Username   string     `json:"username"`
-	State      OptInt32   `json:"state"`
-	Score      OptFloat64 `json:"score"`
-	Penalty    OptInt32   `json:"penalty"`
-	TimeStat   OptInt32   `json:"time_stat"`
-	MemoryStat OptInt32   `json:"memory_stat"`
+	Revision int64 `json:"revision"`
+	// The verdict and resources are withheld by the freeze or the contest's feedback level.
+	ResultHidden OptBool    `json:"result_hidden"`
+	ID           uuid.UUID  `json:"id"`
+	UserID       uuid.UUID  `json:"user_id"`
+	Username     string     `json:"username"`
+	State        OptInt32   `json:"state"`
+	Score        OptFloat64 `json:"score"`
+	Penalty      OptInt32   `json:"penalty"`
+	TimeStat     OptInt32   `json:"time_stat"`
+	MemoryStat   OptInt32   `json:"memory_stat"`
 	// Identifier of the language configuration from GET /languages.
 	Language          string       `json:"language"`
 	FailedTest        OptNilInt32  `json:"failed_test"`
@@ -12585,9 +12792,9 @@ func (s *SubmissionsListItemModel) GetRevision() int64 {
 	return s.Revision
 }
 
-// GetFrozen returns the value of Frozen.
-func (s *SubmissionsListItemModel) GetFrozen() OptBool {
-	return s.Frozen
+// GetResultHidden returns the value of ResultHidden.
+func (s *SubmissionsListItemModel) GetResultHidden() OptBool {
+	return s.ResultHidden
 }
 
 // GetID returns the value of ID.
@@ -12700,9 +12907,9 @@ func (s *SubmissionsListItemModel) SetRevision(val int64) {
 	s.Revision = val
 }
 
-// SetFrozen sets the value of Frozen.
-func (s *SubmissionsListItemModel) SetFrozen(val OptBool) {
-	s.Frozen = val
+// SetResultHidden sets the value of ResultHidden.
+func (s *SubmissionsListItemModel) SetResultHidden(val OptBool) {
+	s.ResultHidden = val
 }
 
 // SetID sets the value of ID.
@@ -13278,10 +13485,11 @@ func (s *TeamRoleQuery) UnmarshalText(data []byte) error {
 // Test detail item data.
 // Ref: #/components/schemas/TestDetailItemModel
 type TestDetailItemModel struct {
-	TestIndex int32  `json:"test_index"`
-	Verdict   string `json:"verdict"`
-	TimeMs    int32  `json:"time_ms"`
-	MemoryKB  int32  `json:"memory_kb"`
+	TestIndex int32   `json:"test_index"`
+	Verdict   string  `json:"verdict"`
+	TimeMs    int32   `json:"time_ms"`
+	MemoryKB  int32   `json:"memory_kb"`
+	Sample    OptBool `json:"sample"`
 }
 
 // GetTestIndex returns the value of TestIndex.
@@ -13304,6 +13512,11 @@ func (s *TestDetailItemModel) GetMemoryKB() int32 {
 	return s.MemoryKB
 }
 
+// GetSample returns the value of Sample.
+func (s *TestDetailItemModel) GetSample() OptBool {
+	return s.Sample
+}
+
 // SetTestIndex sets the value of TestIndex.
 func (s *TestDetailItemModel) SetTestIndex(val int32) {
 	s.TestIndex = val
@@ -13322,6 +13535,11 @@ func (s *TestDetailItemModel) SetTimeMs(val int32) {
 // SetMemoryKB sets the value of MemoryKB.
 func (s *TestDetailItemModel) SetMemoryKB(val int32) {
 	s.MemoryKB = val
+}
+
+// SetSample sets the value of Sample.
+func (s *TestDetailItemModel) SetSample(val OptBool) {
+	s.Sample = val
 }
 
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.
@@ -13355,14 +13573,24 @@ type UpdateContestOK struct{}
 // Fields for the update contest request.
 // Ref: #/components/schemas/UpdateContestRequestModel
 type UpdateContestRequestModel struct {
-	Login                  OptString       `json:"login"`
-	Title                  OptString       `json:"title"`
-	Description            OptString       `json:"description"`
-	Visibility             OptString       `json:"visibility"`
-	MonitorScope           OptContestScope `json:"monitor_scope"`
-	SubmissionsListScope   OptContestScope `json:"submissions_list_scope"`
-	SubmissionsReviewScope OptContestScope `json:"submissions_review_scope"`
-	SubmissionDetailsScope OptContestScope `json:"submission_details_scope"`
+	Login             OptString        `json:"login"`
+	Title             OptString        `json:"title"`
+	Description       OptString        `json:"description"`
+	Visibility        OptString        `json:"visibility"`
+	ScoreboardDuring  OptContestScope  `json:"scoreboard_during"`
+	ScoreboardAfter   OptContestScope  `json:"scoreboard_after"`
+	SubmissionsDuring OptContestScope  `json:"submissions_during"`
+	SubmissionsAfter  OptContestScope  `json:"submissions_after"`
+	SourcesDuring     OptContestScope  `json:"sources_during"`
+	SourcesAfter      OptContestScope  `json:"sources_after"`
+	ReportsDuring     OptContestScope  `json:"reports_during"`
+	ReportsAfter      OptContestScope  `json:"reports_after"`
+	FeedbackDuring    OptFeedbackLevel `json:"feedback_during"`
+	FeedbackAfter     OptFeedbackLevel `json:"feedback_after"`
+	// Hide attempts made after the freeze instead of showing them as pending.
+	FreezeHidesAttempts OptBool `json:"freeze_hides_attempts"`
+	// When the scoreboard unfreezes; null unfreezes it at the contest end.
+	UnfreezeTime OptNilDateTime `json:"unfreeze_time"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status; omitted preserves the current mode.
@@ -13400,24 +13628,64 @@ func (s *UpdateContestRequestModel) GetVisibility() OptString {
 	return s.Visibility
 }
 
-// GetMonitorScope returns the value of MonitorScope.
-func (s *UpdateContestRequestModel) GetMonitorScope() OptContestScope {
-	return s.MonitorScope
+// GetScoreboardDuring returns the value of ScoreboardDuring.
+func (s *UpdateContestRequestModel) GetScoreboardDuring() OptContestScope {
+	return s.ScoreboardDuring
 }
 
-// GetSubmissionsListScope returns the value of SubmissionsListScope.
-func (s *UpdateContestRequestModel) GetSubmissionsListScope() OptContestScope {
-	return s.SubmissionsListScope
+// GetScoreboardAfter returns the value of ScoreboardAfter.
+func (s *UpdateContestRequestModel) GetScoreboardAfter() OptContestScope {
+	return s.ScoreboardAfter
 }
 
-// GetSubmissionsReviewScope returns the value of SubmissionsReviewScope.
-func (s *UpdateContestRequestModel) GetSubmissionsReviewScope() OptContestScope {
-	return s.SubmissionsReviewScope
+// GetSubmissionsDuring returns the value of SubmissionsDuring.
+func (s *UpdateContestRequestModel) GetSubmissionsDuring() OptContestScope {
+	return s.SubmissionsDuring
 }
 
-// GetSubmissionDetailsScope returns the value of SubmissionDetailsScope.
-func (s *UpdateContestRequestModel) GetSubmissionDetailsScope() OptContestScope {
-	return s.SubmissionDetailsScope
+// GetSubmissionsAfter returns the value of SubmissionsAfter.
+func (s *UpdateContestRequestModel) GetSubmissionsAfter() OptContestScope {
+	return s.SubmissionsAfter
+}
+
+// GetSourcesDuring returns the value of SourcesDuring.
+func (s *UpdateContestRequestModel) GetSourcesDuring() OptContestScope {
+	return s.SourcesDuring
+}
+
+// GetSourcesAfter returns the value of SourcesAfter.
+func (s *UpdateContestRequestModel) GetSourcesAfter() OptContestScope {
+	return s.SourcesAfter
+}
+
+// GetReportsDuring returns the value of ReportsDuring.
+func (s *UpdateContestRequestModel) GetReportsDuring() OptContestScope {
+	return s.ReportsDuring
+}
+
+// GetReportsAfter returns the value of ReportsAfter.
+func (s *UpdateContestRequestModel) GetReportsAfter() OptContestScope {
+	return s.ReportsAfter
+}
+
+// GetFeedbackDuring returns the value of FeedbackDuring.
+func (s *UpdateContestRequestModel) GetFeedbackDuring() OptFeedbackLevel {
+	return s.FeedbackDuring
+}
+
+// GetFeedbackAfter returns the value of FeedbackAfter.
+func (s *UpdateContestRequestModel) GetFeedbackAfter() OptFeedbackLevel {
+	return s.FeedbackAfter
+}
+
+// GetFreezeHidesAttempts returns the value of FreezeHidesAttempts.
+func (s *UpdateContestRequestModel) GetFreezeHidesAttempts() OptBool {
+	return s.FreezeHidesAttempts
+}
+
+// GetUnfreezeTime returns the value of UnfreezeTime.
+func (s *UpdateContestRequestModel) GetUnfreezeTime() OptNilDateTime {
+	return s.UnfreezeTime
 }
 
 // GetFreezeDurationMinutes returns the value of FreezeDurationMinutes.
@@ -13495,24 +13763,64 @@ func (s *UpdateContestRequestModel) SetVisibility(val OptString) {
 	s.Visibility = val
 }
 
-// SetMonitorScope sets the value of MonitorScope.
-func (s *UpdateContestRequestModel) SetMonitorScope(val OptContestScope) {
-	s.MonitorScope = val
+// SetScoreboardDuring sets the value of ScoreboardDuring.
+func (s *UpdateContestRequestModel) SetScoreboardDuring(val OptContestScope) {
+	s.ScoreboardDuring = val
 }
 
-// SetSubmissionsListScope sets the value of SubmissionsListScope.
-func (s *UpdateContestRequestModel) SetSubmissionsListScope(val OptContestScope) {
-	s.SubmissionsListScope = val
+// SetScoreboardAfter sets the value of ScoreboardAfter.
+func (s *UpdateContestRequestModel) SetScoreboardAfter(val OptContestScope) {
+	s.ScoreboardAfter = val
 }
 
-// SetSubmissionsReviewScope sets the value of SubmissionsReviewScope.
-func (s *UpdateContestRequestModel) SetSubmissionsReviewScope(val OptContestScope) {
-	s.SubmissionsReviewScope = val
+// SetSubmissionsDuring sets the value of SubmissionsDuring.
+func (s *UpdateContestRequestModel) SetSubmissionsDuring(val OptContestScope) {
+	s.SubmissionsDuring = val
 }
 
-// SetSubmissionDetailsScope sets the value of SubmissionDetailsScope.
-func (s *UpdateContestRequestModel) SetSubmissionDetailsScope(val OptContestScope) {
-	s.SubmissionDetailsScope = val
+// SetSubmissionsAfter sets the value of SubmissionsAfter.
+func (s *UpdateContestRequestModel) SetSubmissionsAfter(val OptContestScope) {
+	s.SubmissionsAfter = val
+}
+
+// SetSourcesDuring sets the value of SourcesDuring.
+func (s *UpdateContestRequestModel) SetSourcesDuring(val OptContestScope) {
+	s.SourcesDuring = val
+}
+
+// SetSourcesAfter sets the value of SourcesAfter.
+func (s *UpdateContestRequestModel) SetSourcesAfter(val OptContestScope) {
+	s.SourcesAfter = val
+}
+
+// SetReportsDuring sets the value of ReportsDuring.
+func (s *UpdateContestRequestModel) SetReportsDuring(val OptContestScope) {
+	s.ReportsDuring = val
+}
+
+// SetReportsAfter sets the value of ReportsAfter.
+func (s *UpdateContestRequestModel) SetReportsAfter(val OptContestScope) {
+	s.ReportsAfter = val
+}
+
+// SetFeedbackDuring sets the value of FeedbackDuring.
+func (s *UpdateContestRequestModel) SetFeedbackDuring(val OptFeedbackLevel) {
+	s.FeedbackDuring = val
+}
+
+// SetFeedbackAfter sets the value of FeedbackAfter.
+func (s *UpdateContestRequestModel) SetFeedbackAfter(val OptFeedbackLevel) {
+	s.FeedbackAfter = val
+}
+
+// SetFreezeHidesAttempts sets the value of FreezeHidesAttempts.
+func (s *UpdateContestRequestModel) SetFreezeHidesAttempts(val OptBool) {
+	s.FreezeHidesAttempts = val
+}
+
+// SetUnfreezeTime sets the value of UnfreezeTime.
+func (s *UpdateContestRequestModel) SetUnfreezeTime(val OptNilDateTime) {
+	s.UnfreezeTime = val
 }
 
 // SetFreezeDurationMinutes sets the value of FreezeDurationMinutes.

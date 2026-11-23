@@ -141,15 +141,15 @@ const (
 	finished
 )
 
-// contest is private, invite-only and running unless a case changes it; every scope is moderator-only.
+// contest is private, invite-only and running unless a case changes it; every audience is moderator-only and authors see verdicts.
 func contest(p phase, change func(*cm.Contest)) (cm.Contest, time.Time) {
 	start := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
 	now := map[phase]time.Time{before: start.Add(-time.Nanosecond), running: start, finished: end}[p]
 	c := cm.Contest{Visibility: cm.ContestVisibilityPrivate, StartTime: &start, EndTime: &end, Settings: cm.ContestSettings{
 		JoinPolicy: m.JoinInviteOnly,
-		MonitorScope:      cm.ScopeModerator, SubmissionsListScope: cm.ScopeModerator,
-		SubmissionsReviewScope: cm.ScopeModerator, SubmissionDetailsScope: cm.ScopeModerator,
+		Scoreboard: cm.Same(cm.ScopeModerator), Submissions: cm.Same(cm.ScopeModerator),
+		Sources: cm.Same(cm.ScopeModerator), Reports: cm.Same(cm.ScopeModerator), Feedback: cm.Same(cm.FeedbackVerdict),
 	}}
 	if change != nil {
 		change(&c)
@@ -162,9 +162,17 @@ func upsolving(c *cm.Contest) { c.Settings.EnableUpsolving = true }
 func openEntry(c *cm.Contest) { public(c); c.Settings.JoinPolicy = m.JoinOpen }
 func hidden(c *cm.Contest)    { c.Settings.HideStatements = true }
 func monitor(s cm.ContestScope) func(*cm.Contest) {
-	return func(c *cm.Contest) { c.Settings.MonitorScope = s }
+	return func(c *cm.Contest) { c.Settings.Scoreboard = cm.Same(s) }
+}
+func feedback(during cm.FeedbackLevel) func(*cm.Contest) {
+	return func(c *cm.Contest) { c.Settings.Feedback.During = during }
 }
 func both(a, b func(*cm.Contest)) func(*cm.Contest) { return func(c *cm.Contest) { a(c); b(c) } }
+
+// phased shows the scoreboard to participants while the contest runs and to everyone after it ends.
+func phased(c *cm.Contest) {
+	c.Settings.Scoreboard = cm.Phased[cm.ContestScope]{During: cm.ScopeParticipant, After: cm.ScopePublic}
+}
 
 func TestContestPolicy(t *testing.T) {
 	cols := actors("participant", "moderator", "owner")
@@ -190,6 +198,10 @@ func TestContestPolicy(t *testing.T) {
 		{"public scope", m.ContestViewScoreboard, running, both(public, monitor(cm.ScopePublic)), "111111"},
 		{"public scope before start", m.ContestViewScoreboard, before, both(public, monitor(cm.ScopePublic)), "000111"},
 		{"public scope of a private contest", m.ContestViewScoreboard, running, monitor(cm.ScopePublic), "001111"},
+		{"participants during", m.ContestViewScoreboard, running, both(public, phased), "001111"},
+		{"everyone after", m.ContestViewScoreboard, finished, both(public, phased), "111111"},
+		{"hidden own results", m.ContestViewScoreboard, running, both(both(public, monitor(cm.ScopePublic)), feedback(cm.FeedbackHidden)), "000111"},
+		{"hidden own results after the end", m.ContestViewScoreboard, finished, both(both(public, monitor(cm.ScopePublic)), feedback(cm.FeedbackHidden)), "111111"},
 		{"moderator scope", m.ContestListSubmissions, running, nil, "000111"},
 		{"", m.ContestListOwnSubmissions, running, nil, "001111"},
 		{"upsolving", m.ContestListOwnSubmissions, finished, both(public, upsolving), "011111"},
@@ -214,7 +226,9 @@ func TestVirtualRunPolicy(t *testing.T) {
 	replayable := func(c *cm.Contest) { public(c); monitor(cm.ScopeParticipant)(c); c.Settings.AllowVirtual = true }
 	// active is under way at the finished-phase clock, over has already ended.
 	active := func(now time.Time) *cm.VirtualRun { return &cm.VirtualRun{StartedAt: now, EndsAt: now.Add(time.Hour)} }
-	over := func(now time.Time) *cm.VirtualRun { return &cm.VirtualRun{StartedAt: now.Add(-2 * time.Hour), EndsAt: now} }
+	over := func(now time.Time) *cm.VirtualRun {
+		return &cm.VirtualRun{StartedAt: now.Add(-2 * time.Hour), EndsAt: now}
+	}
 	for _, tc := range []struct {
 		name     string
 		action   m.ContestAction
@@ -251,22 +265,52 @@ func TestVirtualRunPolicy(t *testing.T) {
 func TestSubmissionPolicy(t *testing.T) {
 	cols := actors("participant", "moderator", "owner")
 	author := cols[2].user.Id
+	open := func(g access.SubmissionGrant) bool { return g.Open }
+	source := func(g access.SubmissionGrant) bool { return g.Source }
+	tests := func(g access.SubmissionGrant) bool { return g.Results.Tests() }
+	verdict := func(g access.SubmissionGrant) bool { return g.Results != cm.FeedbackHidden }
+	others := func(scope cm.ContestScope) func(*cm.Contest) {
+		return func(c *cm.Contest) {
+			public(c)
+			c.Settings.Submissions = cm.Same(scope)
+			c.Settings.Reports = cm.Same(scope)
+		}
+	}
 	for _, tc := range []struct {
-		name   string
-		action m.SubmissionAction
-		author uuid.UUID
-		change func(*cm.Contest)
-		want   string
+		name    string
+		see     func(access.SubmissionGrant) bool
+		author  uuid.UUID
+		phase   phase
+		change  func(*cm.Contest)
+		want    string
+		virtual bool
 	}{
-		{"own", m.SubmissionView, author, nil, "001111"},
-		{"another's", m.SubmissionView, uuid.New(), nil, "000111"},
-		{"own, moderator details", m.SubmissionViewDetails, author, nil, "000111"},
-		{"own, participant details", m.SubmissionViewDetails, author, func(c *cm.Contest) { c.Settings.SubmissionDetailsScope = cm.ScopeParticipant }, "001111"},
-		{"public review", m.SubmissionView, uuid.New(), func(c *cm.Contest) { public(c); c.Settings.SubmissionsReviewScope = cm.ScopePublic }, "111111"},
+		{"own opens", open, author, running, nil, "001111", false},
+		{"another's stays closed", open, uuid.New(), running, nil, "000111", false},
+		{"own verdict", verdict, author, running, nil, "001111", false},
+		{"own tests at verdict level", tests, author, running, nil, "000111", false},
+		{"own tests", tests, author, running, feedback(cm.FeedbackTests), "001111", false},
+		{"own results hidden", verdict, author, running, feedback(cm.FeedbackHidden), "000111", false},
+		{"own code hidden", source, author, running, feedback(cm.FeedbackHidden), "000111", false},
+		{"own results after the end", tests, author, finished, both(feedback(cm.FeedbackHidden), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "001111", false},
+		{"public list", open, uuid.New(), running, others(cm.ScopePublic), "111111", false},
+		{"public reports", tests, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackFull)), "111111", false},
+		{"reports for moderators", tests, uuid.New(), running, both(others(cm.ScopeModerator), feedback(cm.FeedbackFull)), "000111", false},
+		{"never more than the author", tests, uuid.New(), running, others(cm.ScopePublic), "000111", false},
+		{"author's hidden results", verdict, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackHidden)), "000111", false},
+		{"code after the end", source, uuid.New(), finished, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "111111", false},
+		{"code while running", source, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "000111", false},
+		{"code the author cannot see", source, uuid.New(), running, both(func(c *cm.Contest) { public(c); c.Settings.Sources = cm.Same(cm.ScopePublic) }, feedback(cm.FeedbackHidden)), "000111", false},
+		{"reports alone open", open, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Reports = cm.Same(cm.ScopePublic) }, "111111", false},
+		{"a virtual run keeps its level after the end", tests, uuid.New(), finished, both(others(cm.ScopePublic), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "000111", true},
+		{"a virtual run never shows more than the stricter phase", tests, uuid.New(), finished, both(others(cm.ScopePublic), func(c *cm.Contest) {
+			c.Settings.Feedback = cm.Phased[cm.FeedbackLevel]{During: cm.FeedbackFull, After: cm.FeedbackHidden}
+		}), "000111", true},
+		{"own virtual submissions without a finished run", tests, author, finished, func(c *cm.Contest) { upsolving(c); c.Settings.Feedback.After = cm.FeedbackFull }, "000111", true},
 	} {
-		c, now := contest(running, tc.change)
-		check(t, fmt.Sprint(tc.action, " ", tc.name), cols, tc.want, func(a actor) bool {
-			return access.SubmissionAllows(a.user, access.ContestFacts{Contest: c, Role: m.ContestRole(a.role), Now: now}, tc.author, tc.action)
+		c, now := contest(tc.phase, tc.change)
+		check(t, tc.name, cols, tc.want, func(a actor) bool {
+			return tc.see(access.SubmissionAllows(a.user, access.ContestFacts{Contest: c, Role: m.ContestRole(a.role), Now: now}, tc.author, tc.virtual))
 		})
 	}
 }

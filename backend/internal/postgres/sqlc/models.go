@@ -187,6 +187,51 @@ func (ns NullContestVisibility) Value() (driver.Value, error) {
 	return string(ns.ContestVisibility), nil
 }
 
+type FeedbackLevel string
+
+const (
+	FeedbackLevelHidden  FeedbackLevel = "hidden"
+	FeedbackLevelVerdict FeedbackLevel = "verdict"
+	FeedbackLevelSamples FeedbackLevel = "samples"
+	FeedbackLevelTests   FeedbackLevel = "tests"
+	FeedbackLevelFull    FeedbackLevel = "full"
+)
+
+func (e *FeedbackLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FeedbackLevel(s)
+	case string:
+		*e = FeedbackLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FeedbackLevel: %T", src)
+	}
+	return nil
+}
+
+type NullFeedbackLevel struct {
+	FeedbackLevel FeedbackLevel `json:"feedback_level"`
+	Valid         bool          `json:"valid"` // Valid is true if FeedbackLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFeedbackLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.FeedbackLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FeedbackLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFeedbackLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FeedbackLevel), nil
+}
+
 type FreezeStatus string
 
 const (
@@ -585,30 +630,38 @@ type AuthToken struct {
 }
 
 type Contest struct {
-	ID                     uuid.UUID                       `json:"id"`
-	OrganizationID         uuid.UUID                       `json:"organization_id"`
-	Visibility             contestsmodel.ContestVisibility `json:"visibility"`
-	Title                  string                          `json:"title"`
-	Login                  string                          `json:"login"`
-	Description            string                          `json:"description"`
-	JoinPolicy             accessmodel.JoinPolicy          `json:"join_policy"`
-	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
-	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
-	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
-	SubmissionDetailsScope contestsmodel.ContestScope      `json:"submission_details_scope"`
-	FreezeStatus           contestsmodel.FreezeStatus      `json:"freeze_status"`
-	FreezeDurationMinutes  *int32                          `json:"freeze_duration_minutes"`
-	FreezeStartedAt        *time.Time                      `json:"freeze_started_at"`
-	HideStatements         bool                            `json:"hide_statements"`
-	AllowClarifications    bool                            `json:"allow_clarifications"`
-	EnableDrafts           bool                            `json:"enable_drafts"`
-	EnableUpsolving        bool                            `json:"enable_upsolving"`
-	AllowVirtual           bool                            `json:"allow_virtual"`
-	Languages              []string                        `json:"languages"`
-	StartTime              *time.Time                      `json:"start_time"`
-	EndTime                *time.Time                      `json:"end_time"`
-	CreatedAt              time.Time                       `json:"created_at"`
-	UpdatedAt              time.Time                       `json:"updated_at"`
+	ID                    uuid.UUID                       `json:"id"`
+	OrganizationID        uuid.UUID                       `json:"organization_id"`
+	Visibility            contestsmodel.ContestVisibility `json:"visibility"`
+	Title                 string                          `json:"title"`
+	Login                 string                          `json:"login"`
+	Description           string                          `json:"description"`
+	JoinPolicy            accessmodel.JoinPolicy          `json:"join_policy"`
+	ScoreboardDuring      contestsmodel.ContestScope      `json:"scoreboard_during"`
+	ScoreboardAfter       contestsmodel.ContestScope      `json:"scoreboard_after"`
+	SubmissionsDuring     contestsmodel.ContestScope      `json:"submissions_during"`
+	SubmissionsAfter      contestsmodel.ContestScope      `json:"submissions_after"`
+	SourcesDuring         contestsmodel.ContestScope      `json:"sources_during"`
+	SourcesAfter          contestsmodel.ContestScope      `json:"sources_after"`
+	ReportsDuring         contestsmodel.ContestScope      `json:"reports_during"`
+	ReportsAfter          contestsmodel.ContestScope      `json:"reports_after"`
+	FeedbackDuring        contestsmodel.FeedbackLevel     `json:"feedback_during"`
+	FeedbackAfter         contestsmodel.FeedbackLevel     `json:"feedback_after"`
+	FreezeStatus          contestsmodel.FreezeStatus      `json:"freeze_status"`
+	FreezeDurationMinutes *int32                          `json:"freeze_duration_minutes"`
+	FreezeStartedAt       *time.Time                      `json:"freeze_started_at"`
+	FreezeHidesAttempts   bool                            `json:"freeze_hides_attempts"`
+	UnfreezeTime          *time.Time                      `json:"unfreeze_time"`
+	HideStatements        bool                            `json:"hide_statements"`
+	AllowClarifications   bool                            `json:"allow_clarifications"`
+	EnableDrafts          bool                            `json:"enable_drafts"`
+	EnableUpsolving       bool                            `json:"enable_upsolving"`
+	AllowVirtual          bool                            `json:"allow_virtual"`
+	Languages             []string                        `json:"languages"`
+	StartTime             *time.Time                      `json:"start_time"`
+	EndTime               *time.Time                      `json:"end_time"`
+	CreatedAt             time.Time                       `json:"created_at"`
+	UpdatedAt             time.Time                       `json:"updated_at"`
 }
 
 type ContestAccess struct {

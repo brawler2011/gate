@@ -20,7 +20,7 @@ type MessageSubmissionCompleted struct {
 	Position             *int32                 `json:"position,omitempty"`
 	Language             *string                `json:"language,omitempty"`
 	CreatedAt            *time.Time             `json:"created_at,omitempty"`
-	Frozen               *bool                  `json:"frozen,omitempty"`
+	ResultHidden         *bool                  `json:"result_hidden,omitempty"`
 	Id                   uuid.UUID              `json:"id" binding:"required"`
 	State                *int32                 `json:"state,omitempty"`
 	Score                *float64               `json:"score,omitempty"`

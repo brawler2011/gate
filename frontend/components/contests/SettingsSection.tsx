@@ -25,6 +25,21 @@ const SCOPE_OPTIONS = [
   {label: "Модератор", value: "moderator", color: "yellow"},
 ];
 
+const PHASED_SCOPES = [
+  {key: "scoreboard", label: "Монитор"},
+  {key: "submissions", label: "Список чужих посылок"},
+  {key: "sources", label: "Чужой код"},
+  {key: "reports", label: "Чужие протоколы тестирования"},
+] as const;
+
+const FEEDBACK_OPTIONS = [
+  {label: "Скрыты", value: "hidden", color: "red"},
+  {label: "Вердикт", value: "verdict", color: "yellow"},
+  {label: "Протокол по примерам", value: "samples", color: "blue"},
+  {label: "Протокол по всем тестам", value: "tests", color: "blue"},
+  {label: "Полный, с данными теста", value: "full", color: "green"},
+];
+
 const VISIBILITY_OPTIONS = [
   {label: "Публичный", value: "public", color: "green"},
   {label: "Приватный", value: "private", color: "red"},
@@ -129,10 +144,18 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     title: string;
     description: string;
     visibility: string;
-    monitor_scope: corev1.ContestScope;
-    submissions_list_scope: corev1.ContestScope;
-    submissions_review_scope: corev1.ContestScope;
-    submission_details_scope: corev1.ContestScope;
+    scoreboard_during: corev1.ContestScope;
+    scoreboard_after: corev1.ContestScope;
+    submissions_during: corev1.ContestScope;
+    submissions_after: corev1.ContestScope;
+    sources_during: corev1.ContestScope;
+    sources_after: corev1.ContestScope;
+    reports_during: corev1.ContestScope;
+    reports_after: corev1.ContestScope;
+    feedback_during: corev1.FeedbackLevel;
+    feedback_after: corev1.FeedbackLevel;
+    freeze_hides_attempts: boolean;
+    unfreeze_time: string;
     start_time: string;
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
@@ -155,10 +178,18 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       allow_virtual: contest.allow_virtual,
       hide_statements: contest.hide_statements,
       languages: contest.languages,
-      monitor_scope: contest.monitor_scope,
-      submissions_list_scope: contest.submissions_list_scope,
-      submissions_review_scope: contest.submissions_review_scope,
-      submission_details_scope: contest.submission_details_scope,
+      scoreboard_during: contest.scoreboard_during,
+      scoreboard_after: contest.scoreboard_after,
+      submissions_during: contest.submissions_during,
+      submissions_after: contest.submissions_after,
+      sources_during: contest.sources_during,
+      sources_after: contest.sources_after,
+      reports_during: contest.reports_during,
+      reports_after: contest.reports_after,
+      feedback_during: contest.feedback_during,
+      feedback_after: contest.feedback_after,
+      freeze_hides_attempts: contest.freeze_hides_attempts,
+      unfreeze_time: toLocalDatetimeString(contest.unfreeze_time),
       start_time: toLocalDatetimeString(contest.start_time),
       end_time: toLocalDatetimeString(contest.end_time),
       freeze_duration_minutes: contest.freeze_duration_minutes ?? "",
@@ -203,6 +234,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       login: newLogin !== contest.login ? newLogin : undefined,
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
+      unfreeze_time: values.unfreeze_time ? new Date(values.unfreeze_time).toISOString() : null,
       freeze_duration_minutes: freezeDuration,
       freeze_status: values.freeze_status as corev1.UpdateContestRequestModel["freeze_status"],
       join_policy: values.join_policy as corev1.UpdateContestRequestModel["join_policy"],
@@ -316,6 +348,21 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             options={FREEZE_STATUS_OPTIONS}
           />
 
+          <TextInput
+            label="Разморозка монитора"
+            description="Пусто — в момент окончания контеста"
+            type="datetime-local"
+            {...form.getInputProps("unfreeze_time")}
+          />
+
+          <Group justify="space-between">
+            <Text size="sm">Скрывать попытки после заморозки</Text>
+            <Switch
+              checked={form.values.freeze_hides_attempts}
+              onChange={(event) => form.setFieldValue("freeze_hides_attempts", event.currentTarget.checked)}
+            />
+          </Group>
+
           <CustomSelect
             label="Видимость"
             value={form.values.visibility}
@@ -396,38 +443,45 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <Divider my="sm" />
 
-          <Text size="sm" c="dimmed" mb="md">
-            Следующие настройки определяют минимальную роль пользователя для доступа к различным функциям контеста
+          <Text size="sm" fw={500}>Видимость результатов</Text>
+          <Text size="xs" c="dimmed">
+            Кто видит чужие результаты во время контеста и после окончания. Модераторы видят всё;
+            чужие посылки никогда не показываются подробнее, чем их автору.
           </Text>
 
-          <CustomSelect
-            label="Доступ к монитору"
-            value={form.values.monitor_scope}
-            onChange={(value) => form.setFieldValue('monitor_scope', value as corev1.ContestScope)}
-            options={SCOPE_OPTIONS}
-          />
+          {PHASED_SCOPES.map(({key, label}) => (
+            <Group key={key} grow align="flex-start">
+              <CustomSelect
+                label={`${label}: во время`}
+                value={form.values[`${key}_during`]}
+                onChange={(value) => form.setFieldValue(`${key}_during`, value as corev1.ContestScope)}
+                options={SCOPE_OPTIONS}
+              />
+              <CustomSelect
+                label="после окончания"
+                value={form.values[`${key}_after`]}
+                onChange={(value) => form.setFieldValue(`${key}_after`, value as corev1.ContestScope)}
+                options={SCOPE_OPTIONS}
+              />
+            </Group>
+          ))}
 
-          <CustomSelect
-            label="Просмотр списка посылок"
-            value={form.values.submissions_list_scope}
-            onChange={(value) => form.setFieldValue('submissions_list_scope', value as corev1.ContestScope)}
-            options={SCOPE_OPTIONS}
-          />
-
-          <CustomSelect
-            label="Просмотр кода посылок"
-            value={form.values.submissions_review_scope}
-            onChange={(value) => form.setFieldValue('submissions_review_scope', value as corev1.ContestScope)}
-            options={SCOPE_OPTIONS}
-          />
-
-          <CustomSelect
-            label="Просмотр деталей и тестов посылок"
-            value={form.values.submission_details_scope}
-            onChange={(value) => form.setFieldValue('submission_details_scope', value as corev1.ContestScope)}
-            options={SCOPE_OPTIONS}
-            description="Определяет, кто может видеть подробный протокол тестирования, входные/выходные данные упавшего теста и лог ошибок"
-          />
+          <Group grow align="flex-start">
+            <CustomSelect
+              label="Свои результаты: во время"
+              value={form.values.feedback_during}
+              onChange={(value) => form.setFieldValue("feedback_during", value as corev1.FeedbackLevel)}
+              options={FEEDBACK_OPTIONS}
+              description={"«Скрыты» — для очных олимпиад: участник видит только факт отправки, "
+                + "монитор доступен лишь модераторам"}
+            />
+            <CustomSelect
+              label="после окончания"
+              value={form.values.feedback_after}
+              onChange={(value) => form.setFieldValue("feedback_after", value as corev1.FeedbackLevel)}
+              options={FEEDBACK_OPTIONS}
+            />
+          </Group>
 
           <Button type="submit" loading={saving} fullWidth color={APP_COLORS.contests}>
             Сохранить изменения

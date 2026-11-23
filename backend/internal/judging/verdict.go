@@ -33,6 +33,7 @@ func truncateDetailString(s string) (string, bool) {
 
 type TestResult struct {
 	TestNumber    int
+	Sample        bool
 	Verdict       string
 	Score         *float64
 	Time          int64 // nanoseconds
@@ -109,6 +110,7 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 			Verdict:   result.Verdict,
 			TimeMs:    timeMs,
 			MemoryKb:  memoryKb,
+			Sample:    result.Sample,
 		})
 
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && failedTestDetails == nil {

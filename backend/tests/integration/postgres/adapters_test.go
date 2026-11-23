@@ -325,8 +325,11 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Equal(t, title, c.Title)
 	require.Equal(t, orgID, c.OrganizationID)
 	require.Equal(t, contestsmodel.ContestSettings{
-		JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopeParticipant,
-		SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator,
+		JoinPolicy:  accessmodel.JoinOpen,
+		Scoreboard:  contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeParticipant, After: contestsmodel.ScopePublic},
+		Submissions: contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeModerator, After: contestsmodel.ScopeParticipant},
+		Sources:     contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator),
+		Feedback:     contestsmodel.Phased[contestsmodel.FeedbackLevel]{During: contestsmodel.FeedbackVerdict, After: contestsmodel.FeedbackFull},
 		FreezeStatus: contestsmodel.FreezeStatusAuto, AllowClarifications: true, EnableDrafts: true, EnableUpsolving: true, Languages: []string{},
 	}, c.Settings)
 

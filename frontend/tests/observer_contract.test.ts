@@ -30,7 +30,7 @@ describe("observer message contract", () => {
   });
 
   test("accepts frozen results without hidden fields", () => {
-    expect(submissions({event_type: "submissions.completed", payload: {id, revision: 1, frozen: true}})).toBe(true);
+    expect(submissions({event_type: "submissions.completed", payload: {id, revision: 1, result_hidden: true}})).toBe(true);
   });
 
   test("validates authoritative scoreboard rows", () => {

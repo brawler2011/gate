@@ -138,7 +138,7 @@ func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	start, end := now.Add(-time.Hour), now.Add(time.Hour)
 	freeze := now.Add(-10 * time.Minute)
-	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,monitor_scope='public',freeze_duration_minutes=70 WHERE id=$1`, f.contest, start, end)
+	_, err := f.pool.Exec(f.ctx, `UPDATE contests SET start_time=$2,end_time=$3,scoreboard_during='public',scoreboard_after='public',freeze_duration_minutes=70 WHERE id=$1`, f.contest, start, end)
 	require.NoError(t, err)
 	users := []uuid.UUID{uuid.New(), uuid.New()}
 	for _, user := range users {

@@ -193,46 +193,112 @@ func (s *ContestModel) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
-		if err := s.MonitorScope.Validate(); err != nil {
+		if err := s.ScoreboardDuring.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "monitor_scope",
+			Name:  "scoreboard_during",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if err := s.SubmissionsListScope.Validate(); err != nil {
+		if err := s.ScoreboardAfter.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submissions_list_scope",
+			Name:  "scoreboard_after",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if err := s.SubmissionsReviewScope.Validate(); err != nil {
+		if err := s.SubmissionsDuring.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submissions_review_scope",
+			Name:  "submissions_during",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if err := s.SubmissionDetailsScope.Validate(); err != nil {
+		if err := s.SubmissionsAfter.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submission_details_scope",
+			Name:  "submissions_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.SourcesDuring.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sources_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.SourcesAfter.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sources_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.ReportsDuring.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reports_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.ReportsAfter.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reports_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.FeedbackDuring.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feedback_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.FeedbackAfter.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feedback_after",
 			Error: err,
 		})
 	}
@@ -598,6 +664,23 @@ func (s ErrorCode) Validate() error {
 	case "package_layout":
 		return nil
 	case "package_syntax":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s FeedbackLevel) Validate() error {
+	switch s {
+	case "hidden":
+		return nil
+	case "verdict":
+		return nil
+	case "samples":
+		return nil
+	case "tests":
+		return nil
+	case "full":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -3452,7 +3535,7 @@ func (s *UpdateContestRequestModel) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
-		if value, ok := s.MonitorScope.Get(); ok {
+		if value, ok := s.ScoreboardDuring.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
 					return err
@@ -3465,12 +3548,12 @@ func (s *UpdateContestRequestModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "monitor_scope",
+			Name:  "scoreboard_during",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if value, ok := s.SubmissionsListScope.Get(); ok {
+		if value, ok := s.ScoreboardAfter.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
 					return err
@@ -3483,12 +3566,12 @@ func (s *UpdateContestRequestModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submissions_list_scope",
+			Name:  "scoreboard_after",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if value, ok := s.SubmissionsReviewScope.Get(); ok {
+		if value, ok := s.SubmissionsDuring.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
 					return err
@@ -3501,12 +3584,12 @@ func (s *UpdateContestRequestModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submissions_review_scope",
+			Name:  "submissions_during",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if value, ok := s.SubmissionDetailsScope.Get(); ok {
+		if value, ok := s.SubmissionsAfter.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
 					return err
@@ -3519,7 +3602,115 @@ func (s *UpdateContestRequestModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "submission_details_scope",
+			Name:  "submissions_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SourcesDuring.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sources_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SourcesAfter.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sources_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ReportsDuring.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reports_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ReportsAfter.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reports_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.FeedbackDuring.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feedback_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.FeedbackAfter.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feedback_after",
 			Error: err,
 		})
 	}

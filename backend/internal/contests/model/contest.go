@@ -40,6 +40,48 @@ const (
 	ScopeModerator   ContestScope = "moderator"
 )
 
+// FeedbackLevel is what authors see about their own submissions; others never see more.
+type FeedbackLevel string
+
+const (
+	FeedbackHidden  FeedbackLevel = "hidden"
+	FeedbackVerdict FeedbackLevel = "verdict"
+	FeedbackSamples FeedbackLevel = "samples"
+	FeedbackTests   FeedbackLevel = "tests"
+	FeedbackFull    FeedbackLevel = "full"
+)
+
+// Tests reports whether the level shows per-test results.
+func (l FeedbackLevel) Tests() bool {
+	return l == FeedbackSamples || l == FeedbackTests || l == FeedbackFull
+}
+
+// Meet is the most either level allows; samples and tests share only the verdict.
+func (l FeedbackLevel) Meet(o FeedbackLevel) FeedbackLevel {
+	rank := map[FeedbackLevel]int{FeedbackHidden: 0, FeedbackVerdict: 1, FeedbackSamples: 2, FeedbackTests: 2, FeedbackFull: 3}
+	switch {
+	case l == o:
+		return l
+	case rank[l] == rank[o]:
+		return FeedbackVerdict
+	case rank[l] < rank[o]:
+		return l
+	}
+	return o
+}
+
+// Phased holds a setting while the contest runs and after it ends.
+type Phased[T any] struct{ During, After T }
+
+func Same[T any](v T) Phased[T] { return Phased[T]{During: v, After: v} }
+
+func (p Phased[T]) At(after bool) T {
+	if after {
+		return p.After
+	}
+	return p.During
+}
+
 const PenaltyPerAttempt int32 = 20
 
 type CreateContestParams struct {
@@ -256,38 +298,51 @@ type CreateContestJoinRequestInput struct {
 }
 
 type ContestSettings struct {
-	JoinPolicy             accessmodel.JoinPolicy
-	MonitorScope           ContestScope
-	SubmissionsListScope   ContestScope
-	SubmissionsReviewScope ContestScope
-	SubmissionDetailsScope ContestScope
-	FreezeStatus           FreezeStatus
-	FreezeDurationMinutes  *int32
-	FreezeStartedAt        *time.Time
-	HideStatements         bool
-	AllowClarifications    bool
-	EnableDrafts           bool
-	EnableUpsolving        bool
-	AllowVirtual           bool
-	Languages              []string
+	JoinPolicy accessmodel.JoinPolicy
+	// Scoreboard, Submissions, Sources and Reports admit viewers of other people's results.
+	Scoreboard            Phased[ContestScope]
+	Submissions           Phased[ContestScope]
+	Sources               Phased[ContestScope]
+	Reports               Phased[ContestScope]
+	Feedback              Phased[FeedbackLevel]
+	FreezeStatus          FreezeStatus
+	FreezeDurationMinutes *int32
+	FreezeStartedAt       *time.Time
+	FreezeHidesAttempts   bool
+	UnfreezeTime          *time.Time
+	HideStatements        bool
+	AllowClarifications   bool
+	EnableDrafts          bool
+	EnableUpsolving       bool
+	AllowVirtual          bool
+	Languages             []string
 }
 
 // Nil fields keep the stored value; FreezeDurationSet distinguishes clearing the duration from omitting it.
 type ContestSettingsPatch struct {
-	JoinPolicy             *accessmodel.JoinPolicy
-	MonitorScope           *ContestScope
-	SubmissionsListScope   *ContestScope
-	SubmissionsReviewScope *ContestScope
-	SubmissionDetailsScope *ContestScope
-	FreezeStatus           *FreezeStatus
-	FreezeDurationMinutes  *int32
-	FreezeDurationSet      bool
-	HideStatements         *bool
-	AllowClarifications    *bool
-	EnableDrafts           *bool
-	EnableUpsolving        *bool
-	AllowVirtual           *bool
-	Languages              []string
+	JoinPolicy            *accessmodel.JoinPolicy
+	ScoreboardDuring      *ContestScope
+	ScoreboardAfter       *ContestScope
+	SubmissionsDuring     *ContestScope
+	SubmissionsAfter      *ContestScope
+	SourcesDuring         *ContestScope
+	SourcesAfter          *ContestScope
+	ReportsDuring         *ContestScope
+	ReportsAfter          *ContestScope
+	FeedbackDuring        *FeedbackLevel
+	FeedbackAfter         *FeedbackLevel
+	FreezeStatus          *FreezeStatus
+	FreezeDurationMinutes *int32
+	FreezeDurationSet     bool
+	FreezeHidesAttempts   *bool
+	UnfreezeTime          *time.Time
+	UnfreezeTimeSet       bool
+	HideStatements        *bool
+	AllowClarifications   *bool
+	EnableDrafts          *bool
+	EnableUpsolving       *bool
+	AllowVirtual          *bool
+	Languages             []string
 }
 
 // Contest language restrictions do not apply to problem programs.
@@ -311,7 +366,11 @@ func (c *Contest) GetFreezeTime() *time.Time {
 }
 
 func (c *Contest) IsFrozenAt(t time.Time) bool {
-	if c.StartTime != nil && t.Before(*c.StartTime) || c.EndTime != nil && !t.Before(*c.EndTime) {
+	thaw := c.EndTime
+	if c.Settings.UnfreezeTime != nil {
+		thaw = c.Settings.UnfreezeTime
+	}
+	if c.StartTime != nil && t.Before(*c.StartTime) || thaw != nil && !t.Before(*thaw) {
 		return false
 	}
 	switch c.Settings.FreezeStatus {
@@ -358,6 +417,7 @@ func (c *Contest) Shift(run VirtualRun) Contest {
 		freeze := c.Settings.FreezeStartedAt.Add(offset)
 		shifted.Settings.FreezeStartedAt = &freeze
 	}
+	shifted.Settings.UnfreezeTime = nil
 	return shifted
 }
 

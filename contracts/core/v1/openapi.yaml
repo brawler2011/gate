@@ -4761,12 +4761,27 @@ components:
         problem:
           $ref: "#/components/schemas/ContestProblemModel"
     ContestScope:
-      description: Lowest audience that may see a contest view.
+      description: >-
+        Lowest audience that may see other people's results while the contest runs (*_during) or after it ends (*_after);
+        moderators always may. scoreboard_* covers the scoreboard, submissions_* listing submissions, sources_* their code
+        and reports_* their test reports.
       type: string
       enum:
         - public
         - participant
         - moderator
+    FeedbackLevel:
+      description: >-
+        What authors see about their own submissions; others never see more.
+        hidden shows only that a submission was received; verdict adds the verdict, score, failed test, resources and compile log;
+        tests adds a per-test table; full adds the failing test's data; samples is full restricted to sample tests.
+      type: string
+      enum:
+        - hidden
+        - verdict
+        - samples
+        - tests
+        - full
     ContestModel:
       description: "Contest data."
       example:
@@ -4778,10 +4793,16 @@ components:
         title: Test contest
         description: Example description
         visibility: example
-        monitor_scope: participant
-        submissions_list_scope: moderator
-        submissions_review_scope: moderator
-        submission_details_scope: moderator
+        scoreboard_during: participant
+        scoreboard_after: public
+        submissions_during: moderator
+        submissions_after: participant
+        sources_during: moderator
+        sources_after: moderator
+        reports_during: moderator
+        reports_after: moderator
+        feedback_during: verdict
+        feedback_after: full
         freeze_status: auto
         join_policy: open
         hide_statements: false
@@ -4801,11 +4822,18 @@ components:
         - title
         - description
         - visibility
-        - monitor_scope
-        - submissions_list_scope
-        - submissions_review_scope
-        - submission_details_scope
+        - scoreboard_during
+        - scoreboard_after
+        - submissions_during
+        - submissions_after
+        - sources_during
+        - sources_after
+        - reports_during
+        - reports_after
+        - feedback_during
+        - feedback_after
         - freeze_status
+        - freeze_hides_attempts
         - join_policy
         - hide_statements
         - allow_clarifications
@@ -4836,14 +4864,34 @@ components:
           type: string
         visibility:
           type: string
-        monitor_scope:
+        scoreboard_during:
           $ref: "#/components/schemas/ContestScope"
-        submissions_list_scope:
+        scoreboard_after:
           $ref: "#/components/schemas/ContestScope"
-        submissions_review_scope:
+        submissions_during:
           $ref: "#/components/schemas/ContestScope"
-        submission_details_scope:
+        submissions_after:
           $ref: "#/components/schemas/ContestScope"
+        sources_during:
+          $ref: "#/components/schemas/ContestScope"
+        sources_after:
+          $ref: "#/components/schemas/ContestScope"
+        reports_during:
+          $ref: "#/components/schemas/ContestScope"
+        reports_after:
+          $ref: "#/components/schemas/ContestScope"
+        feedback_during:
+          $ref: "#/components/schemas/FeedbackLevel"
+        feedback_after:
+          $ref: "#/components/schemas/FeedbackLevel"
+        freeze_hides_attempts:
+          description: Hide attempts made after the freeze instead of showing them as pending.
+          type: boolean
+        unfreeze_time:
+          description: When the scoreboard unfreezes; null unfreezes it at the contest end.
+          type: string
+          format: date-time
+          nullable: true
         freeze_duration_minutes:
           type: integer
           format: int32
@@ -5119,10 +5167,16 @@ components:
         title: Test contest
         description: Example description
         visibility: private
-        monitor_scope: participant
-        submissions_list_scope: moderator
-        submissions_review_scope: moderator
-        submission_details_scope: moderator
+        scoreboard_during: participant
+        scoreboard_after: public
+        submissions_during: moderator
+        submissions_after: participant
+        sources_during: moderator
+        sources_after: moderator
+        reports_during: moderator
+        reports_after: moderator
+        feedback_during: verdict
+        feedback_after: full
         freeze_duration_minutes: 1
         freeze_status: auto
         start_time: '2026-01-01T12:00:00Z'
@@ -5145,14 +5199,34 @@ components:
         visibility:
           type: string
           example: private
-        monitor_scope:
+        scoreboard_during:
           $ref: "#/components/schemas/ContestScope"
-        submissions_list_scope:
+        scoreboard_after:
           $ref: "#/components/schemas/ContestScope"
-        submissions_review_scope:
+        submissions_during:
           $ref: "#/components/schemas/ContestScope"
-        submission_details_scope:
+        submissions_after:
           $ref: "#/components/schemas/ContestScope"
+        sources_during:
+          $ref: "#/components/schemas/ContestScope"
+        sources_after:
+          $ref: "#/components/schemas/ContestScope"
+        reports_during:
+          $ref: "#/components/schemas/ContestScope"
+        reports_after:
+          $ref: "#/components/schemas/ContestScope"
+        feedback_during:
+          $ref: "#/components/schemas/FeedbackLevel"
+        feedback_after:
+          $ref: "#/components/schemas/FeedbackLevel"
+        freeze_hides_attempts:
+          description: Hide attempts made after the freeze instead of showing them as pending.
+          type: boolean
+        unfreeze_time:
+          description: When the scoreboard unfreezes; null unfreezes it at the contest end.
+          type: string
+          format: date-time
+          nullable: true
         freeze_duration_minutes:
           type: integer
           format: int32
@@ -5314,7 +5388,8 @@ components:
           type: integer
           format: int64
           minimum: 0
-        frozen:
+        result_hidden:
+          description: The verdict and resources are withheld by the freeze or the contest's feedback level.
           type: boolean
         id:
           type: string
@@ -5392,6 +5467,7 @@ components:
         verdict: OK
         time_ms: 15
         memory_kb: 2048
+        sample: true
       type: object
       required:
         - test_index
@@ -5414,6 +5490,8 @@ components:
           type: integer
           format: int32
           example: 2048
+        sample:
+          type: boolean
     FailedTestDetailModel:
       description: "Failed test detail data."
       example:
@@ -5522,7 +5600,8 @@ components:
       properties:
         kind:
           $ref: "#/components/schemas/SubmissionKind"
-        frozen:
+        result_hidden:
+          description: The verdict and resources are withheld by the freeze or the contest's feedback level.
           type: boolean
         id:
           type: string
