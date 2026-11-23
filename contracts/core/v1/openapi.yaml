@@ -4005,6 +4005,7 @@ components:
         - contest_not_started
         - contest_ended
         - clarifications_disabled
+        - drafts_disabled
         - scoreboard_frozen
         - limit_reached
         - unknown_language
