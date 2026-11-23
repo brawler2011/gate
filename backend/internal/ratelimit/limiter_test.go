@@ -7,18 +7,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
-func testLimiter(t *testing.T) (*Limiter, *miniredis.Miniredis) {
+type clock struct{ at time.Time }
+
+func (c *clock) set(at time.Time)        { c.at = at }
+func (c *clock) advance(d time.Duration) { c.at = c.at.Add(d) }
+func testLimiter() (*Limiter, *clock) {
+	c := &clock{at: time.Now()}
+	l := New(NewMemory())
+	l.Clock = func() time.Time { return c.at }
+	return l, c
+}
+
+func requireLimited(t *testing.T, err error, retry time.Duration) {
 	t.Helper()
-	server := miniredis.RunT(t)
-	client := redis.NewClient(&redis.Options{Addr: server.Addr(), MaxRetries: -1})
-	t.Cleanup(func() { _ = client.Close() })
-	return New(client), server
+	var limited *pkg.RateLimitError
+	require.ErrorAs(t, err, &limited)
+	require.Equal(t, retry, limited.RetryAfter)
 }
 
 func TestSlidingQuotas(t *testing.T) {
@@ -29,12 +37,10 @@ func TestSlidingQuotas(t *testing.T) {
 		{"email", append([]Quota(nil), EmailQuotas...)}, {"submissions", append([]Quota(nil), SubmissionQuotas...)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			l, server := testLimiter(t)
 			ctx := context.Background()
-			// Advance Redis's own clock as well as TTLs; Lua uses TIME.
-			now := time.Now()
-			server.SetTime(now)
 			for _, q := range tc.quotas {
+				l, _ := testLimiter()
+				// Relax shorter windows to test each quota tier independently.
 				for i := range tc.quotas {
 					if tc.quotas[i].Window < q.Window {
 						tc.quotas[i].Limit = q.Limit + 1
@@ -43,39 +49,43 @@ func TestSlidingQuotas(t *testing.T) {
 				for range q.Limit {
 					require.NoError(t, l.Allow(ctx, "quota", tc.quotas...))
 				}
-				var limited *pkg.RateLimitError
-				require.ErrorAs(t, l.Allow(ctx, "quota", tc.quotas...), &limited)
-				require.Positive(t, limited.RetryAfter)
-				require.LessOrEqual(t, limited.RetryAfter, q.Window)
-				// Relax shorter windows to test each quota tier independently.
-				server.FlushAll()
+				requireLimited(t, l.Allow(ctx, "quota", tc.quotas...), q.Window)
 			}
 		})
 	}
 }
 
 func TestSlidingWindowExpiryAndIsolation(t *testing.T) {
-	l, server := testLimiter(t)
+	l, c := testLimiter()
 	ctx := context.Background()
-	now := time.Now()
-	server.SetTime(now)
 	q := Quota{2, time.Minute}
 	require.NoError(t, l.Allow(ctx, "a", q))
-	server.SetTime(now.Add(30 * time.Second))
+	c.advance(30 * time.Second)
 	require.NoError(t, l.Allow(ctx, "a", q))
-	var limited *pkg.RateLimitError
-	require.ErrorAs(t, l.Allow(ctx, "a", q), &limited)
-	require.Equal(t, 30*time.Second, limited.RetryAfter)
+	requireLimited(t, l.Allow(ctx, "a", q), 30*time.Second)
 	require.NoError(t, l.Allow(ctx, "b", q))
-	server.SetTime(now.Add(time.Minute))
+	c.advance(30 * time.Second)
 	require.NoError(t, l.Allow(ctx, "a", q))
-	require.ErrorAs(t, l.Allow(ctx, "a", q), &limited)
-	require.Equal(t, 30*time.Second, limited.RetryAfter)
-	require.Equal(t, time.Minute, server.TTL("a"))
+	requireLimited(t, l.Allow(ctx, "a", q), 30*time.Second)
+}
+
+func TestDelayedHitKeepsOrder(t *testing.T) {
+	l, c := testLimiter()
+	ctx := context.Background()
+	start := c.at
+	q := Quota{2, time.Minute}
+	c.set(start.Add(10 * time.Second))
+	require.NoError(t, l.Allow(ctx, "a", q))
+	// A request stamped earlier reaches the store after a newer hit.
+	c.set(start)
+	require.NoError(t, l.Allow(ctx, "a", q))
+	c.set(start.Add(65 * time.Second))
+	require.NoError(t, l.Allow(ctx, "a", q))
+	requireLimited(t, l.Allow(ctx, "a", q), 5*time.Second)
 }
 
 func TestConcurrentQuota(t *testing.T) {
-	l, _ := testLimiter(t)
+	l := New(nil)
 	var accepted atomic.Int32
 	var wg sync.WaitGroup
 	for range 100 {
@@ -90,61 +100,45 @@ func TestConcurrentQuota(t *testing.T) {
 }
 
 func TestLoginFailuresAndReset(t *testing.T) {
-	l, server := testLimiter(t)
+	l, c := testLimiter()
 	ctx := context.Background()
 	for range 15 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
-	var limited *pkg.RateLimitError
-	require.ErrorAs(t, l.LoginFailure(ctx, "user"), &limited)
-	require.Equal(t, 2*time.Minute, limited.RetryAfter)
-	server.FastForward(time.Minute)
-	require.ErrorAs(t, l.LoginFailure(ctx, "user"), &limited)
-	require.Equal(t, time.Minute, limited.RetryAfter)
-	server.FastForward(time.Minute)
+	requireLimited(t, l.LoginFailure(ctx, "user"), 2*time.Minute)
+	c.advance(time.Minute)
+	requireLimited(t, l.LoginFailure(ctx, "user"), time.Minute)
+	c.advance(time.Minute)
 	require.NoError(t, l.LoginFailure(ctx, "user"))
 	l.LoginSuccess(ctx, "user")
-	require.False(t, server.Exists("rl:fail:login:user"))
 	for range 15 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
-	server.FastForward(5 * time.Minute)
+	c.advance(5 * time.Minute)
 	require.NoError(t, l.LoginFailure(ctx, "user"))
-}
-
-func TestRedisFailureAllowsRequests(t *testing.T) {
-	l, server := testLimiter(t)
-	server.Close()
-	ctx := context.Background()
-	require.NoError(t, l.Allow(ctx, "key", Quota{1, time.Minute}))
-	require.NoError(t, l.LoginFailure(ctx, "user"))
-	l.LoginSuccess(ctx, "user")
 }
 
 func TestLoginFailureSlidingWindow(t *testing.T) {
-	l, server := testLimiter(t)
+	l, c := testLimiter()
 	ctx := context.Background()
-	now := time.Now()
-	server.SetTime(now)
+	now := c.at
 	for range 10 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
-	server.SetTime(now.Add(4 * time.Minute))
+	c.set(now.Add(4 * time.Minute))
 	for range 5 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
-	server.SetTime(now.Add(5 * time.Minute))
+	c.set(now.Add(5 * time.Minute))
 	// Expired failures release quota while unexpired failures still count.
 	for range 10 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
-	var limited *pkg.RateLimitError
-	require.ErrorAs(t, l.LoginFailure(ctx, "user"), &limited)
-	require.Equal(t, 2*time.Minute, limited.RetryAfter)
+	requireLimited(t, l.LoginFailure(ctx, "user"), 2*time.Minute)
 }
 
 func TestLoginIdentifierCaseInsensitive(t *testing.T) {
-	l, server := testLimiter(t)
+	l, _ := testLimiter()
 	ctx := context.Background()
 	for attempt := range 15 {
 		name := "test_user"
@@ -153,9 +147,7 @@ func TestLoginIdentifierCaseInsensitive(t *testing.T) {
 		}
 		require.NoError(t, l.LoginFailure(ctx, name))
 	}
-	var limited *pkg.RateLimitError
-	require.ErrorAs(t, l.LoginFailure(ctx, "Test_User"), &limited)
+	requireLimited(t, l.LoginFailure(ctx, "Test_User"), 2*time.Minute)
 	l.LoginSuccess(ctx, "tEST_uSER")
-	require.False(t, server.Exists("rl:fail:login:test_user"))
 	require.NoError(t, l.LoginFailure(ctx, "TEST_USER"))
 }

@@ -4,7 +4,7 @@
 
 {{- define "gate.backendEnv" -}}
 {{- $secret := .Values.secretName -}}
-{{- range $key := list "POSTGRES_DSN" "REDIS_URL" "S3_ACCESS_KEY" "S3_SECRET_KEY" "RESEND_API_KEY" }}
+{{- range $key := list "POSTGRES_DSN" "S3_ACCESS_KEY" "S3_SECRET_KEY" "RESEND_API_KEY" }}
 - name: {{ $key }}
   valueFrom: {secretKeyRef: {name: {{ $secret }}, key: {{ $key }}}}
 {{- end }}

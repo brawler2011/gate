@@ -200,11 +200,10 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 				return err
 			}
 		}
-		api, closeAPI, err := apiServices(shared, languages)
+		api, err := apiServices(shared, languages)
 		if err != nil {
 			return err
 		}
-		defer closeAPI()
 		services = append(services, api...)
 	}
 
@@ -342,7 +341,7 @@ func workerHealthHandler(ready func() (bool, []string)) http.Handler {
 	return mux
 }
 
-func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService, closeAPI func(), err error) {
+func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) {
 	cfg, logger, pool, store, natsJS := d.cfg, d.logger, d.pool, d.store, d.natsJS
 
 	usersRepo := pgstore.NewUsersRepo(pool)
@@ -364,21 +363,11 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		defaultS3BlogBucket:   "blog",
 	} {
 		if err := store.EnsureBucket(context.Background(), bucket); err != nil {
-			return nil, nil, fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
+			return nil, fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
 		}
 	}
 
-	redisClient, err := pkg.NewRedisClient(cfg.Secrets.RedisURL)
-	if err != nil {
-		return nil, nil, fmt.Errorf("create rate limiter redis client: %w", err)
-	}
-	closeAPI = func() { _ = redisClient.Close() }
-	defer func() {
-		if err != nil {
-			closeAPI()
-		}
-	}()
-	limiter := ratelimit.New(redisClient)
+	limiter := ratelimit.New(pgstore.NewRateLimits(pool))
 	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Email.Provider == config.EmailProviderResend, cfg.Secrets.ResendAPIKey, cfg.Email.From, cfg.Email.AppBaseURL)
 
@@ -436,7 +425,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 
 	submissionsSub, err := pubsub.NewSubmissionsSub(context.Background(), natsJS, submissionDispatcher)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create submissions subscriber: %w", err)
+		return nil, fmt.Errorf("create submissions subscriber: %w", err)
 	}
 
 	contestsDispatcher := outbox.NewEventDispatcher()
@@ -453,7 +442,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 
 	contestsSub, err := pubsub.NewContestsSub(context.Background(), natsJS, contestsDispatcher)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create contests subscriber: %w", err)
+		return nil, fmt.Errorf("create contests subscriber: %w", err)
 	}
 
 	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC, logger), authUC, accessLoader, contestsRepo)
@@ -497,7 +486,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		corev1.WithNotFound(middleware.NotFound),
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create core api server: %w", err)
+		return nil, fmt.Errorf("create core api server: %w", err)
 	}
 
 	apiHandler := middleware.AuthMiddleware(authUC, middleware.ResponseErrorHandler(logger))(
@@ -537,7 +526,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
-	services = []appService{
+	services := []appService{
 		newService(
 			"outbox worker",
 			func(ctx context.Context) error {
@@ -591,7 +580,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		),
 		newHTTPService("public server", publicServer),
 	}
-	return services, closeAPI, nil
+	return services, nil
 }
 
 // writeJudgeArgs lets the go-judge container start with the flags the worker's config implies.

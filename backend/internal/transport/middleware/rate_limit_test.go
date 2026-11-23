@@ -8,11 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/alicebob/miniredis/v2"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,10 +25,7 @@ func TestRateLimit(t *testing.T) {
 		{"submissions", "/submissions", 60, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			server := miniredis.RunT(t)
-			client := redis.NewClient(&redis.Options{Addr: server.Addr(), MaxRetries: -1})
-			defer func() { _ = client.Close() }()
-			handler := RateLimit(ratelimit.New(client), "", ResponseErrorHandler(slog.Default()))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+			handler := RateLimit(ratelimit.New(nil), "", ResponseErrorHandler(slog.Default()))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 			ctx := context.Background()
 			if tc.authenticated {
 				ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New()})
@@ -60,8 +55,6 @@ func TestRateLimit(t *testing.T) {
 			} else {
 				require.Equal(t, http.StatusNoContent, send("192.0.2.2:1234").Code)
 			}
-			server.Close()
-			require.Equal(t, http.StatusNoContent, send("192.0.2.1:1234").Code)
 		})
 	}
 }

@@ -256,7 +256,7 @@ tasks:
         sh deploy/secrets.sh {{.KUBECTL}} -n {{.NAMESPACE}}
 
   infra:up:
-    desc: Deploy PostgreSQL, Redis, NATS, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
+    desc: Deploy PostgreSQL, NATS, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
     deps: [k3s:up, judge:image]
     vars:
       JUDGE_IMAGE:

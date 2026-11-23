@@ -4,12 +4,6 @@ postgres:
   resources:
     requests: {cpu: 100m, memory: 128Mi}
     limits: {memory: 512Mi}
-redis:
-  storage: 1Gi
-  maxMemory: 128mb
-  resources:
-    requests: {cpu: 20m, memory: 32Mi}
-    limits: {memory: 192Mi}
 nats:
   storage: 2Gi
   resources:

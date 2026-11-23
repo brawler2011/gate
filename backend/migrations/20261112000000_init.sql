@@ -142,6 +142,15 @@ CREATE TABLE sessions (
 );
 CREATE INDEX sessions_user_id_idx ON sessions USING btree (user_id);
 
+CREATE TABLE rate_limits (
+    key text NOT NULL,
+    hits timestamptz[] DEFAULT '{}' NOT NULL,
+    blocked_until timestamptz,
+    expires_at timestamptz NOT NULL,
+    CONSTRAINT rate_limits_pkey PRIMARY KEY (key)
+);
+CREATE INDEX rate_limits_expires_at_idx ON rate_limits USING btree (expires_at);
+
 CREATE TABLE auth_tokens (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,

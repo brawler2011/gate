@@ -235,7 +235,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	}
 
 	// Account state is revealed only after the password matches.
-	// Valid credentials clear cooldown; bound bcrypt work independently of Redis availability.
+	// Valid credentials clear cooldown.
 	select {
 	case uc.bcryptSlots <- struct{}{}:
 	case <-ctx.Done():

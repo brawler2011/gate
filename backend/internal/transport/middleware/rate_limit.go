@@ -14,13 +14,13 @@ func RateLimit(limiter *ratelimit.Limiter, trustedProxy string, onError corev1.E
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := accessmodel.UserFromContext(r.Context())
-			key, limit := "rl:api:user:"+user.Id.String(), 600
+			key, limit := "api:user:"+user.Id.String(), 600
 			if user.IsGuest() {
-				key, limit = "rl:api:ip:"+rateLimitClientIP(r, trustedProxy), 300
+				key, limit = "api:ip:"+rateLimitClientIP(r, trustedProxy), 300
 			}
 			err := limiter.Allow(r.Context(), key, ratelimit.Quota{Limit: limit, Window: time.Minute})
 			if err == nil && r.Method == http.MethodPost && r.URL.Path == "/submissions" && !user.IsGuest() {
-				err = limiter.Allow(r.Context(), "rl:sub:"+user.Id.String(), ratelimit.SubmissionQuotas...)
+				err = limiter.Allow(r.Context(), "submissions:"+user.Id.String(), ratelimit.SubmissionQuotas...)
 			}
 			if err != nil {
 				onError(r.Context(), w, r, err)

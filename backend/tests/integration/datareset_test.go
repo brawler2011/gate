@@ -21,7 +21,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -44,7 +43,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	require.NoError(t, err)
 	_, err = stores.DB.ExecContext(ctx, "INSERT INTO reset_marker VALUES (1)")
 	require.NoError(t, err)
-	require.NoError(t, stores.Redis.Set(ctx, "reset-marker", "1", 0).Err())
 	require.NoError(t, stores.S3.EnsureBucket(ctx, "reset-marker"))
 	require.NoError(t, stores.S3.UploadFile(ctx, "reset-marker", "object", strings.NewReader("data"), "text/plain"))
 	_, err = stores.JetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{Name: "RESET_MARKER", Subjects: []string{"reset.>"}})
@@ -56,7 +54,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	var rows int
 	require.NoError(t, stores.DB.QueryRowContext(ctx, "SELECT count(*) FROM reset_marker").Scan(&rows))
 	require.Equal(t, 1, rows)
-	require.Equal(t, "1", stores.Redis.Get(ctx, "reset-marker").Val())
 	keys, err := stores.S3.ListFiles(ctx, "reset-marker", "")
 	require.NoError(t, err)
 	require.Equal(t, []string{"object"}, keys)
@@ -79,7 +76,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	want, err := datareset.Hash(changed)
 	require.NoError(t, err)
 	require.Equal(t, want, hash)
-	require.Zero(t, stores.Redis.Exists(ctx, "reset-marker").Val())
 	keys, err = stores.S3.ListFiles(ctx, "reset-marker", "")
 	require.NoError(t, err)
 	require.Empty(t, keys)
@@ -114,12 +110,6 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	redisAddr := startResetContainer(t, ctx, testcontainers.ContainerRequest{
-		Image: "redis:7.2.4-alpine", ExposedPorts: []string{"6379/tcp"}, WaitingFor: wait.ForListeningPort("6379/tcp"),
-	}, "6379/tcp")
-	redisClient := redis.NewClient(&redis.Options{Addr: redisAddr})
-	t.Cleanup(func() { _ = redisClient.Close() })
-
 	js, _ := newNATSJetStream(t)
 
 	s3Addr := startResetContainer(t, ctx, testcontainers.ContainerRequest{
@@ -130,7 +120,7 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	}, seaweedS3Port)
 	store := storage.NewS3Storage(storage.S3Config{Endpoint: "http://" + s3Addr, AccessKey: "any", SecretKey: "any", Region: "us-east-1"})
 
-	return datareset.Stores{DB: db, Redis: redisClient, S3: store, JetStream: js}
+	return datareset.Stores{DB: db, S3: store, JetStream: js}
 }
 
 func startResetContainer(t *testing.T, ctx context.Context, request testcontainers.ContainerRequest, port nat.Port) string {

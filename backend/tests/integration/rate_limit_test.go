@@ -3,19 +3,40 @@
 package integration
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
+
+// rateClock is the limiter's clock; the zero time means the real one.
+type rateClock struct {
+	mu sync.Mutex
+	at time.Time
+}
+
+func (c *rateClock) set(at time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.at = at
+}
+
+func (c *rateClock) now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.at.IsZero() {
+		return time.Now()
+	}
+	return c.at
+}
 
 func (s *IntegrationTestSuite) requireRateLimited(err error) {
 	s.T().Helper()
@@ -51,19 +72,17 @@ func (s *IntegrationTestSuite) TestRateLimitedLogin() {
 	// Correct credentials with different casing must clear the same failure key.
 	identifier = strings.ToUpper(name)
 	s.Require().NoError(login(password))
-	s.False(s.rateRedis.Exists("rl:fail:login:" + name))
 	for range 15 {
 		s.Equal(http.StatusUnauthorized, s.getStatusCode(login("wrong-password")))
 	}
 	s.requireRateLimited(login("wrong-password"))
-	s.rateRedis.FastForward(2 * time.Minute)
+	s.rateClock.set(time.Now().Add(2 * time.Minute))
 	s.Equal(http.StatusUnauthorized, s.getStatusCode(login("wrong-password")))
 	// Unverified accounts are rejected after the password check and do not consume failure quota.
 	other, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "unverified_limit", Email: "unverified_limit@example.com", Password: password})
 	s.Require().NoError(err)
 	_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{Identifier: other.User.Username, Password: password})
 	s.Equal(http.StatusForbidden, s.getStatusCode(err))
-	s.False(s.rateRedis.Exists("rl:fail:login:" + other.User.Username))
 }
 
 func (s *IntegrationTestSuite) TestRateLimitedEmail() {
@@ -90,32 +109,32 @@ func (s *IntegrationTestSuite) TestRateLimitedEmail() {
 			// Moving through short windows still enforces hourly and daily quotas.
 			now := time.Now()
 			for batch := 1; batch < 4; batch++ {
-				s.rateRedis.SetTime(now.Add(time.Duration(batch) * 5 * time.Minute))
+				s.rateClock.set(now.Add(time.Duration(batch) * 5 * time.Minute))
 				for range 5 {
 					s.Require().NoError(send())
 				}
 			}
-			s.rateRedis.SetTime(now.Add(20 * time.Minute))
+			s.rateClock.set(now.Add(20 * time.Minute))
 			s.requireRateLimited(send())
-			s.rateRedis.SetTime(now.Add(time.Hour))
+			s.rateClock.set(now.Add(time.Hour))
 			for batch := 0; batch < 4; batch++ {
-				s.rateRedis.SetTime(now.Add(time.Hour + time.Duration(batch)*5*time.Minute))
+				s.rateClock.set(now.Add(time.Hour + time.Duration(batch)*5*time.Minute))
 				for range 5 {
 					s.Require().NoError(send())
 				}
 			}
-			s.rateRedis.SetTime(now.Add(2 * time.Hour))
+			s.rateClock.set(now.Add(2 * time.Hour))
 			for batch := 0; batch < 2; batch++ {
-				s.rateRedis.SetTime(now.Add(2*time.Hour + time.Duration(batch)*5*time.Minute))
+				s.rateClock.set(now.Add(2*time.Hour + time.Duration(batch)*5*time.Minute))
 				for range 5 {
 					s.Require().NoError(send())
 				}
 			}
-			s.rateRedis.SetTime(now.Add(3 * time.Hour))
+			s.rateClock.set(now.Add(3 * time.Hour))
 			s.requireRateLimited(send())
-			s.rateRedis.SetTime(now.Add(24 * time.Hour))
+			s.rateClock.set(now.Add(24 * time.Hour))
 			s.Require().NoError(send())
-			s.rateRedis.SetTime(time.Now())
+			s.rateClock.set(time.Time{})
 		})
 	}
 }
@@ -133,9 +152,9 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 		return rr
 	}
 	now := time.Now()
-	s.rateRedis.SetTime(now)
+	s.rateClock.set(now)
 	for batch := 0; batch < 5; batch++ {
-		s.rateRedis.SetTime(now.Add(time.Duration(batch) * 5 * time.Minute))
+		s.rateClock.set(now.Add(time.Duration(batch) * 5 * time.Minute))
 		for range 60 {
 			s.Require().Equal(http.StatusNotFound, send(user.Id).Code)
 		}
@@ -146,23 +165,11 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 		s.Require().NoError(json.Unmarshal(rr.Body.Bytes(), &body))
 		s.Equal("rate_limited", body["code"])
 	}
-	s.rateRedis.SetTime(now.Add(25 * time.Minute))
+	s.rateClock.set(now.Add(25 * time.Minute))
 	s.Equal(http.StatusTooManyRequests, send(user.Id).Code)
 	s.Equal(http.StatusNotFound, send(other.Id).Code)
-	s.rateRedis.SetTime(now.Add(time.Hour))
+	s.rateClock.set(now.Add(time.Hour))
 	s.Equal(http.StatusNotFound, send(user.Id).Code)
-	s.rateRedis.Close()
-	s.Equal(http.StatusNotFound, send(user.Id).Code)
-}
-
-func (s *IntegrationTestSuite) TestRateLimitRedisOutage() {
-	s.rateRedis.Close()
-	// Neither anonymous middleware nor login failures may turn an outage into 500.
-	_, err := s.client.Login(context.Background(), &corev1.LoginRequestModel{Identifier: "missing", Password: "wrong-password"})
-	s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
-	_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "redis_outage", Email: "redis_outage@example.com", Password: "Password12345"})
-	s.Require().NoError(err)
-	s.Require().NoError(s.client.ForgotPassword(s.ctx, &corev1.ForgotPasswordRequestModel{Identifier: "redis_outage"}))
 }
 
 func (s *IntegrationTestSuite) TestRateLimitedProxyClients() {

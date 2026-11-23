@@ -1023,6 +1023,13 @@ type ProblemTeam struct {
 	CreatedAt      time.Time               `json:"created_at"`
 }
 
+type RateLimit struct {
+	Key          string      `json:"key"`
+	Hits         []time.Time `json:"hits"`
+	BlockedUntil *time.Time  `json:"blocked_until"`
+	ExpiresAt    time.Time   `json:"expires_at"`
+}
+
 type RequestIdempotency struct {
 	OrganizationID uuid.UUID `json:"organization_id"`
 	Operation      string    `json:"operation"`
