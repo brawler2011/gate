@@ -63,6 +63,8 @@ func ProblemAllows(actor m.User, f ProblemFacts, action m.ProblemAction) bool {
 		return f.Public || r >= 1
 	case m.ProblemUse:
 		return !actor.IsGuest() && (f.Public || r >= 1)
+	case m.ProblemRead:
+		return r >= 1
 	case m.ProblemEdit:
 		return r >= 2
 	case m.ProblemManage:

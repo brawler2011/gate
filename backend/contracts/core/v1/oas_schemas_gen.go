@@ -4202,6 +4202,79 @@ func (s *GetPostImageOKHeaders) SetResponse(val GetPostImageOK) {
 
 func (*GetPostImageOKHeaders) getPostImageRes() {}
 
+type GetProblemAssetOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetProblemAssetOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// GetProblemAssetOKHeaders wraps GetProblemAssetOK with response headers.
+type GetProblemAssetOKHeaders struct {
+	CacheControl          OptString
+	ContentSecurityPolicy OptString
+	ContentType           string
+	ETag                  OptString
+	Response              GetProblemAssetOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetProblemAssetOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetContentSecurityPolicy returns the value of ContentSecurityPolicy.
+func (s *GetProblemAssetOKHeaders) GetContentSecurityPolicy() OptString {
+	return s.ContentSecurityPolicy
+}
+
+// GetContentType returns the value of ContentType.
+func (s *GetProblemAssetOKHeaders) GetContentType() string {
+	return s.ContentType
+}
+
+// GetETag returns the value of ETag.
+func (s *GetProblemAssetOKHeaders) GetETag() OptString {
+	return s.ETag
+}
+
+// GetResponse returns the value of Response.
+func (s *GetProblemAssetOKHeaders) GetResponse() GetProblemAssetOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetProblemAssetOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetContentSecurityPolicy sets the value of ContentSecurityPolicy.
+func (s *GetProblemAssetOKHeaders) SetContentSecurityPolicy(val OptString) {
+	s.ContentSecurityPolicy = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *GetProblemAssetOKHeaders) SetContentType(val string) {
+	s.ContentType = val
+}
+
+// SetETag sets the value of ETag.
+func (s *GetProblemAssetOKHeaders) SetETag(val OptString) {
+	s.ETag = val
+}
+
+// SetResponse sets the value of Response.
+func (s *GetProblemAssetOKHeaders) SetResponse(val GetProblemAssetOK) {
+	s.Response = val
+}
+
 type GetProblemDraftObjectOK struct {
 	Data io.Reader
 }
@@ -4219,7 +4292,8 @@ func (s GetProblemDraftObjectOK) Read(p []byte) (n int, err error) {
 // Result of get problem.
 // Ref: #/components/schemas/GetProblemResponseModel
 type GetProblemResponseModel struct {
-	Problem ProblemModel `json:"problem"`
+	Problem   ProblemModel             `json:"problem"`
+	Statement OptProblemStatementModel `json:"statement"`
 }
 
 // GetProblem returns the value of Problem.
@@ -4227,9 +4301,19 @@ func (s *GetProblemResponseModel) GetProblem() ProblemModel {
 	return s.Problem
 }
 
+// GetStatement returns the value of Statement.
+func (s *GetProblemResponseModel) GetStatement() OptProblemStatementModel {
+	return s.Statement
+}
+
 // SetProblem sets the value of Problem.
 func (s *GetProblemResponseModel) SetProblem(val ProblemModel) {
 	s.Problem = val
+}
+
+// SetStatement sets the value of Statement.
+func (s *GetProblemResponseModel) SetStatement(val OptProblemStatementModel) {
+	s.Statement = val
 }
 
 // Result of get submission.
@@ -7284,6 +7368,52 @@ func (o OptProblemParams) Get() (v ProblemParams, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptProblemParams) Or(d ProblemParams) ProblemParams {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptProblemStatementModel returns new OptProblemStatementModel with value set to v.
+func NewOptProblemStatementModel(v ProblemStatementModel) OptProblemStatementModel {
+	return OptProblemStatementModel{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptProblemStatementModel is optional ProblemStatementModel.
+type OptProblemStatementModel struct {
+	Value ProblemStatementModel
+	Set   bool
+}
+
+// IsSet returns true if OptProblemStatementModel was set.
+func (o OptProblemStatementModel) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptProblemStatementModel) Reset() {
+	var v ProblemStatementModel
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptProblemStatementModel) SetTo(v ProblemStatementModel) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptProblemStatementModel) Get() (v ProblemStatementModel, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptProblemStatementModel) Or(d ProblemStatementModel) ProblemStatementModel {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -10596,8 +10726,7 @@ func (s *ProblemMemberModelRole) UnmarshalText(data []byte) error {
 	}
 }
 
-// Problem catalog data. The statement, samples and assets belong to the draft and to published
-// packages and are read there.
+// Problem catalog data. The draft and packages hold the statement.
 // Ref: #/components/schemas/ProblemModel
 type ProblemModel struct {
 	Permissions       ProblemPermissionsModel `json:"permissions"`
@@ -10819,7 +10948,9 @@ func (s *ProblemParams) init() ProblemParams {
 // What the caller may do with the problem.
 // Ref: #/components/schemas/ProblemPermissionsModel
 type ProblemPermissionsModel struct {
-	Use    bool `json:"use"`
+	Use bool `json:"use"`
+	// Whether the caller may read the draft and packages, including tests and solutions.
+	Read   bool `json:"read"`
 	Edit   bool `json:"edit"`
 	Manage bool `json:"manage"`
 	Delete bool `json:"delete"`
@@ -10828,6 +10959,11 @@ type ProblemPermissionsModel struct {
 // GetUse returns the value of Use.
 func (s *ProblemPermissionsModel) GetUse() bool {
 	return s.Use
+}
+
+// GetRead returns the value of Read.
+func (s *ProblemPermissionsModel) GetRead() bool {
+	return s.Read
 }
 
 // GetEdit returns the value of Edit.
@@ -10848,6 +10984,11 @@ func (s *ProblemPermissionsModel) GetDelete() bool {
 // SetUse sets the value of Use.
 func (s *ProblemPermissionsModel) SetUse(val bool) {
 	s.Use = val
+}
+
+// SetRead sets the value of Read.
+func (s *ProblemPermissionsModel) SetRead(val bool) {
+	s.Read = val
 }
 
 // SetEdit sets the value of Edit.
@@ -11043,6 +11184,158 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Statement of the problem's latest package; absent until a package is built.
+// Ref: #/components/schemas/ProblemStatementModel
+type ProblemStatementModel struct {
+	Title       string `json:"title"`
+	TimeLimit   int32  `json:"time_limit"`
+	MemoryLimit int32  `json:"memory_limit"`
+	// File the solution reads instead of standard input; empty for standard input.
+	InputFile string `json:"input_file"`
+	// File the solution writes instead of standard output; empty for standard output.
+	OutputFile   string               `json:"output_file"`
+	Legend       string               `json:"legend"`
+	InputFormat  string               `json:"input_format"`
+	OutputFormat string               `json:"output_format"`
+	Notes        string               `json:"notes"`
+	Scoring      string               `json:"scoring"`
+	Samples      []ProblemSampleModel `json:"samples"`
+	// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`.
+	Assets ProblemStatementModelAssets `json:"assets"`
+}
+
+// GetTitle returns the value of Title.
+func (s *ProblemStatementModel) GetTitle() string {
+	return s.Title
+}
+
+// GetTimeLimit returns the value of TimeLimit.
+func (s *ProblemStatementModel) GetTimeLimit() int32 {
+	return s.TimeLimit
+}
+
+// GetMemoryLimit returns the value of MemoryLimit.
+func (s *ProblemStatementModel) GetMemoryLimit() int32 {
+	return s.MemoryLimit
+}
+
+// GetInputFile returns the value of InputFile.
+func (s *ProblemStatementModel) GetInputFile() string {
+	return s.InputFile
+}
+
+// GetOutputFile returns the value of OutputFile.
+func (s *ProblemStatementModel) GetOutputFile() string {
+	return s.OutputFile
+}
+
+// GetLegend returns the value of Legend.
+func (s *ProblemStatementModel) GetLegend() string {
+	return s.Legend
+}
+
+// GetInputFormat returns the value of InputFormat.
+func (s *ProblemStatementModel) GetInputFormat() string {
+	return s.InputFormat
+}
+
+// GetOutputFormat returns the value of OutputFormat.
+func (s *ProblemStatementModel) GetOutputFormat() string {
+	return s.OutputFormat
+}
+
+// GetNotes returns the value of Notes.
+func (s *ProblemStatementModel) GetNotes() string {
+	return s.Notes
+}
+
+// GetScoring returns the value of Scoring.
+func (s *ProblemStatementModel) GetScoring() string {
+	return s.Scoring
+}
+
+// GetSamples returns the value of Samples.
+func (s *ProblemStatementModel) GetSamples() []ProblemSampleModel {
+	return s.Samples
+}
+
+// GetAssets returns the value of Assets.
+func (s *ProblemStatementModel) GetAssets() ProblemStatementModelAssets {
+	return s.Assets
+}
+
+// SetTitle sets the value of Title.
+func (s *ProblemStatementModel) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetTimeLimit sets the value of TimeLimit.
+func (s *ProblemStatementModel) SetTimeLimit(val int32) {
+	s.TimeLimit = val
+}
+
+// SetMemoryLimit sets the value of MemoryLimit.
+func (s *ProblemStatementModel) SetMemoryLimit(val int32) {
+	s.MemoryLimit = val
+}
+
+// SetInputFile sets the value of InputFile.
+func (s *ProblemStatementModel) SetInputFile(val string) {
+	s.InputFile = val
+}
+
+// SetOutputFile sets the value of OutputFile.
+func (s *ProblemStatementModel) SetOutputFile(val string) {
+	s.OutputFile = val
+}
+
+// SetLegend sets the value of Legend.
+func (s *ProblemStatementModel) SetLegend(val string) {
+	s.Legend = val
+}
+
+// SetInputFormat sets the value of InputFormat.
+func (s *ProblemStatementModel) SetInputFormat(val string) {
+	s.InputFormat = val
+}
+
+// SetOutputFormat sets the value of OutputFormat.
+func (s *ProblemStatementModel) SetOutputFormat(val string) {
+	s.OutputFormat = val
+}
+
+// SetNotes sets the value of Notes.
+func (s *ProblemStatementModel) SetNotes(val string) {
+	s.Notes = val
+}
+
+// SetScoring sets the value of Scoring.
+func (s *ProblemStatementModel) SetScoring(val string) {
+	s.Scoring = val
+}
+
+// SetSamples sets the value of Samples.
+func (s *ProblemStatementModel) SetSamples(val []ProblemSampleModel) {
+	s.Samples = val
+}
+
+// SetAssets sets the value of Assets.
+func (s *ProblemStatementModel) SetAssets(val ProblemStatementModelAssets) {
+	s.Assets = val
+}
+
+// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`.
+type ProblemStatementModelAssets map[string]string
+
+func (s *ProblemStatementModelAssets) init() ProblemStatementModelAssets {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 // ProblemStatusCodeWithHeaders wraps Problem with status code and response headers.

@@ -31,7 +31,7 @@ export const ProblemHeader = ({
     <Stack align="center" gap={0} w="fit-content" mx="auto" mb="sm">
       <Group gap="xs" align="center" justify="center">
         <Title order={2}>
-          {letter}. {title}
+          {letter && `${letter}. `}{title}
         </Title>
         {isManager && problemId && (
           <Tooltip label="Редактировать задачу" withArrow>

@@ -77,6 +77,7 @@ const (
 	GetPostByIdOperation                    OperationName = "GetPostById"
 	GetPostImageOperation                   OperationName = "GetPostImage"
 	GetProblemOperation                     OperationName = "GetProblem"
+	GetProblemAssetOperation                OperationName = "GetProblemAsset"
 	GetProblemBlockStatusForUserOperation   OperationName = "GetProblemBlockStatusForUser"
 	GetProblemBuildOperation                OperationName = "GetProblemBuild"
 	GetProblemDraftOperation                OperationName = "GetProblemDraft"

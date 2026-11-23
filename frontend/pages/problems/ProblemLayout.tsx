@@ -22,10 +22,12 @@ const ProblemLayout = (): ReactNode => {
   }
   const problemResponse = problem.data;
   const org = organization.data?.organization;
+  const canRead = problemResponse.problem.permissions.read;
+  const nav = canRead ? <ProblemHeaderNav slug={slug} problemId={problem_id} /> : undefined;
   return (
     <DefaultLayout
       headerUser={user}
-      headerSecondaryNav={<ProblemHeaderNav slug={slug} problemId={problem_id} />}
+      headerSecondaryNav={nav}
       headerOrganization={org ? {id: org.id, login: org.login, name: org.name} : undefined}
       headerProblem={
         problemResponse?.problem

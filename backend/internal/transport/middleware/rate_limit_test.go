@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"log/slog"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"

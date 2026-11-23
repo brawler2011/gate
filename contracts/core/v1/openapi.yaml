@@ -2072,6 +2072,41 @@ paths:
               schema:
                 type: string
                 format: binary
+  /problems/{id}/assets/{sha256}:
+    get:
+      tags: [problems]
+      operationId: GetProblemAsset
+      summary: "Get a problem statement image"
+      description: "Serves a statement image of the problem's latest package, addressed by content hash."
+      parameters:
+        - $ref: '#/components/parameters/ProblemIDPath'
+        - name: sha256
+          description: "SHA-256 of the image, as listed in the statement's `assets`."
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9a-f]{64}$"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Statement image
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            ETag:
+              schema:
+                type: string
+            Content-Security-Policy:
+              schema:
+                type: string
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
   /organizations:
     get:
       tags: [organizations]
@@ -4217,11 +4252,15 @@ components:
       type: object
       required:
         - use
+        - read
         - edit
         - manage
         - delete
       properties:
         use:
+          type: boolean
+        read:
+          description: Whether the caller may read the draft and packages, including tests and solutions.
           type: boolean
         edit:
           type: boolean
@@ -4289,10 +4328,9 @@ components:
           type: boolean
     ProblemModel:
       description: >-
-        Problem catalog data. The statement, samples and assets belong to the
-        draft and to published packages and are read there.
+        Problem catalog data. The draft and packages hold the statement.
       example:
-        permissions: {use: false, edit: false, manage: false, delete: false}
+        permissions: {use: false, read: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         organization_login: example
@@ -4355,7 +4393,7 @@ components:
     ProblemsListItemModel:
       description: "Problems list item data."
       example:
-        permissions: {use: false, edit: false, manage: false, delete: false}
+        permissions: {use: false, read: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         organization_login: example
@@ -4410,7 +4448,7 @@ components:
       description: "Paginated collection of problems."
       example:
         problems:
-        - permissions: {use: false, edit: false, manage: false, delete: false}
+        - permissions: {use: false, read: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           organization_login: example
@@ -4440,7 +4478,7 @@ components:
       description: "Result of get problem."
       example:
         problem:
-          permissions: {use: false, edit: false, manage: false, delete: false}
+          permissions: {use: false, read: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           organization_login: example
@@ -4456,17 +4494,80 @@ components:
           is_template: false
           created_at: '2026-01-01T12:00:00Z'
           updated_at: '2026-01-01T12:00:00Z'
+        statement:
+          title: Test problem
+          time_limit: 1000
+          memory_limit: 256
+          input_file: ''
+          output_file: ''
+          legend: example
+          input_format: example
+          output_format: example
+          notes: example
+          scoring: example
           samples:
           - input: 1 2
             output: '3'
           assets:
-            pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
+            assets/pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
       type: object
       required:
         - problem
       properties:
         problem:
           $ref: "#/components/schemas/ProblemModel"
+        statement:
+          $ref: "#/components/schemas/ProblemStatementModel"
+    ProblemStatementModel:
+      description: "Statement of the problem's latest package; absent until a package is built."
+      type: object
+      required:
+        - title
+        - time_limit
+        - memory_limit
+        - input_file
+        - output_file
+        - legend
+        - input_format
+        - output_format
+        - notes
+        - scoring
+        - samples
+        - assets
+      properties:
+        title:
+          type: string
+        time_limit:
+          type: integer
+          format: int32
+        memory_limit:
+          type: integer
+          format: int32
+        input_file:
+          type: string
+          description: File the solution reads instead of standard input; empty for standard input.
+        output_file:
+          type: string
+          description: File the solution writes instead of standard output; empty for standard output.
+        legend:
+          type: string
+        input_format:
+          type: string
+        output_format:
+          type: string
+        notes:
+          type: string
+        scoring:
+          type: string
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemSampleModel"
+        assets:
+          description: "SHA-256 of each statement asset by package path, e.g. `assets/pic.png`."
+          type: object
+          additionalProperties:
+            type: string
     ContestProblemModel:
       description: "Contest problem data."
       example:
@@ -5537,7 +5638,7 @@ components:
     DashboardProblemModel:
       description: "Dashboard problem data."
       example:
-        permissions: {use: false, edit: false, manage: false, delete: false}
+        permissions: {use: false, read: false, edit: false, manage: false, delete: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         title: A + B
         organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -5595,7 +5696,7 @@ components:
           user_role: example
           created_at: '2026-01-01T12:00:00Z'
         my_problems:
-        - permissions: {use: false, edit: false, manage: false, delete: false}
+        - permissions: {use: false, read: false, edit: false, manage: false, delete: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           title: A + B
           organization_id: 123e4567-e89b-42d3-a456-426614174000

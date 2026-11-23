@@ -96,6 +96,7 @@ func TestProblemPolicy(t *testing.T) {
 		{m.ProblemView, true, "1111111"},
 		{m.ProblemUse, false, "0011111"},
 		{m.ProblemUse, true, "0111111"},
+		{m.ProblemRead, true, "0011111"},
 		{m.ProblemEdit, true, "0001111"},
 		{m.ProblemManage, true, "0000111"},
 		{m.ProblemDelete, true, "0000011"},

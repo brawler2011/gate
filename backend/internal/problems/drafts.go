@@ -55,7 +55,7 @@ type DraftUseCase struct {
 
 // authorize fails fast before uploads; mutations authorize again inside their transaction.
 func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) (model.Problem, error) {
-	action := accessmodel.ProblemView
+	action := accessmodel.ProblemRead
 	if edit {
 		action = accessmodel.ProblemEdit
 	}

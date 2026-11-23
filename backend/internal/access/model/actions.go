@@ -27,6 +27,7 @@ type ProblemAction string
 const (
 	ProblemView   ProblemAction = "view"
 	ProblemUse    ProblemAction = "use"
+	ProblemRead   ProblemAction = "read"
 	ProblemEdit   ProblemAction = "edit"
 	ProblemManage ProblemAction = "manage"
 	ProblemDelete ProblemAction = "delete"

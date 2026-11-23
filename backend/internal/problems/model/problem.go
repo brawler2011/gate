@@ -119,6 +119,10 @@ type ProblemPackage struct {
 	CreatedAt      time.Time
 	Title, Type    string
 	Statements     []DraftStatement
+	TimeLimitMs    int32
+	MemoryLimitMb  int32
+	InputFile      string
+	OutputFile     string
 }
 
 type CreateProblemInput struct {
