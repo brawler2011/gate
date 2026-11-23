@@ -111,7 +111,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Equal(http.StatusConflict, s.getStatusCode(err), "after the run upsolving rules apply")
 	s.Equal(int32(1), board(runner.Id, false)[participant.Id].ProblemsSolved, "a finished run shows the final standings")
 
-	// A frozen running contest must not reveal later verdicts through the virtual view either.
+	// A frozen running contest must not reveal post-freeze verdicts through the virtual view either.
 	later := time.Now().Add(time.Hour)
 	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID, EndTime: &later, EndTimeSet: true}))
 	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
@@ -120,7 +120,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID, UserId: second.Id, Role: accessmodel.ContestParticipant}))
 	_, err = s.dbPool.Exec(s.ctx, `INSERT INTO submissions(contest_id,owner_id,problem_id,kind,source,language,state,created_at)
-		VALUES ($1,$2,$3,'contest','print(1)','python3',200,$4)`, contestID, second.Id, problem.ID, start.Add(40*time.Minute))
+		VALUES ($1,$2,$3,'contest','print(1)','python3',200,$4)`, contestID, second.Id, problem.ID, time.Now())
 	s.Require().NoError(err)
 	for _, virtual := range []bool{false, true} {
 		s.Zero(board(watcher.Id, virtual)[second.Id].ProblemsSolved, "virtual=%v", virtual)

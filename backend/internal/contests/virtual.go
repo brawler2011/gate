@@ -82,11 +82,7 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 	if elapsed != nil {
 		rules.cutoff = &shown
 	}
-	history := ctx
-	if rules.frozen {
-		history = accessmodel.WithScoreboardFreeze(ctx, contest.GetFreezeTime())
-	}
-	official, err := uc.contestRepo.GetContestScoreboardSubmissions(history, contest.ID)
+	official, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contest.ID)
 	if err != nil {
 		return nil, err
 	}
