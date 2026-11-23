@@ -68,7 +68,7 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			}
 			// Out-of-order inserts must not let acceptance erase earlier failed attempts.
 			add := func(c, u, p uuid.UUID, state submissionsmodel.State, minute int) {
-				exec(`INSERT INTO submissions(contest_id,owner_id,problem_id,source,language,state,created_at) VALUES ($1,$2,$3,'print(1)',30,$4,$5)`, c, u, p, state, start.Add(time.Duration(minute)*time.Minute))
+				exec(`INSERT INTO submissions(contest_id,owner_id,problem_id,kind,source,language,state,created_at) VALUES ($1,$2,$3,'contest','print(1)',30,$4,$5)`, c, u, p, state, start.Add(time.Duration(minute)*time.Minute))
 			}
 			for _, user := range users[:size] {
 				for _, problem := range problems[:size] {
@@ -154,7 +154,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	add := func(user uuid.UUID, created, observed time.Time, before, after submissionsmodel.State) {
 		t.Helper()
 		id := uuid.New()
-		_, err = f.pool.Exec(f.ctx, `INSERT INTO submissions(id,contest_id,problem_id,owner_id,source,language,state,created_at) VALUES($1,$2,$3,$4,'code',30,$5,$6)`, id, f.contest, f.problem, user, before, created)
+		_, err = f.pool.Exec(f.ctx, `INSERT INTO submissions(id,contest_id,problem_id,owner_id,kind,source,language,state,created_at) VALUES($1,$2,$3,$4,'contest','code',30,$5,$6)`, id, f.contest, f.problem, user, before, created)
 		require.NoError(t, err)
 		_, err = f.pool.Exec(f.ctx, `UPDATE submission_state_history SET observed_at=$2 WHERE submission_id=$1`, id, observed)
 		require.NoError(t, err)

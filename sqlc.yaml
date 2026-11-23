@@ -127,6 +127,11 @@ sql:
               package: "contestsmodel"
               type: "FreezeStatus"
               pointer: true
+          - db_type: "submission_kind"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "Kind"
           - db_type: "state"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/submissions/model"

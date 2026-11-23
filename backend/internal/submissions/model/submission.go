@@ -28,6 +28,14 @@ const (
 	Disqualified State = 300
 )
 
+// Kind records how the author took part when submitting; only contest submissions reach the standings.
+type Kind string
+
+const (
+	KindContest   Kind = "contest"
+	KindUpsolving Kind = "upsolving"
+)
+
 type TestDetailItem struct {
 	TestIndex int32  `json:"test_index"`
 	Verdict   string `json:"verdict"`
@@ -72,6 +80,7 @@ type SubmissionCreation struct {
 	UserId    uuid.UUID
 	Language  string
 	Penalty   int32
+	Kind      Kind
 	State     *State
 	BanReason *string
 }
@@ -123,6 +132,7 @@ type Submission struct {
 	Frozen            bool                   `json:"-"`
 	SourceHidden      bool                   `json:"-"`
 	ID                uuid.UUID              `json:"id"`
+	Kind              Kind                   `json:"kind"`
 	CreatedBy         *uuid.UUID             `json:"created_by"`
 	Username          string                 `json:"username"`
 	Submission        string                 `json:"submission"`

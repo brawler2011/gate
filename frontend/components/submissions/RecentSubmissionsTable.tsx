@@ -8,6 +8,7 @@ import {ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/l
 
 import styles from "./RecentSubmissionsTable.module.css";
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
+import {SubmissionKindBadge} from "./SubmissionKindBadge";
 
 import type {SubmissionsListItemModel} from "@/contracts/core/v1/schema";
 import type {SubmissionWithProgress} from "@/lib/submissions";
@@ -108,6 +109,7 @@ export const RecentSubmissionsTable = ({
               >
                 <Table.Td ta="center">
                   <Text fw={500}>{TimeBeautify(submission.created_at)}</Text>
+                  <SubmissionKindBadge kind={submission.kind} />
                 </Table.Td>
                 <Table.Td ta="center" className={styles.statusColumn}>
                   <StatusCell

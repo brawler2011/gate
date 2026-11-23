@@ -2880,10 +2880,16 @@ export interface components {
             pagination: components["schemas"]["PaginationModel"];
         };
         /**
+         * @description How the author took part; only contest submissions count toward the standings.
+         * @enum {string}
+         */
+        SubmissionKind: "contest" | "upsolving";
+        /**
          * @description Submissions list item data.
          * @example {
          *       "revision": 1,
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "kind": "contest",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
          *       "language": "cpp17",
@@ -2898,6 +2904,7 @@ export interface components {
          *     }
          */
         SubmissionsListItemModel: {
+            kind: components["schemas"]["SubmissionKind"];
             /**
              * Format: int64
              * @description Revision local to this submission.
@@ -3062,6 +3069,7 @@ export interface components {
          * @description Submission data.
          * @example {
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "kind": "contest",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
          *       "language": "cpp17",
@@ -3076,6 +3084,7 @@ export interface components {
          *     }
          */
         SubmissionModel: {
+            kind: components["schemas"]["SubmissionKind"];
             frozen?: boolean;
             /** Format: uuid */
             id: string;
@@ -5467,6 +5476,7 @@ export type UpdateProblemRequestModel = components['schemas']['UpdateProblemRequ
 export type UpdateContestRequestModel = components['schemas']['UpdateContestRequestModel'];
 export type CreateSubmissionRequestModel = components['schemas']['CreateSubmissionRequestModel'];
 export type ListSubmissionsResponseModel = components['schemas']['ListSubmissionsResponseModel'];
+export type SubmissionKind = components['schemas']['SubmissionKind'];
 export type SubmissionsListItemModel = components['schemas']['SubmissionsListItemModel'];
 export type TestDetailItemModel = components['schemas']['TestDetailItemModel'];
 export type FailedTestDetailModel = components['schemas']['FailedTestDetailModel'];

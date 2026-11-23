@@ -11906,19 +11906,63 @@ func (s *SortByQuery) UnmarshalText(data []byte) error {
 	}
 }
 
+// How the author took part; only contest submissions count toward the standings.
+// Ref: #/components/schemas/SubmissionKind
+type SubmissionKind string
+
+const (
+	SubmissionKindContest   SubmissionKind = "contest"
+	SubmissionKindUpsolving SubmissionKind = "upsolving"
+)
+
+// AllValues returns all SubmissionKind values.
+func (SubmissionKind) AllValues() []SubmissionKind {
+	return []SubmissionKind{
+		SubmissionKindContest,
+		SubmissionKindUpsolving,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SubmissionKind) MarshalText() ([]byte, error) {
+	switch s {
+	case SubmissionKindContest:
+		return []byte(s), nil
+	case SubmissionKindUpsolving:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SubmissionKind) UnmarshalText(data []byte) error {
+	switch SubmissionKind(data) {
+	case SubmissionKindContest:
+		*s = SubmissionKindContest
+		return nil
+	case SubmissionKindUpsolving:
+		*s = SubmissionKindUpsolving
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Submission data.
 // Ref: #/components/schemas/SubmissionModel
 type SubmissionModel struct {
-	Frozen     OptBool    `json:"frozen"`
-	ID         uuid.UUID  `json:"id"`
-	UserID     uuid.UUID  `json:"user_id"`
-	Username   string     `json:"username"`
-	Submission OptString  `json:"submission"`
-	State      OptInt32   `json:"state"`
-	Score      OptFloat64 `json:"score"`
-	Penalty    OptInt32   `json:"penalty"`
-	TimeStat   OptInt32   `json:"time_stat"`
-	MemoryStat OptInt32   `json:"memory_stat"`
+	Kind       SubmissionKind `json:"kind"`
+	Frozen     OptBool        `json:"frozen"`
+	ID         uuid.UUID      `json:"id"`
+	UserID     uuid.UUID      `json:"user_id"`
+	Username   string         `json:"username"`
+	Submission OptString      `json:"submission"`
+	State      OptInt32       `json:"state"`
+	Score      OptFloat64     `json:"score"`
+	Penalty    OptInt32       `json:"penalty"`
+	TimeStat   OptInt32       `json:"time_stat"`
+	MemoryStat OptInt32       `json:"memory_stat"`
 	// Identifier of the language configuration from GET /languages.
 	Language          string                        `json:"language"`
 	FailedTest        OptNilInt32                   `json:"failed_test"`
@@ -11933,6 +11977,11 @@ type SubmissionModel struct {
 	BanReason         OptNilString                  `json:"ban_reason"`
 	UpdatedAt         time.Time                     `json:"updated_at"`
 	CreatedAt         time.Time                     `json:"created_at"`
+}
+
+// GetKind returns the value of Kind.
+func (s *SubmissionModel) GetKind() SubmissionKind {
+	return s.Kind
 }
 
 // GetFrozen returns the value of Frozen.
@@ -12048,6 +12097,11 @@ func (s *SubmissionModel) GetUpdatedAt() time.Time {
 // GetCreatedAt returns the value of CreatedAt.
 func (s *SubmissionModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
+}
+
+// SetKind sets the value of Kind.
+func (s *SubmissionModel) SetKind(val SubmissionKind) {
+	s.Kind = val
 }
 
 // SetFrozen sets the value of Frozen.
@@ -12247,6 +12301,7 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 // Submissions list item data.
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
+	Kind SubmissionKind `json:"kind"`
 	// Revision local to this submission.
 	Revision   int64      `json:"revision"`
 	Frozen     OptBool    `json:"frozen"`
@@ -12271,6 +12326,11 @@ type SubmissionsListItemModel struct {
 	BanReason         OptNilString `json:"ban_reason"`
 	UpdatedAt         time.Time    `json:"updated_at"`
 	CreatedAt         time.Time    `json:"created_at"`
+}
+
+// GetKind returns the value of Kind.
+func (s *SubmissionsListItemModel) GetKind() SubmissionKind {
+	return s.Kind
 }
 
 // GetRevision returns the value of Revision.
@@ -12381,6 +12441,11 @@ func (s *SubmissionsListItemModel) GetUpdatedAt() time.Time {
 // GetCreatedAt returns the value of CreatedAt.
 func (s *SubmissionsListItemModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
+}
+
+// SetKind sets the value of Kind.
+func (s *SubmissionsListItemModel) SetKind(val SubmissionKind) {
+	s.Kind = val
 }
 
 // SetRevision sets the value of Revision.

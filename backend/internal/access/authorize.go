@@ -4,6 +4,7 @@ import (
 	"context"
 
 	m "github.com/brawler2011/gate/backend/internal/access/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -65,6 +66,20 @@ func (a ContestAccess) Role() m.ContestRole {
 
 // Participates reports whether the caller competes as a participant; upsolvers only see their own submissions.
 func (a ContestAccess) Participates() bool { return newContestState(a.Actor, a.Facts).participant }
+
+// Submit authorizes a submission made now and classifies it.
+func (a ContestAccess) Submit() (submissionsmodel.Kind, error) {
+	s := newContestState(a.Actor, a.Facts)
+	switch {
+	case a.Can(m.ContestSubmit) && s.finished:
+		return submissionsmodel.KindUpsolving, nil
+	case a.Can(m.ContestSubmit):
+		return submissionsmodel.KindContest, nil
+	case s.finished && s.view && !a.Actor.IsGuest() && !a.Facts.Contest.Settings.EnableUpsolving:
+		return "", pkg.Wrap(pkg.ErrContestEnded, nil, "upsolving is disabled for this contest")
+	}
+	return "", decide(a.Actor, false, s.view)
+}
 
 func (a ContestAccess) CanSubmission(author uuid.UUID, action m.SubmissionAction) bool {
 	return SubmissionAllows(a.Actor, a.Facts, author, action)

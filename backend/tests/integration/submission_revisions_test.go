@@ -46,7 +46,7 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{
 		ID: contest, OrganizationID: org.ID, Title: "Revision", Login: "revision-" + suffix, Visibility: contestsmodel.ContestVisibilityPublic}, user.Id))
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
-	creation := &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem.ID, UserId: user.Id, Language: "cpp17", Solution: "int main(){}"}
+	creation := &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, ContestId: contest, ProblemId: problem.ID, UserId: user.Id, Language: "cpp17", Solution: "int main(){}"}
 	first, err := repo.CreateSubmission(s.ctx, creation)
 	s.Require().NoError(err)
 	second, err := repo.CreateSubmission(s.ctx, creation)

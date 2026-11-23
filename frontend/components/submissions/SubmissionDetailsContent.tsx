@@ -8,6 +8,7 @@ import {CodeBlock} from "@/components/shared/CodeBlock";
 import {languageName, useLanguages} from "@/lib/languages";
 import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
+import {SubmissionKindBadge} from "./SubmissionKindBadge";
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 
 import type {SubmissionModel} from "@/contracts/core/v1/schema";
@@ -186,9 +187,12 @@ export const SubmissionDetailsContent = ({
             <Text size="xs" c="dimmed">
               Время отправки
             </Text>
-            <Text size="sm" fw={500}>
-              {TimeBeautify(submission.created_at)}
-            </Text>
+            <Group gap="xs" align="center">
+              <Text size="sm" fw={500}>
+                {TimeBeautify(submission.created_at)}
+              </Text>
+              <SubmissionKindBadge kind={submission.kind} />
+            </Group>
           </Box>
           <Box>
             <Text size="xs" c="dimmed">

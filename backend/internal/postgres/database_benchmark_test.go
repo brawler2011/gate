@@ -179,7 +179,7 @@ func BenchmarkSubmissions(b *testing.B) {
 					require.EqualValues(b, size.rows, count)
 					tx, err := pool.Begin(ctx)
 					require.NoError(b, err)
-					creation := submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
+					creation := submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
 					_, err = repo.WithTx(tx).CreateSubmission(ctx, &creation)
 					require.NoError(b, err)
 					_, err = repo.WithTx(tx).UpdateSubmission(ctx, f.submission, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.Accepted})

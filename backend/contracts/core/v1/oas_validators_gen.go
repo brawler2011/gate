@@ -3118,12 +3118,34 @@ func (s SortByQuery) Validate() error {
 	}
 }
 
+func (s SubmissionKind) Validate() error {
+	switch s {
+	case "contest":
+		return nil
+	case "upsolving":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *SubmissionModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.Score.Get(); ok {
 			if err := func() error {
@@ -3165,6 +3187,17 @@ func (s *SubmissionsListItemModel) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if err := (validate.Int{
 			MinSet:        true,

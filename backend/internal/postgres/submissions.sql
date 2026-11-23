@@ -4,6 +4,7 @@ INSERT INTO submissions (
     package_id,
     problem_id,
     owner_id,
+    kind,
     source,
     language,
     penalty,
@@ -16,6 +17,7 @@ VALUES (
     (SELECT cp.package_id FROM contest_problems cp WHERE cp.contest_id = @contest_id::uuid AND cp.problem_id = @problem_id::uuid),
     @problem_id::uuid,
     @owner_id::uuid,
+    @kind::submission_kind,
     @source,
     @language,
     @penalty,
@@ -28,6 +30,7 @@ RETURNING id;
 -- name: GetSubmission :one
 SELECT s.id,
   s.owner_id,
+  s.kind,
   u.username,
   s.source,
   s.state,
@@ -94,6 +97,7 @@ RETURNING s.id, previous.state AS previous_state, s.revision;
 -- name: ListSubmissions :many
 SELECT s.id,
   s.owner_id,
+  s.kind,
   u.username,
   s.state,
   s.score,

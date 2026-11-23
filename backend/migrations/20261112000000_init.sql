@@ -77,6 +77,12 @@ CREATE TYPE problem_visibility AS ENUM (
     'public'
 );
 
+-- Only contest submissions count toward the standings.
+CREATE TYPE submission_kind AS ENUM (
+    'contest',
+    'upsolving'
+);
+
 -- manager is only derived from organization admins; nobody holds it directly.
 CREATE TYPE team_role AS ENUM (
     'member',
@@ -855,6 +861,7 @@ CREATE TABLE submissions (
     contest_id uuid,
     problem_id uuid,
     owner_id uuid,
+    kind submission_kind NOT NULL,
     source varchar(65536) NOT NULL,
     language text NOT NULL,
     state integer DEFAULT 1 NOT NULL,

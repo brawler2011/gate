@@ -155,8 +155,8 @@ func seedSubmissions(tb testing.TB, pool *pgxpool.Pool, size int) submissionBenc
 		fixtureExec(tb, pool, `INSERT INTO contest_problems(contest_id,problem_id,package_id,ordinal) VALUES ($1,$2,$3,$4)`, f.contest, problem, pack, i)
 	}
 	fixtureExec(tb, pool, `INSERT INTO contest_members(contest_id,user_id) SELECT $1,md5('user'||i)::uuid FROM generate_series(1,$2::int) i`, f.contest, participants)
-	fixtureExec(tb, pool, `INSERT INTO submissions(id,contest_id,owner_id,problem_id,source,language,state,revision,created_at)
- SELECT md5('submission'||i)::uuid,$1,md5('user'||(((i-1)/10)%$3::int+1))::uuid,md5('problem'||((i-1)%10+1))::uuid,
+	fixtureExec(tb, pool, `INSERT INTO submissions(id,contest_id,owner_id,problem_id,kind,source,language,state,revision,created_at)
+ SELECT md5('submission'||i)::uuid,$1,md5('user'||(((i-1)/10)%$3::int+1))::uuid,md5('problem'||((i-1)%10+1))::uuid,'contest',
  repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,1,
  '2026-01-01'::timestamptz + ((i-1)/($3::int*10))*interval '10 minutes'
  FROM generate_series(1,$2::int) i`, f.contest, size, participants)

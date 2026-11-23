@@ -5025,11 +5025,18 @@ components:
             $ref: "#/components/schemas/SubmissionsListItemModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+    SubmissionKind:
+      description: How the author took part; only contest submissions count toward the standings.
+      type: string
+      enum:
+        - contest
+        - upsolving
     SubmissionsListItemModel:
       description: "Submissions list item data."
       example:
         revision: 1
         id: 123e4567-e89b-42d3-a456-426614174000
+        kind: contest
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: user123
         language: cpp17
@@ -5043,6 +5050,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - kind
         - revision
         - id
         - user_id
@@ -5057,6 +5065,8 @@ components:
         - updated_at
         - created_at
       properties:
+        kind:
+          $ref: "#/components/schemas/SubmissionKind"
         revision:
           description: Revision local to this submission.
           type: integer
@@ -5240,6 +5250,7 @@ components:
       description: "Submission data."
       example:
         id: 123e4567-e89b-42d3-a456-426614174000
+        kind: contest
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: user123
         language: cpp17
@@ -5253,6 +5264,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - kind
         - id
         - user_id
         - username
@@ -5266,6 +5278,8 @@ components:
         - updated_at
         - created_at
       properties:
+        kind:
+          $ref: "#/components/schemas/SubmissionKind"
         frozen:
           type: boolean
         id:
