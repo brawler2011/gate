@@ -14,8 +14,8 @@ const metadataMatches = (row: SubmissionEvent['payload'], selection: Submissions
 
 // Durable events refetch lists; only transient progress is patched locally.
 export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: SubmissionEvent,
-  selection: SubmissionsSelection, revisions: Map<string, number>, replay = false): LiveSubmissions | undefined => {
-  if (!data || (!replay && event.sequence <= (data.since ?? 0)) || !metadataMatches(event.payload, selection)) {
+  selection: SubmissionsSelection, revisions: Map<string, number>): LiveSubmissions | undefined => {
+  if (!data || !metadataMatches(event.payload, selection)) {
     return data;
   }
   const payload = event.payload;
@@ -31,13 +31,14 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
     case 'submissions.test_started': progress = {phase: 'testing', testNumber: event.payload.number}; break;
     default: return data;
   }
-  return {...data, since: Math.max(data.since ?? 0, event.sequence),
-    submissions: data.submissions.map(s => s.id === payload.id ? {...s, progress} : s)};
+  return {...data, submissions: data.submissions.map(s => s.id === payload.id ? {...s, progress} : s)};
 };
 
-export const applyScoreboardEvent = (data: LiveScoreboard | undefined, payload: MessageScoreboardUpdated,
-  sequence: number): LiveScoreboard | undefined => {
-  if (!data || sequence < (data.since ?? 0) || (sequence === (data.since ?? 0) && !payload.replace)) {
+// Updates arrive in commit order and are read after their change,
+// so a row older than the snapshot is fixed by the next update.
+export const applyScoreboardEvent = (data: LiveScoreboard | undefined,
+  payload: MessageScoreboardUpdated): LiveScoreboard | undefined => {
+  if (!data) {
     return data;
   }
   const next = payload.scoreboard;
@@ -52,5 +53,5 @@ export const applyScoreboardEvent = (data: LiveScoreboard | undefined, payload: 
     const lastB = b.last_accepted_at ? Date.parse(b.last_accepted_at) : Infinity;
     return lastA - lastB || Number(a.username > b.username) - Number(a.username < b.username);
   });
-  return {...next, items, since: sequence};
+  return {...next, items};
 };

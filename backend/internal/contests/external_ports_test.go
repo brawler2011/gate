@@ -7,7 +7,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -71,15 +70,6 @@ type ContestsRepo interface {
 	ListOrganizationContests(context.Context, string, string, int32, int32) (*contestsmodel.ContestsList, error)
 	ListContestMembers(context.Context, contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
 	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
-	DeleteOldEvents(ctx context.Context, retentionDays int32) error
-	PickEvents(ctx context.Context, limit int32, timeoutSec int32) ([]eventdata.OutboxEvent, error)
-	CreateEvent(ctx context.Context, event *eventdata.CreateOutboxEventParams) error
-	MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error
-	MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID, errorMsg string, permanent bool) error
 }
 
 type ProblemsUC interface {

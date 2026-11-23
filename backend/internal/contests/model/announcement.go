@@ -46,6 +46,11 @@ type ContestAnnouncementCreatedEvent struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
+func (a ContestAnnouncement) CreatedEvent() ContestAnnouncementCreatedEvent {
+	return ContestAnnouncementCreatedEvent{ID: a.ID, ContestID: a.ContestID, ProblemID: a.ProblemID, ProblemTitle: a.ProblemTitle, ProblemLetter: a.ProblemLetter,
+		AuthorID: a.AuthorID, AuthorUsername: a.AuthorUsername, Title: a.Title, Body: a.Body, CreatedAt: a.CreatedAt}
+}
+
 type ContestAnnouncementDeletedEvent struct {
 	ID        uuid.UUID `json:"id"`
 	ContestID uuid.UUID `json:"contest_id"`

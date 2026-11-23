@@ -20,8 +20,6 @@ type MessageSubmissionCreated struct {
 	Position             *int32                 `json:"position,omitempty"`
 	Language             *string                `json:"language,omitempty"`
 	CreatedAt            *time.Time             `json:"created_at,omitempty"`
-	IsNew                bool                   `json:"is_new" binding:"required"`
-	PreviousState        *int32                 `json:"previous_state,omitempty"`
 	Frozen               *bool                  `json:"frozen,omitempty"`
 	Id                   uuid.UUID              `json:"id" binding:"required"`
 	State                *int32                 `json:"state,omitempty"`

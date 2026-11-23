@@ -38,17 +38,11 @@ const go = new GoGenerator({
   },
 });
 const ts = new TypeScriptGenerator({modelType: 'interface', rawPropertyNames: true});
-const schemas = (Bun.YAML.parse(source) as {components: {schemas: Record<string, object>}}).components.schemas;
-
-for (const [generator, directory, extension, options, closeSchemas] of [
-  [go, 'backend/contracts/observer/v1', 'go', {packageName: 'observerv1'}, ['SubmissionsWsCloseCode', 'SubmissionsWsCloseReason']],
-  [ts, 'frontend/contracts/observer/v1', 'ts', {}, []],
+for (const [generator, directory, extension, options] of [
+  [go, 'backend/contracts/observer/v1', 'go', {packageName: 'observerv1'}],
+  [ts, 'frontend/contracts/observer/v1', 'ts', {}],
 ] as const) {
   const models = await generator.generateCompleteModels(document, options);
-  // Close frames are protocol metadata, rather than application message payloads.
-  for (const name of closeSchemas) {
-    models.push(...await generator.generateCompleteModels(schemas[name], options));
-  }
   await rm(directory, {recursive: true, force: true});
   await mkdir(directory, {recursive: true});
   for (const model of models) {

@@ -123,7 +123,7 @@ describe("Production scoreboard freeze presentation", () => {
       const requestsBeforeRefresh = fetch.mock.calls.length;
       await act(async () => {
         if (trigger === "completion") {
-          listener().onMessage({data: JSON.stringify({event_type: "scoreboard.updated", sequence: 8, payload: {
+          listener().onMessage({data: JSON.stringify({event_type: "scoreboard.updated", payload: {
             user_id: "u0", unfrozen: true, replace: false, scoreboard: {...recovered, items: [recovered.items[0]]},
           }})} as MessageEvent);
         } else {

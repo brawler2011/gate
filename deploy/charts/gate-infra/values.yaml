@@ -10,14 +10,6 @@ postgres:
   # Set to reach the service from the host (development).
   nodePort: null
 
-nats:
-  image: nats:2.10-alpine
-  storage: 5Gi
-  resources:
-    requests: {cpu: 50m, memory: 64Mi}
-    limits: {memory: 512Mi}
-  nodePort: null
-
 seaweedfs:
   image: chrislusf/seaweedfs:4.53_full
   storage: 50Gi

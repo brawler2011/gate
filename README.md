@@ -21,7 +21,7 @@ task hooks:install
 
 ```sh
 cp deploy/local/.env.example deploy/local/.env
-task infra:up                   # PostgreSQL, NATS, SeaweedFS, go-judge in local k3s
+task infra:up                   # PostgreSQL, SeaweedFS, go-judge in local k3s
 task be:migrate
 task dev                        # backend on :8080, frontend on http://localhost:3000
 ```

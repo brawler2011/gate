@@ -50,16 +50,6 @@ func (r *diagnosticSubmissionsRepo) ResetSubmissionsState(context.Context, submi
 	return []submissionsmodel.SubmissionReset{{ID: r.submission.ID, PreviousState: r.submission.State}}, nil
 }
 
-type diagnosticOutboxRepo struct {
-	OutboxRepo
-	event *eventdata.CreateOutboxEventParams
-}
-
-func (r *diagnosticOutboxRepo) CreateEvent(_ context.Context, event *eventdata.CreateOutboxEventParams) error {
-	r.event = event
-	return nil
-}
-
 type diagnosticTransactor struct {
 	commitErr error
 	buf       *bytes.Buffer
@@ -85,11 +75,11 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			contestID := uuid.New()
 			submissionID := uuid.New()
 			repo := &diagnosticSubmissionsRepo{submission: submissionsmodel.Submission{ID: submissionID, ContestID: &contestID, CreatedAt: time.Now().Add(-24 * time.Hour)}}
-			outbox := &diagnosticOutboxRepo{}
+			notices := &noticeLog{}
 			viewerID := uuid.New()
 			loader := accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contestsmodel.Contest{ID: contestID}, Now: time.Now()}}}
 			loader.Grant(contestID, viewerID, string(accessmodel.ContestModerator))
-			uc := NewSubmissionsUseCase(repo, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{Loader: loader, submissionCommandStore: repo, OutboxRepo: outbox}}, loader)
+			uc := NewSubmissionsUseCase(repo, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{Loader: loader, submissionCommandStore: repo, Writer: notices}}, loader)
 			ctx := accessmodel.WithUser(requestid.With(context.Background(), "request-123"), accessmodel.User{Id: viewerID, Role: accessmodel.UserRoleUser})
 			var err error
 			if rejudge {
@@ -98,8 +88,7 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 				_, err = uc.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{ContestId: contestID, UserId: viewerID})
 			}
 			require.Equal(t, commitErr, err)
-			require.NotNil(t, outbox.event)
-			require.Equal(t, "request-123", outbox.event.Headers[requestid.Header])
+			require.Equal(t, []eventdata.Notice{{Type: submissionsmodel.SubmissionEventCreated, ID: submissionID}}, notices.notices)
 			if commitErr != nil {
 				require.Empty(t, buf.String())
 			} else {
@@ -113,10 +102,6 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			}
 		}
 	}
-}
-
-func (r *diagnosticOutboxRepo) Record(ctx context.Context, event eventdata.Event) error {
-	return recordTestEvent(ctx, event, r.CreateEvent)
 }
 
 func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {

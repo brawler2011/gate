@@ -9,14 +9,12 @@ import (
 	"io/fs"
 
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pressly/goose/v3"
 )
 
 type Stores struct {
-	DB        *sql.DB
-	S3        *storage.S3Storage
-	JetStream jetstream.JetStream
+	DB *sql.DB
+	S3 *storage.S3Storage
 }
 
 func Hash(migrations fs.FS) (string, error) {
@@ -98,20 +96,6 @@ func wipe(ctx context.Context, stores Stores) error {
 	for _, bucket := range buckets {
 		if err := stores.S3.EmptyBucket(ctx, bucket); err != nil {
 			return fmt.Errorf("empty bucket %s: %w", bucket, err)
-		}
-	}
-
-	lister := stores.JetStream.StreamNames(ctx)
-	var streams []string
-	for name := range lister.Name() {
-		streams = append(streams, name)
-	}
-	if err := lister.Err(); err != nil {
-		return fmt.Errorf("list streams: %w", err)
-	}
-	for _, name := range streams {
-		if err := stores.JetStream.DeleteStream(ctx, name); err != nil {
-			return fmt.Errorf("delete stream %s: %w", name, err)
 		}
 	}
 

@@ -9,7 +9,6 @@ import (
 )
 
 type ScoreboardResponseModel struct {
-	Since                *int64                         `json:"since,omitempty"`
 	ContestId            uuid.UUID                      `json:"contest_id" binding:"required"`
 	ContestLogin         string                         `json:"contest_login" binding:"required"`
 	OrganizationLogin    string                         `json:"organization_login" binding:"required"`

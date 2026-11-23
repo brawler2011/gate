@@ -43,27 +43,8 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 			return err
 		}
 
-		event := contestsmodel.ContestAnnouncementCreatedEvent{
-			ID:             announcement.ID,
-			ContestID:      announcement.ContestID,
-			ProblemID:      announcement.ProblemID,
-			ProblemTitle:   announcement.ProblemTitle,
-			ProblemLetter:  announcement.ProblemLetter,
-			AuthorID:       announcement.AuthorID,
-			AuthorUsername: announcement.AuthorUsername,
-			Title:          announcement.Title,
-			Body:           announcement.Body,
-			CreatedAt:      announcement.CreatedAt,
-		}
-
-		outboxEvent := eventdata.Event{
-			AggregateID: announcement.ContestID,
-			Type:        eventdata.OutboxEventContestAnnouncementCreated,
-			Payload:     event,
-		}
-
-		if err := tx.Record(ctx, outboxEvent); err != nil {
-			return fmt.Errorf("create outbox event for announcement: %w", err)
+		if err := tx.Notify(ctx, eventdata.Notice{Type: contestsmodel.ContestEventAnnouncementCreated, ID: announcement.ID}); err != nil {
+			return fmt.Errorf("notify announcement: %w", err)
 		}
 
 		return nil
@@ -81,17 +62,6 @@ func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, cont
 			return err
 		}
 
-		event := contestsmodel.ContestAnnouncementDeletedEvent{
-			ID:        id,
-			ContestID: contestID,
-		}
-
-		outboxEvent := eventdata.Event{
-			AggregateID: contestID,
-			Type:        eventdata.OutboxEventContestAnnouncementDeleted,
-			Payload:     event,
-		}
-
-		return tx.Record(ctx, outboxEvent)
+		return tx.Notify(ctx, eventdata.Notice{Type: contestsmodel.ContestEventAnnouncementDeleted, ID: id, ContestID: &contestID})
 	})
 }

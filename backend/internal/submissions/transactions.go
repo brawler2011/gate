@@ -23,7 +23,7 @@ type SubmissionTxStore interface {
 	ScheduleJob(context.Context, uuid.UUID) (judgingmodel.Job, error)
 	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
-	Record(context.Context, eventdata.Event) error
+	eventdata.Writer
 	ResetSubmissionsState(ctx context.Context, filter submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *submissionsmodel.SubmissionUpdate) (submissionsmodel.SubmissionChange, error)
 	BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error

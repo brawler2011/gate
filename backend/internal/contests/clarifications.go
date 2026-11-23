@@ -44,25 +44,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			return err
 		}
 
-		event := contestsmodel.ContestClarificationCreatedEvent{
-			ID:            clarification.ID,
-			ContestID:     clarification.ContestID,
-			ProblemID:     clarification.ProblemID,
-			ProblemTitle:  clarification.ProblemTitle,
-			ProblemLetter: clarification.ProblemLetter,
-			UserID:        clarification.UserID,
-			Username:      clarification.Username,
-			Question:      clarification.Question,
-			CreatedAt:     clarification.CreatedAt,
-		}
-
-		outboxEvent := eventdata.Event{
-			AggregateID: clarification.ContestID,
-			Type:        eventdata.OutboxEventContestClarificationCreated,
-			Payload:     event,
-		}
-
-		return tx.Record(ctx, outboxEvent)
+		return tx.Notify(ctx, eventdata.Notice{Type: contestsmodel.ContestEventClarificationCreated, ID: clarification.ID})
 	})
 	if err != nil {
 		return nil, err
@@ -94,38 +76,8 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			return err
 		}
 
-		ansByUsername := ""
-		if clarification.AnsweredByUsername != nil {
-			ansByUsername = *clarification.AnsweredByUsername
-		}
-		ansAt := clarification.CreatedAt
-		if clarification.AnsweredAt != nil {
-			ansAt = *clarification.AnsweredAt
-		}
-
-		event := contestsmodel.ContestClarificationAnsweredEvent{
-			ID:                 clarification.ID,
-			ContestID:          clarification.ContestID,
-			ProblemID:          clarification.ProblemID,
-			ProblemTitle:       clarification.ProblemTitle,
-			ProblemLetter:      clarification.ProblemLetter,
-			UserID:             clarification.UserID,
-			Username:           clarification.Username,
-			Question:           clarification.Question,
-			Answer:             input.Answer,
-			AnsweredBy:         user.Id,
-			AnsweredByUsername: ansByUsername,
-			AnsweredAt:         ansAt,
-		}
-
-		outboxEvent := eventdata.Event{
-			AggregateID: clarification.ContestID,
-			Type:        eventdata.OutboxEventContestClarificationAnswered,
-			Payload:     event,
-		}
-
-		if err := tx.Record(ctx, outboxEvent); err != nil {
-			return fmt.Errorf("create outbox event for clarification answered: %w", err)
+		if err := tx.Notify(ctx, eventdata.Notice{Type: contestsmodel.ContestEventClarificationAnswered, ID: clarification.ID}); err != nil {
+			return fmt.Errorf("notify clarification answered: %w", err)
 		}
 
 		if input.PublishAsAnnouncement {
@@ -149,27 +101,8 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 				return fmt.Errorf("publish clarification as announcement: %w", err)
 			}
 
-			annEvent := contestsmodel.ContestAnnouncementCreatedEvent{
-				ID:             announcement.ID,
-				ContestID:      announcement.ContestID,
-				ProblemID:      announcement.ProblemID,
-				ProblemTitle:   announcement.ProblemTitle,
-				ProblemLetter:  announcement.ProblemLetter,
-				AuthorID:       announcement.AuthorID,
-				AuthorUsername: announcement.AuthorUsername,
-				Title:          announcement.Title,
-				Body:           announcement.Body,
-				CreatedAt:      announcement.CreatedAt,
-			}
-
-			annOutboxEvent := eventdata.Event{
-				AggregateID: announcement.ContestID,
-				Type:        eventdata.OutboxEventContestAnnouncementCreated,
-				Payload:     annEvent,
-			}
-
-			if err := tx.Record(ctx, annOutboxEvent); err != nil {
-				return fmt.Errorf("create outbox event for announcement: %w", err)
+			if err := tx.Notify(ctx, eventdata.Notice{Type: contestsmodel.ContestEventAnnouncementCreated, ID: announcement.ID}); err != nil {
+				return fmt.Errorf("notify announcement: %w", err)
 			}
 		}
 

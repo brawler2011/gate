@@ -12,7 +12,6 @@ interface MessageSubmissionCompleted {
   'position'?: number;
   'language'?: string;
   'created_at'?: string;
-  'previous_state'?: number;
   'frozen'?: boolean;
   'id': string;
   'state'?: number;

@@ -2916,8 +2916,6 @@ export interface components {
         ListSubmissionsResponseModel: {
             /** Format: int32 */
             total_count: number;
-            /** Format: int64 */
-            since?: number;
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
@@ -3659,8 +3657,6 @@ export interface components {
          *     }
          */
         ScoreboardResponseModel: {
-            /** Format: int64 */
-            since?: number;
             /** Format: uuid */
             contest_id: string;
             /** @example contest-1 */

@@ -85,7 +85,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
 		submissionID = resp.ID
-		s.checkDiagnosticDelivery(submissionID, admin.Id, contestOrg.Login)
 		// Rapid consecutive submissions are valid; quotas impose no inter-submit delay.
 		for range 2 {
 			_, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{
@@ -162,11 +161,7 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
 	after, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Equal(before.Generation+1, after.Generation)
-	var jobs, events int
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, `SELECT count(*) FROM judge_jobs WHERE submission_id=$1`, sub).Scan(&jobs))
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, `SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submission.created'`, sub).Scan(&events))
-	s.Equal(1, jobs)
-	s.Equal(1, events)
+	s.Equal(1, s.judgeJobCount(sub))
 }
 
 // Upsolving submissions are judged and listed but never reach the standings, even when the end later moves past them.

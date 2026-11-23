@@ -20,7 +20,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -45,8 +44,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, stores.S3.EnsureBucket(ctx, "reset-marker"))
 	require.NoError(t, stores.S3.UploadFile(ctx, "reset-marker", "object", strings.NewReader("data"), "text/plain"))
-	_, err = stores.JetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{Name: "RESET_MARKER", Subjects: []string{"reset.>"}})
-	require.NoError(t, err)
 
 	reset, err = datareset.Apply(ctx, stores, migrations)
 	require.NoError(t, err)
@@ -57,8 +54,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	keys, err := stores.S3.ListFiles(ctx, "reset-marker", "")
 	require.NoError(t, err)
 	require.Equal(t, []string{"object"}, keys)
-	_, err = stores.JetStream.Stream(ctx, "RESET_MARKER")
-	require.NoError(t, err)
 
 	changed := changedMigrations(t, migrations)
 	reset, err = datareset.Apply(ctx, stores, changed)
@@ -79,8 +74,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	keys, err = stores.S3.ListFiles(ctx, "reset-marker", "")
 	require.NoError(t, err)
 	require.Empty(t, keys)
-	_, err = stores.JetStream.Stream(ctx, "RESET_MARKER")
-	require.ErrorIs(t, err, jetstream.ErrStreamNotFound)
 }
 
 func changedMigrations(t *testing.T, migrations fs.FS) fs.FS {
@@ -110,8 +103,6 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	js, _ := newNATSJetStream(t)
-
 	s3Addr := startResetContainer(t, ctx, testcontainers.ContainerRequest{
 		Image:        "chrislusf/seaweedfs:4.53_full",
 		ExposedPorts: []string{seaweedS3Port},
@@ -120,7 +111,7 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	}, seaweedS3Port)
 	store := storage.NewS3Storage(storage.S3Config{Endpoint: "http://" + s3Addr, AccessKey: "any", SecretKey: "any", Region: "us-east-1"})
 
-	return datareset.Stores{DB: db, S3: store, JetStream: js}
+	return datareset.Stores{DB: db, S3: store}
 }
 
 func startResetContainer(t *testing.T, ctx context.Context, request testcontainers.ContainerRequest, port nat.Port) string {

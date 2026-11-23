@@ -4,26 +4,19 @@ import (
 	"context"
 	"errors"
 
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
-
-	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/google/uuid"
 )
-
-var ErrBusy = errors.New("judge job is active")
 
 var ErrLeaseLost = errors.New("judge job lease lost")
 
 type Jobs interface {
-	Claim(context.Context, judgingmodel.JobRef) (judgingmodel.Job, error)
+	ClaimNext(context.Context) (judgingmodel.Job, bool, error)
 	Renew(context.Context, judgingmodel.Job) error
 	Release(context.Context, judgingmodel.Job) error
 	PickStalledJobs(context.Context, int32) ([]judgingmodel.Job, error)
+	DeleteObsolete(context.Context) error
 }
 
-type Progress interface {
-	PublishQueued(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
-	PublishCompilingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
-	PublishTestingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
-	PublishTestStarted(context.Context, uuid.UUID, int32, submissionsmodel.SubmissionEventMeta) error
-}
+// Progress carries transient judging progress outside any transaction.
+type Progress = eventdata.Writer

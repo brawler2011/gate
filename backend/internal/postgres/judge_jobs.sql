@@ -5,24 +5,18 @@ FROM submissions s JOIN problem_packages p ON p.id=s.package_id
 WHERE s.id=sqlc.arg(submission_id)::uuid
 RETURNING *;
 
--- name: ClaimJudgeJob :one
+-- name: ClaimNextJudgeJob :one
 UPDATE judge_jobs j
 SET state='processing',attempt=j.attempt+1,lease_token=sqlc.arg(lease_token)::uuid,
     deadline_at=now()+interval '30 seconds'
-FROM submissions s
-WHERE j.id=sqlc.arg(id)::uuid AND j.generation=sqlc.arg(generation)::bigint
-  AND s.id=sqlc.arg(submission_id)::uuid AND j.submission_id=s.id
-  AND j.generation=s.generation AND s.state<>300
-  AND (j.state='pending' OR (j.state='processing' AND j.deadline_at<now()))
+WHERE j.id=(
+    SELECT c.id FROM judge_jobs c JOIN submissions s ON s.id=c.submission_id
+    WHERE c.state='pending' AND c.generation=s.generation AND s.state<>300
+    ORDER BY c.created_at
+    LIMIT 1
+    FOR UPDATE OF c SKIP LOCKED
+)
 RETURNING j.*;
-
--- name: JudgeJobActive :one
-SELECT EXISTS (
-    SELECT 1 FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id
-    WHERE j.id=sqlc.arg(id)::uuid AND j.generation=sqlc.arg(generation)::bigint
-      AND s.id=sqlc.arg(submission_id)::uuid AND j.generation=s.generation AND s.state<>300
-      AND j.state='processing' AND j.deadline_at>now()
-) AS active;
 
 -- name: RenewJudgeJob :execrows
 UPDATE judge_jobs j SET deadline_at=now()+interval '30 seconds'
@@ -36,8 +30,8 @@ UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL
 WHERE id=sqlc.arg(id)::uuid AND lease_token=sqlc.arg(lease_token)::uuid AND state='processing' AND deadline_at>now();
 
 -- name: CompleteJudgeJob :execrows
-UPDATE judge_jobs j SET state='completed',completed_at=now(),lease_token=NULL,deadline_at=NULL
-FROM submissions s
+DELETE FROM judge_jobs j
+USING submissions s
 WHERE j.id=sqlc.arg(id)::uuid AND j.lease_token=sqlc.arg(lease_token)::uuid
   AND j.submission_id=sqlc.arg(submission_id)::uuid AND j.generation=sqlc.arg(generation)::bigint
   AND j.state='processing' AND j.deadline_at>clock_timestamp()
@@ -50,9 +44,8 @@ WHERE j.state = 'processing' AND j.deadline_at < clock_timestamp()
 ORDER BY j.deadline_at
 LIMIT sqlc.arg(limit_count)::int;
 
--- name: CompleteStalledJudgeJob :execrows
-UPDATE judge_jobs
-SET state = 'completed', completed_at = clock_timestamp(), lease_token = NULL, deadline_at = NULL
+-- name: DeleteStalledJudgeJob :execrows
+DELETE FROM judge_jobs
 WHERE id = sqlc.arg(id)::uuid AND generation = sqlc.arg(generation)::bigint
   AND state = 'processing' AND deadline_at < clock_timestamp();
 
@@ -61,3 +54,10 @@ UPDATE judge_jobs
 SET state = 'pending', lease_token = NULL, deadline_at = NULL
 WHERE id = sqlc.arg(id)::uuid AND generation = sqlc.arg(generation)::bigint
   AND state = 'processing' AND deadline_at < clock_timestamp();
+
+-- name: DeleteObsoleteJudgeJobs :execrows
+DELETE FROM judge_jobs j
+WHERE j.state = 'pending' AND NOT EXISTS (
+    SELECT 1 FROM submissions s
+    WHERE s.id = j.submission_id AND s.generation = j.generation AND s.state <> 300
+);

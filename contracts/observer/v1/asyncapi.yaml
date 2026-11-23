@@ -6,12 +6,13 @@ info:
     contest/<id>/own/<user_id> topics using access policies; query filters only
     narrow those audiences. Public topics admit guests when the configured action
     scope allows it. Source, verdict and scoreboard projections are shared per
-    audience before publication and replay. Public and participant standings are
-    masked during freeze; managers receive live standings and own topics retain
+    audience before publication. Public and participant standings are masked
+    during freeze; managers receive live standings and own topics retain
     authorized own verdicts. Revision, session or account invalidation clears the
-    queued projection and closes the connection. Reconnect reauthorizes; replay
-    from an incompatible lifecycle projection is rejected and requires a fresh
-    REST snapshot. Failed validation closes the subscription.
+    queued projection and closes the connection. Events are not replayed: a
+    client reads the REST snapshot after connecting and again after every
+    reconnect, and the server closes connections whenever it may have missed
+    events. Failed validation closes the subscription.
   title: ObserverService API
   version: 0.0.1
 channels:
@@ -27,11 +28,6 @@ channels:
         query:
           type: object
           properties:
-            since:
-              description: Omit for live events; set for replay.
-              type: integer
-              format: int64
-              minimum: 0
             contestId:
               type: string
               format: uuid
@@ -48,10 +44,9 @@ channels:
       - $ref: "#/servers/observer"
     description: >-
       Submission lifecycle events filtered by contest, user, problem, or language.
-      Each subscriber has one queue of at most 1000 events, including while history
-      is being delivered. Queue overflow disconnects the subscriber by closing the
+      Each subscriber has one queue of at most 1000 events. Queue overflow disconnects the subscriber by closing the
       transport; delivery of a close frame is not guaranteed. Every outgoing event,
-      including history and scoreboard messages, has a 10-second write timeout.
+      including scoreboard messages, has a 10-second write timeout.
       Incoming WebSocket messages are limited to 1024 bytes (1 KiB), including
       fragmented messages; exceeding the limit closes the connection.
   contests:
@@ -66,11 +61,6 @@ channels:
         query:
           type: object
           properties:
-            since:
-              description: Omit for live events; set for replay.
-              type: integer
-              format: int64
-              minimum: 0
             contestId:
               type: string
               format: uuid
@@ -81,10 +71,9 @@ channels:
       - $ref: "#/servers/observer"
     description: >-
       Announcements and clarifications for the required contestId.
-      Each subscriber has one queue of at most 1000 events, including while history
-      is being delivered. Queue overflow disconnects the subscriber by closing the
+      Each subscriber has one queue of at most 1000 events. Queue overflow disconnects the subscriber by closing the
       transport; delivery of a close frame is not guaranteed. Every outgoing event,
-      including history and scoreboard messages, has a 10-second write timeout.
+      including scoreboard messages, has a 10-second write timeout.
       Incoming WebSocket messages are limited to 1024 bytes (1 KiB), including
       fragmented messages; exceeding the limit closes the connection.
 operations:
@@ -98,21 +87,6 @@ operations:
       $ref: "#/channels/contests"
 components:
   schemas:
-    SubmissionsWsCloseCode:
-      type: integer
-      format: int32
-      enum:
-        - 4408
-        - 4409
-        - 4410
-      title: SubmissionsWsCloseCode
-    SubmissionsWsCloseReason:
-      type: string
-      enum:
-        - buffer_empty
-        - history_lost
-        - invalid_range
-      title: SubmissionsWsCloseReason
     SubmissionEventMeta:
       type: object
       required:
@@ -165,13 +139,7 @@ components:
         - type: object
           required:
             - id
-            - is_new
           properties:
-            is_new:
-              type: boolean
-            previous_state:
-              type: integer
-              format: int32
             frozen:
               type: boolean
             id:
@@ -233,9 +201,6 @@ components:
           required:
             - id
           properties:
-            previous_state:
-              type: integer
-              format: int32
             frozen:
               type: boolean
             id:
@@ -399,12 +364,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionCreatedMessageEventType
           type: string
@@ -417,12 +377,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionQueuedMessageEventType
           type: string
@@ -435,12 +390,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionCompilingStartedMessageEventType
           type: string
@@ -453,12 +403,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionTestingStartedMessageEventType
           type: string
@@ -471,12 +416,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionTestStartedMessageEventType
           type: string
@@ -489,12 +429,7 @@ components:
       required:
         - event_type
         - payload
-        - sequence
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: SubmissionCompletedMessageEventType
           type: string
@@ -556,12 +491,8 @@ components:
     ScoreboardUpdatedMessage:
       type: object
       additionalProperties: false
-      required: [event_type, payload, sequence]
+      required: [event_type, payload]
       properties:
-        sequence:
-          type: integer
-          format: int64
-          minimum: 0
         event_type:
           title: ScoreboardUpdatedMessageEventType
           type: string

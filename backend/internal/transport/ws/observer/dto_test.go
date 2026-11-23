@@ -82,19 +82,3 @@ func TestCompletedEnvelopePreservesZeroAndFormats(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &got))
 	require.InDelta(t, 3, got.Payload["failed_test"], 0)
 }
-
-func TestReplayCloseFrames(t *testing.T) {
-	for _, tt := range []struct {
-		err    error
-		code   int
-		reason string
-	}{
-		{ErrBufferEmpty, 4408, "buffer_empty"},
-		{ErrHistoryLost, 4409, "history_lost"},
-		{ErrInvalidRange, 4410, "invalid_range"},
-	} {
-		code, reason := getClosingFrameData(tt.err)
-		require.Equal(t, tt.code, code)
-		require.Equal(t, tt.reason, string(reason))
-	}
-}

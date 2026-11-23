@@ -2,7 +2,6 @@
 import ScoreboardProblemHeaderModel from './ScoreboardProblemHeaderModel';
 import ScoreboardItemModel from './ScoreboardItemModel';
 interface ScoreboardResponseModel {
-  'since'?: number;
   'contest_id': string;
   'contest_login': string;
   'organization_login': string;

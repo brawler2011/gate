@@ -93,7 +93,7 @@ func receive[T any](t *testing.T, ch <-chan T) T {
 }
 
 type queueHarness struct {
-	subscribe func(websocketConnection, uint64, bool) (*subscription, []*WrappedEvent, error)
+	subscribe func(websocketConnection) *subscription
 	broadcast func(*WrappedEvent)
 	count     func() int
 	event     func(uint64, bool) *WrappedEvent
@@ -103,13 +103,11 @@ func newQueueHarness(kind string) *queueHarness {
 	contestID := uuid.New()
 	q := &queueHarness{}
 	if kind == "submissions" {
-		h := NewHub(2, nil, nil)
-		q.subscribe = func(conn websocketConnection, since uint64, replay bool) (*subscription, []*WrappedEvent, error) {
-			sub, history, err := h.subscribe(conn, &SubmissionsFilter{ContestId: &contestID, Since: since}, replay)
-			if err != nil {
-				return nil, history, err
-			}
-			return sub.subscription, history, nil
+		h := NewHub(nil, nil)
+		q.subscribe = func(conn websocketConnection) *subscription {
+			sub := h.subscribe(&SubmissionsFilter{ContestId: &contestID})
+			sub.attach(conn)
+			return sub.subscription
 		}
 		q.broadcast = h.broadcast
 		q.count = func() int { h.mu.RLock(); defer h.mu.RUnlock(); return len(h.subscribers) }
@@ -118,16 +116,14 @@ func newQueueHarness(kind string) *queueHarness {
 			if !matches {
 				id = uuid.New()
 			}
-			return &WrappedEvent{Seq: seq, DTOPayload: fmt.Appendf(nil, "%d", seq), RawEvent: &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{ContestId: &id}}}
+			return &WrappedEvent{DTOPayload: fmt.Appendf(nil, "%d", seq), RawEvent: &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{ContestId: &id}}}
 		}
 	} else {
-		h := NewContestsHub(2)
-		q.subscribe = func(conn websocketConnection, since uint64, replay bool) (*subscription, []*WrappedEvent, error) {
-			sub, history, err := h.subscribe(conn, &ContestsFilter{ContestId: contestID, Since: since}, replay)
-			if err != nil {
-				return nil, history, err
-			}
-			return sub.subscription, history, nil
+		h := NewContestsHub()
+		q.subscribe = func(conn websocketConnection) *subscription {
+			sub := h.subscribe(&ContestsFilter{ContestId: contestID})
+			sub.attach(conn)
+			return sub.subscription
 		}
 		q.broadcast = h.broadcast
 		q.count = func() int { h.mu.RLock(); defer h.mu.RUnlock(); return len(h.subscribers) }
@@ -136,117 +132,78 @@ func newQueueHarness(kind string) *queueHarness {
 			if !matches {
 				id = uuid.New()
 			}
-			return &WrappedEvent{Seq: seq, DTOPayload: fmt.Appendf(nil, "%d", seq), RawEvent: &contestsmodel.ContestAnnouncementDeletedEvent{ContestID: id}}
+			return &WrappedEvent{DTOPayload: fmt.Appendf(nil, "%d", seq), RawEvent: &contestsmodel.ContestAnnouncementDeletedEvent{ContestID: id}}
 		}
 	}
 	return q
 }
 
-func (q *queueHarness) run(sub *subscription, history []*WrappedEvent) <-chan struct{} {
+func (q *queueHarness) run(sub *subscription) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		sub.run(history, func(*WrappedEvent) bool { return true }, func(event *WrappedEvent) error {
+		sub.run(func(event *WrappedEvent) error {
 			return writeEvent(sub.conn, event.DTOPayload)
 		})
 	}()
 	return done
 }
 
-func TestSnapshotQueueOrder(t *testing.T) {
+func TestQueueOverflowIsolatesSlowSubscriber(t *testing.T) {
 	for _, kind := range []string{"submissions", "contests"} {
 		t.Run(kind, func(t *testing.T) {
 			q := newQueueHarness(kind)
-			q.broadcast(q.event(1, true))
-			q.broadcast(q.event(2, true))
-			conn := newControlledConnection()
-			sub, history, err := q.subscribe(conn, 0, true)
-			require.NoError(t, err)
-			done := q.run(sub, history)
+			slow := newControlledConnection()
+			// Acquiring the hub lock here proves transport closure is outside it.
+			slow.onClose = func() { q.count() }
+			sub := q.subscribe(slow)
+			done := q.run(sub)
 			t.Cleanup(func() { sub.close("test finished", nil); receive(t, done) })
-			receive(t, conn.started)
-			// Evict the entire ring while the first history write is paused.
-			q.broadcast(q.event(3, true))
-			q.broadcast(q.event(4, false))
-			q.broadcast(q.event(5, true))
-			require.Len(t, sub.outbox, 2)
-			close(conn.release)
-			for _, seq := range []string{"1", "2", "3", "5"} {
-				require.Equal(t, seq, receive(t, conn.writes))
-			}
-			q.broadcast(q.event(6, true))
-			require.Equal(t, "6", receive(t, conn.writes))
-			require.Empty(t, conn.writes)
-		})
-	}
-}
-
-func TestQueueOverflowIsolatesSlowSubscriber(t *testing.T) {
-	for _, kind := range []string{"submissions", "contests"} {
-		for _, replay := range []bool{true, false} {
-			t.Run(fmt.Sprintf("%s/history=%t", kind, replay), func(t *testing.T) {
-				q := newQueueHarness(kind)
-				q.broadcast(q.event(1, true))
-				slow := newControlledConnection()
-				// Acquiring the hub lock here proves transport closure is outside it.
-				slow.onClose = func() { q.count() }
-				sub, history, err := q.subscribe(slow, 0, replay)
-				require.NoError(t, err)
-				done := q.run(sub, history)
-				t.Cleanup(func() { sub.close("test finished", nil); receive(t, done) })
-				seq := uint64(2)
-				if !replay {
-					q.broadcast(q.event(seq, true))
-					seq++
-				}
-				receive(t, slow.started)
-				healthy := newControlledConnection()
-				close(healthy.release)
-				other, _, err := q.subscribe(healthy, 0, false)
-				require.NoError(t, err)
-				otherDone := q.run(other, nil)
-				t.Cleanup(func() { other.close("test finished", nil); receive(t, otherDone) })
-				for i := 0; i < eventQueueCapacity; i++ {
-					q.broadcast(q.event(seq, true))
-					require.Equal(t, fmt.Sprint(seq), receive(t, healthy.writes))
-					seq++
-				}
-				require.Len(t, sub.outbox, eventQueueCapacity)
-				require.Equal(t, eventQueueCapacity, cap(sub.outbox))
-				require.Equal(t, 2, q.count())
+			seq := uint64(1)
+			q.broadcast(q.event(seq, true))
+			seq++
+			receive(t, slow.started)
+			healthy := newControlledConnection()
+			close(healthy.release)
+			other := q.subscribe(healthy)
+			otherDone := q.run(other)
+			t.Cleanup(func() { other.close("test finished", nil); receive(t, otherDone) })
+			for i := 0; i < eventQueueCapacity; i++ {
 				q.broadcast(q.event(seq, true))
-				receive(t, slow.closed)
-				receive(t, done)
-				require.Equal(t, 1, q.count())
 				require.Equal(t, fmt.Sprint(seq), receive(t, healthy.writes))
-				sub.close("concurrent cleanup", errors.New("write failed"))
-				require.EqualValues(t, 1, slow.closeCount.Load())
-				q.broadcast(q.event(seq+1, true))
-				require.Equal(t, fmt.Sprint(seq+1), receive(t, healthy.writes))
-				require.Empty(t, sub.outbox)
-			})
-		}
+				seq++
+			}
+			require.Len(t, sub.outbox, eventQueueCapacity)
+			require.Equal(t, eventQueueCapacity, cap(sub.outbox))
+			require.Equal(t, 2, q.count())
+			q.broadcast(q.event(seq, true))
+			receive(t, slow.closed)
+			receive(t, done)
+			require.Equal(t, 1, q.count())
+			require.Equal(t, fmt.Sprint(seq), receive(t, healthy.writes))
+			sub.close("concurrent cleanup", errors.New("write failed"))
+			require.EqualValues(t, 1, slow.closeCount.Load())
+			q.broadcast(q.event(seq+1, true))
+			require.Equal(t, fmt.Sprint(seq+1), receive(t, healthy.writes))
+			require.Empty(t, sub.outbox)
+		})
 	}
 }
 
 func TestWriteFailureReleasesSubscriptionAndReader(t *testing.T) {
 	for _, kind := range []string{"submissions", "contests"} {
-		for _, phase := range []string{"history", "live", "deadline setup", "read failure"} {
+		for _, phase := range []string{"live", "deadline setup", "read failure"} {
 			t.Run(kind+"/"+phase, func(t *testing.T) {
 				q := newQueueHarness(kind)
-				q.broadcast(q.event(1, true))
 				conn := newControlledConnection()
 				if phase == "deadline setup" {
 					conn.deadlineErr = net.ErrClosed
 				}
-				sub, history, err := q.subscribe(conn, 0, phase != "live")
-				require.NoError(t, err)
+				sub := q.subscribe(conn)
 				before := time.Now()
-				done := q.run(sub, history)
+				done := q.run(sub)
 				t.Cleanup(func() { sub.close("test finished", nil); receive(t, done) })
-				if phase == "live" {
-					q.broadcast(q.event(2, true))
-				}
+				q.broadcast(q.event(1, true))
 				deadline := receive(t, conn.deadline)
 				require.WithinDuration(t, before.Add(10*time.Second), deadline, time.Second)
 				if phase != "deadline setup" {
@@ -310,38 +267,6 @@ func TestIncomingMessageLimit(t *testing.T) {
 				}, time.Second, time.Millisecond)
 			})
 		}
-	}
-}
-
-func TestHistoryRangeErrors(t *testing.T) {
-	for _, kind := range []string{"submissions", "contests"} {
-		t.Run(kind, func(t *testing.T) {
-			f := newWSFixture(t)
-			f.hub.ring = NewRingBuffer[*WrappedEvent](1)
-			f.contests.ring = NewRingBuffer[*WrappedEvent](1)
-			for range 2 {
-				if kind == "submissions" {
-					f.publish(t, submissionsmodel.SubmissionEventCreated, &submissionsmodel.SubmissionCreatedEvent{Id: uuid.New(), SubmissionEventMeta: f.meta(f.stub.user.Id)})
-				} else {
-					f.publish(t, contestsmodel.ContestEventAnnouncementDeleted, &contestsmodel.ContestAnnouncementDeletedEvent{ID: uuid.New(), ContestID: f.stub.contest.ID})
-				}
-			}
-			conn := f.connect(t, f.path(kind))
-			requireClose(t, conn, 4409)
-			for _, test := range []struct {
-				err    error
-				code   int
-				reason string
-			}{
-				{ErrBufferEmpty, 4408, "buffer_empty"},
-				{ErrHistoryLost, 4409, "history_lost"},
-				{ErrInvalidRange, 4410, "invalid_range"},
-			} {
-				code, reason := getClosingFrameData(test.err)
-				require.Equal(t, test.code, code)
-				require.Equal(t, test.reason, string(reason))
-			}
-		})
 	}
 }
 

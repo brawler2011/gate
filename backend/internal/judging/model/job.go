@@ -15,6 +15,7 @@ type Job struct {
 	Attempt      int32
 	LeaseToken   uuid.UUID
 	Deadline     time.Time
+	CreatedAt    time.Time
 }
 
 type JobRef struct {

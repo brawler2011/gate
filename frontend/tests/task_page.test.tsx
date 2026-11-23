@@ -69,7 +69,7 @@ it.each(['success', 'failure', 'guest'])('handles the initial submissions snapsh
       expect(listener).not.toHaveBeenCalled();
       await act(async () => {
         finishSubmissions(outcome === 'success'
-          ? Response.json({submissions: [{id: 'submission', state: 2, score: 73, created_at: '2026-10-01T00:00:00Z'}], since: 42})
+          ? Response.json({submissions: [{id: 'submission', state: 2, score: 73, created_at: '2026-10-01T00:00:00Z'}]})
           : Response.json({message: 'Unavailable'}, {status: 500}));
         await pendingSubmissions;
       });

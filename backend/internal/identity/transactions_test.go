@@ -6,7 +6,6 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 
 	"github.com/google/uuid"
@@ -27,10 +26,6 @@ func (identityTestStore) LockUser(context.Context, uuid.UUID) error { return nil
 type ContestsRepo interface {
 	ListUserContestMemberships(context.Context, uuid.UUID) ([]contestsmodel.UserContestMembership, error)
 	AddContestMemberIfNotExists(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
 }
 
 type identityAuthStore interface {

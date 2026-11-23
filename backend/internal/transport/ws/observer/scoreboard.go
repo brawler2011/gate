@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -46,10 +45,7 @@ func (h *Hub) trackScoreboard(ctx context.Context, contestID *uuid.UUID) error {
 	return nil
 }
 
-func scoreboardEnvelope(scoreboard *contestsmodel.ScoreboardResponse, userID uuid.UUID, unfrozen, replace bool, seq uint64) ([]byte, error) {
-	if seq > math.MaxInt64 {
-		return nil, fmt.Errorf("scoreboard sequence exceeds int64")
-	}
+func scoreboardEnvelope(scoreboard *contestsmodel.ScoreboardResponse, userID uuid.UUID, unfrozen, replace bool) ([]byte, error) {
 	raw, err := json.Marshal(scoreboard)
 	if err != nil {
 		return nil, fmt.Errorf("marshal scoreboard: %w", err)
@@ -58,7 +54,7 @@ func scoreboardEnvelope(scoreboard *contestsmodel.ScoreboardResponse, userID uui
 	if err := json.Unmarshal(raw, &dto); err != nil {
 		return nil, fmt.Errorf("convert scoreboard: %w", err)
 	}
-	msg := observerv1.ScoreboardUpdatedMessage{EventType: new(observerv1.ScoreboardUpdatedMessageEventType), Sequence: int64(seq),
+	msg := observerv1.ScoreboardUpdatedMessage{EventType: new(observerv1.ScoreboardUpdatedMessageEventType),
 		Payload: &observerv1.MessageScoreboardUpdated{UserId: userID, Unfrozen: unfrozen, Replace: replace, Scoreboard: &dto}}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -111,11 +107,11 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 			return fmt.Errorf("project unfrozen scoreboard: %w", err)
 		}
 	}
-	event.scoreboardPublic, err = scoreboardEnvelope(public, *meta.UserId, false, replace, event.Seq)
+	event.scoreboardPublic, err = scoreboardEnvelope(public, *meta.UserId, false, replace)
 	if err != nil {
 		return err
 	}
-	event.scoreboardUnfrozen, err = scoreboardEnvelope(live, *meta.UserId, true, replace, event.Seq)
+	event.scoreboardUnfrozen, err = scoreboardEnvelope(live, *meta.UserId, true, replace)
 	if err != nil {
 		return err
 	}
@@ -167,10 +163,7 @@ func (s *Observer) sendFinalSnapshot(ctx context.Context, filter *SubmissionsFil
 			h.scoreboardMu.Unlock()
 			return
 		}
-		h.mu.RLock()
-		sequence := h.ring.MaxSeq()
-		h.mu.RUnlock()
-		payload, err := scoreboardEnvelope(snapshot, uuid.Nil, false, true, sequence)
+		payload, err := scoreboardEnvelope(snapshot, uuid.Nil, false, true)
 		if err != nil {
 			h.scoreboardMu.Unlock()
 			return

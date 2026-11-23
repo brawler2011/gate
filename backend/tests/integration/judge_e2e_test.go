@@ -22,12 +22,10 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
-	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -37,7 +35,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,13 +45,22 @@ const (
 	e2eSandboxTimout = 90 * time.Second
 )
 
-func setupE2EEnvironment(t *testing.T) (context.Context, *pgxpool.Pool, jetstream.JetStream) {
+func setupE2EEnvironment(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	ctx := context.Background()
-	dbPool := newTestDB(t)
-	js, _ := newNATSJetStream(t)
-	require.NoError(t, pkg.EnsureSubmissionsStream(ctx, js))
-	return ctx, dbPool, js
+	return context.Background(), newTestDB(t)
+}
+
+// judgeNow schedules and judges a submission in place of a worker.
+func judgeNow(t *testing.T, ctx context.Context, pool *pgxpool.Pool, judge *judging.JudgeUseCase, id uuid.UUID) {
+	t.Helper()
+	jobs := pgstore.NewJudgeJobs(pool)
+	_, err := jobs.ScheduleJob(ctx, id)
+	require.NoError(t, err)
+	job, ok, err := jobs.ClaimNext(ctx)
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Equal(t, id, job.SubmissionID)
+	require.NoError(t, judge.JudgeSubmission(ctx, job))
 }
 
 func TestJudgeFullFlowE2E(t *testing.T) {
@@ -62,7 +68,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		t.Skip("Skipping E2E test in short mode")
 	}
 	t.Parallel()
-	ctx, dbPool, js := setupE2EEnvironment(t)
+	ctx, dbPool := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
 	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
@@ -132,7 +138,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Limits: limits, WorkDir: workDir, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 			&judging.PackageLoader{Store: reads, Bucket: bucket, Cache: packages, Packages: drafts, Limits: limits},
-			executor, judgeworker.NewEventPublisher(js))
+			executor, pgstore.NewNotifier(dbPool))
 	}
 	judgeUC := newJudge(image)
 	cached := func(t *testing.T) []string {
@@ -158,9 +164,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		t.Helper()
 		id, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, Solution: source, ProblemId: problem, ContestId: contestID, UserId: userID, Language: language})
 		require.NoError(t, err)
-		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, id)
-		require.NoError(t, err)
-		require.NoError(t, judgeUC.JudgeSubmission(ctx, job.Ref()))
+		judgeNow(t, ctx, dbPool, judgeUC, id)
 		sub, err := submissionsRepo.GetSubmission(ctx, id)
 		require.NoError(t, err)
 		return sub
@@ -258,7 +262,7 @@ type judgeHarness struct {
 
 func newJudgeHarness(t *testing.T) *judgeHarness {
 	t.Helper()
-	ctx, dbPool, js := setupE2EEnvironment(t)
+	ctx, dbPool := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
 	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
@@ -292,7 +296,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Limits: h.limits, WorkDir: workDir, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,
 		&judging.PackageLoader{Store: store, Bucket: bucket, Cache: packages, Packages: h.drafts, Limits: h.limits},
-		executor, judgeworker.NewEventPublisher(js))
+		executor, pgstore.NewNotifier(dbPool))
 
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
 	require.NoError(t, dbfixtures.CreateContest(h.ctx, h.pool, contestsmodel.CreateContestParams{ID: h.contestID, OrganizationID: org.ID, Title: "E2E Contest", Login: "e2e-contest", Description: "E2E", Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}, contestOwner(t, h.ctx, h.pool)))
@@ -333,9 +337,7 @@ func (h *judgeHarness) submit(t *testing.T, problem uuid.UUID, language string, 
 	t.Helper()
 	id, err := h.submissions.CreateSubmission(h.ctx, &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, Solution: source, ProblemId: problem, ContestId: h.contestID, UserId: h.userID, Language: language})
 	require.NoError(t, err)
-	job, err := pgstore.NewJudgeJobs(h.pool).ScheduleJob(h.ctx, id)
-	require.NoError(t, err)
-	require.NoError(t, h.judge.JudgeSubmission(h.ctx, job.Ref()))
+	judgeNow(t, h.ctx, h.pool, h.judge, id)
 	sub, err := h.submissions.GetSubmission(h.ctx, id)
 	require.NoError(t, err)
 	return sub

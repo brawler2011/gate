@@ -1,7 +1,6 @@
 package observer
 
 import (
-	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -43,14 +42,24 @@ type subscription struct {
 	detach func()
 }
 
-func newSubscription(conn websocketConnection) *subscription {
-	s := &subscription{
+func newSubscription() *subscription {
+	return &subscription{
 		id:     uuid.New(),
 		outbox: make(chan *WrappedEvent, eventQueueCapacity),
 		done:   make(chan struct{}),
 	}
+}
+
+// attach binds the upgraded connection; subscribing before the handshake lets a client's snapshot miss no event.
+func (s *subscription) attach(conn websocketConnection) {
+	s.queueMu.Lock()
+	defer s.queueMu.Unlock()
 	s.conn = unregisteringConnection{websocketConnection: conn, sub: s}
-	return s
+	select {
+	case <-s.done:
+		_ = conn.Close()
+	default:
+	}
 }
 
 // Unregister before sending a close frame so reconnects cannot match a previous subscription.
@@ -102,30 +111,13 @@ func (s *subscription) close(reason string, err error) {
 				break drain
 			}
 		}
+		conn := s.conn
 		s.queueMu.Unlock()
-		_ = s.conn.Close()
+		if conn != nil {
+			_ = conn.Close()
+		}
 		slog.Info("websocket disconnected", "id", s.id, "reason", reason, "error", err)
 	})
-}
-
-// Hold the hub lock through history capture and live-queue registration to avoid missed events.
-func snapshotHistory(ring *RingBuffer[*WrappedEvent], since uint64, replay bool) ([]*WrappedEvent, error) {
-	barrier := ring.MaxSeq()
-	if !replay || barrier == 0 {
-		return nil, nil
-	}
-	history, err := ring.GetRange(since, barrier)
-	if errors.Is(err, ErrBufferEmpty) {
-		return nil, nil
-	}
-	return history, err
-}
-
-func rejectHistory(conn websocketConnection, err error) {
-	sub := newSubscription(conn)
-	code, message := getClosingFrameData(err)
-	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, string(message)), time.Now().Add(timeToClose))
-	sub.close("cannot get history", err)
 }
 
 func (s *subscription) startReadPump() <-chan struct{} {
@@ -143,7 +135,7 @@ func (s *subscription) startReadPump() <-chan struct{} {
 	return readDone
 }
 
-func (s *subscription) run(history []*WrappedEvent, matches func(*WrappedEvent) bool, send func(*WrappedEvent) error) {
+func (s *subscription) run(send func(*WrappedEvent) error) {
 	readDone := s.startReadPump()
 	defer func() {
 		s.close("sender stopped", nil)
@@ -171,11 +163,6 @@ func (s *subscription) run(history []*WrappedEvent, matches func(*WrappedEvent) 
 			return false
 		}
 		return true
-	}
-	for _, event := range history {
-		if matches(event) && !deliver(event) {
-			return
-		}
 	}
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()

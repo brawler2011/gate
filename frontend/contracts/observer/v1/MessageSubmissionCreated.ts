@@ -12,8 +12,6 @@ interface MessageSubmissionCreated {
   'position'?: number;
   'language'?: string;
   'created_at'?: string;
-  'is_new': boolean;
-  'previous_state'?: number;
   'frozen'?: boolean;
   'id': string;
   'state'?: number;

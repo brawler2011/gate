@@ -3,7 +3,6 @@
 package observerv1
 
 type SubmissionCompletedMessage struct {
-	Sequence  int64                                `json:"sequence" binding:"required"`
 	EventType *SubmissionCompletedMessageEventType `json:"event_type" binding:"required"`
 	Payload   *MessageSubmissionCompleted          `json:"payload" binding:"required"`
 }

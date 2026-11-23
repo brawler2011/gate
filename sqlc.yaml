@@ -76,16 +76,6 @@ sql:
               import: "github.com/brawler2011/gate/backend/internal/submissions/model"
               package: "submissionsmodel"
               type: "State"
-          - column: "outbox_events.status"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/events"
-              package: "events"
-              type: "OutboxEventStatus"
-          - column: "outbox_events.event_type"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/events"
-              package: "events"
-              type: "OutboxEventType"
           - db_type: "contest_visibility"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -137,16 +127,6 @@ sql:
               import: "github.com/brawler2011/gate/backend/internal/submissions/model"
               package: "submissionsmodel"
               type: "State"
-          - db_type: "outbox_event_status"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/events"
-              package: "events"
-              type: "OutboxEventStatus"
-          - db_type: "outbox_event_type"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/events"
-              package: "events"
-              type: "OutboxEventType"
 
           - db_type: "contest_role"
             go_type:

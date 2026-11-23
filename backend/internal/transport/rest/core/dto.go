@@ -29,13 +29,6 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 	return int32(v)
 }
 
-func safeInt64[T ~uint64](v T) int64 {
-	if uint64(v) > math.MaxInt64 {
-		return math.MaxInt64
-	}
-	return int64(v)
-}
-
 func timePtrToOptNilDateTime(t *time.Time) corev1.OptNilDateTime {
 	if t == nil {
 		return corev1.OptNilDateTime{}

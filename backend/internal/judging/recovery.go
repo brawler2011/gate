@@ -59,8 +59,7 @@ func (r *JudgeRecovery) RecoverJob(ctx context.Context, job judgingmodel.Job) er
 			if err != nil || !current {
 				return err
 			}
-			change, err := tx.UpdateSubmission(ctx, job.SubmissionID, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.GotIE})
-			if err != nil {
+			if _, err := tx.UpdateSubmission(ctx, job.SubmissionID, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.GotIE}); err != nil {
 				return err
 			}
 			sub, err := tx.GetSubmission(ctx, job.SubmissionID)
@@ -70,32 +69,17 @@ func (r *JudgeRecovery) RecoverJob(ctx context.Context, job judgingmodel.Job) er
 			if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 				return err
 			}
-			event := sub.CompletedEvent(change.PreviousState)
-			return tx.Record(ctx, eventdata.Event{
-				AggregateID: sub.ID,
-				Type:        eventdata.OutboxEventSubmissionCompleted,
-				Payload:     event,
-			})
+			return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})
 		}
-
-		current, err := tx.RequeueStalledJob(ctx, job.Ref())
-		if err != nil || !current {
-			return err
-		}
-		sub, err := tx.GetSubmission(ctx, job.SubmissionID)
-		if err != nil {
-			return err
-		}
-		event := sub.CreatedEvent(job.ID, job.Generation, nil)
-		return tx.Record(ctx, eventdata.Event{
-			AggregateID: sub.ID,
-			Type:        eventdata.OutboxEventSubmissionCreated,
-			Payload:     event,
-		})
+		_, err := tx.RequeueStalledJob(ctx, job.Ref())
+		return err
 	})
 }
 
 func (r *JudgeRecovery) RecoverStalledJobs(ctx context.Context) (int, error) {
+	if err := r.jobs.DeleteObsolete(ctx); err != nil {
+		return 0, err
+	}
 	stalled, err := r.jobs.PickStalledJobs(ctx, r.batchSize)
 	if err != nil {
 		return 0, err

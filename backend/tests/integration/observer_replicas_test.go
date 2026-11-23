@@ -4,61 +4,69 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
-	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
-	"github.com/brawler2011/gate/backend/pkg"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 )
 
-type subjectRecorder chan string
-
-func (r subjectRecorder) Dispatch(_ context.Context, subject string, _ []byte) error {
-	r <- subject
-	return nil
+type listener struct {
+	connected chan struct{}
+	notices   chan eventdata.Notice
 }
 
-// Every replica must receive each observer event for its own WebSocket state.
-func TestObserverEventsReachEveryReplica(t *testing.T) {
+func receive[T any](t *testing.T, ch <-chan T) T {
+	t.Helper()
+	select {
+	case v := <-ch:
+		return v
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out")
+		panic("unreachable")
+	}
+}
+
+// Every replica must receive each committed notice, and must resync after losing its connection.
+func TestNoticesReachEveryReplica(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
-	js, _ := newNATSJetStream(t)
-	require.NoError(t, pkg.EnsureSubmissionsStream(ctx, js))
-	require.NoError(t, pkg.EnsureContestsStream(ctx, js))
-
-	// Published before the replicas start: a new replica does not replay history.
-	_, err := js.Publish(ctx, "submissions.created", []byte("{}"))
-	require.NoError(t, err)
-
-	var replicas [2]subjectRecorder
+	pool := newTestDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	var running sync.WaitGroup
+	t.Cleanup(func() { cancel(); running.Wait() })
+	var replicas [2]listener
 	for i := range replicas {
-		replicas[i] = make(subjectRecorder, 10)
-		submissions, err := pubsub.NewSubmissionsSub(ctx, js, replicas[i])
-		require.NoError(t, err)
-		contests, err := pubsub.NewContestsSub(ctx, js, replicas[i])
-		require.NoError(t, err)
-		for _, sub := range []*pubsub.StreamSubscriber{submissions, contests} {
-			done := make(chan struct{})
-			go func() { _ = sub.Start(ctx); close(done) }()
-			t.Cleanup(func() { sub.Stop(); <-done })
-		}
+		r := listener{connected: make(chan struct{}, 2), notices: make(chan eventdata.Notice, 10)}
+		replicas[i] = r
+		running.Go(func() {
+			_ = pgstore.Listen(ctx, pool, pgstore.EventsChannel, func() { r.connected <- struct{}{} }, func(n *pgconn.Notification) {
+				var notice eventdata.Notice
+				require.NoError(t, json.Unmarshal([]byte(n.Payload), &notice))
+				r.notices <- notice
+			})
+		})
+		receive(t, r.connected)
 	}
 
-	for _, subject := range []string{"submissions.updated", "contest.announcement_created"} {
-		_, err := js.Publish(ctx, subject, []byte("{}"))
-		require.NoError(t, err)
+	tx, err := pool.Begin(ctx)
+	require.NoError(t, err)
+	_, err = tx.Exec(ctx, "SELECT pg_notify('gate_events', '{\"type\":\"rolled back\"}')")
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback(ctx))
+	notice := eventdata.Notice{Type: "submissions.completed", ID: uuid.New()}
+	require.NoError(t, pgstore.NewNotifier(pool).Notify(ctx, notice))
+	for _, r := range replicas {
+		require.Equal(t, notice, receive(t, r.notices))
 	}
-	for i, replica := range replicas {
-		got := map[string]bool{}
-		for len(got) < 2 {
-			select {
-			case subject := <-replica:
-				got[subject] = true
-			case <-time.After(10 * time.Second):
-				t.Fatalf("replica %d received only %v", i, got)
-			}
-		}
-		require.Equal(t, map[string]bool{"submissions.updated": true, "contest.announcement_created": true}, got, "replica %d", i)
+
+	_, err = pool.Exec(ctx, "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query LIKE '%LISTEN gate_events%' AND pid <> pg_backend_pid() AND datname = current_database()")
+	require.NoError(t, err)
+	for _, r := range replicas {
+		receive(t, r.connected)
 	}
 }

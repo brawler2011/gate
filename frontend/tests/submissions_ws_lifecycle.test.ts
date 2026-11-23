@@ -64,7 +64,7 @@ describe("WebSocket subscription lifecycle", () => {
     expect(b.closeCalls).toBe(0);
   });
 
-  for (const code of [1000, 1006, 1008, 4408, 4409, 4410]) {
+  for (const code of [1000, 1006, 1008]) {
     it(`reconnects after close ${code}`, async () => {
       const params = listener();
       add(params);

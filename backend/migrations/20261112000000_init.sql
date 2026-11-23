@@ -45,13 +45,6 @@ CREATE TYPE organization_role AS ENUM (
     'owner'
 );
 
-CREATE TYPE outbox_event_status AS ENUM (
-    'pending',
-    'processing',
-    'completed',
-    'failed'
-);
-
 CREATE TYPE participation_mode AS ENUM (
     'open',
     'by_request',
@@ -930,57 +923,20 @@ CREATE TABLE judge_jobs (
     lease_token uuid,
     deadline_at timestamptz,
     created_at timestamptz DEFAULT now() NOT NULL,
-    completed_at timestamptz,
     CONSTRAINT judge_jobs_attempt_check CHECK ((attempt >= 0)),
     CONSTRAINT judge_jobs_generation_check CHECK ((generation > 0)),
-    CONSTRAINT judge_jobs_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text]))),
+    CONSTRAINT judge_jobs_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'processing'::text]))),
     CONSTRAINT judge_jobs_pkey PRIMARY KEY (id),
     CONSTRAINT judge_jobs_submission_id_generation_key UNIQUE (submission_id, generation),
     CONSTRAINT judge_jobs_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE SET NULL,
     CONSTRAINT judge_jobs_submission_id_fkey FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
 );
 CREATE INDEX judge_jobs_recovery ON judge_jobs USING btree (deadline_at) WHERE (state = 'processing'::text);
+CREATE INDEX judge_jobs_pending ON judge_jobs USING btree (created_at) WHERE (state = 'pending'::text);
 
 CREATE TRIGGER on_submissions_update BEFORE UPDATE ON submissions FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
 
-CREATE TABLE outbox_events (
-    id uuid DEFAULT uuidv7() NOT NULL,
-    aggregate_id uuid NOT NULL,
-    event_type varchar(64) NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    status outbox_event_status DEFAULT 'pending'::outbox_event_status NOT NULL,
-    retry_count integer DEFAULT 0 NOT NULL,
-    error_message text,
-    created_at timestamptz DEFAULT now() NOT NULL,
-    processed_at timestamptz,
-    locked_at timestamptz,
-    deadline_at timestamptz,
-    headers jsonb DEFAULT '{}'::jsonb NOT NULL,
-    aggregate_version bigint NOT NULL,
-    lease_token uuid,
-    next_attempt_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT outbox_events_retry_count_check CHECK ((retry_count >= 0)),
-    CONSTRAINT outbox_events_pkey PRIMARY KEY (id)
-);
-CREATE UNIQUE INDEX outbox_aggregate_version ON outbox_events USING btree (aggregate_id, aggregate_version);
-CREATE INDEX outbox_events_aggregate_id_idx ON outbox_events USING btree (aggregate_id);
-CREATE INDEX outbox_events_status_idx ON outbox_events USING btree (status);
-CREATE INDEX outbox_events_worker_idx ON outbox_events USING btree (created_at) WHERE ((status = 'pending'::outbox_event_status) OR (status = 'processing'::outbox_event_status));
-
-CREATE TABLE inbox_receipts (
-    consumer_name text NOT NULL,
-    event_id uuid NOT NULL,
-    processed_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT inbox_receipts_pkey PRIMARY KEY (consumer_name, event_id)
-);
-
-CREATE TABLE event_aggregates (
-    aggregate_id uuid NOT NULL,
-    version bigint NOT NULL,
-    CONSTRAINT event_aggregates_version_check CHECK ((version > 0)),
-    CONSTRAINT event_aggregates_pkey PRIMARY KEY (aggregate_id)
-);
 
 
 CREATE TABLE notifications (

@@ -24,7 +24,7 @@ type ContestEventsTxStore interface {
 	DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error
 	CreateClarification(ctx context.Context, userID uuid.UUID, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
 	AnswerClarification(ctx context.Context, id, contestID, answeredBy uuid.UUID, answer string) (*contestsmodel.ContestClarification, error)
-	Record(context.Context, eventdata.Event) error
+	eventdata.Writer
 }
 
 type ContestEventsTransactions interface {

@@ -102,7 +102,6 @@ func topicConfigurationAt(c contestsmodel.Contest, now time.Time) string {
 func projectSubmission(event *WrappedEvent, source, frozen bool) ([]byte, error) {
 	var envelope struct {
 		EventType string                     `json:"event_type"`
-		Sequence  uint64                     `json:"sequence"`
 		Payload   map[string]json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(event.DTOPayload, &envelope); err != nil {
@@ -112,12 +111,11 @@ func projectSubmission(event *WrappedEvent, source, frozen bool) ([]byte, error)
 		delete(envelope.Payload, "source")
 	}
 	if frozen {
-		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source", "previous_state"} {
+		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source"} {
 			delete(envelope.Payload, field)
 		}
 		envelope.Payload["frozen"] = json.RawMessage("true")
 	}
-	envelope.Sequence = event.Seq
 	data, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, fmt.Errorf("encode submission projection: %w", err)
@@ -138,13 +136,6 @@ func scopeEvent(e *WrappedEvent, topics []string) *WrappedEvent {
 		}
 	}
 	return &clone
-}
-func scopeHistory(events []*WrappedEvent, topics []string) []*WrappedEvent {
-	result := make([]*WrappedEvent, len(events))
-	for i, e := range events {
-		result[i] = scopeEvent(e, topics)
-	}
-	return result
 }
 func projectContestTopics(e *WrappedEvent) {
 	var contest, owner uuid.UUID

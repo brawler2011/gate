@@ -36,13 +36,11 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/brawler2011/gate/backend/tests/mocks"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ogen-go/ogen/validate"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/mock/gomock"
 )
 
 type contextKey string
@@ -74,10 +72,6 @@ type IntegrationTestSuite struct {
 	transport  *testTransport
 	testServer *httptest.Server
 	client     *corev1.Client
-
-	ctrl *gomock.Controller
-
-	mockNats *mocks.MockPublisher
 
 	usersRepo         *pgstore.UsersRepo
 	contestsRepo      *pgstore.ContestsRepo
@@ -138,8 +132,6 @@ func runIsolated(t *testing.T, name string, fn func(*IntegrationTestSuite)) {
 		s.SetT(t)
 		s.ctx = context.Background()
 		s.dbPool = newTestDB(t)
-		s.ctrl = gomock.NewController(t)
-		s.mockNats = mocks.NewMockPublisher(s.ctrl)
 		s.initApp()
 		fn(s)
 	})

@@ -58,45 +58,16 @@ func (m *mockAnnouncementsRepo) DeleteAnnouncement(ctx context.Context, id, cont
 	return nil
 }
 
-type mockOutboxRepo struct {
-	events []*eventdata.CreateOutboxEventParams
-}
-
-func (m *mockOutboxRepo) CreateEvent(ctx context.Context, params *eventdata.CreateOutboxEventParams) error {
-	m.events = append(m.events, params)
-	return nil
-}
-
-func (m *mockOutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int32) error {
-	return nil
-}
-
-func (m *mockOutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int32) ([]eventdata.OutboxEvent, error) {
-	return nil, nil
-}
-
-func (m *mockOutboxRepo) MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error {
-	return nil
-}
-
-func (m *mockOutboxRepo) MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID, errorMsg string, permanent bool) error {
-	return nil
-}
-
-func (m *mockOutboxRepo) ResetFailedToPending(ctx context.Context, maxRetries int32, retryDelaySec int32) error {
-	return nil
-}
-
 func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	ctx := context.Background()
 	repo := newMockAnnouncementsRepo()
-	outboxRepo := &mockOutboxRepo{}
+	notices := &noticeLog{}
 
 	contestID := uuid.New()
 	authorID := uuid.New()
 	loader := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contestsmodel.Contest{ID: contestID}, Now: time.Now()}}}
 	loader.Grant(contestID, authorID, string(accessmodel.ContestModerator))
-	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: repo, OutboxRepo: outboxRepo}}, nil, nil)
+	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: repo, Writer: notices}}, nil, nil)
 
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser})
 
@@ -115,20 +86,14 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Test Announcement", ann.Title)
 	assert.Equal(t, contestID, ann.ContestID)
-	assert.Len(t, outboxRepo.events, 1)
-	assert.Equal(t, eventdata.OutboxEventContestAnnouncementCreated, outboxRepo.events[0].EventType)
+	assert.Equal(t, []eventdata.Notice{{Type: contestsmodel.ContestEventAnnouncementCreated, ID: ann.ID}}, notices.notices)
 
 	require.Len(t, repo.announcements, 1)
 	assert.Equal(t, *ann, repo.announcements[ann.ID])
 
 	err = uc.DeleteAnnouncement(ctx, ann.ID, contestID)
 	require.NoError(t, err)
-	assert.Len(t, outboxRepo.events, 2)
-	assert.Equal(t, eventdata.OutboxEventContestAnnouncementDeleted, outboxRepo.events[1].EventType)
+	assert.Equal(t, eventdata.Notice{Type: contestsmodel.ContestEventAnnouncementDeleted, ID: ann.ID, ContestID: &contestID}, notices.notices[1])
 
 	assert.Empty(t, repo.announcements)
-}
-
-func (r *mockOutboxRepo) Record(ctx context.Context, event eventdata.Event) error {
-	return recordTestEvent(ctx, event, r.CreateEvent)
 }

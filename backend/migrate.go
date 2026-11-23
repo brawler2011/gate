@@ -11,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/datareset"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/nats-io/nats.go/jetstream"
 )
 
 //go:embed migrations/*.sql
@@ -33,16 +32,6 @@ func runMigrations(configFile, envFile string) error {
 	}
 	defer db.Close()
 
-	natsConn, err := pkg.NewNatsConn(cfg.Secrets.NatsURL)
-	if err != nil {
-		return err
-	}
-	defer natsConn.Close()
-	js, err := jetstream.New(natsConn)
-	if err != nil {
-		return fmt.Errorf("create jetstream: %w", err)
-	}
-
 	store := storage.NewS3Storage(storage.S3Config{
 		Endpoint:  cfg.Storage.S3Endpoint,
 		AccessKey: cfg.Secrets.S3AccessKey,
@@ -50,7 +39,7 @@ func runMigrations(configFile, envFile string) error {
 		Region:    defaultS3Region,
 	})
 
-	reset, err := datareset.Apply(context.Background(), datareset.Stores{DB: db, S3: store, JetStream: js}, migrations)
+	reset, err := datareset.Apply(context.Background(), datareset.Stores{DB: db, S3: store}, migrations)
 	if err != nil {
 		return err
 	}

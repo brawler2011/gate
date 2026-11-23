@@ -72,7 +72,7 @@ describe("Observer visibility in production components", () => {
     const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
     try {
       expect(listener!.url()).toContain("contestId=contest");
-      const event = {data: JSON.stringify({event_type: "scoreboard.updated", sequence: 8, payload: {
+      const event = {data: JSON.stringify({event_type: "scoreboard.updated", payload: {
         user_id: "user", unfrozen: false, replace: false, scoreboard: snapshot,
       }})} as MessageEvent;
       await act(async () => {

@@ -1,9 +1,6 @@
 postgres:
   storage: 1Gi
   nodePort: 30432
-nats:
-  storage: 1Gi
-  nodePort: 30422
 seaweedfs:
   storage: 5Gi
   nodePort: 30833
