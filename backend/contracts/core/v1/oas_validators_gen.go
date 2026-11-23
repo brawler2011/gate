@@ -560,6 +560,8 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "clarifications_disabled":
 		return nil
+	case "drafts_disabled":
+		return nil
 	case "scoreboard_frozen":
 		return nil
 	case "limit_reached":

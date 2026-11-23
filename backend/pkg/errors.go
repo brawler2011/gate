@@ -88,6 +88,7 @@ var (
 	ErrContestNotStarted           = NewCode("contest_not_started", CodeForbidden)
 	ErrContestEnded                = NewCode("contest_ended", CodeConflict)
 	ErrClarificationsDisabled      = NewCode("clarifications_disabled", CodeForbidden)
+	ErrDraftsDisabled              = NewCode("drafts_disabled", CodeForbidden)
 	ErrScoreboardFrozen            = NewCode("scoreboard_frozen", CodeForbidden)
 	// Params: limit.
 	ErrLimitReached       = NewCode("limit_reached", CodeInvalid)

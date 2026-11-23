@@ -116,6 +116,7 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   contest_not_started: "Контест ещё не начался",
   contest_ended: "Контест уже завершён",
   clarifications_disabled: "Вопросы жюри в этом контесте отключены",
+  drafts_disabled: "Черновики в этом контесте отключены",
   scoreboard_frozen: "Фильтр по результатам недоступен во время заморозки",
   limit_reached: limitText,
   unknown_language: languageText("Неизвестный язык"),

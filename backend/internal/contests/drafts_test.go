@@ -167,12 +167,16 @@ type draftTestStore struct {
 }
 
 // runningContests treats every id as a public, running contest anyone may enter.
-type runningContests struct{ accesstest.Loader }
+type runningContests struct {
+	accesstest.Loader
+	noDrafts bool
+}
 
-func (runningContests) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
+func (c runningContests) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
 	facts := map[uuid.UUID]access.ContestFacts{}
 	for _, id := range ids {
-		contest := contestsmodel.Contest{ID: id, Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen}}
+		settings := contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, EnableDrafts: !c.noDrafts}
+		contest := contestsmodel.Contest{ID: id, Visibility: contestsmodel.ContestVisibilityPublic, Settings: settings}
 		facts[id] = access.ContestFacts{Contest: contest, Now: time.Now()}
 	}
 	return facts, nil
@@ -213,6 +217,34 @@ func TestDraftListReturnsOnlyCallerDrafts(t *testing.T) {
 	if len(list.Drafts) != 1 || list.Drafts[0].ID != id {
 		t.Fatalf("unexpected drafts: %+v", list)
 	}
+}
+
+func TestDisabledDraftsRejectEveryoneAndStayStored(t *testing.T) {
+	repo := newMockDraftsRepo()
+	author, contest := uuid.New(), uuid.New()
+	id, err := repo.CreateDraft(context.Background(), author, &contestsmodel.ContestDraftCreation{ContestID: contest, Code: "kept"})
+	require.NoError(t, err)
+	useCase := func(disabled bool) *DraftsUseCase {
+		store := draftTestStore{mockDraftsRepo: repo, runningContests: runningContests{noDrafts: disabled}}
+		return NewDraftsUseCase(testTransactions[DraftTxStore]{store}, repo, store)
+	}
+	off := useCase(true)
+	for name, user := range map[string]accessmodel.User{
+		"author": {Id: author, Role: accessmodel.UserRoleUser},
+		"admin":  {Id: uuid.New(), Role: accessmodel.UserRoleAdmin},
+	} {
+		ctx := accessmodel.WithUser(context.Background(), user)
+		_, err := off.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{ContestID: contest})
+		require.ErrorIs(t, err, pkg.ErrDraftsDisabled, name)
+		_, err = off.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{ContestID: contest, Code: "new"})
+		require.ErrorIs(t, err, pkg.ErrDraftsDisabled, name)
+		require.ErrorIs(t, off.DeleteDraft(ctx, contest, id), pkg.ErrDraftsDisabled, name)
+	}
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: author, Role: accessmodel.UserRoleUser})
+	list, err := useCase(false).ListDrafts(ctx, contestsmodel.ContestDraftsFilter{ContestID: contest})
+	require.NoError(t, err)
+	require.Len(t, list.Drafts, 1)
+	require.Equal(t, id, list.Drafts[0].ID)
 }
 
 func (draftTestStore) LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error { return nil }

@@ -6872,6 +6872,8 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeContestEnded
 	case ErrorCodeClarificationsDisabled:
 		*s = ErrorCodeClarificationsDisabled
+	case ErrorCodeDraftsDisabled:
+		*s = ErrorCodeDraftsDisabled
 	case ErrorCodeScoreboardFrozen:
 		*s = ErrorCodeScoreboardFrozen
 	case ErrorCodeLimitReached:

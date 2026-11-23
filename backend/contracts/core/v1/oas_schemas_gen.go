@@ -3346,6 +3346,7 @@ const (
 	ErrorCodeContestNotStarted           ErrorCode = "contest_not_started"
 	ErrorCodeContestEnded                ErrorCode = "contest_ended"
 	ErrorCodeClarificationsDisabled      ErrorCode = "clarifications_disabled"
+	ErrorCodeDraftsDisabled              ErrorCode = "drafts_disabled"
 	ErrorCodeScoreboardFrozen            ErrorCode = "scoreboard_frozen"
 	ErrorCodeLimitReached                ErrorCode = "limit_reached"
 	ErrorCodeUnknownLanguage             ErrorCode = "unknown_language"
@@ -3413,6 +3414,7 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeContestNotStarted,
 		ErrorCodeContestEnded,
 		ErrorCodeClarificationsDisabled,
+		ErrorCodeDraftsDisabled,
 		ErrorCodeScoreboardFrozen,
 		ErrorCodeLimitReached,
 		ErrorCodeUnknownLanguage,
@@ -3517,6 +3519,8 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeContestEnded:
 		return []byte(s), nil
 	case ErrorCodeClarificationsDisabled:
+		return []byte(s), nil
+	case ErrorCodeDraftsDisabled:
 		return []byte(s), nil
 	case ErrorCodeScoreboardFrozen:
 		return []byte(s), nil
@@ -3686,6 +3690,9 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeClarificationsDisabled:
 		*s = ErrorCodeClarificationsDisabled
+		return nil
+	case ErrorCodeDraftsDisabled:
+		*s = ErrorCodeDraftsDisabled
 		return nil
 	case ErrorCodeScoreboardFrozen:
 		*s = ErrorCodeScoreboardFrozen

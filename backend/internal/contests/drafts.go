@@ -55,6 +55,9 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 	}
 	var id uuid.UUID
 	err = access.WithinContest(ctx, uc.transactions, creation.ContestID, accessmodel.ContestView, func(tx DraftTxStore, a access.ContestAccess) error {
+		if err := draftsEnabled(a); err != nil {
+			return err
+		}
 		if err := tx.LockDraftOwner(ctx, creation.ContestID, user.Id); err != nil {
 			return err
 		}
@@ -84,6 +87,9 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 		return err
 	}
 	return access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestView, func(tx DraftTxStore, a access.ContestAccess) error {
+		if err := draftsEnabled(a); err != nil {
+			return err
+		}
 		draft, err := tx.GetDraft(ctx, draftID)
 		if err != nil {
 			return err
@@ -108,8 +114,20 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 		return nil, err
 	}
 
-	if _, err := access.Contest(ctx, uc.access, filter.ContestID, accessmodel.ContestView); err != nil {
+	a, err := access.Contest(ctx, uc.access, filter.ContestID, accessmodel.ContestView)
+	if err != nil {
+		return nil, err
+	}
+	if err := draftsEnabled(a); err != nil {
 		return nil, err
 	}
 	return uc.reads.ListDrafts(ctx, user.Id, filter)
+}
+
+// Disabling drafts hides them from everyone, managers included, and keeps them stored.
+func draftsEnabled(a access.ContestAccess) error {
+	if !a.Facts.Contest.Settings.EnableDrafts {
+		return pkg.Wrap(pkg.ErrDraftsDisabled, nil, "drafts are disabled for this contest")
+	}
+	return nil
 }
