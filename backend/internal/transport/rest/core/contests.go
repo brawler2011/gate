@@ -913,7 +913,7 @@ func optBool(v corev1.OptBool) *bool {
 }
 
 func virtualRunDTO(run contestsmodel.VirtualRun) corev1.VirtualRunModel {
-	return corev1.VirtualRunModel{StartedAt: run.StartedAt, EndsAt: run.EndsAt}
+	return corev1.VirtualRunModel{StartedAt: run.StartedAt, EndsAt: run.Over()}
 }
 
 func (h *CoreServer) GetVirtualRun(ctx context.Context, params corev1.GetVirtualRunParams) (*corev1.VirtualRunResponseModel, error) {

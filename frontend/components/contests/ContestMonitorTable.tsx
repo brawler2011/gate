@@ -39,15 +39,19 @@ export const ContestMonitorTable = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [showRealMonitor, setShowRealMonitor] = useState(false);
   const [showVirtual, setShowVirtual] = useState(false);
-  const {replaying} = useVirtualRun(orgLogin, contestLogin);
+  const {replaying, pending} = useVirtualRun(orgLogin, contestLogin);
   // Live updates carry official rows at the present moment, so replayed and virtual views poll instead.
   const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
     params: {
       path: {org_login: orgLogin, contest_login: contestLogin},
       query: showVirtual ? {unfrozen: showRealMonitor, virtual: true} : {unfrozen: showRealMonitor},
     },
-  }, {placeholderData: keepPreviousData, meta: {unfrozen: showRealMonitor, polled: replaying || showVirtual},
-    refetchInterval: replaying || showVirtual ? 30_000 : false});
+  }, {
+    enabled: !pending,
+    placeholderData: keepPreviousData,
+    meta: {unfrozen: showRealMonitor, polled: replaying || showVirtual},
+    refetchInterval: replaying || showVirtual ? 30_000 : false,
+  });
   useEffect(() => {
     if (scoreboard.error) {
       notifications.show({title: "Ошибка", message: "Не удалось загрузить таблицу", color: "red"});

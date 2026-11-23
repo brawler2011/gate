@@ -817,13 +817,15 @@ CREATE TABLE contest_problem_results (
 );
 CREATE INDEX contest_problem_results_contest_idx ON contest_problem_results USING btree (contest_id);
 
--- A personal replay of a finished contest; ends_at is fixed at start so later edits of the contest times keep the run.
+-- A personal replay of a finished contest; the window is fixed at start so later edits of the contest times keep the run.
 CREATE TABLE contest_virtual_runs (
     contest_id uuid NOT NULL,
     user_id uuid NOT NULL,
     started_at timestamptz NOT NULL,
     ends_at timestamptz NOT NULL,
-    CONSTRAINT contest_virtual_runs_check CHECK ((ends_at >= started_at)),
+    finished_at timestamptz,
+    CONSTRAINT contest_virtual_runs_check CHECK ((ends_at > started_at)),
+    CONSTRAINT contest_virtual_runs_finished_check CHECK ((finished_at >= started_at AND finished_at < ends_at)),
     CONSTRAINT contest_virtual_runs_pkey PRIMARY KEY (contest_id, user_id),
     CONSTRAINT contest_virtual_runs_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
     CONSTRAINT contest_virtual_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

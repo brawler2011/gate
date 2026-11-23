@@ -333,21 +333,26 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 }
 
 func sortScoreboardItems(items []contestsmodel.ScoreboardItem) {
-	sort.Slice(items, func(i, j int) bool {
+	sortRanked(items, func(item contestsmodel.ScoreboardItem) *time.Time { return item.LastAcceptedAt })
+}
+
+func sortRanked(items []contestsmodel.ScoreboardItem, lastAccepted func(contestsmodel.ScoreboardItem) *time.Time) {
+	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].ProblemsSolved != items[j].ProblemsSolved {
 			return items[i].ProblemsSolved > items[j].ProblemsSolved
 		}
 		if items[i].TotalPenalty != items[j].TotalPenalty {
 			return items[i].TotalPenalty < items[j].TotalPenalty
 		}
+		a, b := lastAccepted(items[i]), lastAccepted(items[j])
 		switch {
-		case items[i].LastAcceptedAt != nil && items[j].LastAcceptedAt != nil:
-			if !items[i].LastAcceptedAt.Equal(*items[j].LastAcceptedAt) {
-				return items[i].LastAcceptedAt.Before(*items[j].LastAcceptedAt)
+		case a != nil && b != nil:
+			if !a.Equal(*b) {
+				return a.Before(*b)
 			}
-		case items[i].LastAcceptedAt != nil:
+		case a != nil:
 			return true
-		case items[j].LastAcceptedAt != nil:
+		case b != nil:
 			return false
 		}
 		return items[i].Username < items[j].Username

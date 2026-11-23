@@ -88,7 +88,7 @@ func (a Access) ContestFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UU
 	for _, r := range rows {
 		f := access.ContestFacts{Contest: mapContest(r.Contest, r.OrgLogin), Role: accessmodel.ContestRole(r.Role), Now: r.Now, Blocked: r.Blocked, Competed: r.Competed}
 		if r.RunStartedAt != nil && r.RunEndsAt != nil {
-			f.Run = &contestsmodel.VirtualRun{UserID: actor, StartedAt: *r.RunStartedAt, EndsAt: *r.RunEndsAt}
+			f.Run = &contestsmodel.VirtualRun{UserID: actor, StartedAt: *r.RunStartedAt, EndsAt: *r.RunEndsAt, FinishedAt: r.RunFinishedAt}
 		}
 		facts[r.Contest.ID] = f
 	}

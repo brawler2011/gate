@@ -91,10 +91,38 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Require().Len(all, 2)
 	s.True(all[runner.Id].Virtual.Or(false))
 
+	// A run keeps its own two-hour window when the contest is later shortened.
+	begun := time.Now().Add(-100 * time.Minute)
+	_, err = s.dbPool.Exec(s.ctx, `UPDATE contest_virtual_runs SET started_at = $3, ends_at = $4 WHERE contest_id = $1 AND user_id = $2`,
+		contestID, runner.Id, begun, begun.Add(end.Sub(start)))
+	s.Require().NoError(err)
+	_, err = s.dbPool.Exec(s.ctx, `UPDATE submissions SET state = 106, created_at = $2 WHERE id = $1`, id, begun.Add(90*time.Minute))
+	s.Require().NoError(err)
+	shorter := start.Add(time.Hour)
+	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID, EndTime: &shorter, EndTimeSet: true}))
+	late := board(watcher.Id, true)[runner.Id]
+	s.Require().Len(late.ProblemResults, 1)
+	s.Equal(int32(1), late.ProblemResults[0].FailedAttempts)
+
 	finish := corev1.FinishVirtualRunParams{OrgLogin: org.Login, ContestLogin: "virtual"}
 	s.Require().NoError(s.client.FinishVirtualRun(as(runner.Id), finish))
 	s.Equal(http.StatusConflict, s.getStatusCode(s.client.FinishVirtualRun(as(runner.Id), finish)))
 	_, err = submit()
 	s.Equal(http.StatusConflict, s.getStatusCode(err), "after the run upsolving rules apply")
 	s.Equal(int32(1), board(runner.Id, false)[participant.Id].ProblemsSolved, "a finished run shows the final standings")
+
+	// A frozen running contest must not reveal later verdicts through the virtual view either.
+	later := time.Now().Add(time.Hour)
+	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID, EndTime: &later, EndTimeSet: true}))
+	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
+		FreezeStatus: corev1.NewOptUpdateContestRequestModelFreezeStatus(corev1.UpdateContestRequestModelFreezeStatusFrozen)}, path))
+	second := s.createUser("second_virtual", accessmodel.UserRoleUser)
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
+		ContestId: contestID, UserId: second.Id, Role: accessmodel.ContestParticipant}))
+	_, err = s.dbPool.Exec(s.ctx, `INSERT INTO submissions(contest_id,owner_id,problem_id,kind,source,language,state,created_at)
+		VALUES ($1,$2,$3,'contest','print(1)','python3',200,$4)`, contestID, second.Id, problem.ID, start.Add(40*time.Minute))
+	s.Require().NoError(err)
+	for _, virtual := range []bool{false, true} {
+		s.Zero(board(watcher.Id, virtual)[second.Id].ProblemsSolved, "virtual=%v", virtual)
+	}
 }

@@ -794,10 +794,11 @@ type ContestUserProblemBlock struct {
 }
 
 type ContestVirtualRun struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	StartedAt time.Time `json:"started_at"`
-	EndsAt    time.Time `json:"ends_at"`
+	ContestID  uuid.UUID  `json:"contest_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	StartedAt  time.Time  `json:"started_at"`
+	EndsAt     time.Time  `json:"ends_at"`
+	FinishedAt *time.Time `json:"finished_at"`
 }
 
 type EventAggregate struct {

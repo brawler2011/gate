@@ -32,7 +32,7 @@ WHERE p.id = ANY(sqlc.arg('ids')::uuid[]);
 SELECT sqlc.embed(c), o.login AS org_login, COALESCE(a.role::text, '')::text AS role, now()::timestamptz AS now,
     ARRAY(SELECT b.problem_id FROM contest_user_problem_blocks b
           WHERE b.contest_id = c.id AND b.user_id = sqlc.arg('user_id')::uuid)::uuid[] AS blocked,
-    r.started_at AS run_started_at, r.ends_at AS run_ends_at,
+    r.started_at AS run_started_at, r.ends_at AS run_ends_at, r.finished_at AS run_finished_at,
     EXISTS (SELECT 1 FROM submissions s WHERE s.contest_id = c.id AND s.owner_id = sqlc.arg('user_id')::uuid AND s.kind = 'contest') AS competed
 FROM contests c
 JOIN organizations o ON o.id = c.organization_id

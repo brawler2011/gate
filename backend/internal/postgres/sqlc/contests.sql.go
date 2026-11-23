@@ -210,18 +210,18 @@ func (q *Queries) DeleteContestUserProblemBlock(ctx context.Context, arg DeleteC
 }
 
 const finishVirtualRun = `-- name: FinishVirtualRun :exec
-UPDATE contest_virtual_runs SET ends_at = $3::timestamptz
-WHERE contest_id = $1 AND user_id = $2 AND ends_at > $3::timestamptz
+UPDATE contest_virtual_runs SET finished_at = $3::timestamptz
+WHERE contest_id = $1 AND user_id = $2 AND finished_at IS NULL AND ends_at > $3::timestamptz
 `
 
 type FinishVirtualRunParams struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	EndsAt    time.Time `json:"ends_at"`
+	ContestID  uuid.UUID `json:"contest_id"`
+	UserID     uuid.UUID `json:"user_id"`
+	FinishedAt time.Time `json:"finished_at"`
 }
 
 func (q *Queries) FinishVirtualRun(ctx context.Context, arg FinishVirtualRunParams) error {
-	_, err := q.db.Exec(ctx, finishVirtualRun, arg.ContestID, arg.UserID, arg.EndsAt)
+	_, err := q.db.Exec(ctx, finishVirtualRun, arg.ContestID, arg.UserID, arg.FinishedAt)
 	return err
 }
 
@@ -1015,16 +1015,17 @@ func (q *Queries) ListUserContestMemberships(ctx context.Context, userID uuid.UU
 }
 
 const listVirtualRuns = `-- name: ListVirtualRuns :many
-SELECT r.user_id, u.username, r.started_at, r.ends_at
+SELECT r.user_id, u.username, r.started_at, r.ends_at, r.finished_at
 FROM contest_virtual_runs r JOIN users u ON u.id = r.user_id
 WHERE r.contest_id = $1
 `
 
 type ListVirtualRunsRow struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Username  string    `json:"username"`
-	StartedAt time.Time `json:"started_at"`
-	EndsAt    time.Time `json:"ends_at"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Username   string     `json:"username"`
+	StartedAt  time.Time  `json:"started_at"`
+	EndsAt     time.Time  `json:"ends_at"`
+	FinishedAt *time.Time `json:"finished_at"`
 }
 
 func (q *Queries) ListVirtualRuns(ctx context.Context, contestID uuid.UUID) ([]ListVirtualRunsRow, error) {
@@ -1041,6 +1042,7 @@ func (q *Queries) ListVirtualRuns(ctx context.Context, contestID uuid.UUID) ([]L
 			&i.Username,
 			&i.StartedAt,
 			&i.EndsAt,
+			&i.FinishedAt,
 		); err != nil {
 			return nil, err
 		}

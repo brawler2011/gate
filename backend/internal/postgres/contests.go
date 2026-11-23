@@ -944,7 +944,7 @@ func (r *ContestsRepo) CreateVirtualRun(ctx context.Context, contestID uuid.UUID
 
 // FinishVirtualRun ends an active run at the given time; a run already over is left as is.
 func (r *ContestsRepo) FinishVirtualRun(ctx context.Context, contestID, userID uuid.UUID, at time.Time) error {
-	err := r.queries.FinishVirtualRun(ctx, sqlc.FinishVirtualRunParams{ContestID: contestID, UserID: userID, EndsAt: at})
+	err := r.queries.FinishVirtualRun(ctx, sqlc.FinishVirtualRunParams{ContestID: contestID, UserID: userID, FinishedAt: at})
 	return dbError("finish virtual run", err)
 }
 
@@ -955,7 +955,7 @@ func (r *ContestsRepo) ListVirtualRuns(ctx context.Context, contestID uuid.UUID)
 	}
 	runs := make([]contestsmodel.VirtualRun, len(rows))
 	for i, row := range rows {
-		runs[i] = contestsmodel.VirtualRun{UserID: row.UserID, Username: row.Username, StartedAt: row.StartedAt, EndsAt: row.EndsAt}
+		runs[i] = contestsmodel.VirtualRun{UserID: row.UserID, Username: row.Username, StartedAt: row.StartedAt, EndsAt: row.EndsAt, FinishedAt: row.FinishedAt}
 	}
 	return runs, nil
 }

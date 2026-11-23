@@ -68,10 +68,6 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 	if err != nil {
 		return nil, err
 	}
-	official, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contest.ID)
-	if err != nil {
-		return nil, err
-	}
 	runs, err := uc.contestRepo.ListVirtualRuns(ctx, contest.ID)
 	if err != nil {
 		return nil, err
@@ -86,19 +82,29 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 	if elapsed != nil {
 		rules.cutoff = &shown
 	}
+	history := ctx
+	if rules.frozen {
+		history = accessmodel.WithScoreboardFreeze(ctx, contest.GetFreezeTime())
+	}
+	official, err := uc.contestRepo.GetContestScoreboardSubmissions(history, contest.ID)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]contestsmodel.ScoreboardItem, 0, len(participants)+len(runs))
 	results := rulesResults(rules, problems, participants, official)
 	for id, username := range participants {
 		items = append(items, scoreboardItem(id, username, nonNil(results[id])))
 	}
 	response := uc.scoreboardResponse(contest, problems, rules.frozen, contest.GetFreezeTime())
+	offsets := map[uuid.UUID]time.Duration{}
 	for _, run := range runs {
 		own := run.UserID == a.Actor.Id
 		if !own && !others {
 			continue
 		}
 		shifted := contest.Shift(run)
-		cutoff := run.EndsAt
+		offsets[run.UserID] = run.StartedAt.Sub(*contest.StartTime)
+		cutoff := run.Over()
 		if t := at(run.StartedAt); t.Before(cutoff) {
 			cutoff = t
 		}
@@ -112,7 +118,14 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 			response.IsFrozen, response.FreezeTime = runRules.frozen, shifted.GetFreezeTime()
 		}
 	}
-	sortScoreboardItems(items)
+	// Ties on the last acceptance compare elapsed time, so virtual rows move onto the official timeline.
+	sortRanked(items, func(item contestsmodel.ScoreboardItem) *time.Time {
+		if !item.Virtual || item.LastAcceptedAt == nil {
+			return item.LastAcceptedAt
+		}
+		t := item.LastAcceptedAt.Add(-offsets[item.UserID])
+		return &t
+	})
 	response.Items = items
 	return response, nil
 }

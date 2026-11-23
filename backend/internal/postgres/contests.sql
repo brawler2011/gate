@@ -241,11 +241,11 @@ WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.
 INSERT INTO contest_virtual_runs (contest_id, user_id, started_at, ends_at) VALUES ($1, $2, $3, $4);
 
 -- name: FinishVirtualRun :exec
-UPDATE contest_virtual_runs SET ends_at = sqlc.arg('ends_at')::timestamptz
-WHERE contest_id = $1 AND user_id = $2 AND ends_at > sqlc.arg('ends_at')::timestamptz;
+UPDATE contest_virtual_runs SET finished_at = sqlc.arg('finished_at')::timestamptz
+WHERE contest_id = $1 AND user_id = $2 AND finished_at IS NULL AND ends_at > sqlc.arg('finished_at')::timestamptz;
 
 -- name: ListVirtualRuns :many
-SELECT r.user_id, u.username, r.started_at, r.ends_at
+SELECT r.user_id, u.username, r.started_at, r.ends_at, r.finished_at
 FROM contest_virtual_runs r JOIN users u ON u.id = r.user_id
 WHERE r.contest_id = $1;
 

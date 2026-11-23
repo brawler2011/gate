@@ -96,8 +96,8 @@ func newContestState(actor m.User, f ContestFacts) contestState {
 	user := !actor.IsGuest()
 	s.participant = user && (r >= 1 || public && c.Settings.ParticipationMode == contestsmodel.ParticipationModeOpen)
 	s.virtual = user && s.view && f.Run != nil
-	s.replaying = s.virtual && !f.Now.Before(f.Run.StartedAt) && f.Now.Before(f.Run.EndsAt)
-	s.competitor = s.participant || user && s.view && s.finished && (c.Settings.EnableUpsolving || s.virtual)
+	s.replaying = s.virtual && !f.Now.Before(f.Run.StartedAt) && f.Now.Before(f.Run.Over())
+	s.competitor = s.participant || s.replaying || user && s.view && s.finished && (c.Settings.EnableUpsolving || s.virtual)
 	return s
 }
 
@@ -134,8 +134,11 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 	case m.ContestListOwnSubmissions:
 		return s.competitor
 	case m.ContestSubmit:
-		if s.finished {
-			return s.replaying || settings.EnableUpsolving && s.competitor
+		switch {
+		case s.replaying:
+			return true
+		case s.finished:
+			return settings.EnableUpsolving && s.competitor
 		}
 		return s.started && s.participant
 	case m.ContestStartVirtual:

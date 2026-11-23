@@ -36,7 +36,7 @@ const loadContestAccess = `-- name: LoadContestAccess :many
 SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login, COALESCE(a.role::text, '')::text AS role, now()::timestamptz AS now,
     ARRAY(SELECT b.problem_id FROM contest_user_problem_blocks b
           WHERE b.contest_id = c.id AND b.user_id = $1::uuid)::uuid[] AS blocked,
-    r.started_at AS run_started_at, r.ends_at AS run_ends_at,
+    r.started_at AS run_started_at, r.ends_at AS run_ends_at, r.finished_at AS run_finished_at,
     EXISTS (SELECT 1 FROM submissions s WHERE s.contest_id = c.id AND s.owner_id = $1::uuid AND s.kind = 'contest') AS competed
 FROM contests c
 JOIN organizations o ON o.id = c.organization_id
@@ -51,14 +51,15 @@ type LoadContestAccessParams struct {
 }
 
 type LoadContestAccessRow struct {
-	Contest      Contest     `json:"contest"`
-	OrgLogin     string      `json:"org_login"`
-	Role         string      `json:"role"`
-	Now          time.Time   `json:"now"`
-	Blocked      []uuid.UUID `json:"blocked"`
-	RunStartedAt *time.Time  `json:"run_started_at"`
-	RunEndsAt    *time.Time  `json:"run_ends_at"`
-	Competed     bool        `json:"competed"`
+	Contest       Contest     `json:"contest"`
+	OrgLogin      string      `json:"org_login"`
+	Role          string      `json:"role"`
+	Now           time.Time   `json:"now"`
+	Blocked       []uuid.UUID `json:"blocked"`
+	RunStartedAt  *time.Time  `json:"run_started_at"`
+	RunEndsAt     *time.Time  `json:"run_ends_at"`
+	RunFinishedAt *time.Time  `json:"run_finished_at"`
+	Competed      bool        `json:"competed"`
 }
 
 func (q *Queries) LoadContestAccess(ctx context.Context, arg LoadContestAccessParams) ([]LoadContestAccessRow, error) {
@@ -101,6 +102,7 @@ func (q *Queries) LoadContestAccess(ctx context.Context, arg LoadContestAccessPa
 			&i.Blocked,
 			&i.RunStartedAt,
 			&i.RunEndsAt,
+			&i.RunFinishedAt,
 			&i.Competed,
 		); err != nil {
 			return nil, err

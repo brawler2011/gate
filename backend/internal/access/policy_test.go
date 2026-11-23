@@ -204,6 +204,7 @@ func TestVirtualRunPolicy(t *testing.T) {
 		{"second run", m.ContestStartVirtual, finished, replayable, over, false, "000000"},
 		{"private", m.ContestStartVirtual, finished, func(c *cm.Contest) { c.Settings.AllowVirtual = true }, nil, false, "001111"},
 		{"during the run without upsolving", m.ContestSubmit, finished, replayable, active, false, "011111"},
+		{"during the run after the end moved later", m.ContestSubmit, running, replayable, active, false, "011111"},
 		{"after the run without upsolving", m.ContestSubmit, finished, replayable, over, false, "000000"},
 		{"participant scope without a run", m.ContestViewScoreboard, finished, replayable, nil, false, "001111"},
 		{"participant scope with a run", m.ContestViewScoreboard, finished, replayable, over, false, "011111"},
