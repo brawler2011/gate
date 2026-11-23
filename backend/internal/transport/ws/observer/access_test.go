@@ -93,10 +93,14 @@ func (m *accessStub) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUI
 		c.Visibility = contestsmodel.ContestVisibilityPublic
 	}
 	c.Settings.JoinPolicy = accessmodel.JoinInviteOnly
-	c.Settings.MonitorScope = scope(p.GetMonitor)
-	c.Settings.SubmissionsListScope = scope(p.ListUsersSubmissions)
-	c.Settings.SubmissionsReviewScope = scope(p.GetOtherUserSubmission)
-	c.Settings.SubmissionDetailsScope = scope(p.GetSubmissionDetails)
+	c.Settings.Scoreboard = contestsmodel.Same(scope(p.GetMonitor))
+	c.Settings.Submissions = contestsmodel.Same(scope(p.ListUsersSubmissions))
+	c.Settings.Sources = contestsmodel.Same(scope(p.GetOtherUserSubmission))
+	c.Settings.Reports = contestsmodel.Same(scope(p.GetSubmissionDetails))
+	c.Settings.Feedback = contestsmodel.Same(contestsmodel.FeedbackVerdict)
+	if p.GetSubmissionDetails {
+		c.Settings.Feedback = contestsmodel.Same(contestsmodel.FeedbackFull)
+	}
 	facts := map[uuid.UUID]access.ContestFacts{}
 	for _, id := range ids {
 		if id == c.ID {
@@ -124,7 +128,7 @@ type wsFixture struct {
 
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
-	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, MonitorScope: contestsmodel.ScopeParticipant, SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}}, permissions: contestPermissions{GetContest: true, ListOwnSubmissions: true}}
+	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public", Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, FreezeStatus: contestsmodel.FreezeStatusAuto, Scoreboard: contestsmodel.Same(contestsmodel.ScopeParticipant), Submissions: contestsmodel.Same(contestsmodel.ScopeModerator), Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}}, permissions: contestPermissions{GetContest: true, ListOwnSubmissions: true}}
 	f := &wsFixture{stub: stub, hub: NewHub(stub, nil), contests: NewContestsHub(), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub, middleware.ResponseErrorHandler(slog.Default())), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
@@ -275,7 +279,7 @@ func TestHandshake(t *testing.T) {
 func TestSubmissionQueueLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = contestPermissions{GetMonitor: true, ListOwnSubmissions: true}
-	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), FreezeStatus: contestsmodel.FreezeStatusFrozen, Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}
 	other := uuid.New()
 	meta := f.meta(other)
 	created := &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: submissionsmodel.Saved, Source: "secret code"}
@@ -290,7 +294,7 @@ func TestSubmissionQueueLiveAndRevocation(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	for range 2 {
 		payload := readPayload(t, conn)
-		require.Equal(t, true, payload["frozen"])
+		require.Equal(t, true, payload["result_hidden"])
 		for _, key := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "source", "failed_test"} {
 			require.NotContains(t, payload, key)
 		}
@@ -302,7 +306,7 @@ func TestSubmissionQueueLiveAndRevocation(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &own)
 	payload := readPayload(t, conn)
 	require.InDelta(t, float64(submissionsmodel.Accepted), payload["state"], 0)
-	require.NotContains(t, payload, "frozen")
+	require.NotContains(t, payload, "result_hidden")
 	f.stub.change(func() { f.stub.permissions = contestPermissions{} })
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, completed)
 	requireClose(t, conn, 1008)
@@ -340,7 +344,7 @@ func TestDeliveryRevalidates(t *testing.T) {
 func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = contestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
-	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), FreezeStatus: contestsmodel.FreezeStatusFrozen, Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}
 	conn := f.connect(t, f.path("submissions"))
 	meta := f.meta(uuid.New())
 	id := uuid.New()
@@ -355,9 +359,9 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
-	require.Equal(t, true, readPayload(t, conn)["frozen"])
+	require.Equal(t, true, readPayload(t, conn)["result_hidden"])
 	f.stub.change(func() {
-		f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+		f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), FreezeStatus: contestsmodel.FreezeStatusUnfrozen, Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}
 	})
 	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
@@ -366,7 +370,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	payload := readPayload(t, conn)
 	require.NotContains(t, payload, "source")
-	require.NotContains(t, payload, "frozen")
+	require.NotContains(t, payload, "result_hidden")
 	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: id, State: 200})
 	require.InDelta(t, float64(200), readPayload(t, conn)["state"], 0)
@@ -489,7 +493,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 			end := time.Now().Add(30 * time.Minute)
 			boundary := end.Add(-time.Hour)
 			f.stub.contest.EndTime = &end
-			f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatus(test.status), FreezeDurationMinutes: new(int32(60)), SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+			f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), FreezeStatus: contestsmodel.FreezeStatus(test.status), FreezeDurationMinutes: new(int32(60)), Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}
 			if test.noBoundary {
 				f.stub.contest.EndTime = nil
 			}
@@ -504,11 +508,11 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 			f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: 106, FailedTest: &failed})
 			payload := readPayload(t, conn)
 			if test.frozen {
-				require.Equal(t, true, payload["frozen"])
+				require.Equal(t, true, payload["result_hidden"])
 				require.NotContains(t, payload, "state")
 				require.NotContains(t, payload, "failed_test")
 			} else {
-				require.NotContains(t, payload, "frozen")
+				require.NotContains(t, payload, "result_hidden")
 				require.InDelta(t, 106, payload["state"], 0)
 				require.InDelta(t, 7, payload["failed_test"], 0)
 			}
@@ -519,13 +523,13 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 func TestPublicGuestAudience(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}
-	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
+	f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), FreezeStatus: contestsmodel.FreezeStatusFrozen, Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}
 	conn, resp, err := f.dial(t, f.path("submissions"), false)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
 	payload := readPayload(t, conn)
-	require.Equal(t, true, payload["frozen"])
+	require.Equal(t, true, payload["result_hidden"])
 	require.NotContains(t, payload, "state")
 }
 
@@ -536,8 +540,8 @@ func TestUpsolverGetsPublicAudience(t *testing.T) {
 	c.EndTime = &end
 	c.Settings.EnableUpsolving = true
 	c.Settings.JoinPolicy = accessmodel.JoinInviteOnly
-	c.Settings.MonitorScope = contestsmodel.ScopePublic
-	c.Settings.SubmissionsListScope = contestsmodel.ScopeParticipant
+	c.Settings.Scoreboard = contestsmodel.Same(contestsmodel.ScopePublic)
+	c.Settings.Submissions = contestsmodel.Same(contestsmodel.ScopeParticipant)
 	f.stub.contest.Settings, f.stub.contest.EndTime = c.Settings, c.EndTime
 	f.stub.facts = &access.ContestFacts{Contest: c, Now: time.Now()}
 	conn := f.connect(t, f.path("submissions"))

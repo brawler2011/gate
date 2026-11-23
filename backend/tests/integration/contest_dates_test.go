@@ -127,8 +127,8 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 		{"zero", `{"freeze_duration_minutes":0}`, http.StatusBadRequest, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
 		{"false", `{"enable_drafts":false}`, http.StatusOK, new(int32(30)), false, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
 		{"empty", `{"description":""}`, http.StatusOK, new(int32(30)), true, "", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
-		{"public_scope", `{"monitor_scope":"public"}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopePublic},
-		{"unknown_scope", `{"monitor_scope":"owner"}`, http.StatusBadRequest, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
+		{"public_scope", `{"scoreboard_during":"public"}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopePublic},
+		{"unknown_scope", `{"scoreboard_during":"owner"}`, http.StatusBadRequest, new(int32(30)), true, "Original", contestsmodel.FreezeStatusFrozen, contestsmodel.ScopeParticipant},
 		{"explicit_auto", `{"freeze_status":"auto"}`, http.StatusOK, new(int32(30)), true, "Original", contestsmodel.FreezeStatusAuto, contestsmodel.ScopeParticipant},
 	} {
 		s.Run(tc.name, func() {
@@ -156,7 +156,7 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 			s.Equal(tc.description, got.Description)
 			s.Equal(tc.freezeStatus, got.Settings.FreezeStatus)
 			s.Equal(tc.freezeStatus == contestsmodel.FreezeStatusFrozen, got.Settings.FreezeStartedAt != nil, "manual freeze records its start")
-			s.Equal(tc.monitor, got.Settings.MonitorScope)
+			s.Equal(tc.monitor, got.Settings.Scoreboard.During)
 		})
 	}
 }

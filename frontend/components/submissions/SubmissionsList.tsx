@@ -29,8 +29,8 @@ interface VerdictCellProps {
 const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
   const {state, progress, failed_test} = submission;
 
-  if (submission.frozen) {
-    return <Text c="dimmed">Заморожено</Text>;
+  if (submission.result_hidden) {
+    return <Text c="dimmed">Скрыто</Text>;
   }
 
   if (state === 1 && !progress) {

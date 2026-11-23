@@ -373,11 +373,12 @@ describe('Query-owned submission lists', () => {
   it('uses the frozen server snapshot without retaining hidden verdict fields', async () => {
     const {result} = view(); const socket = await open();
     const {state: _state, ...metadata} = submission();
-    fetch.mockImplementation(Object.assign(async () => Response.json(data({...metadata, revision: 2, frozen: true})),
+    const hidden = {...metadata, revision: 2, result_hidden: true};
+    fetch.mockImplementation(Object.assign(async () => Response.json(data(hidden)),
       {preconnect: () => {}}));
-    await act(async () => message(socket, 'completed', {...metadata, revision: 2, frozen: true}));
+    await act(async () => message(socket, 'completed', {...metadata, revision: 2, result_hidden: true}));
     await advance(100);
-    expect(result.current.submissions[0].frozen).toBe(true);
+    expect(result.current.submissions[0].result_hidden).toBe(true);
     expect(result.current.submissions[0].state).toBeUndefined();
     expect(result.current.submissions[0].score).toBeUndefined();
   });

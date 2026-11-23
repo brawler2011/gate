@@ -7,6 +7,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,7 @@ func TestSubmissionViewFreeze(t *testing.T) {
 		{"missing author", "auto", boundary, nil, false, true, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			contest := contestsmodel.Contest{Settings: contestsmodel.ContestSettings{FreezeStatus: test.status, SubmissionsReviewScope: contestsmodel.ScopePublic, SubmissionDetailsScope: contestsmodel.ScopePublic}}
+			contest := contestsmodel.Contest{Settings: contestsmodel.ContestSettings{FreezeStatus: test.status, Sources: contestsmodel.Same(contestsmodel.ScopePublic), Reports: contestsmodel.Same(contestsmodel.ScopePublic), Feedback: contestsmodel.Same(contestsmodel.FeedbackFull)}}
 			if test.duration {
 				contest.Settings.FreezeDurationMinutes = new(int32(60))
 			}
@@ -48,14 +49,45 @@ func TestSubmissionViewFreeze(t *testing.T) {
 				role = accessmodel.ContestModerator
 			}
 			view := SubmissionView(viewerAccess(viewer, contest, role, now), test.author, test.created)
-			require.Equal(t, test.frozen, view.Frozen)
+			require.Equal(t, test.frozen, view.Hidden())
 			require.Equal(t, !test.frozen, view.Source)
-			require.Equal(t, !test.frozen, view.Details)
+			require.Equal(t, !test.frozen, view.Results.Tests())
 		})
 	}
 	futureEnd := now.Add(2 * time.Hour)
-	contest := contestsmodel.Contest{EndTime: &futureEnd, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60))}}
-	require.False(t, SubmissionView(viewerAccess(viewer, contest, "", now), &other, futureEnd).Frozen)
+	contest := contestsmodel.Contest{EndTime: &futureEnd, Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60)),
+		Submissions: contestsmodel.Same(contestsmodel.ScopePublic), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}}
+	require.False(t, SubmissionView(viewerAccess(viewer, contest, "", now), &other, futureEnd).Hidden())
+}
+
+func TestSubmissionReportLevels(t *testing.T) {
+	compile := "warning"
+	details := &submissionsmodel.SubmissionTestDetails{CompilerOutput: &compile, Tests: []submissionsmodel.TestDetailItem{
+		{TestIndex: 1, Verdict: "OK", Sample: true}, {TestIndex: 2, Verdict: "OK"}, {TestIndex: 3, Verdict: "WA"},
+	}, FailedTestDetails: &submissionsmodel.FailedTestDetail{TestIndex: 3, Input: "secret"}}
+	for _, test := range []struct {
+		level  contestsmodel.FeedbackLevel
+		tests  []int32
+		failed bool
+	}{
+		{contestsmodel.FeedbackVerdict, nil, false},
+		{contestsmodel.FeedbackSamples, []int32{1}, false},
+		{contestsmodel.FeedbackTests, []int32{1, 2, 3}, false},
+		{contestsmodel.FeedbackFull, []int32{1, 2, 3}, true},
+	} {
+		t.Run(string(test.level), func(t *testing.T) {
+			report := SubmissionVisibility{Results: test.level}.Report(details)
+			require.Equal(t, &compile, report.CompilerOutput)
+			var tests []int32
+			for _, item := range report.Tests {
+				tests = append(tests, item.TestIndex)
+			}
+			require.Equal(t, test.tests, tests)
+			require.Equal(t, test.failed, report.FailedTestDetails != nil)
+		})
+	}
+	require.Nil(t, SubmissionVisibility{Results: contestsmodel.FeedbackHidden}.Report(details))
+	require.Len(t, details.Tests, 3, "trimming must not change the stored report")
 }
 
 func viewerAccess(viewer uuid.UUID, contest contestsmodel.Contest, role accessmodel.ContestRole, now time.Time) access.ContestAccess {

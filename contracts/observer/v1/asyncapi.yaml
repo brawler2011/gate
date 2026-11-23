@@ -140,7 +140,7 @@ components:
           required:
             - id
           properties:
-            frozen:
+            result_hidden:
               type: boolean
             id:
               type: string
@@ -201,7 +201,7 @@ components:
           required:
             - id
           properties:
-            frozen:
+            result_hidden:
               type: boolean
             id:
               type: string

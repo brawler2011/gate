@@ -27,6 +27,15 @@ CREATE TYPE contest_visibility AS ENUM (
     'public'
 );
 
+-- What authors see about their own submissions; others never see more.
+CREATE TYPE feedback_level AS ENUM (
+    'hidden',
+    'verdict',
+    'samples',
+    'tests',
+    'full'
+);
+
 CREATE TYPE freeze_status AS ENUM (
     'auto',
     'frozen',
@@ -421,13 +430,23 @@ CREATE TABLE contests (
     login varchar(64) NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     join_policy join_policy DEFAULT 'open'::join_policy NOT NULL,
-    monitor_scope contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
-    submissions_list_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
-    submissions_review_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
-    submission_details_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    -- Audiences of other people's results while the contest runs and after it ends.
+    scoreboard_during contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
+    scoreboard_after contest_scope DEFAULT 'public'::contest_scope NOT NULL,
+    submissions_during contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    submissions_after contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
+    sources_during contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    sources_after contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    reports_during contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    reports_after contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    feedback_during feedback_level DEFAULT 'verdict'::feedback_level NOT NULL,
+    feedback_after feedback_level DEFAULT 'full'::feedback_level NOT NULL,
     freeze_status freeze_status DEFAULT 'auto'::freeze_status NOT NULL,
     freeze_duration_minutes integer,
     freeze_started_at timestamptz,
+    freeze_hides_attempts boolean DEFAULT false NOT NULL,
+    -- NULL lifts the freeze at the end.
+    unfreeze_time timestamptz,
     hide_statements boolean DEFAULT false NOT NULL,
     allow_clarifications boolean DEFAULT true NOT NULL,
     enable_drafts boolean DEFAULT true NOT NULL,
@@ -441,6 +460,7 @@ CREATE TABLE contests (
     CONSTRAINT contests_check CHECK (((end_time IS NULL) OR (start_time IS NULL) OR (end_time > start_time))),
     CONSTRAINT contests_freeze_duration_check CHECK ((freeze_duration_minutes > 0)),
     CONSTRAINT contests_freeze_started_check CHECK (((freeze_status = 'frozen'::freeze_status) = (freeze_started_at IS NOT NULL))),
+    CONSTRAINT contests_unfreeze_time_check CHECK ((unfreeze_time >= end_time)),
     CONSTRAINT contests_login_check CHECK (((length((login)::text) >= 3) AND (length((login)::text) <= 64))),
     CONSTRAINT contests_pkey PRIMARY KEY (id),
     CONSTRAINT contests_id_organization_unique UNIQUE (id, organization_id),

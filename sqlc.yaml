@@ -93,6 +93,18 @@ sql:
               package: "contestsmodel"
               type: "ContestScope"
               pointer: true
+          - db_type: "feedback_level"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "FeedbackLevel"
+          - db_type: "feedback_level"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "FeedbackLevel"
+              pointer: true
           - db_type: "freeze_status"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"

@@ -178,19 +178,30 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	}
 
 	settings := contestsmodel.ContestSettingsPatch{
-		MonitorScope:           optScope(req.MonitorScope),
-		SubmissionsListScope:   optScope(req.SubmissionsListScope),
-		SubmissionsReviewScope: optScope(req.SubmissionsReviewScope),
-		SubmissionDetailsScope: optScope(req.SubmissionDetailsScope),
-		FreezeDurationSet:      req.FreezeDurationMinutes.IsSet(),
-		HideStatements:         optBool(req.HideStatements),
-		AllowClarifications:    optBool(req.AllowClarifications),
-		EnableDrafts:           optBool(req.EnableDrafts),
-		EnableUpsolving:        optBool(req.EnableUpsolving),
-		AllowVirtual:           optBool(req.AllowVirtual),
+		ScoreboardDuring:    optScope(req.ScoreboardDuring),
+		ScoreboardAfter:     optScope(req.ScoreboardAfter),
+		SubmissionsDuring:   optScope(req.SubmissionsDuring),
+		SubmissionsAfter:    optScope(req.SubmissionsAfter),
+		SourcesDuring:       optScope(req.SourcesDuring),
+		SourcesAfter:        optScope(req.SourcesAfter),
+		ReportsDuring:       optScope(req.ReportsDuring),
+		ReportsAfter:        optScope(req.ReportsAfter),
+		FeedbackDuring:      optFeedback(req.FeedbackDuring),
+		FeedbackAfter:       optFeedback(req.FeedbackAfter),
+		FreezeHidesAttempts: optBool(req.FreezeHidesAttempts),
+		UnfreezeTimeSet:     req.UnfreezeTime.IsSet(),
+		FreezeDurationSet:   req.FreezeDurationMinutes.IsSet(),
+		HideStatements:      optBool(req.HideStatements),
+		AllowClarifications: optBool(req.AllowClarifications),
+		EnableDrafts:        optBool(req.EnableDrafts),
+		EnableUpsolving:     optBool(req.EnableUpsolving),
+		AllowVirtual:        optBool(req.AllowVirtual),
 	}
 	if v, ok := req.FreezeDurationMinutes.Get(); ok {
 		settings.FreezeDurationMinutes = &v
+	}
+	if v, ok := req.UnfreezeTime.Get(); ok {
+		settings.UnfreezeTime = &v
 	}
 	if v, ok := req.FreezeStatus.Get(); ok {
 		status := contestsmodel.FreezeStatus(v)
@@ -859,6 +870,14 @@ func optScope(v corev1.OptContestScope) *contestsmodel.ContestScope {
 	}
 	scope := contestsmodel.ContestScope(v.Value)
 	return &scope
+}
+
+func optFeedback(v corev1.OptFeedbackLevel) *contestsmodel.FeedbackLevel {
+	if !v.IsSet() {
+		return nil
+	}
+	level := contestsmodel.FeedbackLevel(v.Value)
+	return &level
 }
 
 func optBool(v corev1.OptBool) *bool {

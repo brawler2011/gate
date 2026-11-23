@@ -47,7 +47,7 @@ func (m *visibilityStub) ListSubmissions(context.Context, submissionsmodel.Submi
 
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
-	public := contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, SubmissionsReviewScope: contestsmodel.ScopePublic, SubmissionDetailsScope: contestsmodel.ScopePublic}
+	public := contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, Scoreboard: contestsmodel.Same(contestsmodel.ScopePublic), Submissions: contestsmodel.Same(contestsmodel.ScopePublic), Sources: contestsmodel.Same(contestsmodel.ScopePublic), Reports: contestsmodel.Same(contestsmodel.ScopePublic), Feedback: contestsmodel.Same(contestsmodel.FeedbackFull)}
 	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Visibility: contestsmodel.ContestVisibilityPublic, Settings: public}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
 	loader := &accesstest.Loader{}
 	setContest := func() {
@@ -75,9 +75,9 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 				require.NoError(t, json.Unmarshal(data, &payload))
 				if own {
 					require.InDelta(t, 200, payload["state"], 0)
-					require.NotContains(t, payload, "frozen")
+					require.NotContains(t, payload, "result_hidden")
 				} else {
-					require.Equal(t, true, payload["frozen"])
+					require.Equal(t, true, payload["result_hidden"])
 					for _, key := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "submission", "ban_reason"} {
 						require.NotContains(t, payload, key)
 					}

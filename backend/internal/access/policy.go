@@ -85,6 +85,8 @@ func ProblemAllows(actor m.User, f ProblemFacts, action m.ProblemAction) bool {
 
 type contestState struct {
 	manager, view, started, finished bool
+	// after selects the settings for a finished contest; a replay still runs under the "during" ones.
+	after bool
 	// competitor may submit or has submitted: a participant, a virtual runner, or anyone upsolving a finished contest.
 	participant, competitor bool
 	// virtual: the actor has a virtual run; replaying: it is under way.
@@ -108,19 +110,24 @@ func newContestState(actor m.User, f ContestFacts) contestState {
 	s.virtual = user && s.view && f.Run != nil
 	s.replaying = s.virtual && !f.Now.Before(f.Run.StartedAt) && f.Now.Before(f.Run.Over())
 	s.competitor = s.participant || s.replaying || user && s.view && s.finished && (c.Settings.EnableUpsolving || s.virtual)
+	s.after = s.finished && !s.replaying
 	return s
 }
 
-// audience reports whether a scope setting admits the actor; managers pass every scope.
-func (s contestState) audience(scope contestsmodel.ContestScope) bool {
-	switch scope {
+// audience reports whether a setting admits the actor in the current phase; managers pass every setting.
+func (s contestState) audience(rule contestsmodel.Phased[contestsmodel.ContestScope]) bool {
+	switch rule.At(s.after) {
 	case contestsmodel.ScopePublic:
 		return s.manager || s.view && s.started
 	case contestsmodel.ScopeParticipant:
-		return s.manager || s.participant && s.started
+		return s.manager || (s.participant || s.virtual) && s.started
 	default:
 		return s.manager
 	}
+}
+
+func (s contestState) feedback() contestsmodel.FeedbackLevel {
+	return s.f.Contest.Settings.Feedback.At(s.after)
 }
 
 func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
@@ -138,9 +145,10 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 	case m.ContestDelete:
 		return rank(actor, f.Role) >= 3
 	case m.ContestViewScoreboard:
-		return s.audience(settings.MonitorScope) || s.virtual && settings.MonitorScope != contestsmodel.ScopeModerator
+		// The scoreboard would reveal verdicts that authors may not see yet.
+		return s.manager || s.audience(settings.Scoreboard) && s.feedback() != contestsmodel.FeedbackHidden
 	case m.ContestListSubmissions:
-		return s.audience(settings.SubmissionsListScope)
+		return s.audience(settings.Submissions)
 	case m.ContestListOwnSubmissions:
 		return s.competitor
 	case m.ContestSubmit:
@@ -158,18 +166,31 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 	return false
 }
 
-func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, action m.SubmissionAction) bool {
+// SubmissionGrant is what the actor may see of one contest submission.
+type SubmissionGrant struct {
+	Open, Source bool
+	Results      contestsmodel.FeedbackLevel
+}
+
+// SubmissionAllows grants authors their feedback level and others never more than the author sees.
+func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID) SubmissionGrant {
 	s := newContestState(actor, f)
 	settings := f.Contest.Settings
-	own := !actor.IsGuest() && author == actor.Id && s.competitor
-	view := own || s.audience(settings.SubmissionsReviewScope)
-	switch action {
-	case m.SubmissionView:
-		return view
-	case m.SubmissionViewDetails:
-		return view && s.audience(settings.SubmissionDetailsScope)
+	if s.manager {
+		return SubmissionGrant{Open: true, Source: true, Results: contestsmodel.FeedbackFull}
 	}
-	return false
+	level := s.feedback()
+	if !actor.IsGuest() && author == actor.Id && s.competitor {
+		return SubmissionGrant{Open: true, Source: level != contestsmodel.FeedbackHidden, Results: level}
+	}
+	if !s.audience(settings.Reports) && level != contestsmodel.FeedbackHidden {
+		level = contestsmodel.FeedbackVerdict
+	}
+	source := s.audience(settings.Sources)
+	if !source && !s.audience(settings.Submissions) {
+		return SubmissionGrant{Results: contestsmodel.FeedbackHidden}
+	}
+	return SubmissionGrant{Open: true, Source: source, Results: level}
 }
 
 // ChangeRole decides setting target's role from current to next, where "" means no role.

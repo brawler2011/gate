@@ -180,30 +180,38 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 	visibility := string(c.Visibility)
 	s := c.Settings
 	model := corev1.ContestModel{
-		ID:                     c.ID,
-		Login:                  c.Login,
-		OrganizationID:         c.OrganizationID,
-		OrganizationLogin:      c.OrganizationLogin,
-		Title:                  title,
-		Description:            c.Description,
-		Visibility:             visibility,
-		MonitorScope:           corev1.ContestScope(s.MonitorScope),
-		SubmissionsListScope:   corev1.ContestScope(s.SubmissionsListScope),
-		SubmissionsReviewScope: corev1.ContestScope(s.SubmissionsReviewScope),
-		SubmissionDetailsScope: corev1.ContestScope(s.SubmissionDetailsScope),
-		FreezeDurationMinutes:  int32PtrToOptNilInt32(s.FreezeDurationMinutes),
-		FreezeStatus:           corev1.ContestModelFreezeStatus(s.FreezeStatus),
-		EnableDrafts:           s.EnableDrafts,
-		AllowClarifications:    s.AllowClarifications,
-		EnableUpsolving:        s.EnableUpsolving,
-		AllowVirtual:           s.AllowVirtual,
-		JoinPolicy:             corev1.ContestModelJoinPolicy(s.JoinPolicy),
-		HideStatements:         s.HideStatements,
-		Languages:              append([]string{}, s.Languages...),
-		CreatedAt:              c.CreatedAt,
-		UpdatedAt:              c.UpdatedAt,
-		StartTime:              timePtrToOptNilDateTime(c.StartTime),
-		EndTime:                timePtrToOptNilDateTime(c.EndTime),
+		ID:                    c.ID,
+		Login:                 c.Login,
+		OrganizationID:        c.OrganizationID,
+		OrganizationLogin:     c.OrganizationLogin,
+		Title:                 title,
+		Description:           c.Description,
+		Visibility:            visibility,
+		ScoreboardDuring:      corev1.ContestScope(s.Scoreboard.During),
+		ScoreboardAfter:       corev1.ContestScope(s.Scoreboard.After),
+		SubmissionsDuring:     corev1.ContestScope(s.Submissions.During),
+		SubmissionsAfter:      corev1.ContestScope(s.Submissions.After),
+		SourcesDuring:         corev1.ContestScope(s.Sources.During),
+		SourcesAfter:          corev1.ContestScope(s.Sources.After),
+		ReportsDuring:         corev1.ContestScope(s.Reports.During),
+		ReportsAfter:          corev1.ContestScope(s.Reports.After),
+		FeedbackDuring:        corev1.FeedbackLevel(s.Feedback.During),
+		FeedbackAfter:         corev1.FeedbackLevel(s.Feedback.After),
+		FreezeHidesAttempts:   s.FreezeHidesAttempts,
+		UnfreezeTime:          timePtrToOptNilDateTime(s.UnfreezeTime),
+		FreezeDurationMinutes: int32PtrToOptNilInt32(s.FreezeDurationMinutes),
+		FreezeStatus:          corev1.ContestModelFreezeStatus(s.FreezeStatus),
+		EnableDrafts:          s.EnableDrafts,
+		AllowClarifications:   s.AllowClarifications,
+		EnableUpsolving:       s.EnableUpsolving,
+		AllowVirtual:          s.AllowVirtual,
+		JoinPolicy:            corev1.ContestModelJoinPolicy(s.JoinPolicy),
+		HideStatements:        s.HideStatements,
+		Languages:             append([]string{}, s.Languages...),
+		CreatedAt:             c.CreatedAt,
+		UpdatedAt:             c.UpdatedAt,
+		StartTime:             timePtrToOptNilDateTime(c.StartTime),
+		EndTime:               timePtrToOptNilDateTime(c.EndTime),
 	}
 
 	return model
@@ -318,8 +326,8 @@ func SubmissionListItemDTO(s submissionsmodel.Submission) corev1.SubmissionsList
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
-	if s.Frozen {
-		dto.Frozen = corev1.NewOptBool(true)
+	if s.ResultHidden {
+		dto.ResultHidden = corev1.NewOptBool(true)
 		dto.State.Reset()
 		dto.Score.Reset()
 		dto.Penalty.Reset()
@@ -346,6 +354,7 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 				Verdict:   t.Verdict,
 				TimeMs:    t.TimeMs,
 				MemoryKB:  t.MemoryKb,
+				Sample:    corev1.NewOptBool(t.Sample),
 			}
 		}
 	}
@@ -408,8 +417,8 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
-	if s.Frozen {
-		dto.Frozen = corev1.NewOptBool(true)
+	if s.ResultHidden {
+		dto.ResultHidden = corev1.NewOptBool(true)
 		dto.State.Reset()
 		dto.Score.Reset()
 		dto.Penalty.Reset()
@@ -418,11 +427,8 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 		dto.FailedTest.Reset()
 		dto.BanReason.Reset()
 	}
-	if s.SourceHidden || s.Frozen {
+	if s.SourceHidden {
 		dto.Submission.Reset()
-	}
-	if s.Frozen {
-		dto.TestDetails.Reset()
 	}
 	return dto
 

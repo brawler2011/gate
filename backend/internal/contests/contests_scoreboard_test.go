@@ -300,6 +300,26 @@ func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	require.Zero(t, sb.Items[0].ProblemResults[0].FailedAttempts)
 }
 
+func TestScoreboardFreezeHidesAttempts(t *testing.T) {
+	f := newScoreboardFixture("alice", "bob")
+	f.submit(t, "alice", 0, submissionsmodel.GotWA, 10*time.Minute)
+	f.submit(t, "alice", 0, submissionsmodel.Accepted, 70*time.Minute)
+	f.submit(t, "bob", 0, submissionsmodel.Accepted, 70*time.Minute)
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusAuto
+	f.repo.contest.Settings.FreezeHidesAttempts = true
+	sb := f.scoreboard(t, false)
+	require.True(t, sb.IsFrozen)
+	cells := map[string][]contestsmodel.ContestProblemResult{}
+	for _, item := range sb.Items {
+		cells[item.Username] = item.ProblemResults
+	}
+	require.Len(t, cells["alice"], 1)
+	require.EqualValues(t, 1, cells["alice"][0].FailedAttempts)
+	require.Zero(t, cells["alice"][0].PendingAttempts)
+	require.Empty(t, cells["bob"], "attempts after the freeze leave no trace")
+	require.EqualValues(t, 1, f.scoreboard(t, true).Items[0].ProblemsSolved)
+}
+
 func TestScoreboardPenaltyAndTieBreaks(t *testing.T) {
 	f := newScoreboardFixture("alice", "bob", "charlie", "dave")
 	f.submit(t, "alice", 0, submissionsmodel.GotWA, 3*time.Minute)

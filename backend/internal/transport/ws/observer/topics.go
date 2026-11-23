@@ -64,12 +64,10 @@ func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 		if audience == "own" || allowed(m.ContestListSubmissions) {
 			view := submissions.SubmissionView(a, meta.UserId, meta.CreatedAt)
 			if audience != "own" && audience != "managers" && c.IsFrozenAt(now) {
-				view.Frozen = true
-				view.Source = false
-				view.Details = false
+				view.Hide()
 			}
-			if (!view.Frozen || e.EventType == sm.SubmissionEventCreated || e.EventType == sm.SubmissionEventCompleted) && (e.EventType != sm.SubmissionEventTestStarted || view.Details) {
-				payload, err := projectSubmission(e, view.Source, view.Frozen)
+			if (!view.Hidden() || e.EventType == sm.SubmissionEventCreated || e.EventType == sm.SubmissionEventCompleted) && (e.EventType != sm.SubmissionEventTestStarted || view.Results.Tests()) {
+				payload, err := projectSubmission(e, view)
 				if err != nil {
 					return err
 				}
@@ -99,7 +97,7 @@ func topicConfigurationAt(c contestsmodel.Contest, now time.Time) string {
 	settings, _ := json.Marshal(c.Settings)
 	return fmt.Sprintf("%s/%s/%v/%v/%s", scoreboardConfigurationAt(c, now), c.Visibility, c.StartTime, c.EndTime, settings)
 }
-func projectSubmission(event *WrappedEvent, source, frozen bool) ([]byte, error) {
+func projectSubmission(event *WrappedEvent, view submissions.SubmissionVisibility) ([]byte, error) {
 	var envelope struct {
 		EventType string                     `json:"event_type"`
 		Payload   map[string]json.RawMessage `json:"payload"`
@@ -107,14 +105,14 @@ func projectSubmission(event *WrappedEvent, source, frozen bool) ([]byte, error)
 	if err := json.Unmarshal(event.DTOPayload, &envelope); err != nil {
 		return nil, fmt.Errorf("decode submission projection: %w", err)
 	}
-	if !source {
+	if !view.Source {
 		delete(envelope.Payload, "source")
 	}
-	if frozen {
+	if view.Hidden() {
 		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source"} {
 			delete(envelope.Payload, field)
 		}
-		envelope.Payload["frozen"] = json.RawMessage("true")
+		envelope.Payload["result_hidden"] = json.RawMessage("true")
 	}
 	data, err := json.Marshal(envelope)
 	if err != nil {

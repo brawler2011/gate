@@ -375,7 +375,7 @@ export const AdminSubmissionsContent = ({
                             style={{cursor: "pointer"}}
                             onClick={() => setSelectedSubmissionId(submission.id)}
                           >
-                            {submission.frozen ? "Заморожено" : ShortVerdictString(submission.state, submission.failed_test)}
+                            {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test)}
                           </Text>
                         </Tooltip>
                       </Table.Td>

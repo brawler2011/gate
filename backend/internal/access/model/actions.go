@@ -49,11 +49,3 @@ const (
 	ContestSubmit             ContestAction = "submit"
 	ContestStartVirtual       ContestAction = "start_virtual"
 )
-
-// SubmissionAction depends on who authored the submission.
-type SubmissionAction string
-
-const (
-	SubmissionView        SubmissionAction = "view"
-	SubmissionViewDetails SubmissionAction = "view_details"
-)

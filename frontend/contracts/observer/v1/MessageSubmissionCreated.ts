@@ -12,7 +12,7 @@ interface MessageSubmissionCreated {
   'position'?: number;
   'language'?: string;
   'created_at'?: string;
-  'frozen'?: boolean;
+  'result_hidden'?: boolean;
   'id': string;
   'state'?: number;
   'source'?: string;

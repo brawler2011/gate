@@ -42,6 +42,7 @@ type TestDetailItem struct {
 	Verdict   string `json:"verdict"`
 	TimeMs    int32  `json:"time_ms"`
 	MemoryKb  int32  `json:"memory_kb"`
+	Sample    bool   `json:"sample,omitempty"`
 }
 
 type FailedTestDetail struct {
@@ -129,7 +130,7 @@ type SubmissionListItem struct {
 
 type Submission struct {
 	Revision          int64                  `json:"revision"`
-	Frozen            bool                   `json:"-"`
+	ResultHidden      bool                   `json:"-"`
 	SourceHidden      bool                   `json:"-"`
 	ID                uuid.UUID              `json:"id"`
 	Kind              Kind                   `json:"kind"`

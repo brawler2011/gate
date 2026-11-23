@@ -59,3 +59,13 @@ func TestContestFreezeBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestContestFreezeLastsUntilUnfreezeTime(t *testing.T) {
+	start := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
+	end, thaw := start.Add(5*time.Hour), start.Add(7*time.Hour)
+	c := contestsmodel.Contest{StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{
+		FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60)), UnfreezeTime: &thaw}}
+	require.True(t, c.IsFrozenAt(end))
+	require.True(t, c.IsFrozenAt(thaw.Add(-time.Nanosecond)))
+	require.False(t, c.IsFrozenAt(thaw))
+}
