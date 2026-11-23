@@ -11,7 +11,7 @@ SET state='processing',attempt=j.attempt+1,lease_token=sqlc.arg(lease_token)::uu
     deadline_at=now()+interval '30 seconds'
 WHERE j.id=(
     SELECT c.id FROM judge_jobs c JOIN submissions s ON s.id=c.submission_id
-    WHERE c.state='pending' AND c.generation=s.generation AND s.state<>300
+    WHERE c.state='pending' AND c.available_at<=now() AND c.generation=s.generation AND s.state<>300
     ORDER BY c.created_at
     LIMIT 1
     FOR UPDATE OF c SKIP LOCKED
@@ -25,8 +25,9 @@ WHERE j.id=sqlc.arg(id)::uuid AND j.lease_token=sqlc.arg(lease_token)::uuid
   AND j.state='processing' AND j.deadline_at>now()
   AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300;
 
+-- A released job waits so one that keeps failing cannot hold the head of the queue.
 -- name: ReleaseJudgeJob :execrows
-UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL
+UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL,available_at=now()+interval '5 seconds'
 WHERE id=sqlc.arg(id)::uuid AND lease_token=sqlc.arg(lease_token)::uuid AND state='processing' AND deadline_at>now();
 
 -- name: CompleteJudgeJob :execrows

@@ -923,6 +923,7 @@ CREATE TABLE judge_jobs (
     lease_token uuid,
     deadline_at timestamptz,
     created_at timestamptz DEFAULT now() NOT NULL,
+    available_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT judge_jobs_attempt_check CHECK ((attempt >= 0)),
     CONSTRAINT judge_jobs_generation_check CHECK ((generation > 0)),
     CONSTRAINT judge_jobs_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'processing'::text]))),

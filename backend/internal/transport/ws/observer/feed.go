@@ -91,6 +91,10 @@ func (f *Feed) deliver(ctx context.Context, n eventdata.Notice) error {
 		if err != nil {
 			return err
 		}
+		// A late progress notice of a finished attempt would otherwise carry the final revision and never clear.
+		if n.Type != sm.SubmissionEventCreated && n.Type != sm.SubmissionEventCompleted && s.State != sm.Saved {
+			return nil
+		}
 		meta := s.EventMeta()
 		var event any
 		switch n.Type {

@@ -17,12 +17,12 @@ SET state='processing',attempt=j.attempt+1,lease_token=$1::uuid,
     deadline_at=now()+interval '30 seconds'
 WHERE j.id=(
     SELECT c.id FROM judge_jobs c JOIN submissions s ON s.id=c.submission_id
-    WHERE c.state='pending' AND c.generation=s.generation AND s.state<>300
+    WHERE c.state='pending' AND c.available_at<=now() AND c.generation=s.generation AND s.state<>300
     ORDER BY c.created_at
     LIMIT 1
     FOR UPDATE OF c SKIP LOCKED
 )
-RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at
+RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.available_at
 `
 
 func (q *Queries) ClaimNextJudgeJob(ctx context.Context, leaseToken uuid.UUID) (JudgeJob, error) {
@@ -39,6 +39,7 @@ func (q *Queries) ClaimNextJudgeJob(ctx context.Context, leaseToken uuid.UUID) (
 		&i.LeaseToken,
 		&i.DeadlineAt,
 		&i.CreatedAt,
+		&i.AvailableAt,
 	)
 	return i, err
 }
@@ -148,7 +149,7 @@ func (q *Queries) PickStalledJudgeJobs(ctx context.Context, limitCount int32) ([
 }
 
 const releaseJudgeJob = `-- name: ReleaseJudgeJob :execrows
-UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL
+UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL,available_at=now()+interval '5 seconds'
 WHERE id=$1::uuid AND lease_token=$2::uuid AND state='processing' AND deadline_at>now()
 `
 
@@ -157,6 +158,7 @@ type ReleaseJudgeJobParams struct {
 	LeaseToken uuid.UUID `json:"lease_token"`
 }
 
+// A released job waits so one that keeps failing cannot hold the head of the queue.
 func (q *Queries) ReleaseJudgeJob(ctx context.Context, arg ReleaseJudgeJobParams) (int64, error) {
 	result, err := q.db.Exec(ctx, releaseJudgeJob, arg.ID, arg.LeaseToken)
 	if err != nil {
@@ -211,7 +213,7 @@ INSERT INTO judge_jobs(id,submission_id,generation,package_id,package_hash)
 SELECT $1::uuid,s.id,s.generation,p.id,p.package_hash
 FROM submissions s JOIN problem_packages p ON p.id=s.package_id
 WHERE s.id=$2::uuid
-RETURNING id, submission_id, generation, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at
+RETURNING id, submission_id, generation, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at, available_at
 `
 
 type ScheduleJudgeJobParams struct {
@@ -233,6 +235,7 @@ func (q *Queries) ScheduleJudgeJob(ctx context.Context, arg ScheduleJudgeJobPara
 		&i.LeaseToken,
 		&i.DeadlineAt,
 		&i.CreatedAt,
+		&i.AvailableAt,
 	)
 	return i, err
 }

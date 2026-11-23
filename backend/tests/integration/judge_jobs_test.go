@@ -155,6 +155,11 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultAndStandingsAreAtomic() {
 	var jobState string
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE submission_id=$1", sub).Scan(&jobState))
 	s.Equal("pending", jobState)
+	_, ok, err := jobs.ClaimNext(s.ctx)
+	s.Require().NoError(err)
+	s.False(ok, "a released job waits before it can be claimed again")
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET available_at=now() WHERE submission_id=$1", sub)
+	s.Require().NoError(err)
 	drop()
 	s.Require().NoError(judge.JudgeSubmission(s.ctx, s.claimNext(jobs)))
 	saved, err = pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)

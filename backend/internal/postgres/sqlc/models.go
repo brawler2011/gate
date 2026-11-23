@@ -767,6 +767,7 @@ type JudgeJob struct {
 	LeaseToken   *uuid.UUID `json:"lease_token"`
 	DeadlineAt   *time.Time `json:"deadline_at"`
 	CreatedAt    time.Time  `json:"created_at"`
+	AvailableAt  time.Time  `json:"available_at"`
 }
 
 type Notification struct {

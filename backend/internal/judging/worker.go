@@ -69,9 +69,7 @@ func (w *Worker) loop(ctx context.Context, logger *slog.Logger) {
 			sleep(ctx, nil, retryDelay)
 			continue
 		}
-		if err := w.judge(ctx, job, logger.With("submission_id", job.SubmissionID, "job_id", job.ID, "attempt", job.Attempt)); err != nil {
-			sleep(ctx, nil, retryDelay)
-		}
+		_ = w.judge(ctx, job, logger.With("submission_id", job.SubmissionID, "job_id", job.ID, "attempt", job.Attempt))
 	}
 }
 
