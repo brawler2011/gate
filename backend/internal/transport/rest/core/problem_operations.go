@@ -14,6 +14,22 @@ import (
 type PackagesReader interface {
 	ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemPackage], error)
 	DownloadPackage(ctx context.Context, problemID, packageID uuid.UUID) (io.ReadCloser, error)
+	Statement(ctx context.Context, problemID uuid.UUID) (problemsmodel.StatementContent, bool, error)
+	OpenStatementImage(ctx context.Context, problemID uuid.UUID, sha256 string) (io.ReadCloser, string, error)
+}
+
+func (h *CoreServer) GetProblemAsset(ctx context.Context, params corev1.GetProblemAssetParams) (*corev1.GetProblemAssetOKHeaders, error) {
+	file, contentType, err := h.Packages.OpenStatementImage(ctx, params.ID, params.SHA256)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.GetProblemAssetOKHeaders{
+		CacheControl:          corev1.NewOptString("private, max-age=31536000, immutable"),
+		ETag:                  corev1.NewOptString(`"` + params.SHA256 + `"`),
+		ContentSecurityPolicy: corev1.NewOptString(statementAssetPolicy),
+		ContentType:           contentType,
+		Response:              corev1.GetProblemAssetOK{Data: file},
+	}, nil
 }
 
 func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemDraft, error) {

@@ -108,6 +108,12 @@ func (m *patchProblemsModule) GetProblemDetails(context.Context, uuid.UUID) (*pr
 	return &problemsmodel.ProblemDetails{Problem: m.problem}, nil
 }
 
+type unbuiltPackages struct{ PackagesReader }
+
+func (unbuiltPackages) Statement(context.Context, uuid.UUID) (problemsmodel.StatementContent, bool, error) {
+	return problemsmodel.StatementContent{}, false, nil
+}
+
 func TestPatchProblemMetadata(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -123,7 +129,7 @@ func TestPatchProblemMetadata(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &patchProblemsModule{problem: problemsmodel.Problem{ID: uuid.New(), Title: "Original", Visibility: "private", IsTemplate: true}}
-			server := NewCoreServer(Services{Problems: store}, false)
+			server := NewCoreServer(Services{Problems: store, Packages: unbuiltPackages{}}, false)
 			handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 			require.NoError(t, err)
 			path := "/problems/" + store.problem.ID.String()
@@ -157,7 +163,7 @@ func TestPatchProblemRejectsObsoleteFields(t *testing.T) {
 				}
 				body += "}"
 				store := &patchProblemsModule{problem: problemsmodel.Problem{ID: uuid.New(), Title: "Original"}}
-				server := NewCoreServer(Services{Problems: store}, false)
+				server := NewCoreServer(Services{Problems: store, Packages: unbuiltPackages{}}, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 				require.NoError(t, err)
 				req := httptest.NewRequest(http.MethodPatch, "/problems/"+store.problem.ID.String(), strings.NewReader(body))

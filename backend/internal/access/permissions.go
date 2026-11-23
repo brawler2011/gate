@@ -16,7 +16,7 @@ type OrganizationPermissions struct {
 
 type TeamPermissions struct{ Manage, Delete, Leave bool }
 
-type ProblemPermissions struct{ Use, Edit, Manage, Delete bool }
+type ProblemPermissions struct{ Use, Read, Edit, Manage, Delete bool }
 
 type ContestPermissions struct {
 	ViewProblems, Submit, ListOwnSubmissions, ListSubmissions, ViewSubmissionDetails, ViewScoreboard, Manage, Delete, StartVirtual bool
@@ -131,7 +131,7 @@ func (s *PermissionSet) Problem(id uuid.UUID) (ProblemPermissions, error) {
 		return ProblemPermissions{}, err
 	}
 	return ProblemPermissions{
-		Use: a.Can(m.ProblemUse), Edit: a.Can(m.ProblemEdit), Manage: a.Can(m.ProblemManage), Delete: a.Can(m.ProblemDelete),
+		Use: a.Can(m.ProblemUse), Read: a.Can(m.ProblemRead), Edit: a.Can(m.ProblemEdit), Manage: a.Can(m.ProblemManage), Delete: a.Can(m.ProblemDelete),
 	}, nil
 }
 

@@ -436,6 +436,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}
 	GetProblem(ctx context.Context, params GetProblemParams) (*GetProblemResponseModel, error)
+	// GetProblemAsset implements GetProblemAsset operation.
+	//
+	// Serves a statement image of the problem's latest package, addressed by content hash.
+	//
+	// GET /problems/{id}/assets/{sha256}
+	GetProblemAsset(ctx context.Context, params GetProblemAssetParams) (*GetProblemAssetOKHeaders, error)
 	// GetProblemBlockStatusForUser implements GetProblemBlockStatusForUser operation.
 	//
 	// Get problem block status for user.

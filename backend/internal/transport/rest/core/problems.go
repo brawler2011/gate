@@ -89,7 +89,19 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 	if err != nil {
 		return nil, err
 	}
-	return projectResponse(h, ctx, &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem)})
+	response := &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem)}
+	content, ok, err := h.Packages.Statement(ctx, params.ID)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		s := content.Statement
+		response.Statement.SetTo(corev1.ProblemStatementModel{
+			Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Scoring: s.Scoring,
+			Samples: SamplesDTO(content.Samples), Assets: content.Assets,
+		})
+	}
+	return projectResponse(h, ctx, response)
 
 }
 

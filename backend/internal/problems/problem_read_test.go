@@ -8,6 +8,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
+	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -24,13 +25,28 @@ func (publicProblems) ProblemFacts(_ context.Context, _ uuid.UUID, ids []uuid.UU
 	return facts, nil
 }
 
-func TestPublicProblemHidesPackagesAndDraft(t *testing.T) {
+type latestPackage struct {
+	PackagesRepo
+	id uuid.UUID
+}
+
+func (r latestPackage) GetReadyPackage(context.Context, uuid.UUID) (model.ProblemPackage, error) {
+	return model.ProblemPackage{ID: r.id}, nil
+}
+
+func TestPublicProblemShowsOnlyItsStatement(t *testing.T) {
 	id := uuid.New()
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
-	packages := &PackageUseCase{Access: publicProblems{}}
+	statement := storedStatement{p: model.PackageStatement{ProblemID: id, Title: "Sum", Statements: []model.DraftStatement{{Language: "en", Legend: "Add"}}}}
+	packages := &PackageUseCase{Repo: latestPackage{id: uuid.New()}, Content: &PackageContent{Repo: statement}, Access: publicProblems{}}
 	drafts := &DraftUseCase{Access: publicProblems{}}
 
-	_, err := packages.ListPackages(ctx, id, paging.Request{})
+	content, ok, err := packages.Statement(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Equal(t, "Add", content.Statement.Legend)
+
+	_, err = packages.ListPackages(ctx, id, paging.Request{})
 	require.ErrorIs(t, err, pkg.ErrForbidden)
 	_, err = packages.DownloadPackage(ctx, id, uuid.New())
 	require.ErrorIs(t, err, pkg.ErrForbidden)

@@ -7285,6 +7285,105 @@ func (s *Server) handleGetProblemRequest(args [1]string, argsEscaped bool, w htt
 	}
 }
 
+// handleGetProblemAssetRequest handles GetProblemAsset operation.
+//
+// Serves a statement image of the problem's latest package, addressed by content hash.
+//
+// GET /problems/{id}/assets/{sha256}
+func (s *Server) handleGetProblemAssetRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetProblemAssetOperation,
+			ID:   "GetProblemAsset",
+		}
+	)
+	params, err := decodeGetProblemAssetParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *GetProblemAssetOKHeaders
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetProblemAssetOperation,
+			OperationSummary: "Get a problem statement image",
+			OperationID:      "GetProblemAsset",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "sha256",
+					In:   "path",
+				}: params.SHA256,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetProblemAssetParams
+			Response = *GetProblemAssetOKHeaders
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetProblemAssetParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetProblemAsset(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetProblemAsset(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetProblemAssetResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetProblemBlockStatusForUserRequest handles GetProblemBlockStatusForUser operation.
 //
 // Get problem block status for user.

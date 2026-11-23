@@ -1,6 +1,7 @@
 import {Suspense, type ReactNode} from "react";
 import {useParams} from "react-router-dom";
 
+import {PublishedStatement} from "@/components/problems/PublishedStatement";
 import {WorkshopEditor} from "@/components/workshop/WorkshopEditor";
 import {api} from "@/lib/api";
 
@@ -17,7 +18,11 @@ const ProblemPage = ({activeTab, title}: ProblemPageProps): ReactNode => {
   return (
     <Suspense>
       <title>{activeTab === "general" ? problem.data?.problem.title ?? "Задача" : title}</title>
-      <WorkshopEditor problemId={problem_id} activeTab={activeTab} />
+      {problem.data && !problem.data.problem.permissions.read ? (
+        <PublishedStatement {...problem.data} />
+      ) : (
+        <WorkshopEditor problemId={problem_id} activeTab={activeTab} />
+      )}
     </Suspense>
   );
 };

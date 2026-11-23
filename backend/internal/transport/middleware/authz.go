@@ -165,6 +165,7 @@ var endpointPolicies = map[string]level{
 	"GetProblemDraftObject":  authenticated,
 	"ExportProblemDraft":     authenticated,
 	"GetProblem":             public,
+	"GetProblemAsset":        public,
 	"UpdateProblem":          authenticated,
 	"DeleteProblem":          authenticated,
 	"ImportProblem":          authenticated,

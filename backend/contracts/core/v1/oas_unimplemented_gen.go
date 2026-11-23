@@ -654,6 +654,15 @@ func (UnimplementedHandler) GetProblem(ctx context.Context, params GetProblemPar
 	return r, ht.ErrNotImplemented
 }
 
+// GetProblemAsset implements GetProblemAsset operation.
+//
+// Serves a statement image of the problem's latest package, addressed by content hash.
+//
+// GET /problems/{id}/assets/{sha256}
+func (UnimplementedHandler) GetProblemAsset(ctx context.Context, params GetProblemAssetParams) (r *GetProblemAssetOKHeaders, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetProblemBlockStatusForUser implements GetProblemBlockStatusForUser operation.
 //
 // Get problem block status for user.

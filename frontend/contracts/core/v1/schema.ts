@@ -1221,6 +1221,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/problems/{id}/assets/{sha256}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a problem statement image
+         * @description Serves a statement image of the problem's latest package, addressed by content hash.
+         */
+        get: operations["GetProblemAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations": {
         parameters: {
             query?: never;
@@ -2205,6 +2225,8 @@ export interface components {
         /** @description What the caller may do with the problem. */
         ProblemPermissionsModel: {
             use: boolean;
+            /** @description Whether the caller may read the draft and packages, including tests and solutions. */
+            read: boolean;
             edit: boolean;
             manage: boolean;
             delete: boolean;
@@ -2234,10 +2256,11 @@ export interface components {
             remove: boolean;
         };
         /**
-         * @description Problem catalog data. The statement, samples and assets belong to the draft and to published packages and are read there.
+         * @description Problem catalog data. The draft and packages hold the statement.
          * @example {
          *       "permissions": {
          *         "use": false,
+         *         "read": false,
          *         "edit": false,
          *         "manage": false,
          *         "delete": false
@@ -2288,6 +2311,7 @@ export interface components {
          * @example {
          *       "permissions": {
          *         "use": false,
+         *         "read": false,
          *         "edit": false,
          *         "manage": false,
          *         "delete": false
@@ -2329,6 +2353,7 @@ export interface components {
          *         {
          *           "permissions": {
          *             "use": false,
+         *             "read": false,
          *             "edit": false,
          *             "manage": false,
          *             "delete": false
@@ -2362,6 +2387,7 @@ export interface components {
          *       "problem": {
          *         "permissions": {
          *           "use": false,
+         *           "read": false,
          *           "edit": false,
          *           "manage": false,
          *           "delete": false
@@ -2380,7 +2406,15 @@ export interface components {
          *         "scoring": "example",
          *         "is_template": false,
          *         "created_at": "2026-01-01T12:00:00Z",
-         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       },
+         *       "statement": {
+         *         "title": "Test problem",
+         *         "legend": "example",
+         *         "input_format": "example",
+         *         "output_format": "example",
+         *         "notes": "example",
+         *         "scoring": "example",
          *         "samples": [
          *           {
          *             "input": "1 2",
@@ -2388,13 +2422,28 @@ export interface components {
          *           }
          *         ],
          *         "assets": {
-         *           "pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
+         *           "assets/pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
          *         }
          *       }
          *     }
          */
         GetProblemResponseModel: {
             problem: components["schemas"]["ProblemModel"];
+            statement?: components["schemas"]["ProblemStatementModel"];
+        };
+        /** @description Statement of the problem's latest package; absent until a package is built. */
+        ProblemStatementModel: {
+            title: string;
+            legend: string;
+            input_format: string;
+            output_format: string;
+            notes: string;
+            scoring: string;
+            samples: components["schemas"]["ProblemSampleModel"][];
+            /** @description SHA-256 of each statement asset by package path, e.g. `assets/pic.png`. */
+            assets: {
+                [key: string]: string;
+            };
         };
         /**
          * @description Contest problem data.
@@ -3306,6 +3355,7 @@ export interface components {
          * @example {
          *       "permissions": {
          *         "use": false,
+         *         "read": false,
          *         "edit": false,
          *         "manage": false,
          *         "delete": false
@@ -3366,6 +3416,7 @@ export interface components {
          *         {
          *           "permissions": {
          *             "use": false,
+         *             "read": false,
          *             "edit": false,
          *             "manage": false,
          *             "delete": false
@@ -5512,6 +5563,7 @@ export type ProblemModel = components['schemas']['ProblemModel'];
 export type ProblemsListItemModel = components['schemas']['ProblemsListItemModel'];
 export type ListProblemsResponseModel = components['schemas']['ListProblemsResponseModel'];
 export type GetProblemResponseModel = components['schemas']['GetProblemResponseModel'];
+export type ProblemStatementModel = components['schemas']['ProblemStatementModel'];
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];
 export type ContestScope = components['schemas']['ContestScope'];
@@ -8641,6 +8693,35 @@ export interface operations {
                 };
                 content: {
                     "application/zip": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetProblemAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+                /** @description SHA-256 of the image, as listed in the statement's `assets`. */
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement image */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    ETag?: string;
+                    "Content-Security-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
                 };
             };
             default: components["responses"]["Problem"];
