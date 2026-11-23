@@ -56,10 +56,6 @@ SELECT EXISTS(SELECT 1 FROM problem_builds WHERE id=$1 AND state='running' AND l
 -- name: ListStoredObjects :many
 SELECT * FROM stored_objects WHERE id=ANY(sqlc.arg(ids)::uuid[]) ORDER BY id;
 
--- name: BuildLeaseValid :one
-SELECT (state='running' AND lease_token=sqlc.arg(token) AND lease_deadline>clock_timestamp() AND deadline>clock_timestamp())::boolean AS valid
-FROM problem_builds WHERE id=sqlc.arg(id);
-
 -- name: SucceededBuildPackageID :one
 SELECT p.id FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE b.id=$1 AND b.state='succeeded';
 
@@ -85,7 +81,7 @@ FROM problem_packages p WHERE p.id=$1;
 SELECT a.name,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
 WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.name;
 
--- name: MarkBuildSucceeded :exec
+-- name: MarkBuildSucceeded :execrows
 UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL,finished_at=clock_timestamp()
 WHERE id=$1 AND state='running' AND lease_token=$2 AND lease_deadline>clock_timestamp();
 

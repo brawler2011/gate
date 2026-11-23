@@ -51,23 +51,6 @@ func (q *Queries) BuildExhausted(ctx context.Context, id uuid.UUID) (bool, error
 	return exhausted, err
 }
 
-const buildLeaseValid = `-- name: BuildLeaseValid :one
-SELECT (state='running' AND lease_token=$1 AND lease_deadline>clock_timestamp() AND deadline>clock_timestamp())::boolean AS valid
-FROM problem_builds WHERE id=$2
-`
-
-type BuildLeaseValidParams struct {
-	Token *uuid.UUID `json:"token"`
-	ID    uuid.UUID  `json:"id"`
-}
-
-func (q *Queries) BuildLeaseValid(ctx context.Context, arg BuildLeaseValidParams) (bool, error) {
-	row := q.db.QueryRow(ctx, buildLeaseValid, arg.Token, arg.ID)
-	var valid bool
-	err := row.Scan(&valid)
-	return valid, err
-}
-
 const buildPackageID = `-- name: BuildPackageID :one
 SELECT id FROM problem_packages WHERE build_id=$1
 `
@@ -510,7 +493,7 @@ func (q *Queries) LockProblemPackage(ctx context.Context, id uuid.UUID) (int32, 
 	return locked, err
 }
 
-const markBuildSucceeded = `-- name: MarkBuildSucceeded :exec
+const markBuildSucceeded = `-- name: MarkBuildSucceeded :execrows
 UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL,finished_at=clock_timestamp()
 WHERE id=$1 AND state='running' AND lease_token=$2 AND lease_deadline>clock_timestamp()
 `
@@ -520,9 +503,12 @@ type MarkBuildSucceededParams struct {
 	LeaseToken *uuid.UUID `json:"lease_token"`
 }
 
-func (q *Queries) MarkBuildSucceeded(ctx context.Context, arg MarkBuildSucceededParams) error {
-	_, err := q.db.Exec(ctx, markBuildSucceeded, arg.ID, arg.LeaseToken)
-	return err
+func (q *Queries) MarkBuildSucceeded(ctx context.Context, arg MarkBuildSucceededParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markBuildSucceeded, arg.ID, arg.LeaseToken)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const packageBuildID = `-- name: PackageBuildID :one

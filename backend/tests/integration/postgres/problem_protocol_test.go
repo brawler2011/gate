@@ -113,6 +113,22 @@ func packageObject(org uuid.UUID) model.StoredObject {
 	return model.NewStoredObject(org, model.UploadSpec{Purpose: "package", SHA256: strings.Repeat("a", 64), Size: 10})
 }
 
+// An attempt whose lease ran out publishes nothing, even before recovery requeues it.
+func TestExpiredLeaseCannotPublish(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d, _ := buildableFixture(t)
+	enqueue(t, ctx, repo, org, d)
+	build, err := repo.ClaimBuild(ctx, time.Minute)
+	require.NoError(t, err)
+	expireLease(t, ctx, pool, build.ID)
+	output := packageObject(org)
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
+	require.ErrorIs(t, err, pkg.ErrConflict)
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, output.ID))
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_builds WHERE id=$1 AND state='running'`, build.ID))
+}
+
 // Recovered attempts cannot publish; the current attempt publishes one replayable package.
 func TestStaleAttemptCannotPublish(t *testing.T) {
 	t.Parallel()

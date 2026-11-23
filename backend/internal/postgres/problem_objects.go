@@ -59,15 +59,16 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 		}
 		return pid, nil
 	}
-	active, err := q.BuildLeaseValid(ctx, sqlc.BuildLeaseValidParams{Token: &token, ID: id})
-	if err != nil {
-		return uuid.Nil, dbError("check build lease", err)
-	}
-	if !active {
-		return uuid.Nil, pkg.ErrConflict
-	}
 	if object.OrganizationID != b.OrganizationID || object.Purpose != "package" {
 		return uuid.Nil, pkg.ErrInvalid
+	}
+	// The lease check and the transition are one statement, so a lease expiring mid-publication publishes nothing.
+	succeeded, err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token})
+	if err != nil {
+		return uuid.Nil, dbError("finish build", err)
+	}
+	if succeeded != 1 {
+		return uuid.Nil, pkg.ErrConflict
 	}
 	if err := insertObjects(ctx, tx, []model.StoredObject{object}); err != nil {
 		return uuid.Nil, err
@@ -82,9 +83,6 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	}
 	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, Assets: encode(index.Assets)}); err != nil {
 		return uuid.Nil, dbError("insert package assets", err)
-	}
-	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {
-		return uuid.Nil, dbError("finish build", err)
 	}
 	if err := commitTx(ctx, tx); err != nil {
 		resolveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
