@@ -3417,7 +3417,8 @@ type CreateProblemParams struct {
 	Title string
 	// UUID of the organization.
 	OrganizationID OptUUID `json:",omitempty,omitzero"`
-	// Problem template identifier, including the builtin: prefix for built-in templates.
+	// Built-in template (builtin: prefix) or the ID of a readable problem in the same organization to
+	// fork.
 	TemplateID string
 }
 

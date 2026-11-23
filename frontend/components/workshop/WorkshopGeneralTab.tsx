@@ -4,6 +4,7 @@ import {Box, Button, Divider, Grid, Group, NumberInput, Select, Stack, Switch, T
 import {notifications} from "@mantine/notifications";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api, unwrap} from "@/lib/api";
@@ -203,6 +204,58 @@ const CatalogSettings = ({problemId}: Props): ReactNode => {
   );
 };
 
+const ForkSection = ({problemId}: Props): ReactNode => {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState("");
+  const [loading, setLoading] = useState(false);
+  const {data} = useQuery({
+    queryKey: ["problem", problemId],
+    queryFn: () => unwrap(api.GET("/problems/{id}", {params: {path: {id: problemId}}})),
+  });
+
+  const fork = async (): Promise<void> => {
+    if (!data) {
+      return;
+    }
+    const {problem} = data;
+    setLoading(true);
+    const {data: created, error} = await api.POST("/problems", {
+      params: {
+        query: {title: title.trim() || problem.title, organization_id: problem.organization_id, template_id: problemId},
+      },
+    });
+    setLoading(false);
+    if (error) {
+      notifications.show({title: "Ошибка", message: problemMessage(error, "Не удалось создать копию"), color: "red"});
+      return;
+    }
+    navigate(`/${problem.organization_login}/problems/${created.id}`);
+  };
+
+  return (
+    <SectionPaper title="Копия">
+      <Stack gap="sm">
+        <Text size="sm" c="dimmed">
+          Новая задача в этой организации из последнего собранного пакета. Вы станете её владельцем,
+          оригинал не изменится.
+        </Text>
+        <Group align="flex-end">
+          <TextInput
+            label="Название копии"
+            placeholder={data?.problem.title}
+            value={title}
+            onChange={(e) => setTitle(e.currentTarget.value)}
+            style={{flex: 1}}
+          />
+          <Button variant="default" loading={loading} disabled={!data} onClick={() => void fork()}>
+            Создать копию
+          </Button>
+        </Group>
+      </Stack>
+    </SectionPaper>
+  );
+};
+
 export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => (
   <Box p="lg">
     <Stack gap="lg" maw={900} mx="auto">
@@ -210,6 +263,7 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => (
         {(draft) => <DraftForm key={draft.revision} draft={draft} problemId={problemId} />}
       </DraftGate>
       <CatalogSettings problemId={problemId} />
+      <ForkSection problemId={problemId} />
     </Stack>
   </Box>
 );

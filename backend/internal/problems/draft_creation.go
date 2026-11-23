@@ -108,7 +108,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 		if err != nil {
 			return uuid.Nil, err
 		}
-		if !template.IsTemplate || template.OrganizationID != org {
+		if template.OrganizationID != org {
 			return uuid.Nil, pkg.ErrForbidden
 		}
 		ready, err := uc.Templates.GetReadyPackage(ctx, tid)
