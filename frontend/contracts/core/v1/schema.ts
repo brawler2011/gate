@@ -6130,7 +6130,7 @@ export interface operations {
                 /** @description UUID of the organization. */
                 organization_id?: components["parameters"]["OrganizationIDQuery"];
                 /**
-                 * @description Problem template identifier, including the builtin: prefix for built-in templates.
+                 * @description Built-in template (builtin: prefix) or the ID of a readable problem in the same organization to fork.
                  * @example builtin:a-plus-b
                  */
                 template_id: string;

@@ -149,6 +149,30 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 		s.Require().NotEqual(uuid.Nil, s.buildPackage(admin.Id, problemID))
 	})
 
+	// Forking needs ProblemRead on the source, not the template flag; public visibility is not enough.
+	s.Run("ForkProblem", func() {
+		maintainer := s.createUser("fork_maintainer", accessmodel.UserRoleUser)
+		outsider := s.createUser("fork_outsider", accessmodel.UserRoleUser)
+		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, maintainer.Id, accessmodel.OrganizationMaintainer))
+		_, err := s.dbPool.Exec(s.ctx, "UPDATE problems SET visibility='public' WHERE id=$1", problemID)
+		s.Require().NoError(err)
+		params := corev1.CreateProblemParams{Title: "Fork", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: problemID.String()}
+		_, err = s.client.CreateProblem(withTestUser(s.ctx, outsider.Id), params)
+		s.Require().Error(err)
+
+		fork, err := s.client.CreateProblem(withTestUser(s.ctx, maintainer.Id), params)
+		s.Require().NoError(err)
+		ctx := withTestUser(s.ctx, maintainer.Id)
+		draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: fork.ID})
+		s.Require().NoError(err)
+		draft.Title = "Fork edited"
+		_, err = s.client.SaveProblemDraft(ctx, draft, corev1.SaveProblemDraftParams{ID: fork.ID, ExpectedRevision: draft.Revision})
+		s.Require().NoError(err)
+		original, err := s.client.GetProblemDraft(withTestUser(s.ctx, admin.Id), corev1.GetProblemDraftParams{ID: problemID})
+		s.Require().NoError(err)
+		s.Equal("Problem A", original.Title)
+	})
+
 	// A published package allows the problem to become a template.
 	s.Run("SetTemplateSucceeds", func() {
 		isTemplate := true

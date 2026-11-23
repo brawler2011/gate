@@ -335,7 +335,7 @@ paths:
           example: Problem 1
         - $ref: "#/components/parameters/OrganizationIDQuery"
         - name: template_id
-          description: "Problem template identifier, including the builtin: prefix for built-in templates."
+          description: "Built-in template (builtin: prefix) or the ID of a readable problem in the same organization to fork."
           in: query
           required: true
           schema:
