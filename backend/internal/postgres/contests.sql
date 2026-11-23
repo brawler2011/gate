@@ -32,7 +32,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    participation_mode = COALESCE(sqlc.narg('participation_mode'), participation_mode),
+    join_policy = COALESCE(sqlc.narg('join_policy'), join_policy),
     monitor_scope = COALESCE(sqlc.narg('monitor_scope'), monitor_scope),
     submissions_list_scope = COALESCE(sqlc.narg('submissions_list_scope'), submissions_list_scope),
     submissions_review_scope = COALESCE(sqlc.narg('submissions_review_scope'), submissions_review_scope),
@@ -163,40 +163,11 @@ ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC
 LIMIT sqlc.arg('page_size')::int;
 
 
--- name: UpsertContestProblemResult :exec
-INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT (contest_id, user_id, problem_id)
-DO UPDATE SET
-    solved = EXCLUDED.solved,
-    failed_attempts = EXCLUDED.failed_attempts,
-    first_ac_time = EXCLUDED.first_ac_time,
-    time_minutes = EXCLUDED.time_minutes,
-    updated_at = NOW();
-
--- name: GetContestProblemResult :one
-SELECT * FROM contest_problem_results
-WHERE contest_id = $1 AND user_id = $2 AND problem_id = $3;
-
--- name: GetContestScoreboardFromStandings :many
-SELECT 
-    cm.user_id,
-    u.username,
-    cpr.problem_id,
-    cpr.solved,
-    cpr.failed_attempts,
-    cpr.first_ac_time,
-    cpr.time_minutes
+-- name: ListContestParticipants :many
+SELECT cm.user_id, u.username
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
-LEFT JOIN contest_problem_results cpr ON cpr.contest_id = cm.contest_id AND cpr.user_id = cm.user_id
 WHERE cm.contest_id = $1 AND cm.role = 'participant';
-
--- name: GetSubmissionsForScoreboard :many
-SELECT state, created_at
-FROM submissions
-WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3 AND kind = 'contest'
-ORDER BY created_at ASC;
 
 -- name: GetContestScoreboardSubmissions :many
 SELECT s.owner_id, s.problem_id,

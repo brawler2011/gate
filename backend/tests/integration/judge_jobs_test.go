@@ -65,13 +65,13 @@ func (s *IntegrationTestSuite) newJobSubmission() (uuid.UUID, uuid.UUID, uuid.UU
 	return submission, contest, problem, user.Id
 }
 
-func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations() {
+func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndRevisions() {
 	sub, contest, _, _ := s.newJobSubmission()
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	first, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
 	_, err = jobs.ScheduleJob(s.ctx, sub)
-	s.Require().Error(err, "one job per generation")
+	s.Require().Error(err, "one job per revision")
 	var wg sync.WaitGroup
 	claims := make(chan judgingmodel.Job, 2)
 	for range 2 {
@@ -110,11 +110,11 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	s.Require().NoError(err)
 	next, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	s.EqualValues(2, next.Generation)
+	s.EqualValues(2, next.Revision)
 	s.NotEqual(first.ID, next.ID)
 	s.Require().NoError(txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
 		current, err := tx.CompleteJob(s.ctx, replacement)
-		s.False(current, "rejudge must reject the old generation")
+		s.False(current, "rejudge must reject the old revision")
 		return err
 	}))
 	current := s.claimNext(jobs)
@@ -129,12 +129,11 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	}))
 }
 
-func (s *IntegrationTestSuite) TestJudgeTerminalResultAndStandingsAreAtomic() {
-	sub, contest, problem, user := s.newJobSubmission()
+func (s *IntegrationTestSuite) TestJudgeTerminalResultIsAtomic() {
+	sub, _, _, _ := s.newJobSubmission()
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	_, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	s.Require().NoError(s.contestsRepo.UpsertContestProblemResult(s.ctx, &contestsmodel.UpsertContestProblemResultParams{ContestID: contest, UserID: user, ProblemID: problem, Solved: true}))
 	judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, silentJudgeProgress{})
 	_, err = s.dbPool.Exec(s.ctx, fmt.Sprintf(`CREATE FUNCTION reject_verdict() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.state=%d THEN RAISE EXCEPTION 'injected completion failure'; END IF; RETURN NEW; END $$;
  CREATE TRIGGER reject_verdict BEFORE UPDATE ON submissions FOR EACH ROW EXECUTE FUNCTION reject_verdict()`, submissionsmodel.GotIE))
@@ -149,9 +148,6 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultAndStandingsAreAtomic() {
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.Saved, saved.State)
 	s.EqualValues(1, saved.Revision)
-	standings, err := s.contestsRepo.GetContestProblemResult(s.ctx, contest, user, problem)
-	s.Require().NoError(err)
-	s.True(standings.Solved)
 	var jobState string
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE submission_id=$1", sub).Scan(&jobState))
 	s.Equal("pending", jobState)
@@ -166,9 +162,6 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultAndStandingsAreAtomic() {
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.GotIE, saved.State)
 	s.EqualValues(2, saved.Revision)
-	standings, err = s.contestsRepo.GetContestProblemResult(s.ctx, contest, user, problem)
-	s.Require().NoError(err)
-	s.False(standings.Solved)
 	s.Zero(s.judgeJobCount(sub), "a finished job is deleted")
 }
 
@@ -198,7 +191,7 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
 	next, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Equal(firstHash, next.PackageHash)
-	s.EqualValues(2, next.Generation)
+	s.EqualValues(2, next.Revision)
 }
 
 type switchGate struct{ open atomic.Bool }
@@ -314,7 +307,7 @@ func (s *IntegrationTestSuite) TestJudgeLeaseExpirationDuringApplyResultDoesNotA
 	s.Equal(submissionsmodel.Saved, saved.State, "submission must not silently transition or finalize")
 }
 
-func (s *IntegrationTestSuite) TestJudgeStaleGenerationAndBlockedSubmissionAckSafely() {
+func (s *IntegrationTestSuite) TestJudgeStaleRevisionAndBlockedSubmissionAckSafely() {
 	sub, contest, _, _ := s.newJobSubmission()
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	first, err := jobs.ScheduleJob(s.ctx, sub)
@@ -328,14 +321,14 @@ func (s *IntegrationTestSuite) TestJudgeStaleGenerationAndBlockedSubmissionAckSa
 	s.Require().NoError(err)
 
 	txs := pgstore.NewJudgeTransactions(s.dbPool)
-	// Completing a stale generation returns false without an error.
+	// Completing a stale revision returns false without an error.
 	var accepted bool
 	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
 		var completeErr error
 		accepted, completeErr = tx.CompleteJob(s.ctx, claim)
 		return completeErr
 	})
-	s.Require().NoError(err, "stale generation must safely return nil without error")
+	s.Require().NoError(err, "stale revision must safely return nil without error")
 	s.False(accepted)
 
 	second, err := jobs.ScheduleJob(s.ctx, sub)
@@ -397,7 +390,7 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.GotIE, saved2.State, "exhausted attempts must transition to GotIE")
 
-	// Recovering an obsolete generation must preserve the rejudged submission.
+	// Recovering an obsolete revision must preserve the rejudged submission.
 	sub3, contest3, _, _ := s.newJobSubmission()
 	job3, err := jobs.ScheduleJob(s.ctx, sub3)
 	s.Require().NoError(err)
@@ -415,9 +408,9 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	s.Zero(s.judgeJobCount(sub3))
 	saved3, err := repo.GetSubmission(s.ctx, sub3)
 	s.Require().NoError(err)
-	s.Equal(submissionsmodel.Saved, saved3.State, "rejudged submission must remain Saved for new generation")
+	s.Equal(submissionsmodel.Saved, saved3.State, "rejudged submission must remain Saved for new revision")
 
-	// A pending job of a superseded generation can never be claimed, so recovery deletes it.
+	// A pending job of a superseded revision can never be claimed, so recovery deletes it.
 	sub4, contest4, _, _ := s.newJobSubmission()
 	_, err = jobs.ScheduleJob(s.ctx, sub4)
 	s.Require().NoError(err)

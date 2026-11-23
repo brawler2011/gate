@@ -196,9 +196,9 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		status := contestsmodel.FreezeStatus(v)
 		settings.FreezeStatus = &status
 	}
-	if v, ok := req.ParticipationMode.Get(); ok {
-		mode := contestsmodel.ParticipationMode(v)
-		settings.ParticipationMode = &mode
+	if v, ok := req.JoinPolicy.Get(); ok {
+		policy := accessmodel.JoinPolicy(v)
+		settings.JoinPolicy = &policy
 	}
 	if req.Languages != nil {
 		settings.Languages = []string{}

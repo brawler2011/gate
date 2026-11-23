@@ -175,7 +175,7 @@ type runningContests struct {
 func (c runningContests) ContestFacts(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]access.ContestFacts, error) {
 	facts := map[uuid.UUID]access.ContestFacts{}
 	for _, id := range ids {
-		settings := contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, EnableDrafts: !c.noDrafts}
+		settings := contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, EnableDrafts: !c.noDrafts}
 		contest := contestsmodel.Contest{ID: id, Visibility: contestsmodel.ContestVisibilityPublic, Settings: settings}
 		facts[id] = access.ContestFacts{Contest: contest, Now: time.Now()}
 	}

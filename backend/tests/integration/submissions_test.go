@@ -143,7 +143,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	})
 }
 
-func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
+func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneRevision() {
 	sub, contestID, problemID, userID := s.newJobSubmission()
 	actor, err := s.usersRepo.GetUserById(s.ctx, userID)
 	s.Require().NoError(err)
@@ -160,7 +160,7 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
 	}))
 	after, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
-	s.Equal(before.Generation+1, after.Generation)
+	s.Equal(before.Revision+1, after.Revision)
 	s.Equal(1, s.judgeJobCount(sub))
 }
 

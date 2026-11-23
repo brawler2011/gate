@@ -17,7 +17,7 @@ import (
 
 const blockSubmission = `-- name: BlockSubmission :exec
 UPDATE submissions
-SET generation = generation + 1, state = 300, score = 0, ban_reason = $1,
+SET state = 300, score = 0, ban_reason = $1,
     updated_at = NOW(), revision = revision + 1
 WHERE id = $2::uuid
 `
@@ -38,7 +38,7 @@ WITH previous AS (
   WHERE id = ANY($2::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
-SET generation = s.generation + 1, state = 300, score = 0, ban_reason = $1,
+SET state = 300, score = 0, ban_reason = $1,
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
@@ -206,7 +206,6 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -246,7 +245,6 @@ type GetSubmissionRow struct {
 	OrganizationLogin string                           `json:"organization_login"`
 	UpdatedAt         time.Time                        `json:"updated_at"`
 	Revision          int64                            `json:"revision"`
-	Generation        int64                            `json:"generation"`
 	CreatedAt         time.Time                        `json:"created_at"`
 }
 
@@ -279,26 +277,8 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.OrganizationLogin,
 		&i.UpdatedAt,
 		&i.Revision,
-		&i.Generation,
 		&i.CreatedAt,
 	)
-	return i, err
-}
-
-const getSubmissionIdentifiers = `-- name: GetSubmissionIdentifiers :one
-SELECT contest_id, owner_id, problem_id FROM submissions WHERE id = $1::uuid
-`
-
-type GetSubmissionIdentifiersRow struct {
-	ContestID *uuid.UUID `json:"contest_id"`
-	OwnerID   *uuid.UUID `json:"owner_id"`
-	ProblemID *uuid.UUID `json:"problem_id"`
-}
-
-func (q *Queries) GetSubmissionIdentifiers(ctx context.Context, id uuid.UUID) (GetSubmissionIdentifiersRow, error) {
-	row := q.db.QueryRow(ctx, getSubmissionIdentifiers, id)
-	var i GetSubmissionIdentifiersRow
-	err := row.Scan(&i.ContestID, &i.OwnerID, &i.ProblemID)
 	return i, err
 }
 
@@ -325,7 +305,6 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -401,7 +380,6 @@ type ListSubmissionsRow struct {
 	OrganizationLogin string                 `json:"organization_login"`
 	UpdatedAt         time.Time              `json:"updated_at"`
 	Revision          int64                  `json:"revision"`
-	Generation        int64                  `json:"generation"`
 	CreatedAt         time.Time              `json:"created_at"`
 }
 
@@ -446,7 +424,6 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.OrganizationLogin,
 			&i.UpdatedAt,
 			&i.Revision,
-			&i.Generation,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -460,19 +437,19 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 }
 
 const lockSubmission = `-- name: LockSubmission :one
-SELECT id, generation, state FROM submissions WHERE id = $1::uuid FOR UPDATE
+SELECT id, revision, state FROM submissions WHERE id = $1::uuid FOR UPDATE
 `
 
 type LockSubmissionRow struct {
-	ID         uuid.UUID              `json:"id"`
-	Generation int64                  `json:"generation"`
-	State      submissionsmodel.State `json:"state"`
+	ID       uuid.UUID              `json:"id"`
+	Revision int64                  `json:"revision"`
+	State    submissionsmodel.State `json:"state"`
 }
 
 func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (LockSubmissionRow, error) {
 	row := q.db.QueryRow(ctx, lockSubmission, id)
 	var i LockSubmissionRow
-	err := row.Scan(&i.ID, &i.Generation, &i.State)
+	err := row.Scan(&i.ID, &i.Revision, &i.State)
 	return i, err
 }
 
@@ -482,7 +459,7 @@ WITH previous AS (
   WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
-SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL,
+SET state = 1, score = 0, test_details = NULL,
     ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
@@ -515,7 +492,7 @@ func (q *Queries) ResetSubmissionsState(ctx context.Context, ids []uuid.UUID) ([
 }
 
 const submissionCandidates = `-- name: SubmissionCandidates :many
-SELECT id, contest_id, owner_id, problem_id FROM submissions
+SELECT id FROM submissions
 WHERE contest_id = $1::uuid
   AND ($2::uuid IS NULL OR problem_id = $2::uuid)
   AND ($3::uuid IS NULL OR id = $3::uuid)
@@ -530,14 +507,7 @@ type SubmissionCandidatesParams struct {
 	OwnerID      *uuid.UUID `json:"owner_id"`
 }
 
-type SubmissionCandidatesRow struct {
-	ID        uuid.UUID  `json:"id"`
-	ContestID *uuid.UUID `json:"contest_id"`
-	OwnerID   *uuid.UUID `json:"owner_id"`
-	ProblemID *uuid.UUID `json:"problem_id"`
-}
-
-func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandidatesParams) ([]SubmissionCandidatesRow, error) {
+func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandidatesParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, submissionCandidates,
 		arg.ContestID,
 		arg.ProblemID,
@@ -548,18 +518,13 @@ func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandid
 		return nil, err
 	}
 	defer rows.Close()
-	items := []SubmissionCandidatesRow{}
+	items := []uuid.UUID{}
 	for rows.Next() {
-		var i SubmissionCandidatesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ContestID,
-			&i.OwnerID,
-			&i.ProblemID,
-		); err != nil {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

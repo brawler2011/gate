@@ -30,7 +30,7 @@ const VISIBILITY_OPTIONS = [
   {label: "Приватный", value: "private", color: "red"},
 ];
 
-const PARTICIPATION_MODE_OPTIONS = [
+const JOIN_POLICY_OPTIONS = [
   {label: "Открытый (свободная регистрация)", value: "open", color: "green"},
   {label: "По заявкам (требуется одобрение)", value: "by_request", color: "blue"},
   {label: "Только по приглашению", value: "invite_only", color: "orange"},
@@ -137,7 +137,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
     freeze_status: corev1.UpdateContestRequestModel["freeze_status"];
-    participation_mode: corev1.UpdateContestRequestModel["participation_mode"];
+    join_policy: corev1.UpdateContestRequestModel["join_policy"];
     enable_drafts: boolean;
     enable_upsolving: boolean;
     allow_virtual: boolean;
@@ -149,7 +149,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       title: contest.title,
       description: contest.description,
       visibility: contest.visibility,
-      participation_mode: contest.participation_mode,
+      join_policy: contest.join_policy,
       enable_drafts: contest.enable_drafts,
       enable_upsolving: contest.enable_upsolving,
       allow_virtual: contest.allow_virtual,
@@ -205,7 +205,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
       freeze_duration_minutes: freezeDuration,
       freeze_status: values.freeze_status as corev1.UpdateContestRequestModel["freeze_status"],
-      participation_mode: values.participation_mode as corev1.UpdateContestRequestModel["participation_mode"],
+      join_policy: values.join_policy as corev1.UpdateContestRequestModel["join_policy"],
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
       allow_virtual: values.allow_virtual,
@@ -325,9 +325,9 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <CustomSelect
             label="Режим участия"
-            value={form.values.participation_mode ?? "open"}
-            onChange={(value) => form.setFieldValue("participation_mode", value as corev1.UpdateContestRequestModel["participation_mode"])}
-            options={PARTICIPATION_MODE_OPTIONS}
+            value={form.values.join_policy ?? "open"}
+            onChange={(value) => form.setFieldValue("join_policy", value as corev1.UpdateContestRequestModel["join_policy"])}
+            options={JOIN_POLICY_OPTIONS}
             description="В открытом контесте любой авторизованный пользователь может отправлять решения"
           />
 

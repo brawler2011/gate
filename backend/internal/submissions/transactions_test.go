@@ -11,7 +11,6 @@ import (
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
-	"github.com/brawler2011/gate/backend/internal/contests"
 	"github.com/google/uuid"
 )
 
@@ -19,11 +18,10 @@ type submissionTestStore struct {
 	accesstest.Loader
 	submissionCommandStore
 	eventdata.Writer
-	contests.ScoreboardStore
 }
 
 func (submissionTestStore) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
-	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
+	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Revision: 1}, nil
 }
 
 func (submissionTestStore) LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error {

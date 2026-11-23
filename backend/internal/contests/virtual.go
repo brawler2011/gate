@@ -64,7 +64,7 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 	if err != nil {
 		return nil, err
 	}
-	_, participants, err := uc.contestRepo.GetContestScoreboardFromStandings(ctx, contest.ID)
+	participants, err := uc.contestRepo.ListContestParticipants(ctx, contest.ID)
 	if err != nil {
 		return nil, err
 	}

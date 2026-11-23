@@ -147,7 +147,7 @@ func contest(p phase, change func(*cm.Contest)) (cm.Contest, time.Time) {
 	end := start.Add(2 * time.Hour)
 	now := map[phase]time.Time{before: start.Add(-time.Nanosecond), running: start, finished: end}[p]
 	c := cm.Contest{Visibility: cm.ContestVisibilityPrivate, StartTime: &start, EndTime: &end, Settings: cm.ContestSettings{
-		ParticipationMode: cm.ParticipationModeInviteOnly,
+		JoinPolicy: m.JoinInviteOnly,
 		MonitorScope:      cm.ScopeModerator, SubmissionsListScope: cm.ScopeModerator,
 		SubmissionsReviewScope: cm.ScopeModerator, SubmissionDetailsScope: cm.ScopeModerator,
 	}}
@@ -159,7 +159,7 @@ func contest(p phase, change func(*cm.Contest)) (cm.Contest, time.Time) {
 
 func public(c *cm.Contest)    { c.Visibility = cm.ContestVisibilityPublic }
 func upsolving(c *cm.Contest) { c.Settings.EnableUpsolving = true }
-func openEntry(c *cm.Contest) { public(c); c.Settings.ParticipationMode = cm.ParticipationModeOpen }
+func openEntry(c *cm.Contest) { public(c); c.Settings.JoinPolicy = m.JoinOpen }
 func hidden(c *cm.Contest)    { c.Settings.HideStatements = true }
 func monitor(s cm.ContestScope) func(*cm.Contest) {
 	return func(c *cm.Contest) { c.Settings.MonitorScope = s }

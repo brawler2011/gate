@@ -9,9 +9,7 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
@@ -43,7 +41,6 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	_, err = s.dbPool.Exec(s.ctx, `INSERT INTO submissions(contest_id,owner_id,problem_id,kind,source,language,state,created_at)
 		VALUES ($1,$2,$3,'contest','print(1)','python3',200,$4)`, contestID, participant.Id, problem.ID, start.Add(30*time.Minute))
 	s.Require().NoError(err)
-	s.Require().NoError(contests.ApplySubmissionResult(s.ctx, s.contestsRepo, &submissionsmodel.Submission{ContestID: &contestID, CreatedBy: &participant.Id, ProblemID: &problem.ID}))
 
 	as := func(user uuid.UUID) context.Context { return withTestUser(s.ctx, user) }
 	run := corev1.StartVirtualRunParams{OrgLogin: org.Login, ContestLogin: "virtual"}

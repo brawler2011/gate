@@ -5,16 +5,14 @@ import (
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
-	contests "github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
 type JudgeTxStore interface {
-	contests.ScoreboardStore
 	eventdata.Writer
-	// CompleteJob must hold scoring-tuple and submission-row locks, in that order, through commit.
+	// CompleteJob must hold the submission row lock through commit.
 	CompleteJob(context.Context, judgingmodel.Job) (bool, error)
 	FailStalledJob(context.Context, judgingmodel.JobRef) (bool, error)
 	RequeueStalledJob(context.Context, judgingmodel.JobRef) (bool, error)

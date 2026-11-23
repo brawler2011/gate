@@ -128,7 +128,6 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
-	Generation        int64                  `json:"-"`
 	Revision          int64                  `json:"revision"`
 	Frozen            bool                   `json:"-"`
 	SourceHidden      bool                   `json:"-"`

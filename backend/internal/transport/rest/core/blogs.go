@@ -40,7 +40,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 			Text:           post.Text,
 			Description:    post.Description,
 			PreviewImageID: post.ImageKey,
-			AuthorID:       post.AuthorUUID,
+			AuthorID:       post.AuthorID,
 			AuthorUsername: post.AuthorName,
 		}
 	}
@@ -99,7 +99,7 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 		Text:           post.Text,
 		Description:    post.Description,
 		PreviewImageID: post.ImageKey,
-		AuthorID:       post.AuthorUUID,
+		AuthorID:       post.AuthorID,
 		AuthorUsername: post.AuthorName,
 	}, nil
 }

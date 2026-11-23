@@ -276,13 +276,13 @@ func (s *ContestModel) Validate() error {
 		})
 	}
 	if err := func() error {
-		if err := s.ParticipationMode.Validate(); err != nil {
+		if err := s.JoinPolicy.Validate(); err != nil {
 			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "participation_mode",
+			Name:  "join_policy",
 			Error: err,
 		})
 	}
@@ -316,7 +316,7 @@ func (s ContestModelFreezeStatus) Validate() error {
 	}
 }
 
-func (s ContestModelParticipationMode) Validate() error {
+func (s ContestModelJoinPolicy) Validate() error {
 	switch s {
 	case "open":
 		return nil
@@ -3570,7 +3570,7 @@ func (s *UpdateContestRequestModel) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.ParticipationMode.Get(); ok {
+		if value, ok := s.JoinPolicy.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
 					return err
@@ -3583,7 +3583,7 @@ func (s *UpdateContestRequestModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "participation_mode",
+			Name:  "join_policy",
 			Error: err,
 		})
 	}
@@ -3606,7 +3606,7 @@ func (s UpdateContestRequestModelFreezeStatus) Validate() error {
 	}
 }
 
-func (s UpdateContestRequestModelParticipationMode) Validate() error {
+func (s UpdateContestRequestModelJoinPolicy) Validate() error {
 	switch s {
 	case "open":
 		return nil

@@ -4783,7 +4783,7 @@ components:
         submissions_review_scope: moderator
         submission_details_scope: moderator
         freeze_status: auto
-        participation_mode: open
+        join_policy: open
         hide_statements: false
         allow_clarifications: true
         enable_drafts: true
@@ -4806,7 +4806,7 @@ components:
         - submissions_review_scope
         - submission_details_scope
         - freeze_status
-        - participation_mode
+        - join_policy
         - hide_statements
         - allow_clarifications
         - enable_drafts
@@ -4879,7 +4879,7 @@ components:
           type: boolean
         allow_virtual:
           type: boolean
-        participation_mode:
+        join_policy:
           type: string
           enum:
             - open
@@ -4909,7 +4909,7 @@ components:
           submissions_review_scope: moderator
           submission_details_scope: moderator
           freeze_status: auto
-          participation_mode: open
+          join_policy: open
           hide_statements: false
           allow_clarifications: true
           enable_drafts: true
@@ -4950,7 +4950,7 @@ components:
           submissions_review_scope: moderator
           submission_details_scope: moderator
           freeze_status: auto
-          participation_mode: open
+          join_policy: open
           hide_statements: false
           allow_clarifications: true
           enable_drafts: true
@@ -5038,7 +5038,7 @@ components:
           submissions_review_scope: moderator
           submission_details_scope: moderator
           freeze_status: auto
-          participation_mode: open
+          join_policy: open
           hide_statements: false
           allow_clarifications: true
           enable_drafts: true
@@ -5130,7 +5130,7 @@ components:
         enable_drafts: false
         allow_clarifications: false
         enable_upsolving: false
-        participation_mode: open
+        join_policy: open
         hide_statements: false
       type: object
       properties:
@@ -5182,7 +5182,7 @@ components:
           type: boolean
         enable_upsolving:
           type: boolean
-        participation_mode:
+        join_policy:
           type: string
           enum:
             - open

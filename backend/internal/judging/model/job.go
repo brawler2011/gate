@@ -9,7 +9,7 @@ import (
 type Job struct {
 	ID           uuid.UUID
 	SubmissionID uuid.UUID
-	Generation   int64
+	Revision     int64
 	PackageID    *uuid.UUID
 	PackageHash  string
 	Attempt      int32
@@ -21,9 +21,9 @@ type Job struct {
 type JobRef struct {
 	ID           uuid.UUID
 	SubmissionID uuid.UUID
-	Generation   int64
+	Revision     int64
 }
 
 func (j Job) Ref() JobRef {
-	return JobRef{ID: j.ID, SubmissionID: j.SubmissionID, Generation: j.Generation}
+	return JobRef{ID: j.ID, SubmissionID: j.SubmissionID, Revision: j.Revision}
 }

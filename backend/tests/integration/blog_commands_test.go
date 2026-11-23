@@ -70,7 +70,7 @@ func (s *IntegrationTestSuite) TestBlogCommandsAuthorizeAfterUploadAndSerializeI
 	}
 	post, err := pgstore.NewBlogsRepo(s.dbPool).GetPostByID(s.ctx, id)
 	s.Require().NoError(err)
-	s.Equal(admin.Id, post.AuthorUUID)
+	s.Equal(admin.Id, post.AuthorID)
 	s.Equal(admin.Username, post.AuthorName)
 	objects, err = local.ListFiles(s.ctx, "blogs", "")
 	s.Require().NoError(err)
@@ -88,8 +88,8 @@ func (s *IntegrationTestSuite) TestListPostsPagination() {
 	ids := make([]uuid.UUID, 3)
 	for i := range ids {
 		ids[i] = uuid.New()
-		_, err := s.dbPool.Exec(s.ctx, "INSERT INTO posts(id, title, text, description, author_uuid, author_name, image_key, created_at) VALUES($1, $2, 'text', 'description', $3, $4, 'preview', $5)",
-			ids[i], fmt.Sprintf("Paged Post %d", i), admin.Id, admin.Username, time.Now().Add(time.Duration(i)*time.Hour))
+		_, err := s.dbPool.Exec(s.ctx, "INSERT INTO posts(id, title, text, description, author_id, image_key, created_at) VALUES($1, $2, 'text', 'description', $3, 'preview', $4)",
+			ids[i], fmt.Sprintf("Paged Post %d", i), admin.Id, time.Now().Add(time.Duration(i)*time.Hour))
 		s.Require().NoError(err)
 	}
 

@@ -1383,17 +1383,17 @@ type ContestModel struct {
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status.
-	FreezeStatus        ContestModelFreezeStatus      `json:"freeze_status"`
-	CreatedAt           time.Time                     `json:"created_at"`
-	UpdatedAt           time.Time                     `json:"updated_at"`
-	StartTime           OptNilDateTime                `json:"start_time"`
-	EndTime             OptNilDateTime                `json:"end_time"`
-	EnableDrafts        bool                          `json:"enable_drafts"`
-	AllowClarifications bool                          `json:"allow_clarifications"`
-	EnableUpsolving     bool                          `json:"enable_upsolving"`
-	AllowVirtual        bool                          `json:"allow_virtual"`
-	ParticipationMode   ContestModelParticipationMode `json:"participation_mode"`
-	HideStatements      bool                          `json:"hide_statements"`
+	FreezeStatus        ContestModelFreezeStatus `json:"freeze_status"`
+	CreatedAt           time.Time                `json:"created_at"`
+	UpdatedAt           time.Time                `json:"updated_at"`
+	StartTime           OptNilDateTime           `json:"start_time"`
+	EndTime             OptNilDateTime           `json:"end_time"`
+	EnableDrafts        bool                     `json:"enable_drafts"`
+	AllowClarifications bool                     `json:"allow_clarifications"`
+	EnableUpsolving     bool                     `json:"enable_upsolving"`
+	AllowVirtual        bool                     `json:"allow_virtual"`
+	JoinPolicy          ContestModelJoinPolicy   `json:"join_policy"`
+	HideStatements      bool                     `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog.
 	Languages []string `json:"languages"`
 }
@@ -1508,9 +1508,9 @@ func (s *ContestModel) GetAllowVirtual() bool {
 	return s.AllowVirtual
 }
 
-// GetParticipationMode returns the value of ParticipationMode.
-func (s *ContestModel) GetParticipationMode() ContestModelParticipationMode {
-	return s.ParticipationMode
+// GetJoinPolicy returns the value of JoinPolicy.
+func (s *ContestModel) GetJoinPolicy() ContestModelJoinPolicy {
+	return s.JoinPolicy
 }
 
 // GetHideStatements returns the value of HideStatements.
@@ -1633,9 +1633,9 @@ func (s *ContestModel) SetAllowVirtual(val bool) {
 	s.AllowVirtual = val
 }
 
-// SetParticipationMode sets the value of ParticipationMode.
-func (s *ContestModel) SetParticipationMode(val ContestModelParticipationMode) {
-	s.ParticipationMode = val
+// SetJoinPolicy sets the value of JoinPolicy.
+func (s *ContestModel) SetJoinPolicy(val ContestModelJoinPolicy) {
+	s.JoinPolicy = val
 }
 
 // SetHideStatements sets the value of HideStatements.
@@ -1697,31 +1697,31 @@ func (s *ContestModelFreezeStatus) UnmarshalText(data []byte) error {
 	}
 }
 
-type ContestModelParticipationMode string
+type ContestModelJoinPolicy string
 
 const (
-	ContestModelParticipationModeOpen       ContestModelParticipationMode = "open"
-	ContestModelParticipationModeByRequest  ContestModelParticipationMode = "by_request"
-	ContestModelParticipationModeInviteOnly ContestModelParticipationMode = "invite_only"
+	ContestModelJoinPolicyOpen       ContestModelJoinPolicy = "open"
+	ContestModelJoinPolicyByRequest  ContestModelJoinPolicy = "by_request"
+	ContestModelJoinPolicyInviteOnly ContestModelJoinPolicy = "invite_only"
 )
 
-// AllValues returns all ContestModelParticipationMode values.
-func (ContestModelParticipationMode) AllValues() []ContestModelParticipationMode {
-	return []ContestModelParticipationMode{
-		ContestModelParticipationModeOpen,
-		ContestModelParticipationModeByRequest,
-		ContestModelParticipationModeInviteOnly,
+// AllValues returns all ContestModelJoinPolicy values.
+func (ContestModelJoinPolicy) AllValues() []ContestModelJoinPolicy {
+	return []ContestModelJoinPolicy{
+		ContestModelJoinPolicyOpen,
+		ContestModelJoinPolicyByRequest,
+		ContestModelJoinPolicyInviteOnly,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s ContestModelParticipationMode) MarshalText() ([]byte, error) {
+func (s ContestModelJoinPolicy) MarshalText() ([]byte, error) {
 	switch s {
-	case ContestModelParticipationModeOpen:
+	case ContestModelJoinPolicyOpen:
 		return []byte(s), nil
-	case ContestModelParticipationModeByRequest:
+	case ContestModelJoinPolicyByRequest:
 		return []byte(s), nil
-	case ContestModelParticipationModeInviteOnly:
+	case ContestModelJoinPolicyInviteOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -1729,16 +1729,16 @@ func (s ContestModelParticipationMode) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ContestModelParticipationMode) UnmarshalText(data []byte) error {
-	switch ContestModelParticipationMode(data) {
-	case ContestModelParticipationModeOpen:
-		*s = ContestModelParticipationModeOpen
+func (s *ContestModelJoinPolicy) UnmarshalText(data []byte) error {
+	switch ContestModelJoinPolicy(data) {
+	case ContestModelJoinPolicyOpen:
+		*s = ContestModelJoinPolicyOpen
 		return nil
-	case ContestModelParticipationModeByRequest:
-		*s = ContestModelParticipationModeByRequest
+	case ContestModelJoinPolicyByRequest:
+		*s = ContestModelJoinPolicyByRequest
 		return nil
-	case ContestModelParticipationModeInviteOnly:
-		*s = ContestModelParticipationModeInviteOnly
+	case ContestModelJoinPolicyInviteOnly:
+		*s = ContestModelJoinPolicyInviteOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -7887,38 +7887,38 @@ func (o OptUpdateContestRequestModelFreezeStatus) Or(d UpdateContestRequestModel
 	return d
 }
 
-// NewOptUpdateContestRequestModelParticipationMode returns new OptUpdateContestRequestModelParticipationMode with value set to v.
-func NewOptUpdateContestRequestModelParticipationMode(v UpdateContestRequestModelParticipationMode) OptUpdateContestRequestModelParticipationMode {
-	return OptUpdateContestRequestModelParticipationMode{
+// NewOptUpdateContestRequestModelJoinPolicy returns new OptUpdateContestRequestModelJoinPolicy with value set to v.
+func NewOptUpdateContestRequestModelJoinPolicy(v UpdateContestRequestModelJoinPolicy) OptUpdateContestRequestModelJoinPolicy {
+	return OptUpdateContestRequestModelJoinPolicy{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptUpdateContestRequestModelParticipationMode is optional UpdateContestRequestModelParticipationMode.
-type OptUpdateContestRequestModelParticipationMode struct {
-	Value UpdateContestRequestModelParticipationMode
+// OptUpdateContestRequestModelJoinPolicy is optional UpdateContestRequestModelJoinPolicy.
+type OptUpdateContestRequestModelJoinPolicy struct {
+	Value UpdateContestRequestModelJoinPolicy
 	Set   bool
 }
 
-// IsSet returns true if OptUpdateContestRequestModelParticipationMode was set.
-func (o OptUpdateContestRequestModelParticipationMode) IsSet() bool { return o.Set }
+// IsSet returns true if OptUpdateContestRequestModelJoinPolicy was set.
+func (o OptUpdateContestRequestModelJoinPolicy) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptUpdateContestRequestModelParticipationMode) Reset() {
-	var v UpdateContestRequestModelParticipationMode
+func (o *OptUpdateContestRequestModelJoinPolicy) Reset() {
+	var v UpdateContestRequestModelJoinPolicy
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptUpdateContestRequestModelParticipationMode) SetTo(v UpdateContestRequestModelParticipationMode) {
+func (o *OptUpdateContestRequestModelJoinPolicy) SetTo(v UpdateContestRequestModelJoinPolicy) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptUpdateContestRequestModelParticipationMode) Get() (v UpdateContestRequestModelParticipationMode, ok bool) {
+func (o OptUpdateContestRequestModelJoinPolicy) Get() (v UpdateContestRequestModelJoinPolicy, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -7926,7 +7926,7 @@ func (o OptUpdateContestRequestModelParticipationMode) Get() (v UpdateContestReq
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptUpdateContestRequestModelParticipationMode) Or(d UpdateContestRequestModelParticipationMode) UpdateContestRequestModelParticipationMode {
+func (o OptUpdateContestRequestModelJoinPolicy) Or(d UpdateContestRequestModelJoinPolicy) UpdateContestRequestModelJoinPolicy {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -13366,15 +13366,15 @@ type UpdateContestRequestModel struct {
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
 	// Freeze mode status; omitted preserves the current mode.
-	FreezeStatus        OptUpdateContestRequestModelFreezeStatus      `json:"freeze_status"`
-	StartTime           OptNilDateTime                                `json:"start_time"`
-	EndTime             OptNilDateTime                                `json:"end_time"`
-	EnableDrafts        OptBool                                       `json:"enable_drafts"`
-	AllowClarifications OptBool                                       `json:"allow_clarifications"`
-	AllowVirtual        OptBool                                       `json:"allow_virtual"`
-	EnableUpsolving     OptBool                                       `json:"enable_upsolving"`
-	ParticipationMode   OptUpdateContestRequestModelParticipationMode `json:"participation_mode"`
-	HideStatements      OptBool                                       `json:"hide_statements"`
+	FreezeStatus        OptUpdateContestRequestModelFreezeStatus `json:"freeze_status"`
+	StartTime           OptNilDateTime                           `json:"start_time"`
+	EndTime             OptNilDateTime                           `json:"end_time"`
+	EnableDrafts        OptBool                                  `json:"enable_drafts"`
+	AllowClarifications OptBool                                  `json:"allow_clarifications"`
+	AllowVirtual        OptBool                                  `json:"allow_virtual"`
+	EnableUpsolving     OptBool                                  `json:"enable_upsolving"`
+	JoinPolicy          OptUpdateContestRequestModelJoinPolicy   `json:"join_policy"`
+	HideStatements      OptBool                                  `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves
 	// the current list.
 	Languages []string `json:"languages"`
@@ -13460,9 +13460,9 @@ func (s *UpdateContestRequestModel) GetEnableUpsolving() OptBool {
 	return s.EnableUpsolving
 }
 
-// GetParticipationMode returns the value of ParticipationMode.
-func (s *UpdateContestRequestModel) GetParticipationMode() OptUpdateContestRequestModelParticipationMode {
-	return s.ParticipationMode
+// GetJoinPolicy returns the value of JoinPolicy.
+func (s *UpdateContestRequestModel) GetJoinPolicy() OptUpdateContestRequestModelJoinPolicy {
+	return s.JoinPolicy
 }
 
 // GetHideStatements returns the value of HideStatements.
@@ -13555,9 +13555,9 @@ func (s *UpdateContestRequestModel) SetEnableUpsolving(val OptBool) {
 	s.EnableUpsolving = val
 }
 
-// SetParticipationMode sets the value of ParticipationMode.
-func (s *UpdateContestRequestModel) SetParticipationMode(val OptUpdateContestRequestModelParticipationMode) {
-	s.ParticipationMode = val
+// SetJoinPolicy sets the value of JoinPolicy.
+func (s *UpdateContestRequestModel) SetJoinPolicy(val OptUpdateContestRequestModelJoinPolicy) {
+	s.JoinPolicy = val
 }
 
 // SetHideStatements sets the value of HideStatements.
@@ -13619,31 +13619,31 @@ func (s *UpdateContestRequestModelFreezeStatus) UnmarshalText(data []byte) error
 	}
 }
 
-type UpdateContestRequestModelParticipationMode string
+type UpdateContestRequestModelJoinPolicy string
 
 const (
-	UpdateContestRequestModelParticipationModeOpen       UpdateContestRequestModelParticipationMode = "open"
-	UpdateContestRequestModelParticipationModeByRequest  UpdateContestRequestModelParticipationMode = "by_request"
-	UpdateContestRequestModelParticipationModeInviteOnly UpdateContestRequestModelParticipationMode = "invite_only"
+	UpdateContestRequestModelJoinPolicyOpen       UpdateContestRequestModelJoinPolicy = "open"
+	UpdateContestRequestModelJoinPolicyByRequest  UpdateContestRequestModelJoinPolicy = "by_request"
+	UpdateContestRequestModelJoinPolicyInviteOnly UpdateContestRequestModelJoinPolicy = "invite_only"
 )
 
-// AllValues returns all UpdateContestRequestModelParticipationMode values.
-func (UpdateContestRequestModelParticipationMode) AllValues() []UpdateContestRequestModelParticipationMode {
-	return []UpdateContestRequestModelParticipationMode{
-		UpdateContestRequestModelParticipationModeOpen,
-		UpdateContestRequestModelParticipationModeByRequest,
-		UpdateContestRequestModelParticipationModeInviteOnly,
+// AllValues returns all UpdateContestRequestModelJoinPolicy values.
+func (UpdateContestRequestModelJoinPolicy) AllValues() []UpdateContestRequestModelJoinPolicy {
+	return []UpdateContestRequestModelJoinPolicy{
+		UpdateContestRequestModelJoinPolicyOpen,
+		UpdateContestRequestModelJoinPolicyByRequest,
+		UpdateContestRequestModelJoinPolicyInviteOnly,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s UpdateContestRequestModelParticipationMode) MarshalText() ([]byte, error) {
+func (s UpdateContestRequestModelJoinPolicy) MarshalText() ([]byte, error) {
 	switch s {
-	case UpdateContestRequestModelParticipationModeOpen:
+	case UpdateContestRequestModelJoinPolicyOpen:
 		return []byte(s), nil
-	case UpdateContestRequestModelParticipationModeByRequest:
+	case UpdateContestRequestModelJoinPolicyByRequest:
 		return []byte(s), nil
-	case UpdateContestRequestModelParticipationModeInviteOnly:
+	case UpdateContestRequestModelJoinPolicyInviteOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -13651,16 +13651,16 @@ func (s UpdateContestRequestModelParticipationMode) MarshalText() ([]byte, error
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *UpdateContestRequestModelParticipationMode) UnmarshalText(data []byte) error {
-	switch UpdateContestRequestModelParticipationMode(data) {
-	case UpdateContestRequestModelParticipationModeOpen:
-		*s = UpdateContestRequestModelParticipationModeOpen
+func (s *UpdateContestRequestModelJoinPolicy) UnmarshalText(data []byte) error {
+	switch UpdateContestRequestModelJoinPolicy(data) {
+	case UpdateContestRequestModelJoinPolicyOpen:
+		*s = UpdateContestRequestModelJoinPolicyOpen
 		return nil
-	case UpdateContestRequestModelParticipationModeByRequest:
-		*s = UpdateContestRequestModelParticipationModeByRequest
+	case UpdateContestRequestModelJoinPolicyByRequest:
+		*s = UpdateContestRequestModelJoinPolicyByRequest
 		return nil
-	case UpdateContestRequestModelParticipationModeInviteOnly:
-		*s = UpdateContestRequestModelParticipationModeInviteOnly
+	case UpdateContestRequestModelJoinPolicyInviteOnly:
+		*s = UpdateContestRequestModelJoinPolicyInviteOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

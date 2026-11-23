@@ -90,11 +90,11 @@ func (f *concurrencyFixture) job(t *testing.T, user, minute int) judgingmodel.Jo
 	// Claim this submission's job directly: other tests' submissions may be pending too.
 	job := judgingmodel.Job{SubmissionID: id, LeaseToken: uuid.New()}
 	require.NoError(t, f.pool.QueryRow(f.ctx, `UPDATE judge_jobs SET state='processing',attempt=attempt+1,lease_token=$2,deadline_at=now()+interval '30 seconds'
- WHERE submission_id=$1 RETURNING id,generation,package_id,package_hash,attempt`, id, job.LeaseToken).Scan(&job.ID, &job.Generation, &job.PackageID, &job.PackageHash, &job.Attempt))
+ WHERE submission_id=$1 RETURNING id,revision,package_id,package_hash,attempt`, id, job.LeaseToken).Scan(&job.ID, &job.Revision, &job.PackageID, &job.PackageHash, &job.Attempt))
 	return job
 }
 
-// Verdict transactions cover standings insertion and notices under contention.
+// Verdict transactions cover notices under contention.
 func applyConcurrentVerdict(ctx context.Context, tx judging.JudgeTxStore, job judgingmodel.Job, state submissionsmodel.State) error {
 	current, err := tx.CompleteJob(ctx, job)
 	if err != nil || !current {
@@ -103,14 +103,7 @@ func applyConcurrentVerdict(ctx context.Context, tx judging.JudgeTxStore, job ju
 	if _, err := tx.UpdateSubmission(ctx, job.SubmissionID, &submissionsmodel.SubmissionUpdate{State: state}); err != nil {
 		return err
 	}
-	sub, err := tx.GetSubmission(ctx, job.SubmissionID)
-	if err != nil {
-		return err
-	}
-	if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
-		return err
-	}
-	return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})
+	return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: job.SubmissionID})
 }
 func (f *concurrencyFixture) complete(job judgingmodel.Job, state submissionsmodel.State) error {
 	return postgres.NewJudgeTransactions(f.pool).Within(f.ctx, func(tx judging.JudgeTxStore) error { return applyConcurrentVerdict(f.ctx, tx, job, state) })
@@ -135,6 +128,18 @@ func (f *concurrencyFixture) holdTuple(t *testing.T, blockers blockerPool, user 
 	return holdTransaction(t, func(ctx context.Context, barrier func() error) error {
 		return postgres.NewSubmissionTransactions(blockers.Pool).Within(ctx, func(tx submissions.SubmissionTxStore) error {
 			if err := tx.LockSubmissionTuple(ctx, f.contest, f.users[user], f.problem); err != nil {
+				return err
+			}
+			return barrier()
+		})
+	})
+}
+
+func holdSubmission(t *testing.T, blockers blockerPool, id uuid.UUID) (release func(commit bool) error) {
+	t.Helper()
+	return holdTransaction(t, func(ctx context.Context, barrier func() error) error {
+		return pgx.BeginFunc(ctx, blockers.Pool, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, "SELECT 1 FROM submissions WHERE id=$1 FOR UPDATE", id); err != nil {
 				return err
 			}
 			return barrier()
@@ -196,37 +201,8 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, submissionsmodel.Accepted, sub.State)
 			require.EqualValues(t, 2, sub.Revision)
-			result, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[2], f.problem)
-			require.NoError(t, err)
-			require.True(t, result.Solved)
 		})
 	}
-}
-
-func TestConcurrentTupleCompletions(t *testing.T) {
-	t.Parallel()
-	f := newConcurrencyFixture(t)
-	failed, early, late := f.job(t, 1, 5), f.job(t, 1, 10), f.job(t, 1, 20)
-	release := f.holdTuple(t, f.blockers, 1)
-	results := []<-chan error{
-		asyncConcurrent(func() error { return f.complete(late, submissionsmodel.Accepted) }),
-		asyncConcurrent(func() error { return f.complete(failed, submissionsmodel.GotWA) }),
-		asyncConcurrent(func() error { return f.complete(early, submissionsmodel.Accepted) }),
-	}
-	f.blockers.waitBlocked(t, f.ctx, 3)
-	require.NoError(t, release(true))
-	for _, result := range results {
-		awaitConcurrent(t, result)
-	}
-	standing, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
-	require.NoError(t, err)
-	require.True(t, standing.Solved)
-	require.EqualValues(t, 1, standing.FailedAttempts)
-	require.WithinDuration(t, f.start.Add(10*time.Minute), *standing.FirstACTime, time.Millisecond)
-	require.EqualValues(t, 10, *standing.TimeMinutes)
-	scoreboard, err := contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, nil, nil).ProjectScoreboard(f.ctx, f.contest, true)
-	require.NoError(t, err)
-	require.EqualValues(t, 30, scoreboard.Items[0].TotalPenalty)
 }
 
 func TestCompletionRacesAdministrativeMutation(t *testing.T) {
@@ -235,7 +211,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 		t.Run(mutation, func(t *testing.T) {
 			f := newConcurrencyFixture(t)
 			job := f.job(t, 1, 10)
-			release := f.holdTuple(t, f.blockers, 1)
+			release := holdSubmission(t, f.blockers, job.SubmissionID)
 			completion := asyncConcurrent(func() error { return f.complete(job, submissionsmodel.Accepted) })
 			uc := f.submissionUC(postgres.NewSubmissionTransactions(f.pool))
 			update := asyncConcurrent(func() error {
@@ -253,7 +229,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 			require.NoError(t, release(true))
 			awaitConcurrent(t, completion)
 			awaitConcurrent(t, update)
-			// A late result from the old generation has no effect regardless of race order.
+			// A late result from the old revision has no effect regardless of race order.
 			require.NoError(t, f.complete(job, submissionsmodel.Accepted))
 			sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 			require.NoError(t, err)
@@ -262,10 +238,6 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 				expected = submissionsmodel.Saved
 			}
 			require.Equal(t, expected, sub.State)
-			require.EqualValues(t, 2, sub.Generation)
-			standing, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
-			require.NoError(t, err)
-			require.False(t, standing.Solved)
 		})
 	}
 }
@@ -296,11 +268,11 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	t.Parallel()
 	f := newConcurrencyFixture(t)
 	jobs := []judgingmodel.Job{f.job(t, 1, 10), f.job(t, 2, 20)}
-	// Hold both tuples to observe lock order; a command waiting on the first must not lock the second.
+	// Hold both submissions to observe lock order; a command waiting on the first must not lock the second.
 	blockers := map[int]blockerPool{1: newBlockerPool(t), 2: newBlockerPool(t)}
 	releases := map[int]func(bool) error{}
 	for user, pool := range blockers {
-		releases[user] = f.holdTuple(t, pool, user)
+		releases[user] = holdSubmission(t, pool, jobs[user-1].SubmissionID)
 	}
 	uc := f.submissionUC(postgres.NewSubmissionTransactions(f.pool))
 	results := []<-chan error{}
@@ -336,11 +308,10 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	// A serializable retry takes a fresh snapshot, so each bulk command rejudges the late submission at most once.
 	late, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, created)
 	require.NoError(t, err)
-	require.LessOrEqual(t, late.Generation, int64(3))
-	require.Equal(t, late.Generation, late.Revision)
+	require.LessOrEqual(t, late.Revision, int64(3))
 	var lateJobs int64
 	require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT count(*) FROM judge_jobs WHERE submission_id=$1", created).Scan(&lateJobs))
-	require.Equal(t, late.Generation, lateJobs)
+	require.Equal(t, late.Revision, lateJobs)
 	sentinel := errors.New("rollback bulk rejudge")
 	err = postgres.NewSubmissionTransactions(f.pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
 		changed, err := tx.ResetSubmissionsState(f.ctx, submissionsmodel.RejudgeFilter{ContestID: f.contest})
@@ -361,7 +332,6 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	for _, job := range jobs {
 		sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 		require.NoError(t, err)
-		require.EqualValues(t, 3, sub.Generation)
 		require.EqualValues(t, 3, sub.Revision)
 		var count int
 		require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT count(*) FROM judge_jobs WHERE submission_id=$1", sub.ID).Scan(&count))
@@ -418,7 +388,7 @@ func TestCompletionChecksDeadlineAfterLockWait(t *testing.T) {
 	job := f.job(t, 1, 10)
 	_, err := f.pool.Exec(f.ctx, "UPDATE judge_jobs SET deadline_at=clock_timestamp()+interval '200 milliseconds' WHERE id=$1", job.ID)
 	require.NoError(t, err)
-	release := f.holdTuple(t, f.blockers, 1)
+	release := holdSubmission(t, f.blockers, job.SubmissionID)
 	result := asyncConcurrent(func() error { return f.complete(job, submissionsmodel.Accepted) })
 	f.blockers.waitBlocked(t, f.ctx, 1)
 	require.Eventually(t, func() bool {

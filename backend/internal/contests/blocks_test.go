@@ -213,7 +213,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 }
 
 func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
-	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
+	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Revision: 1}, nil
 }
 
 func (*blockingSubmissionsRepo) LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error {

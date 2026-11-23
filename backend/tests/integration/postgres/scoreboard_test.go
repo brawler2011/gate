@@ -83,11 +83,6 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			add(contest, users[size+1], problems[0], submissionsmodel.Accepted, 5)
 
 			ctx = accessmodel.WithReadTime(ctx, end.Add(-time.Nanosecond))
-			for _, user := range users[:size] {
-				for _, problem := range problems[:size] {
-					require.NoError(t, contests.ApplySubmissionResult(ctx, repo, &submissionsmodel.Submission{ContestID: &contest, CreatedBy: &user, ProblemID: &problem}))
-				}
-			}
 			// Count actual history queries, including any accidental per-problem reads.
 			recordingPool, recorder := newRecordingPool(t)
 			history := func() int { return recorder.count("FROM submissions") }
@@ -96,11 +91,11 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 				recorder.reset()
 				snapshot, err := uc.ProjectScoreboard(ctx, contest, unfrozen)
 				require.NoError(t, err)
-				expectedHistory, pending := 1, 3
+				pending := 3
 				if unfrozen {
-					expectedHistory, pending = 0, 0
+					pending = 0
 				}
-				require.Equal(t, expectedHistory, history())
+				require.Equal(t, 1, history())
 				require.Len(t, snapshot.Items, size+1)
 				require.Len(t, snapshot.Problems, size)
 				for _, item := range snapshot.Items {
@@ -160,9 +155,6 @@ func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 	add(users[0], freeze, submissionsmodel.Accepted)
 	add(users[0], freeze.Add(time.Minute), submissionsmodel.Saved)
 	add(users[1], freeze.Add(-2*time.Minute), submissionsmodel.Accepted)
-	for _, user := range users {
-		require.NoError(t, contests.ApplySubmissionResult(f.ctx, f.repo, &submissionsmodel.Submission{ContestID: &f.contest, ProblemID: &f.problem, CreatedBy: &user}))
-	}
 	read := func(actor accessmodel.User, at time.Time, live bool) *contestsmodel.ScoreboardResponse {
 		t.Helper()
 		board, err := f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, actor), at), f.contest, live, false)
@@ -185,7 +177,6 @@ func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 	// A rejudge of a pre-freeze submission during the freeze is visible at once.
 	_, err = f.pool.Exec(f.ctx, `UPDATE submissions SET state=$3 WHERE owner_id=$1 AND contest_id=$2`, users[1], f.contest, submissionsmodel.GotWA)
 	require.NoError(t, err)
-	require.NoError(t, contests.ApplySubmissionResult(f.ctx, f.repo, &submissionsmodel.Submission{ContestID: &f.contest, ProblemID: &f.problem, CreatedBy: &users[1]}))
 	for _, item := range read(participant, now, false).Items {
 		if item.UserID == users[1] {
 			require.Zero(t, item.ProblemsSolved)

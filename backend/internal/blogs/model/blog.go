@@ -13,7 +13,7 @@ type Post struct {
 	Title       string
 	Text        string
 	Description string
-	AuthorUUID  uuid.UUID
+	AuthorID    uuid.UUID
 	AuthorName  string
 	ImageKey    string
 }
@@ -22,8 +22,7 @@ type CreatePostParams struct {
 	Title       string
 	Text        string
 	Description string
-	AuthorUUID  uuid.UUID
-	AuthorName  string
+	AuthorID    uuid.UUID
 	ImageKey    string
 }
 

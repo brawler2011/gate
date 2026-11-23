@@ -27,7 +27,6 @@ type scoreboardRepo struct {
 	users       map[uuid.UUID]string
 	roles       map[uuid.UUID]accessmodel.ContestRole
 	submissions map[uuid.UUID]submissionsmodel.Submission
-	results     map[scoreboardKey]contestsmodel.ContestProblemResult
 	blocks      map[scoreboardKey]contestsmodel.ContestUserProblemBlock
 }
 
@@ -59,17 +58,6 @@ func (r *scoreboardRepo) GetContestProblem(_ context.Context, input contestsmode
 	return contestsmodel.ContestProblem{}, pkg.ErrNotFound
 }
 
-func (r *scoreboardRepo) GetSubmissionsForScoreboard(_ context.Context, contest, user, problem uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error) {
-	var result []contestsmodel.SubmissionForScoreboard
-	for _, s := range r.submissions {
-		if s.ContestID != nil && *s.ContestID == contest && s.CreatedBy != nil && *s.CreatedBy == user && s.ProblemID != nil && *s.ProblemID == problem {
-			result = append(result, contestsmodel.SubmissionForScoreboard{State: s.State, CreatedAt: s.CreatedAt})
-		}
-	}
-	sort.Slice(result, func(i, j int) bool { return result[i].CreatedAt.Before(result[j].CreatedAt) })
-	return result, nil
-}
-
 func (r *scoreboardRepo) GetContestScoreboardSubmissions(_ context.Context, contest uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
 	return r.scoreboardHistory(contest, nil), r.historyErr
 }
@@ -99,23 +87,14 @@ func (r *scoreboardRepo) scoreboardHistory(contest uuid.UUID, user *uuid.UUID) [
 	return rows
 }
 
-func (r *scoreboardRepo) UpsertContestProblemResult(_ context.Context, p *contestsmodel.UpsertContestProblemResultParams) error {
-	r.results[scoreboardKey{p.ContestID, p.UserID, p.ProblemID}] = contestsmodel.ContestProblemResult{
-		ContestID: p.ContestID, UserID: p.UserID, ProblemID: p.ProblemID, Solved: p.Solved,
-		FailedAttempts: p.FailedAttempts, FirstACTime: p.FirstACTime, TimeMinutes: p.TimeMinutes,
-	}
-	return nil
-}
-
-func (r *scoreboardRepo) GetContestScoreboardFromStandings(_ context.Context, contest uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error) {
-	var results []contestsmodel.ContestProblemResult
-	for key, result := range r.results {
-		if key.contest == contest {
-			results = append(results, result)
+func (r *scoreboardRepo) ListContestParticipants(context.Context, uuid.UUID) (map[uuid.UUID]string, error) {
+	users := map[uuid.UUID]string{}
+	for id, role := range r.roles {
+		if role == accessmodel.ContestParticipant {
+			users[id] = r.users[id]
 		}
 	}
-	sort.Slice(results, func(i, j int) bool { return results[i].ProblemID.String() < results[j].ProblemID.String() })
-	return results, r.users, nil
+	return users, nil
 }
 
 type scoreboardFixture struct {
@@ -130,7 +109,7 @@ func newScoreboardFixture(names ...string) *scoreboardFixture {
 	r := &scoreboardRepo{
 		contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusUnfrozen, FreezeDurationMinutes: new(int32(60))}},
 		users:   map[uuid.UUID]string{}, roles: map[uuid.UUID]accessmodel.ContestRole{}, submissions: map[uuid.UUID]submissionsmodel.Submission{},
-		results: map[scoreboardKey]contestsmodel.ContestProblemResult{}, blocks: map[scoreboardKey]contestsmodel.ContestUserProblemBlock{},
+		blocks: map[scoreboardKey]contestsmodel.ContestUserProblemBlock{},
 	}
 	for i, name := range []string{"A", "B"} {
 		r.problems = append(r.problems, contestsmodel.ContestProblem{ContestID: r.contest.ID, ProblemID: uuid.New(), Title: name, ShortName: name, Ordinal: i + 1})
@@ -150,7 +129,6 @@ func (f *scoreboardFixture) submit(t *testing.T, user string, problem int, state
 	id, contest, author, task := uuid.New(), f.repo.contest.ID, f.users[user], f.repo.problems[problem].ProblemID
 	sub := submissionsmodel.Submission{ID: id, ContestID: &contest, CreatedBy: &author, ProblemID: &task, State: state, CreatedAt: f.repo.contest.StartTime.Add(offset)}
 	f.repo.submissions[id] = sub
-	require.NoError(t, contests.ApplySubmissionResult(context.Background(), f.repo, &sub))
 	return id
 }
 
@@ -375,7 +353,6 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 	sub := f.repo.submissions[accepted]
 	sub.State = submissionsmodel.Saved
 	f.repo.submissions[accepted] = sub
-	require.NoError(t, contests.ApplySubmissionResult(context.Background(), f.repo, &sub))
 	check()
 	delete(f.repo.roles, f.users["alice"])
 	update, err := f.uc.GetContestScoreboardUser(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, f.users["alice"], false)

@@ -197,7 +197,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 		AllowClarifications:    s.AllowClarifications,
 		EnableUpsolving:        s.EnableUpsolving,
 		AllowVirtual:           s.AllowVirtual,
-		ParticipationMode:      corev1.ContestModelParticipationMode(s.ParticipationMode),
+		JoinPolicy:             corev1.ContestModelJoinPolicy(s.JoinPolicy),
 		HideStatements:         s.HideStatements,
 		Languages:              append([]string{}, s.Languages...),
 		CreatedAt:              c.CreatedAt,

@@ -104,7 +104,7 @@ func newContestState(actor m.User, f ContestFacts) contestState {
 		f:        f,
 	}
 	user := !actor.IsGuest()
-	s.participant = user && (r >= 1 || public && c.Settings.ParticipationMode == contestsmodel.ParticipationModeOpen)
+	s.participant = user && (r >= 1 || public && c.Settings.JoinPolicy == m.JoinOpen)
 	s.virtual = user && s.view && f.Run != nil
 	s.replaying = s.virtual && !f.Now.Before(f.Run.StartedAt) && f.Now.Before(f.Run.Over())
 	s.competitor = s.participant || s.replaying || user && s.view && s.finished && (c.Settings.EnableUpsolving || s.virtual)

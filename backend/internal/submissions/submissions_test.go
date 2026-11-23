@@ -105,5 +105,5 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 }
 
 func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
-	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
+	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Revision: 1}, nil
 }

@@ -76,7 +76,7 @@ func (uc *BlogsUseCase) CreatePost(
 	err = uc.withinAdmin(ctx, func(store TxStore, actor accessmodel.User) error {
 		var err error
 		postID, err = store.CreatePost(ctx, blogsmodel.CreatePostParams{
-			Title: title, Text: text, Description: description, AuthorUUID: actor.Id, AuthorName: actor.Username, ImageKey: imageKey,
+			Title: title, Text: text, Description: description, AuthorID: actor.Id, ImageKey: imageKey,
 		})
 		return err
 	})

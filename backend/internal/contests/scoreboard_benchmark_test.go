@@ -19,12 +19,7 @@ import (
 
 type benchmarkScoreboardRepo struct {
 	*scoreboardRepo
-	standings []contestsmodel.ContestProblemResult
-	batch     []contestsmodel.ScoreboardSubmission
-}
-
-func (r *benchmarkScoreboardRepo) GetContestScoreboardFromStandings(context.Context, uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error) {
-	return r.standings, r.users, nil
+	batch []contestsmodel.ScoreboardSubmission
 }
 
 func (r *benchmarkScoreboardRepo) GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
@@ -47,7 +42,7 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 					end := start.Add(2 * time.Hour)
 					r := &benchmarkScoreboardRepo{scoreboardRepo: &scoreboardRepo{
 						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60))}},
-						users:   map[uuid.UUID]string{},
+						users:   map[uuid.UUID]string{}, roles: map[uuid.UUID]accessmodel.ContestRole{},
 					}}
 					for p := 0; p < 10; p++ {
 						r.problems = append(r.problems, contestsmodel.ContestProblem{ContestID: r.contest.ID, ProblemID: uuid.New(), Ordinal: p + 1, Title: fmt.Sprintf("Problem %d", p), ShortName: fmt.Sprintf("p%d", p)})
@@ -55,10 +50,9 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 					for u := 0; u < size.users; u++ {
 						user := uuid.New()
 						r.users[user] = fmt.Sprintf("user%d", u)
+						r.roles[user] = accessmodel.ContestParticipant
 						for _, p := range r.problems {
 							acTime := start.Add(90 * time.Minute)
-							minutes := int32(90)
-							r.standings = append(r.standings, contestsmodel.ContestProblemResult{ContestID: r.contest.ID, UserID: user, ProblemID: p.ProblemID, Solved: true, FailedAttempts: 1, FirstACTime: &acTime, TimeMinutes: &minutes})
 							r.batch = append(r.batch,
 								contestsmodel.ScoreboardSubmission{UserID: user, ProblemID: p.ProblemID, SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: submissionsmodel.GotWA, CreatedAt: start.Add(10 * time.Minute)}},
 								contestsmodel.ScoreboardSubmission{UserID: user, ProblemID: p.ProblemID, SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: submissionsmodel.Accepted, CreatedAt: acTime}},
@@ -102,9 +96,9 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 
 var scoreboardBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
 	"BenchmarkScoreboardProjection/large/Frozen": {3827000, 261.3, 1253312, 5013},
-	"BenchmarkScoreboardProjection/large/Live":   {3740000, 267.45, 3991552, 6288},
+	"BenchmarkScoreboardProjection/large/Live":   {4800000, 208.0, 1980000, 21100},
 	"BenchmarkScoreboardProjection/small/Frozen": {315000, 3177.5, 127360, 513},
-	"BenchmarkScoreboardProjection/small/Live":   {332000, 3013.0, 390272, 649},
+	"BenchmarkScoreboardProjection/small/Live":   {420000, 2380.0, 185000, 2140},
 }
 
 func checkScoreboardBenchmarkBudget(b *testing.B, before runtime.MemStats) {

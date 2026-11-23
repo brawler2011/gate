@@ -72,26 +72,26 @@ func (r *registrationStore) CreateNotification(_ context.Context, input *notific
 }
 
 func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
-	for _, mode := range []contestsmodel.ParticipationMode{contestsmodel.ParticipationModeOpen, contestsmodel.ParticipationModeByRequest, contestsmodel.ParticipationModeInviteOnly} {
+	for _, mode := range []accessmodel.JoinPolicy{accessmodel.JoinOpen, accessmodel.JoinByRequest, accessmodel.JoinInviteOnly} {
 		t.Run(string(mode), func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: mode}}
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: mode}}
 			store := &registrationStore{contest: contest, owners: []uuid.UUID{uuid.New(), uuid.New()}}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
 			switch mode {
-			case contestsmodel.ParticipationModeOpen:
+			case accessmodel.JoinOpen:
 				require.NoError(t, err)
 				require.True(t, joined)
 				require.True(t, store.joined)
 				require.Nil(t, request)
-			case contestsmodel.ParticipationModeByRequest:
+			case accessmodel.JoinByRequest:
 				require.NoError(t, err)
 				require.False(t, joined)
 				require.True(t, store.requested)
 				require.NotNil(t, request)
 				require.Equal(t, store.owners, store.notified, "every owner hears about the request")
-			case contestsmodel.ParticipationModeInviteOnly:
+			case accessmodel.JoinInviteOnly:
 				require.ErrorIs(t, err, pkg.ErrInviteOnly)
 				require.False(t, store.joined)
 				require.False(t, store.requested)
@@ -101,7 +101,7 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 }
 
 func TestContestRegistrationRechecksVisibility(t *testing.T) {
-	contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen}}
+	contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen}}
 	hidden := contest
 	hidden.Visibility = contestsmodel.ContestVisibilityPrivate
 	// The pre-transaction lookup still sees the public contest; the transaction sees it hidden.
@@ -122,7 +122,7 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 		{name: "pending request", pending: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeByRequest}}
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinByRequest}}
 			store := &registrationStore{contest: contest, member: tc.member, pending: tc.pending}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
