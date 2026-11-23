@@ -2,6 +2,7 @@ package access_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,22 +42,24 @@ func check(t *testing.T, row string, cols []actor, want string, allows func(acto
 }
 
 func TestOrganizationPolicy(t *testing.T) {
-	cols := actors("member", "admin", "owner")
+	cols := actors("member", "maintainer", "admin", "owner")
 	for _, tc := range []struct {
 		action m.OrganizationAction
 		join   m.JoinPolicy
 		want   string
 	}{
-		{m.OrganizationView, m.JoinInviteOnly, "111111"},
-		{m.OrganizationListMembers, m.JoinInviteOnly, "001111"},
-		{m.OrganizationManage, m.JoinInviteOnly, "000111"},
-		{m.OrganizationManageMembers, m.JoinInviteOnly, "000111"},
-		{m.OrganizationDelete, m.JoinInviteOnly, "000011"},
-		{m.OrganizationJoin, m.JoinOpen, "010001"},
-		{m.OrganizationJoin, m.JoinByRequest, "000000"},
-		{m.OrganizationRequestJoin, m.JoinByRequest, "010001"},
-		{m.OrganizationRequestJoin, m.JoinInviteOnly, "000000"},
-		{m.OrganizationLeave, m.JoinOpen, "001110"},
+		{m.OrganizationView, m.JoinInviteOnly, "1111111"},
+		{m.OrganizationListMembers, m.JoinInviteOnly, "0011111"},
+		{m.OrganizationCreate, m.JoinInviteOnly, "0001111"},
+		{m.OrganizationInvite, m.JoinInviteOnly, "0001111"},
+		{m.OrganizationManage, m.JoinInviteOnly, "0000111"},
+		{m.OrganizationManageMembers, m.JoinInviteOnly, "0000111"},
+		{m.OrganizationDelete, m.JoinInviteOnly, "0000011"},
+		{m.OrganizationJoin, m.JoinOpen, "0100001"},
+		{m.OrganizationJoin, m.JoinByRequest, "0000000"},
+		{m.OrganizationRequestJoin, m.JoinByRequest, "0100001"},
+		{m.OrganizationRequestJoin, m.JoinInviteOnly, "0000000"},
+		{m.OrganizationLeave, m.JoinOpen, "0011110"},
 	} {
 		check(t, fmt.Sprint(tc.action, " ", tc.join), cols, tc.want, func(a actor) bool {
 			return access.OrganizationAllows(a.user, access.OrganizationFacts{Role: m.OrganizationRole(a.role), JoinPolicy: tc.join}, tc.action)
@@ -65,23 +68,46 @@ func TestOrganizationPolicy(t *testing.T) {
 }
 
 func TestTeamPolicy(t *testing.T) {
-	cols := actors("member", "maintainer", "manager")
+	// Columns starting with "org " hold that organization role and no team role.
+	cols := actors("member", "maintainer", "org maintainer", "org admin")
 	for _, tc := range []struct {
 		action m.TeamAction
-		secret bool
 		want   string
 	}{
-		{m.TeamView, false, "011111"},
-		{m.TeamView, true, "001111"},
-		{m.TeamManage, true, "000111"},
-		{m.TeamDelete, true, "000011"},
-		// Managers act through organization administration and are not members.
-		{m.TeamLeave, true, "001100"},
+		{m.TeamView, "0111111"},
+		{m.TeamManage, "0001011"},
+		{m.TeamDelete, "0001011"},
+		{m.TeamLeave, "0011000"},
 	} {
-		check(t, fmt.Sprint(tc.action, " secret=", tc.secret), cols, tc.want, func(a actor) bool {
-			member := a.role == "member" || a.role == "maintainer"
-			return access.TeamAllows(a.user, access.TeamFacts{Role: m.TeamRole(a.role), Member: member, Secret: tc.secret}, tc.action)
+		check(t, fmt.Sprint(tc.action), cols, tc.want, func(a actor) bool {
+			f := access.TeamFacts{Role: m.TeamRole(a.role)}
+			if org, ok := strings.CutPrefix(a.role, "org "); ok {
+				f = access.TeamFacts{OrganizationRole: m.OrganizationRole(org)}
+			}
+			return access.TeamAllows(a.user, f, tc.action)
 		})
+	}
+}
+
+func TestOrganizationInvite(t *testing.T) {
+	user := m.User{Id: uuid.New(), Role: m.UserRoleUser}
+	for _, tc := range []struct {
+		inviter, invitee m.OrganizationRole
+		want             bool
+	}{
+		{m.OrganizationMember, m.OrganizationMember, false},
+		{m.OrganizationMaintainer, m.OrganizationMember, true},
+		{m.OrganizationMaintainer, m.OrganizationMaintainer, true},
+		{m.OrganizationMaintainer, m.OrganizationAdmin, false},
+		{m.OrganizationAdmin, m.OrganizationMaintainer, true},
+		{m.OrganizationAdmin, m.OrganizationAdmin, false},
+		{m.OrganizationOwner, m.OrganizationOwner, true},
+		{m.OrganizationOwner, "superuser", false},
+	} {
+		a := access.OrganizationAccess{Actor: user, Facts: access.OrganizationFacts{Role: tc.inviter}}
+		if got := a.Invite(uuid.New(), tc.invitee) == nil; got != tc.want {
+			t.Errorf("%s invites %s: got %v, want %v", tc.inviter, tc.invitee, got, tc.want)
+		}
 	}
 }
 

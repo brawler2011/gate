@@ -123,16 +123,11 @@ type ProblemsUC interface {
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 
-	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error
-	UpdateProblemTeamRole(ctx context.Context, problemID, teamID uuid.UUID, permission accessmodel.ProblemRole) error
-	RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error
-
 	CreateProblemMember(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error
 	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role accessmodel.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
 
 	ListProblemMembers(context.Context, uuid.UUID, paging.Request) (*paging.List[problemsmodel.ProblemMember], error)
-	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
 	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
 	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
 	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
@@ -161,7 +156,6 @@ type TeamsUC interface {
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
 	GetTeamContests(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
-	GetTeamProblems(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error)
 }
 
 type UsersUC interface {

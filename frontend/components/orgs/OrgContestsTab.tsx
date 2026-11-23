@@ -89,7 +89,7 @@ export const OrgContestsTab = ({
         />
         <Group gap="sm">
           <OrgJoinButton org={org} isAuthenticated={isAuthenticated} isMember={isMember} />
-          {isAuthenticated && (
+          {org.permissions.create && (
             <Button
               title="Создать новый контест"
               onClick={() => setCreateOpened(true)}

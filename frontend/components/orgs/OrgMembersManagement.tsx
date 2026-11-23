@@ -18,8 +18,11 @@ import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberReques
 const ROLE_OPTIONS = [
   {label: "Владелец", value: "owner", color: "red"},
   {label: "Администратор", value: "admin", color: "orange"},
+  {label: "Преподаватель", value: "maintainer", color: "teal"},
   {label: "Участник", value: "member", color: "blue"},
 ];
+// Maintainers may invite only these roles.
+const MAINTAINER_INVITE_ROLES = new Set(["maintainer", "member"]);
 
 const getRoleDisplay = (role: string) => {
   return (
@@ -27,9 +30,12 @@ const getRoleDisplay = (role: string) => {
   );
 };
 
-type Props = { orgLogin: string };
+type Props = { orgLogin: string; canManageMembers: boolean };
 
-export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
+export const OrgMembersManagement = ({orgLogin, canManageMembers}: Props): ReactNode => {
+  const inviteRoles = canManageMembers
+    ? ROLE_OPTIONS
+    : ROLE_OPTIONS.filter((r) => MAINTAINER_INVITE_ROLES.has(r.value));
   const [activeTab, setActiveTab] = useState<string | null>("members");
 
   const {pendingId: deletingMemberId, run: mutateMembers} = useEntityMutation();
@@ -74,11 +80,14 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     useEntityCollection(fetchInvitations, false);
 
   const fetchRequests = useCallback(async () => {
+    if (!canManageMembers) {
+      return [];
+    }
     const {data} = await api.GET("/organizations/{login}/requests", {
       params: {path: {login: orgLogin}},
     });
     return data?.requests;
-  }, [orgLogin]);
+  }, [orgLogin, canManageMembers]);
   const {items: requests, loading: loadingRequests, reload: loadRequests} = useEntityCollection(fetchRequests, false);
 
   useEffect(() => {
@@ -271,7 +280,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
               >
                 Приглашения
               </Tabs.Tab>
-              <Tabs.Tab
+              {canManageMembers && <Tabs.Tab
                 value="requests"
                 leftSection={<IconUserCheck size={16} />}
                 rightSection={
@@ -283,7 +292,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
                 }
               >
                 Заявки
-              </Tabs.Tab>
+              </Tabs.Tab>}
             </Tabs.List>
 
             <Group gap="sm">
@@ -295,13 +304,15 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
               >
                 Пригласить
               </Button>
-              <Button
-                variant="light"
-                onClick={() => setBatchModalOpened(true)}
-                leftSection={<IconUserPlus size={16} />}
-              >
-                Сгенерировать участников
-              </Button>
+              {canManageMembers && (
+                <Button
+                  variant="light"
+                  onClick={() => setBatchModalOpened(true)}
+                  leftSection={<IconUserPlus size={16} />}
+                >
+                  Сгенерировать участников
+                </Button>
+              )}
             </Group>
           </Group>
 
@@ -569,7 +580,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
           />
           <Select
             label="Роль в организации"
-            data={ROLE_OPTIONS}
+            data={inviteRoles}
             value={selectedRole}
             onChange={(v) => setSelectedRole(v ?? "member")}
           />

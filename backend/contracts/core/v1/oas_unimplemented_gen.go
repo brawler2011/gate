@@ -24,7 +24,7 @@ func (UnimplementedHandler) AcceptOrganizationInvitation(ctx context.Context, pa
 
 // AddOrganizationMember implements AddOrganizationMember operation.
 //
-// Add member to organization.
+// Add member to organization without an invitation (site administrators only).
 //
 // POST /organizations/{login}/members
 func (UnimplementedHandler) AddOrganizationMember(ctx context.Context, params AddOrganizationMemberParams) error {
@@ -319,15 +319,6 @@ func (UnimplementedHandler) CreateProblemMember(ctx context.Context, params Crea
 	return ht.ErrNotImplemented
 }
 
-// CreateProblemTeam implements CreateProblemTeam operation.
-//
-// Create problem team.
-//
-// POST /problems/{id}/teams
-func (UnimplementedHandler) CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error {
-	return ht.ErrNotImplemented
-}
-
 // CreateSubmission implements CreateSubmission operation.
 //
 // Create submission.
@@ -451,15 +442,6 @@ func (UnimplementedHandler) DeleteProblem(ctx context.Context, params DeleteProb
 //
 // DELETE /problems/{id}/members
 func (UnimplementedHandler) DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error {
-	return ht.ErrNotImplemented
-}
-
-// DeleteProblemTeam implements DeleteProblemTeam operation.
-//
-// Delete problem team.
-//
-// DELETE /problems/{id}/teams
-func (UnimplementedHandler) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error {
 	return ht.ErrNotImplemented
 }
 
@@ -951,15 +933,6 @@ func (UnimplementedHandler) ListProblemPackages(ctx context.Context, params List
 	return r, ht.ErrNotImplemented
 }
 
-// ListProblemTeams implements ListProblemTeams operation.
-//
-// List problem teams.
-//
-// GET /problems/{id}/teams
-func (UnimplementedHandler) ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (r *ListProblemTeamsResponseModel, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // ListProblemTemplates implements ListProblemTemplates operation.
 //
 // List problem templates.
@@ -1011,15 +984,6 @@ func (UnimplementedHandler) ListTeamContests(ctx context.Context, params ListTea
 //
 // GET /teams/{id}/members
 func (UnimplementedHandler) ListTeamMembers(ctx context.Context, params ListTeamMembersParams) (r *ListTeamMembersResponseModel, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListTeamProblems implements ListTeamProblems operation.
-//
-// List problems accessible by team.
-//
-// GET /teams/{id}/problems
-func (UnimplementedHandler) ListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (r *ListProblemsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1308,15 +1272,6 @@ func (UnimplementedHandler) UpdateProblem(ctx context.Context, req *UpdateProble
 //
 // PATCH /problems/{id}/members
 func (UnimplementedHandler) UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error {
-	return ht.ErrNotImplemented
-}
-
-// UpdateProblemTeam implements UpdateProblemTeam operation.
-//
-// Update problem team.
-//
-// PATCH /problems/{id}/teams
-func (UnimplementedHandler) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error {
 	return ht.ErrNotImplemented
 }
 

@@ -1,10 +1,9 @@
 import {Avatar, Badge, Container, Group, Paper, Stack, Tabs, Text, Title} from "@mantine/core";
-import {IconArrowLeft, IconFileCode, IconTrophy, IconUsers} from "@tabler/icons-react";
+import {IconArrowLeft, IconTrophy, IconUsers} from "@tabler/icons-react";
 import {useLoaderData} from "react-router-dom";
 
 import {TeamContestsTab} from "@/components/orgs/TeamContestsTab";
 import {TeamMembersManagement} from "@/components/orgs/TeamMembersManagement";
-import {TeamProblemsTab} from "@/components/orgs/TeamProblemsTab";
 import {LinkAnchor} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
@@ -82,9 +81,6 @@ const TeamPage = (): ReactNode => {
               <Tabs.Tab value="contests" leftSection={<IconTrophy size={16} />}>
                 Контесты
               </Tabs.Tab>
-              <Tabs.Tab value="problems" leftSection={<IconFileCode size={16} />}>
-                Задачи
-              </Tabs.Tab>
             </Tabs.List>
 
             <Tabs.Panel value="members">
@@ -93,10 +89,6 @@ const TeamPage = (): ReactNode => {
 
             <Tabs.Panel value="contests">
               <TeamContestsTab teamId={team_id} />
-            </Tabs.Panel>
-
-            <Tabs.Panel value="problems">
-              <TeamProblemsTab teamId={team_id} />
             </Tabs.Panel>
           </Tabs>
         </Paper>

@@ -11,7 +11,7 @@ import (
 
 // Field order matches the API models so transport converts them directly.
 type OrganizationPermissions struct {
-	Manage, ManageMembers, Delete, ListMembers, Join, RequestJoin, Leave bool
+	Manage, ManageMembers, Delete, ListMembers, Create, Invite, Join, RequestJoin, Leave bool
 }
 
 type TeamPermissions struct{ Manage, Delete, Leave bool }
@@ -111,6 +111,8 @@ func (s *PermissionSet) Organization(id uuid.UUID) (OrganizationPermissions, err
 		ManageMembers: a.Can(m.OrganizationManageMembers),
 		Delete:        a.Can(m.OrganizationDelete),
 		ListMembers:   a.Can(m.OrganizationListMembers),
+		Create:        a.Can(m.OrganizationCreate),
+		Invite:        a.Can(m.OrganizationInvite),
 		Join:          a.Can(m.OrganizationJoin),
 		RequestJoin:   a.Can(m.OrganizationRequestJoin),
 		Leave:         a.Can(m.OrganizationLeave),
@@ -202,14 +204,6 @@ func (s *PermissionSet) ProblemMember(id, user uuid.UUID, role m.ProblemRole) (M
 		return MemberPermissions{}, err
 	}
 	return grant(func(from, to m.ProblemRole) error { return a.ChangeMember(user, from, to) }, role), nil
-}
-
-func (s *PermissionSet) ProblemTeam(id uuid.UUID, role m.ProblemRole) (MemberPermissions, error) {
-	a, err := s.problem(id)
-	if err != nil {
-		return MemberPermissions{}, err
-	}
-	return grant(a.ChangeTeam, role), nil
 }
 
 func (s *PermissionSet) ContestMember(id, user uuid.UUID, role m.ContestRole) (MemberPermissions, error) {

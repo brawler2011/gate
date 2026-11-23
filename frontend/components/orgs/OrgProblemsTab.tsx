@@ -15,14 +15,12 @@ type Props = {
   problems: ProblemsListItemModel[];
   pagination: PaginationModel;
   org: OrganizationModel;
-  isAuthenticated: boolean;
 };
 
 export const OrgProblemsTab = ({
   problems,
   pagination,
   org,
-  isAuthenticated,
 }: Props): ReactNode => {
   const [searchValue, setSearchValue] = useState("");
   const [createOpened, setCreateOpened] = useState(false);
@@ -47,7 +45,7 @@ export const OrgProblemsTab = ({
           size="md"
           style={{flex: 1}}
         />
-        {isAuthenticated && (
+        {org.permissions.create && (
           <Button
             title="Создать новую задачу"
             onClick={() => setCreateOpened(true)}

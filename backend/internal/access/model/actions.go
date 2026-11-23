@@ -5,6 +5,8 @@ type OrganizationAction string
 const (
 	OrganizationView          OrganizationAction = "view"
 	OrganizationListMembers   OrganizationAction = "list_members"
+	OrganizationCreate        OrganizationAction = "create"
+	OrganizationInvite        OrganizationAction = "invite"
 	OrganizationManage        OrganizationAction = "manage"
 	OrganizationManageMembers OrganizationAction = "manage_members"
 	OrganizationDelete        OrganizationAction = "delete"

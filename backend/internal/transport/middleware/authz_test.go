@@ -44,7 +44,7 @@ func TestResourceAuthorizationIsDelegatedToHandlers(t *testing.T) {
 		"CreateContestMember", "UpdateContestMember", "DeleteContestMember",
 		"CreateContestTeam", "UpdateContestTeam", "DeleteContestTeam", "ListContestJoinRequests",
 		"UpdateProblem", "DeleteProblem", "ImportProblem", "BuildProblemPackage", "SaveProblemDraft",
-		"DownloadProblemPackage", "CreateProblemMember", "CreateProblemTeam",
+		"DownloadProblemPackage", "CreateProblemMember",
 		"ListUserSubmissions",
 	} {
 		t.Run(operation, func(t *testing.T) {

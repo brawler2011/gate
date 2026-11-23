@@ -155,7 +155,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.AddOrganizationMemberParams) error {
 	if !validateOrganizationRole(string(params.Role)) {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role, must be 'owner', 'admin', or 'member'")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 	}
 
 	input := &organizationsmodel.AddOrganizationMemberInput{

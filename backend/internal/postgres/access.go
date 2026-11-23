@@ -6,7 +6,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
@@ -60,8 +59,8 @@ func (a Access) TeamFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID)
 	}
 	facts := make(map[uuid.UUID]access.TeamFacts, len(rows))
 	for _, r := range rows {
-		facts[r.ID] = access.TeamFacts{ID: r.ID, OrganizationID: r.OrganizationID, Role: accessmodel.TeamRole(r.Role), Member: r.Member,
-			Secret: organizationsmodel.TeamPrivacy(r.Privacy) == organizationsmodel.TeamPrivacySecret}
+		facts[r.ID] = access.TeamFacts{ID: r.ID, OrganizationID: r.OrganizationID, Role: accessmodel.TeamRole(r.Role),
+			OrganizationRole: accessmodel.OrganizationRole(r.OrganizationRole)}
 	}
 	return facts, nil
 }

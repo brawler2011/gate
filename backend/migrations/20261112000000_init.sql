@@ -41,6 +41,7 @@ CREATE TYPE join_policy AS ENUM (
 
 CREATE TYPE organization_role AS ENUM (
     'member',
+    'maintainer',
     'admin',
     'owner'
 );
@@ -77,11 +78,9 @@ CREATE TYPE submission_kind AS ENUM (
     'virtual'
 );
 
--- manager is only derived from organization admins; nobody holds it directly.
 CREATE TYPE team_role AS ENUM (
     'member',
-    'maintainer',
-    'manager'
+    'maintainer'
 );
 
 CREATE TYPE user_role AS ENUM (
@@ -235,22 +234,17 @@ CREATE TABLE teams (
     name text NOT NULL,
     slug text NOT NULL,
     description text DEFAULT ''::text NOT NULL,
-    privacy text DEFAULT 'closed'::text NOT NULL,
-    parent_team_id uuid,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT teams_name_check CHECK ((length(name) > 0)),
-    CONSTRAINT teams_privacy_check CHECK ((privacy = ANY (ARRAY['secret'::text, 'closed'::text]))),
     CONSTRAINT teams_slug_check CHECK ((length(slug) > 0)),
     CONSTRAINT teams_organization_id_slug_key UNIQUE (organization_id, slug),
     CONSTRAINT teams_id_organization_unique UNIQUE (id, organization_id),
     CONSTRAINT teams_pkey PRIMARY KEY (id),
-    CONSTRAINT teams_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    CONSTRAINT teams_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES teams(id) ON DELETE SET NULL
+    CONSTRAINT teams_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 CREATE INDEX teams_name_trgm_idx ON teams USING gin (name gin_trgm_ops);
 CREATE INDEX teams_organization_id_idx ON teams USING btree (organization_id);
-CREATE INDEX teams_parent_team_id_idx ON teams USING btree (parent_team_id);
 CREATE INDEX teams_slug_idx ON teams USING btree (organization_id, slug);
 
 CREATE TABLE team_members (
@@ -258,7 +252,6 @@ CREATE TABLE team_members (
     user_id uuid NOT NULL,
     role team_role DEFAULT 'member'::team_role NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT team_members_role_check CHECK ((role <> 'manager'::team_role)),
     CONSTRAINT team_members_pkey PRIMARY KEY (team_id, user_id),
     CONSTRAINT team_members_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -312,20 +305,6 @@ CREATE TABLE problem_members (
 CREATE INDEX problem_members_problem_id_idx ON problem_members USING btree (problem_id);
 CREATE INDEX problem_members_user_id_idx ON problem_members USING btree (user_id);
 
--- A team grants access only to resources of its own organization.
-CREATE TABLE problem_teams (
-    problem_id uuid NOT NULL,
-    team_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
-    role problem_role DEFAULT 'viewer'::problem_role NOT NULL,
-    created_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT problem_teams_role_check CHECK ((role <> 'owner'::problem_role)),
-    CONSTRAINT problem_teams_pkey PRIMARY KEY (problem_id, team_id),
-    CONSTRAINT problem_teams_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE CASCADE,
-    CONSTRAINT problem_teams_team_id_fkey FOREIGN KEY (team_id, organization_id) REFERENCES teams(id, organization_id) ON DELETE CASCADE
-);
-CREATE INDEX problem_teams_problem_id_idx ON problem_teams USING btree (problem_id);
-CREATE INDEX problem_teams_team_id_idx ON problem_teams USING btree (team_id);
 
 CREATE TRIGGER on_problems_update BEFORE UPDATE ON problems FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
@@ -836,25 +815,13 @@ CREATE CONSTRAINT TRIGGER owner_required AFTER INSERT OR UPDATE OR DELETE ON con
 
 -- Effective roles: the strongest of a direct grant, a team grant and the organization role.
 -- Site administrators and guests are handled in Go.
-CREATE VIEW team_access AS
-SELECT team_id, user_id, max(role) AS role FROM (
-    SELECT team_id, user_id, role FROM team_members
-    UNION ALL
-    SELECT t.id, om.user_id, 'manager'::team_role
-    FROM teams t JOIN organization_members om ON om.organization_id = t.organization_id
-    WHERE om.role IN ('admin', 'owner')
-) grants GROUP BY team_id, user_id;
-
 CREATE VIEW problem_access AS
 SELECT problem_id, user_id, max(role) AS role FROM (
     SELECT problem_id, user_id, role FROM problem_members
     UNION ALL
-    SELECT link.problem_id, tm.user_id, link.role
-    FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id
-    UNION ALL
-    SELECT p.id, om.user_id, CASE om.role WHEN 'owner' THEN 'owner'::problem_role ELSE 'admin'::problem_role END
+    SELECT p.id, om.user_id, CASE om.role WHEN 'owner' THEN 'owner'::problem_role WHEN 'admin' THEN 'admin'::problem_role ELSE 'viewer'::problem_role END
     FROM problems p JOIN organization_members om ON om.organization_id = p.organization_id
-    WHERE om.role IN ('admin', 'owner')
+    WHERE om.role IN ('maintainer', 'admin', 'owner')
 ) grants GROUP BY problem_id, user_id;
 
 CREATE VIEW contest_access AS

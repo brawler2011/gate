@@ -16,10 +16,10 @@ LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = 
 WHERE o.id = ANY(sqlc.arg('ids')::uuid[]);
 
 -- name: LoadTeamAccess :many
-SELECT t.id, t.organization_id, t.privacy, COALESCE(a.role::text, '')::text AS role,
-    EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = sqlc.arg('user_id')::uuid) AS member
+SELECT t.id, t.organization_id, COALESCE(tm.role::text, '')::text AS role, COALESCE(om.role::text, '')::text AS organization_role
 FROM teams t
-LEFT JOIN team_access a ON a.team_id = t.id AND a.user_id = sqlc.arg('user_id')::uuid
+LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = sqlc.arg('user_id')::uuid
+LEFT JOIN organization_members om ON om.organization_id = t.organization_id AND om.user_id = sqlc.arg('user_id')::uuid
 WHERE t.id = ANY(sqlc.arg('ids')::uuid[]);
 
 -- name: LoadProblemAccess :many

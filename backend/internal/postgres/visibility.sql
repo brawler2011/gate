@@ -8,7 +8,6 @@ WITH visible AS (
     AND (sqlc.narg('organization_id')::uuid IS NULL OR p.organization_id = sqlc.narg('organization_id')::uuid)
     AND (sqlc.arg('search')::text = '' OR p.title ILIKE '%' || sqlc.arg('search')::text || '%')
     AND (sqlc.arg('visibility')::text = '' OR p.visibility::text = sqlc.arg('visibility')::text)
-    AND (sqlc.narg('team_id')::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_teams link WHERE link.problem_id = p.id AND link.team_id = sqlc.narg('team_id')::uuid))
     AND (sqlc.narg('owner_id')::uuid IS NULL OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = sqlc.narg('owner_id')::uuid AND own.role = 'owner'))
     AND (sqlc.narg('is_template')::boolean IS NULL OR p.is_template = sqlc.narg('is_template')::boolean)
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
@@ -55,8 +54,7 @@ ORDER BY CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg(
 -- name: ScopeTeams :many
 WITH visible AS (
   SELECT t.* FROM teams t
-  LEFT JOIN team_access a ON a.team_id = t.id AND a.user_id = sqlc.arg('viewer_id')::uuid
-  WHERE (sqlc.arg('viewer_id')::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (t.privacy = 'closed' OR a.role IS NOT NULL) OR sqlc.arg('all')::boolean)
+  WHERE (sqlc.arg('viewer_id')::uuid <> '00000000-0000-0000-0000-000000000000'::uuid OR sqlc.arg('all')::boolean)
     AND (sqlc.narg('organization_id')::uuid IS NULL OR t.organization_id = sqlc.narg('organization_id')::uuid)
     AND (sqlc.arg('search')::text = '' OR t.name ILIKE '%' || sqlc.arg('search')::text || '%')
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (

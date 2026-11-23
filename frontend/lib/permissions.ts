@@ -1,4 +1,4 @@
-import type {GetMyContestRoleResponseModel} from "@/contracts/core/v1/schema";
+import type {GetMyContestRoleResponseModel, OrganizationPermissionsModel} from "@/contracts/core/v1/schema";
 
 export type ContestRoleResponse = GetMyContestRoleResponseModel | null;
 export const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
@@ -29,8 +29,12 @@ export const getMyContestRole = async (orgLogin: string, contestLogin: string): 
   return parseContestRoleResponse(response);
 };
 
-export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> => {
+export const getOrgPermissions = async (orgLogin: string): Promise<OrganizationPermissionsModel | null> => {
   const {api} = await import("@/lib/api");
   const {data, error} = await api.GET("/organizations/{login}", {params: {path: {login: orgLogin}}});
-  return !error && !!data?.organization.permissions.manage_members;
+  return error ? null : data?.organization.permissions ?? null;
 };
+
+// Maintainers manage invitations; member management needs an administrator.
+export const canOpenOrgMembers = (p: OrganizationPermissionsModel | null): boolean =>
+  !!p && (p.invite || p.manage_members);

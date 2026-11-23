@@ -10,7 +10,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -32,8 +31,6 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		Name:           input.Name,
 		Slug:           input.Slug,
 		Description:    input.Description,
-		Privacy:        string(input.Privacy),
-		ParentTeamID:   input.ParentTeamID,
 	})
 	if err != nil {
 		return nil, dbError("create team", err)
@@ -45,8 +42,6 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		Name:           team.Name,
 		Slug:           team.Slug,
 		Description:    team.Description,
-		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -64,8 +59,6 @@ func (r *TeamsRepo) GetTeamByID(ctx context.Context, id uuid.UUID) (*organizatio
 		Name:           team.Name,
 		Slug:           team.Slug,
 		Description:    team.Description,
-		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -86,8 +79,6 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 		Name:           team.Name,
 		Slug:           team.Slug,
 		Description:    team.Description,
-		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -128,10 +119,6 @@ func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organiz
 	}
 	if input.Description != nil {
 		params.Description = input.Description
-	}
-	if input.Privacy != nil {
-		privacy := string(*input.Privacy)
-		params.Privacy = &privacy
 	}
 
 	if err := r.q.UpdateTeam(ctx, params); err != nil {
@@ -252,8 +239,6 @@ func mapTeams(teams []sqlc.Team) []organizationsmodel.Team {
 			Name:           t.Name,
 			Slug:           t.Slug,
 			Description:    t.Description,
-			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   t.ParentTeamID,
 			CreatedAt:      t.CreatedAt,
 			UpdatedAt:      t.UpdatedAt,
 		}
@@ -272,15 +257,4 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.U
 		return nil, 0, err
 	}
 	return scopeContests(ctx, r.q, sqlc.ScopeContestsParams{TeamID: &teamID, ViewerID: viewer, All: all, PageSize: request.PageSize, PageOffset: request.Offset()})
-}
-func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error) {
-	request, err := request.Normalize()
-	if err != nil {
-		return nil, 0, err
-	}
-	viewer, all, err := (Access{q: r.q}).visibility(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-	return scopeProblems(ctx, r.q, sqlc.ScopeProblemsParams{TeamID: &teamID, ViewerID: viewer, All: all, Descending: true, PageSize: request.PageSize, PageOffset: request.Offset()})
 }

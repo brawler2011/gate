@@ -182,9 +182,10 @@ func (s *ApproveOrganizationJoinRequestModel) SetRole(val OptApproveOrganization
 type ApproveOrganizationJoinRequestModelRole string
 
 const (
-	ApproveOrganizationJoinRequestModelRoleOwner  ApproveOrganizationJoinRequestModelRole = "owner"
-	ApproveOrganizationJoinRequestModelRoleAdmin  ApproveOrganizationJoinRequestModelRole = "admin"
-	ApproveOrganizationJoinRequestModelRoleMember ApproveOrganizationJoinRequestModelRole = "member"
+	ApproveOrganizationJoinRequestModelRoleOwner      ApproveOrganizationJoinRequestModelRole = "owner"
+	ApproveOrganizationJoinRequestModelRoleAdmin      ApproveOrganizationJoinRequestModelRole = "admin"
+	ApproveOrganizationJoinRequestModelRoleMaintainer ApproveOrganizationJoinRequestModelRole = "maintainer"
+	ApproveOrganizationJoinRequestModelRoleMember     ApproveOrganizationJoinRequestModelRole = "member"
 )
 
 // AllValues returns all ApproveOrganizationJoinRequestModelRole values.
@@ -192,6 +193,7 @@ func (ApproveOrganizationJoinRequestModelRole) AllValues() []ApproveOrganization
 	return []ApproveOrganizationJoinRequestModelRole{
 		ApproveOrganizationJoinRequestModelRoleOwner,
 		ApproveOrganizationJoinRequestModelRoleAdmin,
+		ApproveOrganizationJoinRequestModelRoleMaintainer,
 		ApproveOrganizationJoinRequestModelRoleMember,
 	}
 }
@@ -202,6 +204,8 @@ func (s ApproveOrganizationJoinRequestModelRole) MarshalText() ([]byte, error) {
 	case ApproveOrganizationJoinRequestModelRoleOwner:
 		return []byte(s), nil
 	case ApproveOrganizationJoinRequestModelRoleAdmin:
+		return []byte(s), nil
+	case ApproveOrganizationJoinRequestModelRoleMaintainer:
 		return []byte(s), nil
 	case ApproveOrganizationJoinRequestModelRoleMember:
 		return []byte(s), nil
@@ -218,6 +222,9 @@ func (s *ApproveOrganizationJoinRequestModelRole) UnmarshalText(data []byte) err
 		return nil
 	case ApproveOrganizationJoinRequestModelRoleAdmin:
 		*s = ApproveOrganizationJoinRequestModelRoleAdmin
+		return nil
+	case ApproveOrganizationJoinRequestModelRoleMaintainer:
+		*s = ApproveOrganizationJoinRequestModelRoleMaintainer
 		return nil
 	case ApproveOrganizationJoinRequestModelRoleMember:
 		*s = ApproveOrganizationJoinRequestModelRoleMember
@@ -2881,57 +2888,6 @@ func (s *CreateProblemMemberRole) UnmarshalText(data []byte) error {
 	}
 }
 
-// CreateProblemTeamOK is response for CreateProblemTeam operation.
-type CreateProblemTeamOK struct{}
-
-type CreateProblemTeamRole string
-
-const (
-	CreateProblemTeamRoleAdmin  CreateProblemTeamRole = "admin"
-	CreateProblemTeamRoleEditor CreateProblemTeamRole = "editor"
-	CreateProblemTeamRoleViewer CreateProblemTeamRole = "viewer"
-)
-
-// AllValues returns all CreateProblemTeamRole values.
-func (CreateProblemTeamRole) AllValues() []CreateProblemTeamRole {
-	return []CreateProblemTeamRole{
-		CreateProblemTeamRoleAdmin,
-		CreateProblemTeamRoleEditor,
-		CreateProblemTeamRoleViewer,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s CreateProblemTeamRole) MarshalText() ([]byte, error) {
-	switch s {
-	case CreateProblemTeamRoleAdmin:
-		return []byte(s), nil
-	case CreateProblemTeamRoleEditor:
-		return []byte(s), nil
-	case CreateProblemTeamRoleViewer:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *CreateProblemTeamRole) UnmarshalText(data []byte) error {
-	switch CreateProblemTeamRole(data) {
-	case CreateProblemTeamRoleAdmin:
-		*s = CreateProblemTeamRoleAdmin
-		return nil
-	case CreateProblemTeamRoleEditor:
-		*s = CreateProblemTeamRoleEditor
-		return nil
-	case CreateProblemTeamRoleViewer:
-		*s = CreateProblemTeamRoleViewer
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // Fields for the create submission request.
 // Ref: #/components/schemas/CreateSubmissionRequestModel
 type CreateSubmissionRequestModel struct {
@@ -3292,9 +3248,6 @@ type DeleteProblemMemberOK struct{}
 
 // DeleteProblemOK is response for DeleteProblem operation.
 type DeleteProblemOK struct{}
-
-// DeleteProblemTeamOK is response for DeleteProblemTeam operation.
-type DeleteProblemTeamOK struct{}
 
 // DeleteTeamOK is response for DeleteTeam operation.
 type DeleteTeamOK struct{}
@@ -4495,9 +4448,10 @@ func (s *InviteOrganizationMemberRequestModel) SetRole(val InviteOrganizationMem
 type InviteOrganizationMemberRequestModelRole string
 
 const (
-	InviteOrganizationMemberRequestModelRoleOwner  InviteOrganizationMemberRequestModelRole = "owner"
-	InviteOrganizationMemberRequestModelRoleAdmin  InviteOrganizationMemberRequestModelRole = "admin"
-	InviteOrganizationMemberRequestModelRoleMember InviteOrganizationMemberRequestModelRole = "member"
+	InviteOrganizationMemberRequestModelRoleOwner      InviteOrganizationMemberRequestModelRole = "owner"
+	InviteOrganizationMemberRequestModelRoleAdmin      InviteOrganizationMemberRequestModelRole = "admin"
+	InviteOrganizationMemberRequestModelRoleMaintainer InviteOrganizationMemberRequestModelRole = "maintainer"
+	InviteOrganizationMemberRequestModelRoleMember     InviteOrganizationMemberRequestModelRole = "member"
 )
 
 // AllValues returns all InviteOrganizationMemberRequestModelRole values.
@@ -4505,6 +4459,7 @@ func (InviteOrganizationMemberRequestModelRole) AllValues() []InviteOrganization
 	return []InviteOrganizationMemberRequestModelRole{
 		InviteOrganizationMemberRequestModelRoleOwner,
 		InviteOrganizationMemberRequestModelRoleAdmin,
+		InviteOrganizationMemberRequestModelRoleMaintainer,
 		InviteOrganizationMemberRequestModelRoleMember,
 	}
 }
@@ -4515,6 +4470,8 @@ func (s InviteOrganizationMemberRequestModelRole) MarshalText() ([]byte, error) 
 	case InviteOrganizationMemberRequestModelRoleOwner:
 		return []byte(s), nil
 	case InviteOrganizationMemberRequestModelRoleAdmin:
+		return []byte(s), nil
+	case InviteOrganizationMemberRequestModelRoleMaintainer:
 		return []byte(s), nil
 	case InviteOrganizationMemberRequestModelRoleMember:
 		return []byte(s), nil
@@ -4531,6 +4488,9 @@ func (s *InviteOrganizationMemberRequestModelRole) UnmarshalText(data []byte) er
 		return nil
 	case InviteOrganizationMemberRequestModelRoleAdmin:
 		*s = InviteOrganizationMemberRequestModelRoleAdmin
+		return nil
+	case InviteOrganizationMemberRequestModelRoleMaintainer:
+		*s = InviteOrganizationMemberRequestModelRoleMaintainer
 		return nil
 	case InviteOrganizationMemberRequestModelRoleMember:
 		*s = InviteOrganizationMemberRequestModelRoleMember
@@ -4968,22 +4928,6 @@ func (s *ListProblemPackagesOK) SetPagination(val PaginationModel) {
 // SetPackages sets the value of Packages.
 func (s *ListProblemPackagesOK) SetPackages(val []ProblemPackage) {
 	s.Packages = val
-}
-
-// Paginated collection of problem teams.
-// Ref: #/components/schemas/ListProblemTeamsResponseModel
-type ListProblemTeamsResponseModel struct {
-	Teams []ProblemTeamModel `json:"teams"`
-}
-
-// GetTeams returns the value of Teams.
-func (s *ListProblemTeamsResponseModel) GetTeams() []ProblemTeamModel {
-	return s.Teams
-}
-
-// SetTeams sets the value of Teams.
-func (s *ListProblemTeamsResponseModel) SetTeams(val []ProblemTeamModel) {
-	s.Teams = val
 }
 
 // Paginated collection of problems.
@@ -6474,52 +6418,6 @@ func (o OptCreateProblemMemberRole) Get() (v CreateProblemMemberRole, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateProblemMemberRole) Or(d CreateProblemMemberRole) CreateProblemMemberRole {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptCreateProblemTeamRole returns new OptCreateProblemTeamRole with value set to v.
-func NewOptCreateProblemTeamRole(v CreateProblemTeamRole) OptCreateProblemTeamRole {
-	return OptCreateProblemTeamRole{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptCreateProblemTeamRole is optional CreateProblemTeamRole.
-type OptCreateProblemTeamRole struct {
-	Value CreateProblemTeamRole
-	Set   bool
-}
-
-// IsSet returns true if OptCreateProblemTeamRole was set.
-func (o OptCreateProblemTeamRole) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptCreateProblemTeamRole) Reset() {
-	var v CreateProblemTeamRole
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptCreateProblemTeamRole) SetTo(v CreateProblemTeamRole) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptCreateProblemTeamRole) Get() (v CreateProblemTeamRole, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptCreateProblemTeamRole) Or(d CreateProblemTeamRole) CreateProblemTeamRole {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -8247,9 +8145,10 @@ func (s *OrganizationMemberModel) SetCreatedAt(val time.Time) {
 type OrganizationMemberModelRole string
 
 const (
-	OrganizationMemberModelRoleOwner  OrganizationMemberModelRole = "owner"
-	OrganizationMemberModelRoleAdmin  OrganizationMemberModelRole = "admin"
-	OrganizationMemberModelRoleMember OrganizationMemberModelRole = "member"
+	OrganizationMemberModelRoleOwner      OrganizationMemberModelRole = "owner"
+	OrganizationMemberModelRoleAdmin      OrganizationMemberModelRole = "admin"
+	OrganizationMemberModelRoleMaintainer OrganizationMemberModelRole = "maintainer"
+	OrganizationMemberModelRoleMember     OrganizationMemberModelRole = "member"
 )
 
 // AllValues returns all OrganizationMemberModelRole values.
@@ -8257,6 +8156,7 @@ func (OrganizationMemberModelRole) AllValues() []OrganizationMemberModelRole {
 	return []OrganizationMemberModelRole{
 		OrganizationMemberModelRoleOwner,
 		OrganizationMemberModelRoleAdmin,
+		OrganizationMemberModelRoleMaintainer,
 		OrganizationMemberModelRoleMember,
 	}
 }
@@ -8267,6 +8167,8 @@ func (s OrganizationMemberModelRole) MarshalText() ([]byte, error) {
 	case OrganizationMemberModelRoleOwner:
 		return []byte(s), nil
 	case OrganizationMemberModelRoleAdmin:
+		return []byte(s), nil
+	case OrganizationMemberModelRoleMaintainer:
 		return []byte(s), nil
 	case OrganizationMemberModelRoleMember:
 		return []byte(s), nil
@@ -8283,6 +8185,9 @@ func (s *OrganizationMemberModelRole) UnmarshalText(data []byte) error {
 		return nil
 	case OrganizationMemberModelRoleAdmin:
 		*s = OrganizationMemberModelRoleAdmin
+		return nil
+	case OrganizationMemberModelRoleMaintainer:
+		*s = OrganizationMemberModelRoleMaintainer
 		return nil
 	case OrganizationMemberModelRoleMember:
 		*s = OrganizationMemberModelRoleMember
@@ -8440,9 +8345,13 @@ type OrganizationPermissionsModel struct {
 	ManageMembers bool `json:"manage_members"`
 	Delete        bool `json:"delete"`
 	ListMembers   bool `json:"list_members"`
-	Join          bool `json:"join"`
-	RequestJoin   bool `json:"request_join"`
-	Leave         bool `json:"leave"`
+	// Create problems, contests and teams in the organization.
+	Create bool `json:"create"`
+	// Invite users as members or maintainers.
+	Invite      bool `json:"invite"`
+	Join        bool `json:"join"`
+	RequestJoin bool `json:"request_join"`
+	Leave       bool `json:"leave"`
 }
 
 // GetManage returns the value of Manage.
@@ -8463,6 +8372,16 @@ func (s *OrganizationPermissionsModel) GetDelete() bool {
 // GetListMembers returns the value of ListMembers.
 func (s *OrganizationPermissionsModel) GetListMembers() bool {
 	return s.ListMembers
+}
+
+// GetCreate returns the value of Create.
+func (s *OrganizationPermissionsModel) GetCreate() bool {
+	return s.Create
+}
+
+// GetInvite returns the value of Invite.
+func (s *OrganizationPermissionsModel) GetInvite() bool {
+	return s.Invite
 }
 
 // GetJoin returns the value of Join.
@@ -8500,6 +8419,16 @@ func (s *OrganizationPermissionsModel) SetListMembers(val bool) {
 	s.ListMembers = val
 }
 
+// SetCreate sets the value of Create.
+func (s *OrganizationPermissionsModel) SetCreate(val bool) {
+	s.Create = val
+}
+
+// SetInvite sets the value of Invite.
+func (s *OrganizationPermissionsModel) SetInvite(val bool) {
+	s.Invite = val
+}
+
 // SetJoin sets the value of Join.
 func (s *OrganizationPermissionsModel) SetJoin(val bool) {
 	s.Join = val
@@ -8518,9 +8447,10 @@ func (s *OrganizationPermissionsModel) SetLeave(val bool) {
 type OrganizationRoleQuery string
 
 const (
-	OrganizationRoleQueryOwner  OrganizationRoleQuery = "owner"
-	OrganizationRoleQueryAdmin  OrganizationRoleQuery = "admin"
-	OrganizationRoleQueryMember OrganizationRoleQuery = "member"
+	OrganizationRoleQueryOwner      OrganizationRoleQuery = "owner"
+	OrganizationRoleQueryAdmin      OrganizationRoleQuery = "admin"
+	OrganizationRoleQueryMaintainer OrganizationRoleQuery = "maintainer"
+	OrganizationRoleQueryMember     OrganizationRoleQuery = "member"
 )
 
 // AllValues returns all OrganizationRoleQuery values.
@@ -8528,6 +8458,7 @@ func (OrganizationRoleQuery) AllValues() []OrganizationRoleQuery {
 	return []OrganizationRoleQuery{
 		OrganizationRoleQueryOwner,
 		OrganizationRoleQueryAdmin,
+		OrganizationRoleQueryMaintainer,
 		OrganizationRoleQueryMember,
 	}
 }
@@ -8538,6 +8469,8 @@ func (s OrganizationRoleQuery) MarshalText() ([]byte, error) {
 	case OrganizationRoleQueryOwner:
 		return []byte(s), nil
 	case OrganizationRoleQueryAdmin:
+		return []byte(s), nil
+	case OrganizationRoleQueryMaintainer:
 		return []byte(s), nil
 	case OrganizationRoleQueryMember:
 		return []byte(s), nil
@@ -8554,6 +8487,9 @@ func (s *OrganizationRoleQuery) UnmarshalText(data []byte) error {
 		return nil
 	case OrganizationRoleQueryAdmin:
 		*s = OrganizationRoleQueryAdmin
+		return nil
+	case OrganizationRoleQueryMaintainer:
+		*s = OrganizationRoleQueryMaintainer
 		return nil
 	case OrganizationRoleQueryMember:
 		*s = OrganizationRoleQueryMember
@@ -11375,136 +11311,6 @@ func (s *ProblemStatusCodeWithHeaders) SetResponse(val Problem) {
 	s.Response = val
 }
 
-// Problem team data.
-// Ref: #/components/schemas/ProblemTeamModel
-type ProblemTeamModel struct {
-	Permissions MemberPermissionsModel `json:"permissions"`
-	ProblemID   uuid.UUID              `json:"problem_id"`
-	TeamID      uuid.UUID              `json:"team_id"`
-	TeamName    string                 `json:"team_name"`
-	TeamSlug    string                 `json:"team_slug"`
-	Role        ProblemTeamModelRole   `json:"role"`
-	CreatedAt   time.Time              `json:"created_at"`
-}
-
-// GetPermissions returns the value of Permissions.
-func (s *ProblemTeamModel) GetPermissions() MemberPermissionsModel {
-	return s.Permissions
-}
-
-// GetProblemID returns the value of ProblemID.
-func (s *ProblemTeamModel) GetProblemID() uuid.UUID {
-	return s.ProblemID
-}
-
-// GetTeamID returns the value of TeamID.
-func (s *ProblemTeamModel) GetTeamID() uuid.UUID {
-	return s.TeamID
-}
-
-// GetTeamName returns the value of TeamName.
-func (s *ProblemTeamModel) GetTeamName() string {
-	return s.TeamName
-}
-
-// GetTeamSlug returns the value of TeamSlug.
-func (s *ProblemTeamModel) GetTeamSlug() string {
-	return s.TeamSlug
-}
-
-// GetRole returns the value of Role.
-func (s *ProblemTeamModel) GetRole() ProblemTeamModelRole {
-	return s.Role
-}
-
-// GetCreatedAt returns the value of CreatedAt.
-func (s *ProblemTeamModel) GetCreatedAt() time.Time {
-	return s.CreatedAt
-}
-
-// SetPermissions sets the value of Permissions.
-func (s *ProblemTeamModel) SetPermissions(val MemberPermissionsModel) {
-	s.Permissions = val
-}
-
-// SetProblemID sets the value of ProblemID.
-func (s *ProblemTeamModel) SetProblemID(val uuid.UUID) {
-	s.ProblemID = val
-}
-
-// SetTeamID sets the value of TeamID.
-func (s *ProblemTeamModel) SetTeamID(val uuid.UUID) {
-	s.TeamID = val
-}
-
-// SetTeamName sets the value of TeamName.
-func (s *ProblemTeamModel) SetTeamName(val string) {
-	s.TeamName = val
-}
-
-// SetTeamSlug sets the value of TeamSlug.
-func (s *ProblemTeamModel) SetTeamSlug(val string) {
-	s.TeamSlug = val
-}
-
-// SetRole sets the value of Role.
-func (s *ProblemTeamModel) SetRole(val ProblemTeamModelRole) {
-	s.Role = val
-}
-
-// SetCreatedAt sets the value of CreatedAt.
-func (s *ProblemTeamModel) SetCreatedAt(val time.Time) {
-	s.CreatedAt = val
-}
-
-type ProblemTeamModelRole string
-
-const (
-	ProblemTeamModelRoleAdmin  ProblemTeamModelRole = "admin"
-	ProblemTeamModelRoleEditor ProblemTeamModelRole = "editor"
-	ProblemTeamModelRoleViewer ProblemTeamModelRole = "viewer"
-)
-
-// AllValues returns all ProblemTeamModelRole values.
-func (ProblemTeamModelRole) AllValues() []ProblemTeamModelRole {
-	return []ProblemTeamModelRole{
-		ProblemTeamModelRoleAdmin,
-		ProblemTeamModelRoleEditor,
-		ProblemTeamModelRoleViewer,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ProblemTeamModelRole) MarshalText() ([]byte, error) {
-	switch s {
-	case ProblemTeamModelRoleAdmin:
-		return []byte(s), nil
-	case ProblemTeamModelRoleEditor:
-		return []byte(s), nil
-	case ProblemTeamModelRoleViewer:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemTeamModelRole) UnmarshalText(data []byte) error {
-	switch ProblemTeamModelRole(data) {
-	case ProblemTeamModelRoleAdmin:
-		*s = ProblemTeamModelRoleAdmin
-		return nil
-	case ProblemTeamModelRoleEditor:
-		*s = ProblemTeamModelRoleEditor
-		return nil
-	case ProblemTeamModelRoleViewer:
-		*s = ProblemTeamModelRoleViewer
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // Problem template data.
 // Ref: #/components/schemas/ProblemTemplateModel
 type ProblemTemplateModel struct {
@@ -13863,57 +13669,6 @@ func (s *UpdateProblemRequestModel) SetVisibility(val OptString) {
 // SetIsTemplate sets the value of IsTemplate.
 func (s *UpdateProblemRequestModel) SetIsTemplate(val OptBool) {
 	s.IsTemplate = val
-}
-
-// UpdateProblemTeamOK is response for UpdateProblemTeam operation.
-type UpdateProblemTeamOK struct{}
-
-type UpdateProblemTeamRole string
-
-const (
-	UpdateProblemTeamRoleAdmin  UpdateProblemTeamRole = "admin"
-	UpdateProblemTeamRoleEditor UpdateProblemTeamRole = "editor"
-	UpdateProblemTeamRoleViewer UpdateProblemTeamRole = "viewer"
-)
-
-// AllValues returns all UpdateProblemTeamRole values.
-func (UpdateProblemTeamRole) AllValues() []UpdateProblemTeamRole {
-	return []UpdateProblemTeamRole{
-		UpdateProblemTeamRoleAdmin,
-		UpdateProblemTeamRoleEditor,
-		UpdateProblemTeamRoleViewer,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s UpdateProblemTeamRole) MarshalText() ([]byte, error) {
-	switch s {
-	case UpdateProblemTeamRoleAdmin:
-		return []byte(s), nil
-	case UpdateProblemTeamRoleEditor:
-		return []byte(s), nil
-	case UpdateProblemTeamRoleViewer:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *UpdateProblemTeamRole) UnmarshalText(data []byte) error {
-	switch UpdateProblemTeamRole(data) {
-	case UpdateProblemTeamRoleAdmin:
-		*s = UpdateProblemTeamRoleAdmin
-		return nil
-	case UpdateProblemTeamRoleEditor:
-		*s = UpdateProblemTeamRoleEditor
-		return nil
-	case UpdateProblemTeamRoleViewer:
-		*s = UpdateProblemTeamRoleViewer
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
 }
 
 // UpdateTeamMemberRoleOK is response for UpdateTeamMemberRole operation.

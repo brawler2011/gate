@@ -56,6 +56,8 @@ func (s ApproveOrganizationJoinRequestModelRole) Validate() error {
 		return nil
 	case "admin":
 		return nil
+	case "maintainer":
+		return nil
 	case "member":
 		return nil
 	default:
@@ -471,19 +473,6 @@ func (s CreateProblemMemberRole) Validate() error {
 	}
 }
 
-func (s CreateProblemTeamRole) Validate() error {
-	switch s {
-	case "admin":
-		return nil
-	case "editor":
-		return nil
-	case "viewer":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s ErrorCode) Validate() error {
 	switch s {
 	case "invalid":
@@ -833,6 +822,8 @@ func (s InviteOrganizationMemberRequestModelRole) Validate() error {
 	case "owner":
 		return nil
 	case "admin":
+		return nil
+	case "maintainer":
 		return nil
 	case "member":
 		return nil
@@ -1420,46 +1411,6 @@ func (s *ListProblemPackagesOK) Validate() error {
 	return nil
 }
 
-func (s *ListProblemTeamsResponseModel) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if s.Teams == nil {
-			return errors.New("nil is invalid value")
-		}
-		var failures []validate.FieldError
-		for i, elem := range s.Teams {
-			if err := func() error {
-				if err := elem.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				failures = append(failures, validate.FieldError{
-					Name:  fmt.Sprintf("[%d]", i),
-					Error: err,
-				})
-			}
-		}
-		if len(failures) > 0 {
-			return &validate.Error{Fields: failures}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "teams",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
 func (s *ListProblemsResponseModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1814,6 +1765,8 @@ func (s OrganizationMemberModelRole) Validate() error {
 		return nil
 	case "admin":
 		return nil
+	case "maintainer":
+		return nil
 	case "member":
 		return nil
 	default:
@@ -1862,6 +1815,8 @@ func (s OrganizationRoleQuery) Validate() error {
 	case "owner":
 		return nil
 	case "admin":
+		return nil
+	case "maintainer":
 		return nil
 	case "member":
 		return nil
@@ -2995,42 +2950,6 @@ func (s *ProblemStatusCodeWithHeaders) Validate() error {
 	return nil
 }
 
-func (s *ProblemTeamModel) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Role.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "role",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s ProblemTeamModelRole) Validate() error {
-	switch s {
-	case "admin":
-		return nil
-	case "editor":
-		return nil
-	case "viewer":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s *ReorderContestProblemsRequestModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -3661,19 +3580,6 @@ func (s UpdateOrganizationRequestModelJoinPolicy) Validate() error {
 	case "by_request":
 		return nil
 	case "invite_only":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s UpdateProblemTeamRole) Validate() error {
-	switch s {
-	case "admin":
-		return nil
-	case "editor":
-		return nil
-	case "viewer":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

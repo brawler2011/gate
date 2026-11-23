@@ -5,18 +5,17 @@ import "slices"
 type OrganizationRole string
 
 const (
-	OrganizationMember OrganizationRole = "member"
-	OrganizationAdmin  OrganizationRole = "admin"
-	OrganizationOwner  OrganizationRole = "owner"
+	OrganizationMember     OrganizationRole = "member"
+	OrganizationMaintainer OrganizationRole = "maintainer"
+	OrganizationAdmin      OrganizationRole = "admin"
+	OrganizationOwner      OrganizationRole = "owner"
 )
 
-// TeamManager is derived from organization administration; nobody holds it directly.
 type TeamRole string
 
 const (
 	TeamMember     TeamRole = "member"
 	TeamMaintainer TeamRole = "maintainer"
-	TeamManager    TeamRole = "manager"
 )
 
 type ProblemRole string
@@ -50,8 +49,8 @@ type Role interface {
 	Ladder() []string
 }
 
-func (OrganizationRole) Ladder() []string { return []string{"member", "admin", "owner"} }
-func (TeamRole) Ladder() []string         { return []string{"member", "maintainer", "manager"} }
+func (OrganizationRole) Ladder() []string { return []string{"member", "maintainer", "admin", "owner"} }
+func (TeamRole) Ladder() []string         { return []string{"member", "maintainer"} }
 func (ProblemRole) Ladder() []string      { return []string{"viewer", "editor", "admin", "owner"} }
 func (ContestRole) Ladder() []string      { return []string{"participant", "moderator", "owner"} }
 

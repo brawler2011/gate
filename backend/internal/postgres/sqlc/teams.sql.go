@@ -44,19 +44,17 @@ func (q *Queries) CountTeamMembers(ctx context.Context, teamID uuid.UUID) (int64
 }
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (id, organization_id, name, slug, description, privacy, parent_team_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at
+INSERT INTO teams (id, organization_id, name, slug, description)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, organization_id, name, slug, description, created_at, updated_at
 `
 
 type CreateTeamParams struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Name           string     `json:"name"`
-	Slug           string     `json:"slug"`
-	Description    string     `json:"description"`
-	Privacy        string     `json:"privacy"`
-	ParentTeamID   *uuid.UUID `json:"parent_team_id"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Description    string    `json:"description"`
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error) {
@@ -66,8 +64,6 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 		arg.Name,
 		arg.Slug,
 		arg.Description,
-		arg.Privacy,
-		arg.ParentTeamID,
 	)
 	var i Team
 	err := row.Scan(
@@ -76,8 +72,6 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 		&i.Name,
 		&i.Slug,
 		&i.Description,
-		&i.Privacy,
-		&i.ParentTeamID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -94,7 +88,7 @@ func (q *Queries) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 }
 
 const getTeamByID = `-- name: GetTeamByID :one
-SELECT id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at FROM teams WHERE id = $1
+SELECT id, organization_id, name, slug, description, created_at, updated_at FROM teams WHERE id = $1
 `
 
 func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error) {
@@ -106,8 +100,6 @@ func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error) {
 		&i.Name,
 		&i.Slug,
 		&i.Description,
-		&i.Privacy,
-		&i.ParentTeamID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -115,7 +107,7 @@ func (q *Queries) GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error) {
 }
 
 const getTeamBySlug = `-- name: GetTeamBySlug :one
-SELECT id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at FROM teams WHERE organization_id = $1 AND slug = $2
+SELECT id, organization_id, name, slug, description, created_at, updated_at FROM teams WHERE organization_id = $1 AND slug = $2
 `
 
 type GetTeamBySlugParams struct {
@@ -132,8 +124,6 @@ func (q *Queries) GetTeamBySlug(ctx context.Context, arg GetTeamBySlugParams) (T
 		&i.Name,
 		&i.Slug,
 		&i.Description,
-		&i.Privacy,
-		&i.ParentTeamID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -163,7 +153,7 @@ func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (T
 }
 
 const getUserTeamsByOrganization = `-- name: GetUserTeamsByOrganization :many
-SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.parent_team_id, t.created_at, t.updated_at FROM teams t
+SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.created_at, t.updated_at FROM teams t
 INNER JOIN team_members tm ON t.id = tm.team_id
 WHERE tm.user_id = $1 AND t.organization_id = $2
 ORDER BY t.created_at DESC
@@ -189,8 +179,6 @@ func (q *Queries) GetUserTeamsByOrganization(ctx context.Context, arg GetUserTea
 			&i.Name,
 			&i.Slug,
 			&i.Description,
-			&i.Privacy,
-			&i.ParentTeamID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -274,8 +262,7 @@ func (q *Queries) RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberPara
 const updateTeam = `-- name: UpdateTeam :exec
 UPDATE teams
 SET name = COALESCE($2, name),
-    description = COALESCE($3, description),
-    privacy = COALESCE($4, privacy)
+    description = COALESCE($3, description)
 WHERE id = $1
 `
 
@@ -283,16 +270,10 @@ type UpdateTeamParams struct {
 	ID          uuid.UUID `json:"id"`
 	Name        *string   `json:"name"`
 	Description *string   `json:"description"`
-	Privacy     *string   `json:"privacy"`
 }
 
 func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
-	_, err := q.db.Exec(ctx, updateTeam,
-		arg.ID,
-		arg.Name,
-		arg.Description,
-		arg.Privacy,
-	)
+	_, err := q.db.Exec(ctx, updateTeam, arg.ID, arg.Name, arg.Description)
 	return err
 }
 

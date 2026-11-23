@@ -1862,73 +1862,6 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: Avatar deleted successfully
-  /problems/{id}/teams:
-    get:
-      summary: "List problem teams"
-      tags: [problems]
-      operationId: ListProblemTeams
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListProblemTeamsResponseModel"
-    post:
-      summary: "Create problem team"
-      tags: [problems]
-      operationId: CreateProblemTeam
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-        - $ref: "#/components/parameters/TeamIDQuery"
-        - name: role
-          description: "Role the team grants its members."
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [admin, editor, viewer]
-            default: viewer
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-    delete:
-      summary: "Delete problem team"
-      tags: [problems]
-      operationId: DeleteProblemTeam
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-        - $ref: "#/components/parameters/TeamIDQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-    patch:
-      summary: "Update problem team"
-      tags: [problems]
-      operationId: UpdateProblemTeam
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-        - $ref: "#/components/parameters/TeamIDQuery"
-        - name: role
-          description: "Role the team grants its members."
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [admin, editor, viewer]
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
   /problems/{id}/members:
     get:
       summary: "List problem members"
@@ -2224,7 +2157,7 @@ paths:
     post:
       tags: [organizations]
       operationId: AddOrganizationMember
-      summary: Add member to organization
+      summary: Add member to organization without an invitation (site administrators only)
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
         - $ref: "#/components/parameters/UserIDQuery"
@@ -2684,24 +2617,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
-  /teams/{id}/problems:
-    get:
-      tags: [teams]
-      operationId: ListTeamProblems
-      summary: List problems accessible by team
-      parameters:
-        - $ref: "#/components/parameters/TeamIDPath"
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListProblemsResponseModel"
   /posts:
     get:
       tags: [posts]
@@ -3183,7 +3098,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [owner, admin, member]
+        enum: [owner, admin, maintainer, member]
     TeamRoleQuery:
       name: role
       description: Role to assign to the team member.
@@ -4215,6 +4130,8 @@ components:
         - manage_members
         - delete
         - list_members
+        - create
+        - invite
         - join
         - request_join
         - leave
@@ -4226,6 +4143,12 @@ components:
         delete:
           type: boolean
         list_members:
+          type: boolean
+        create:
+          description: Create problems, contests and teams in the organization.
+          type: boolean
+        invite:
+          description: Invite users as members or maintainers.
           type: boolean
         join:
           type: boolean
@@ -6469,7 +6392,7 @@ components:
           type: string
         role:
           type: string
-          enum: [owner, admin, member]
+          enum: [owner, admin, maintainer, member]
         created_at:
           type: string
           format: date-time
@@ -6705,63 +6628,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ContestTeamModel"
-    ProblemTeamModel:
-      description: "Problem team data."
-      example:
-        permissions: {change_role: false, remove: false}
-        problem_id: 123e4567-e89b-42d3-a456-426614174000
-        team_id: 123e4567-e89b-42d3-a456-426614174000
-        team_name: example
-        team_slug: example
-        role: viewer
-        created_at: '2026-01-01T12:00:00Z'
-      type: object
-      required:
-        - permissions
-        - problem_id
-        - team_id
-        - team_name
-        - team_slug
-        - role
-        - created_at
-      properties:
-        permissions:
-          $ref: "#/components/schemas/MemberPermissionsModel"
-        problem_id:
-          type: string
-          format: uuid
-        team_id:
-          type: string
-          format: uuid
-        team_name:
-          type: string
-        team_slug:
-          type: string
-        role:
-          type: string
-          enum: [admin, editor, viewer]
-        created_at:
-          type: string
-          format: date-time
-    ListProblemTeamsResponseModel:
-      description: "Paginated collection of problem teams."
-      example:
-        teams:
-        - permissions: {change_role: false, remove: false}
-          problem_id: 123e4567-e89b-42d3-a456-426614174000
-          team_id: 123e4567-e89b-42d3-a456-426614174000
-          team_name: example
-          team_slug: example
-          role: viewer
-          created_at: '2026-01-01T12:00:00Z'
-      type: object
-      required:
-        - teams
-      properties:
-        teams:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProblemTeamModel"
     ProblemMemberModel:
       description: "Problem member data."
       example:
@@ -7562,7 +7428,7 @@ components:
           format: uuid
         role:
           type: string
-          enum: [owner, admin, member]
+          enum: [owner, admin, maintainer, member]
           default: member
 
     ListOrganizationInvitationsResponseModel:
@@ -7661,7 +7527,7 @@ components:
       properties:
         role:
           type: string
-          enum: [owner, admin, member]
+          enum: [owner, admin, maintainer, member]
           default: member
 
     ListOrganizationJoinRequestsResponseModel:

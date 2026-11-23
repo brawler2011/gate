@@ -116,9 +116,8 @@ func newMockOrgsRepo() *mockOrgsRepo {
 
 func newMockProblemsRepo() *mockProblemsRepo {
 	return &mockProblemsRepo{
-		problems:     make(map[uuid.UUID]problemsmodel.Problem),
-		members:      make(map[string]problemsmodel.ProblemMember),
-		problemTeams: make(map[uuid.UUID][]problemsmodel.ProblemTeam),
+		problems: make(map[uuid.UUID]problemsmodel.Problem),
+		members:  make(map[string]problemsmodel.ProblemMember),
 	}
 }
 
@@ -178,9 +177,8 @@ func (m *mockOrgsRepo) AddMember(ctx context.Context, orgID, userID uuid.UUID, r
 
 type mockProblemsRepo struct {
 	ProblemsRepo
-	problems     map[uuid.UUID]problemsmodel.Problem
-	members      map[string]problemsmodel.ProblemMember // key: problemID:userID
-	problemTeams map[uuid.UUID][]problemsmodel.ProblemTeam
+	problems map[uuid.UUID]problemsmodel.Problem
+	members  map[string]problemsmodel.ProblemMember // key: problemID:userID
 }
 
 func (m *mockProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
@@ -196,10 +194,6 @@ func (m *mockProblemsRepo) GetProblemMember(ctx context.Context, problemID, user
 		return mem, nil
 	}
 	return problemsmodel.ProblemMember{}, pkg.ErrNotFound
-}
-
-func (m *mockProblemsRepo) GetProblemTeams(ctx context.Context, problemID uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
-	return m.problemTeams[problemID], nil
 }
 
 type mockTeamsRepo struct {

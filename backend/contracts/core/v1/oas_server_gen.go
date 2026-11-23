@@ -16,7 +16,7 @@ type Handler interface {
 	AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error
 	// AddOrganizationMember implements AddOrganizationMember operation.
 	//
-	// Add member to organization.
+	// Add member to organization without an invitation (site administrators only).
 	//
 	// POST /organizations/{login}/members
 	AddOrganizationMember(ctx context.Context, params AddOrganizationMemberParams) error
@@ -212,12 +212,6 @@ type Handler interface {
 	//
 	// POST /problems/{id}/members
 	CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error
-	// CreateProblemTeam implements CreateProblemTeam operation.
-	//
-	// Create problem team.
-	//
-	// POST /problems/{id}/teams
-	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
 	// CreateSubmission implements CreateSubmission operation.
 	//
 	// Create submission.
@@ -302,12 +296,6 @@ type Handler interface {
 	//
 	// DELETE /problems/{id}/members
 	DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error
-	// DeleteProblemTeam implements DeleteProblemTeam operation.
-	//
-	// Delete problem team.
-	//
-	// DELETE /problems/{id}/teams
-	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
 	// DeleteTeam implements DeleteTeam operation.
 	//
 	// Delete team.
@@ -634,12 +622,6 @@ type Handler interface {
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
-	// ListProblemTeams implements ListProblemTeams operation.
-	//
-	// List problem teams.
-	//
-	// GET /problems/{id}/teams
-	ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error)
 	// ListProblemTemplates implements ListProblemTemplates operation.
 	//
 	// List problem templates.
@@ -676,12 +658,6 @@ type Handler interface {
 	//
 	// GET /teams/{id}/members
 	ListTeamMembers(ctx context.Context, params ListTeamMembersParams) (*ListTeamMembersResponseModel, error)
-	// ListTeamProblems implements ListTeamProblems operation.
-	//
-	// List problems accessible by team.
-	//
-	// GET /teams/{id}/problems
-	ListTeamProblems(ctx context.Context, params ListTeamProblemsParams) (*ListProblemsResponseModel, error)
 	// ListTeams implements ListTeams operation.
 	//
 	// List teams.
@@ -874,12 +850,6 @@ type Handler interface {
 	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
-	// UpdateProblemTeam implements UpdateProblemTeam operation.
-	//
-	// Update problem team.
-	//
-	// PATCH /problems/{id}/teams
-	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
 	// UpdateTeam implements UpdateTeam operation.
 	//
 	// Update team.

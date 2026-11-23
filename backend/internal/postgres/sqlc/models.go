@@ -276,9 +276,10 @@ func (ns NullJoinPolicy) Value() (driver.Value, error) {
 type OrganizationRole string
 
 const (
-	OrganizationRoleMember OrganizationRole = "member"
-	OrganizationRoleAdmin  OrganizationRole = "admin"
-	OrganizationRoleOwner  OrganizationRole = "owner"
+	OrganizationRoleMember     OrganizationRole = "member"
+	OrganizationRoleMaintainer OrganizationRole = "maintainer"
+	OrganizationRoleAdmin      OrganizationRole = "admin"
+	OrganizationRoleOwner      OrganizationRole = "owner"
 )
 
 func (e *OrganizationRole) Scan(src interface{}) error {
@@ -537,7 +538,6 @@ type TeamRole string
 const (
 	TeamRoleMember     TeamRole = "member"
 	TeamRoleMaintainer TeamRole = "maintainer"
-	TeamRoleManager    TeamRole = "manager"
 )
 
 func (e *TeamRole) Scan(src interface{}) error {
@@ -929,14 +929,6 @@ type ProblemPackageAsset struct {
 	ObjectID  uuid.UUID `json:"object_id"`
 }
 
-type ProblemTeam struct {
-	ProblemID      uuid.UUID               `json:"problem_id"`
-	TeamID         uuid.UUID               `json:"team_id"`
-	OrganizationID uuid.UUID               `json:"organization_id"`
-	Role           accessmodel.ProblemRole `json:"role"`
-	CreatedAt      time.Time               `json:"created_at"`
-}
-
 type RateLimit struct {
 	Key          string      `json:"key"`
 	Hits         []time.Time `json:"hits"`
@@ -984,21 +976,13 @@ type Submission struct {
 }
 
 type Team struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Name           string     `json:"name"`
-	Slug           string     `json:"slug"`
-	Description    string     `json:"description"`
-	Privacy        string     `json:"privacy"`
-	ParentTeamID   *uuid.UUID `json:"parent_team_id"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-type TeamAccess struct {
-	TeamID uuid.UUID   `json:"team_id"`
-	UserID uuid.UUID   `json:"user_id"`
-	Role   interface{} `json:"role"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Description    string    `json:"description"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type TeamMember struct {

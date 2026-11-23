@@ -1,7 +1,7 @@
 
 -- name: CreateTeam :one
-INSERT INTO teams (id, organization_id, name, slug, description, privacy, parent_team_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO teams (id, organization_id, name, slug, description)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetTeamByID :one
@@ -15,8 +15,7 @@ SELECT * FROM teams WHERE organization_id = $1 AND slug = $2;
 -- name: UpdateTeam :exec
 UPDATE teams
 SET name = COALESCE(sqlc.narg('name'), name),
-    description = COALESCE(sqlc.narg('description'), description),
-    privacy = COALESCE(sqlc.narg('privacy'), privacy)
+    description = COALESCE(sqlc.narg('description'), description)
 WHERE id = $1;
 
 -- name: DeleteTeam :exec

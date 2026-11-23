@@ -339,12 +339,6 @@ func encodeCreateProblemMemberResponse(response *CreateProblemMemberOK, w http.R
 	return nil
 }
 
-func encodeCreateProblemTeamResponse(response *CreateProblemTeamOK, w http.ResponseWriter) error {
-	w.WriteHeader(200)
-
-	return nil
-}
-
 func encodeCreateSubmissionResponse(response *CreationResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
@@ -438,12 +432,6 @@ func encodeDeleteProblemResponse(response *DeleteProblemOK, w http.ResponseWrite
 }
 
 func encodeDeleteProblemMemberResponse(response *DeleteProblemMemberOK, w http.ResponseWriter) error {
-	w.WriteHeader(200)
-
-	return nil
-}
-
-func encodeDeleteProblemTeamResponse(response *DeleteProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
@@ -1374,19 +1362,6 @@ func encodeListProblemPackagesResponse(response *ListProblemPackagesOK, w http.R
 	return nil
 }
 
-func encodeListProblemTeamsResponse(response *ListProblemTeamsResponseModel, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeListProblemTemplatesResponse(response []ProblemTemplateModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
@@ -1457,19 +1432,6 @@ func encodeListTeamContestsResponse(response *ListContestsResponseModel, w http.
 }
 
 func encodeListTeamMembersResponse(response *ListTeamMembersResponseModel, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListTeamProblemsResponse(response *ListProblemsResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1766,12 +1728,6 @@ func encodeUpdateProblemResponse(response *UpdateProblemOK, w http.ResponseWrite
 }
 
 func encodeUpdateProblemMemberResponse(response *UpdateProblemMemberOK, w http.ResponseWriter) error {
-	w.WriteHeader(200)
-
-	return nil
-}
-
-func encodeUpdateProblemTeamResponse(response *UpdateProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
