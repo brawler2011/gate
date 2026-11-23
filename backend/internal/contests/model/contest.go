@@ -40,14 +40,6 @@ const (
 	ScopeModerator   ContestScope = "moderator"
 )
 
-type ParticipationMode string
-
-const (
-	ParticipationModeOpen       ParticipationMode = "open"
-	ParticipationModeByRequest  ParticipationMode = "by_request"
-	ParticipationModeInviteOnly ParticipationMode = "invite_only"
-)
-
 const PenaltyPerAttempt int32 = 20
 
 type CreateContestParams struct {
@@ -264,7 +256,7 @@ type CreateContestJoinRequestInput struct {
 }
 
 type ContestSettings struct {
-	ParticipationMode      ParticipationMode
+	JoinPolicy             accessmodel.JoinPolicy
 	MonitorScope           ContestScope
 	SubmissionsListScope   ContestScope
 	SubmissionsReviewScope ContestScope
@@ -282,7 +274,7 @@ type ContestSettings struct {
 
 // Nil fields keep the stored value; FreezeDurationSet distinguishes clearing the duration from omitting it.
 type ContestSettingsPatch struct {
-	ParticipationMode      *ParticipationMode
+	JoinPolicy             *accessmodel.JoinPolicy
 	MonitorScope           *ContestScope
 	SubmissionsListScope   *ContestScope
 	SubmissionsReviewScope *ContestScope
@@ -367,16 +359,6 @@ func (c *Contest) Shift(run VirtualRun) Contest {
 		shifted.Settings.FreezeStartedAt = &freeze
 	}
 	return shifted
-}
-
-type UpsertContestProblemResultParams struct {
-	ContestID      uuid.UUID
-	UserID         uuid.UUID
-	ProblemID      uuid.UUID
-	Solved         bool
-	FailedAttempts int32
-	FirstACTime    *time.Time
-	TimeMinutes    *int32
 }
 
 type ContestProblemResult struct {

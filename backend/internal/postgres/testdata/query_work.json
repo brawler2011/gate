@@ -1,26 +1,26 @@
 {
-  "ScoreboardQueries/large/Standings": {
-    "statements": 1,
+  "ScoreboardQueries/large/Contest": {
+    "statements": 2,
     "transactions": 0,
-    "pages": 143,
-    "sorts": 0,
+    "pages": 5905,
+    "sorts": 1,
     "seq_scans": 3
   },
-  "ScoreboardQueries/large/SubmissionHistory": {
+  "ScoreboardQueries/large/User": {
     "statements": 1,
     "transactions": 0,
-    "pages": 13,
+    "pages": 104,
     "sorts": 0,
     "seq_scans": 0
   },
-  "ScoreboardQueries/small/Standings": {
-    "statements": 1,
+  "ScoreboardQueries/small/Contest": {
+    "statements": 2,
     "transactions": 0,
-    "pages": 16,
-    "sorts": 0,
+    "pages": 62,
+    "sorts": 1,
     "seq_scans": 3
   },
-  "ScoreboardQueries/small/SubmissionHistory": {
+  "ScoreboardQueries/small/User": {
     "statements": 1,
     "transactions": 0,
     "pages": 3,
@@ -44,7 +44,7 @@
   "Submissions/large/Latest": {
     "statements": 2,
     "transactions": 1,
-    "pages": 283,
+    "pages": 284,
     "sorts": 0,
     "seq_scans": 0
   },

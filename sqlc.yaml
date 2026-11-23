@@ -93,18 +93,6 @@ sql:
               package: "contestsmodel"
               type: "ContestScope"
               pointer: true
-          - db_type: "participation_mode"
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/contests/model"
-              package: "contestsmodel"
-              type: "ParticipationMode"
-          - db_type: "participation_mode"
-            nullable: true
-            go_type:
-              import: "github.com/brawler2011/gate/backend/internal/contests/model"
-              package: "contestsmodel"
-              type: "ParticipationMode"
-              pointer: true
           - db_type: "freeze_status"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"

@@ -47,7 +47,7 @@ func (m *visibilityStub) ListSubmissions(context.Context, submissionsmodel.Submi
 
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
-	public := contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, SubmissionsReviewScope: contestsmodel.ScopePublic, SubmissionDetailsScope: contestsmodel.ScopePublic}
+	public := contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, FreezeStatus: contestsmodel.FreezeStatusFrozen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, SubmissionsReviewScope: contestsmodel.ScopePublic, SubmissionDetailsScope: contestsmodel.ScopePublic}
 	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Visibility: contestsmodel.ContestVisibilityPublic, Settings: public}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
 	loader := &accesstest.Loader{}
 	setContest := func() {

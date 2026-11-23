@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	contests "github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -64,9 +63,6 @@ func (r *JudgeRecovery) RecoverJob(ctx context.Context, job judgingmodel.Job) er
 			}
 			sub, err := tx.GetSubmission(ctx, job.SubmissionID)
 			if err != nil {
-				return err
-			}
-			if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 				return err
 			}
 			return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})

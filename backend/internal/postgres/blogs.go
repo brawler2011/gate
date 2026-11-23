@@ -24,8 +24,7 @@ func (r *BlogsRepo) CreatePost(ctx context.Context, params blogsmodel.CreatePost
 		Title:       params.Title,
 		Text:        params.Text,
 		Description: params.Description,
-		AuthorUuid:  params.AuthorUUID,
-		AuthorName:  params.AuthorName,
+		AuthorID:    params.AuthorID,
 		ImageKey:    params.ImageKey,
 	})
 
@@ -54,24 +53,28 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 	}
 
 	offset := (params.Page - 1) * params.PageSize
-	var rows []sqlc.Post
+	var posts []blogsmodel.Post
 	if params.SortOrder == "asc" {
+		var rows []sqlc.ListPostsAscRow
 		rows, err = r.queries.ListPostsAsc(ctx, sqlc.ListPostsAscParams{
 			Limit:  safeInt32(params.PageSize),
 			Offset: safeInt32(offset),
 		})
+		for _, row := range rows {
+			posts = append(posts, postFromSQLC(sqlc.GetPostByIDRow(row)))
+		}
 	} else {
+		var rows []sqlc.ListPostsDescRow
 		rows, err = r.queries.ListPostsDesc(ctx, sqlc.ListPostsDescParams{
 			Limit:  safeInt32(params.PageSize),
 			Offset: safeInt32(offset),
 		})
+		for _, row := range rows {
+			posts = append(posts, postFromSQLC(sqlc.GetPostByIDRow(row)))
+		}
 	}
 	if err != nil {
 		return nil, 0, dbError("list posts", err)
-	}
-	var posts []blogsmodel.Post
-	for _, row := range rows {
-		posts = append(posts, postFromSQLC(row))
 	}
 
 	return posts, int(totalCount), nil
@@ -110,7 +113,7 @@ func (r *BlogsRepo) DeletePost(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func postFromSQLC(row sqlc.Post) blogsmodel.Post {
+func postFromSQLC(row sqlc.GetPostByIDRow) blogsmodel.Post {
 	return blogsmodel.Post{
 		ID:          row.ID,
 		CreatedAt:   row.CreatedAt,
@@ -118,7 +121,7 @@ func postFromSQLC(row sqlc.Post) blogsmodel.Post {
 		Title:       row.Title,
 		Text:        row.Text,
 		Description: row.Description,
-		AuthorUUID:  row.AuthorUuid,
+		AuthorID:    row.AuthorID,
 		AuthorName:  row.AuthorName,
 		ImageKey:    row.ImageKey,
 	}

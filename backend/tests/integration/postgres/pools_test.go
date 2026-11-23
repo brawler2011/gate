@@ -85,10 +85,13 @@ func newBlockerPool(t *testing.T) blockerPool {
 	return blockerPool{Pool: pool, name: name}
 }
 
+// Row-lock waiters queue behind one another, so count every session in the chain.
 func (b blockerPool) blocked(ctx context.Context) (int, error) {
 	var n int
-	err := b.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity waiter WHERE EXISTS (
-		SELECT 1 FROM pg_stat_activity holder WHERE holder.application_name=$1 AND holder.pid=ANY(pg_blocking_pids(waiter.pid)))`, b.name).Scan(&n)
+	err := b.QueryRow(ctx, `WITH RECURSIVE chain(pid) AS (
+		SELECT pid FROM pg_stat_activity WHERE application_name=$1
+		UNION SELECT waiter.pid FROM pg_stat_activity waiter JOIN chain ON chain.pid=ANY(pg_blocking_pids(waiter.pid)))
+	SELECT count(*) FROM chain JOIN pg_stat_activity a USING (pid) WHERE a.application_name<>$1`, b.name).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("count blocked sessions: %w", err)
 	}

@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -23,8 +24,8 @@ func (q *Queries) CountPosts(ctx context.Context) (int64, error) {
 }
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts (title, text, description, author_uuid, author_name, image_key)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO posts (title, text, description, author_id, image_key)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
 
@@ -32,8 +33,7 @@ type CreatePostParams struct {
 	Title       string    `json:"title"`
 	Text        string    `json:"text"`
 	Description string    `json:"description"`
-	AuthorUuid  uuid.UUID `json:"author_uuid"`
-	AuthorName  string    `json:"author_name"`
+	AuthorID    uuid.UUID `json:"author_id"`
 	ImageKey    string    `json:"image_key"`
 }
 
@@ -42,8 +42,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (uuid.UU
 		arg.Title,
 		arg.Text,
 		arg.Description,
-		arg.AuthorUuid,
-		arg.AuthorName,
+		arg.AuthorID,
 		arg.ImageKey,
 	)
 	var id uuid.UUID
@@ -64,14 +63,26 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) (int64, error) {
 }
 
 const getPostByID = `-- name: GetPostByID :one
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-WHERE id = $1
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+WHERE p.id = $1
 `
 
-func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (Post, error) {
+type GetPostByIDRow struct {
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	Text        string    `json:"text"`
+	Description string    `json:"description"`
+	AuthorID    uuid.UUID `json:"author_id"`
+	AuthorName  string    `json:"author_name"`
+	ImageKey    string    `json:"image_key"`
+}
+
+func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (GetPostByIDRow, error) {
 	row := q.db.QueryRow(ctx, getPostByID, id)
-	var i Post
+	var i GetPostByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -79,7 +90,7 @@ func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (Post, error) {
 		&i.Title,
 		&i.Text,
 		&i.Description,
-		&i.AuthorUuid,
+		&i.AuthorID,
 		&i.AuthorName,
 		&i.ImageKey,
 	)
@@ -87,9 +98,9 @@ func (q *Queries) GetPostByID(ctx context.Context, id uuid.UUID) (Post, error) {
 }
 
 const listPostsAsc = `-- name: ListPostsAsc :many
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-ORDER BY created_at ASC, id ASC
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+ORDER BY p.created_at ASC, p.id ASC
 LIMIT $1 OFFSET $2
 `
 
@@ -98,15 +109,27 @@ type ListPostsAscParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListPostsAsc(ctx context.Context, arg ListPostsAscParams) ([]Post, error) {
+type ListPostsAscRow struct {
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	Text        string    `json:"text"`
+	Description string    `json:"description"`
+	AuthorID    uuid.UUID `json:"author_id"`
+	AuthorName  string    `json:"author_name"`
+	ImageKey    string    `json:"image_key"`
+}
+
+func (q *Queries) ListPostsAsc(ctx context.Context, arg ListPostsAscParams) ([]ListPostsAscRow, error) {
 	rows, err := q.db.Query(ctx, listPostsAsc, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Post{}
+	items := []ListPostsAscRow{}
 	for rows.Next() {
-		var i Post
+		var i ListPostsAscRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
@@ -114,7 +137,7 @@ func (q *Queries) ListPostsAsc(ctx context.Context, arg ListPostsAscParams) ([]P
 			&i.Title,
 			&i.Text,
 			&i.Description,
-			&i.AuthorUuid,
+			&i.AuthorID,
 			&i.AuthorName,
 			&i.ImageKey,
 		); err != nil {
@@ -129,9 +152,9 @@ func (q *Queries) ListPostsAsc(ctx context.Context, arg ListPostsAscParams) ([]P
 }
 
 const listPostsDesc = `-- name: ListPostsDesc :many
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-ORDER BY created_at DESC, id DESC
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+ORDER BY p.created_at DESC, p.id DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -140,15 +163,27 @@ type ListPostsDescParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([]Post, error) {
+type ListPostsDescRow struct {
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	Text        string    `json:"text"`
+	Description string    `json:"description"`
+	AuthorID    uuid.UUID `json:"author_id"`
+	AuthorName  string    `json:"author_name"`
+	ImageKey    string    `json:"image_key"`
+}
+
+func (q *Queries) ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([]ListPostsDescRow, error) {
 	rows, err := q.db.Query(ctx, listPostsDesc, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Post{}
+	items := []ListPostsDescRow{}
 	for rows.Next() {
-		var i Post
+		var i ListPostsDescRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
@@ -156,7 +191,7 @@ func (q *Queries) ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([
 			&i.Title,
 			&i.Text,
 			&i.Description,
-			&i.AuthorUuid,
+			&i.AuthorID,
 			&i.AuthorName,
 			&i.ImageKey,
 		); err != nil {

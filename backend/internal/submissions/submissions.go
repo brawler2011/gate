@@ -9,7 +9,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
-	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -118,9 +117,6 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 		}
 
 		if submission.State == submissionsmodel.Disqualified {
-			if err := contests.ApplySubmissionResult(ctx, tx, &submission); err != nil {
-				return err
-			}
 			return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: id})
 		}
 
@@ -146,26 +142,10 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 		if sub.ContestID == nil || *sub.ContestID != contestID {
 			return pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
 		}
-		if sub.CreatedBy != nil && sub.ProblemID != nil {
-			if err := tx.LockSubmissionTuple(ctx, contestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
-				return err
-			}
-		}
-		sub, err = tx.GetSubmission(ctx, submissionID)
-		if err != nil {
-			return err
-		}
 		if err := tx.BlockSubmission(ctx, submissionID, reason); err != nil {
 			return err
 		}
-		sub, err = tx.GetSubmission(ctx, submissionID)
-		if err != nil {
-			return err
-		}
-		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
-			return err
-		}
-		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})
+		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: submissionID})
 	})
 }
 
@@ -249,14 +229,6 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 
 		for _, reset := range resetIDs {
 			id := reset.ID
-			submission, err := tx.GetSubmission(ctx, id)
-			if err != nil {
-				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
-			}
-
-			if err := contests.ApplySubmissionResult(ctx, tx, &submission); err != nil {
-				return err
-			}
 			if _, err := tx.ScheduleJob(ctx, id); err != nil {
 				return err
 			}

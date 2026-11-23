@@ -46,12 +46,6 @@ CREATE TYPE organization_role AS ENUM (
     'owner'
 );
 
-CREATE TYPE participation_mode AS ENUM (
-    'open',
-    'by_request',
-    'invite_only'
-);
-
 CREATE TYPE package_status AS ENUM (
     'pending',
     'building',
@@ -144,7 +138,7 @@ CREATE TABLE rate_limits (
 CREATE INDEX rate_limits_expires_at_idx ON rate_limits USING btree (expires_at);
 
 CREATE TABLE auth_tokens (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
     token_type auth_token_type NOT NULL,
     token_hash text NOT NULL,
@@ -190,21 +184,22 @@ CREATE TABLE organization_members (
 CREATE INDEX organization_members_user_id_idx ON organization_members USING btree (user_id);
 
 CREATE TABLE organization_join_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     organization_id uuid NOT NULL,
     user_id uuid NOT NULL,
     message text,
-    status varchar(32) DEFAULT 'pending'::varchar NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
     reviewed_by uuid,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT organization_join_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'canceled'::text]))),
     CONSTRAINT organization_join_requests_pkey PRIMARY KEY (id),
     CONSTRAINT organization_join_requests_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT organization_join_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT organization_join_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX org_join_requests_org_idx ON organization_join_requests USING btree (organization_id, status);
-CREATE UNIQUE INDEX org_join_requests_pending_unique_idx ON organization_join_requests USING btree (organization_id, user_id) WHERE ((status)::text = 'pending'::text);
+CREATE UNIQUE INDEX org_join_requests_pending_unique_idx ON organization_join_requests USING btree (organization_id, user_id) WHERE (status = 'pending'::text);
 CREATE INDEX org_join_requests_user_idx ON organization_join_requests USING btree (user_id, status);
 
 CREATE TRIGGER on_organizations_update BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION updated_at_update();
@@ -226,8 +221,6 @@ CREATE TABLE teams (
     CONSTRAINT teams_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 CREATE INDEX teams_name_trgm_idx ON teams USING gin (name gin_trgm_ops);
-CREATE INDEX teams_organization_id_idx ON teams USING btree (organization_id);
-CREATE INDEX teams_slug_idx ON teams USING btree (organization_id, slug);
 
 CREATE TABLE team_members (
     team_id uuid NOT NULL,
@@ -284,7 +277,6 @@ CREATE TABLE problem_members (
     CONSTRAINT problem_members_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
     CONSTRAINT problem_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX problem_members_problem_id_idx ON problem_members USING btree (problem_id);
 CREATE INDEX problem_members_user_id_idx ON problem_members USING btree (user_id);
 
 
@@ -428,7 +420,7 @@ CREATE TABLE contests (
     title text NOT NULL,
     login varchar(64) NOT NULL,
     description text DEFAULT ''::text NOT NULL,
-    participation_mode participation_mode DEFAULT 'open'::participation_mode NOT NULL,
+    join_policy join_policy DEFAULT 'open'::join_policy NOT NULL,
     monitor_scope contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
     submissions_list_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
     submissions_review_scope contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
@@ -470,7 +462,6 @@ CREATE TABLE contest_members (
     CONSTRAINT contest_members_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
     CONSTRAINT contest_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX contest_members_contest_id_idx ON contest_members USING btree (contest_id);
 CREATE INDEX contest_members_user_id_idx ON contest_members USING btree (user_id);
 
 CREATE TABLE contest_teams (
@@ -484,7 +475,6 @@ CREATE TABLE contest_teams (
     CONSTRAINT contest_teams_contest_id_fkey FOREIGN KEY (contest_id, organization_id) REFERENCES contests(id, organization_id) ON DELETE CASCADE,
     CONSTRAINT contest_teams_team_id_fkey FOREIGN KEY (team_id, organization_id) REFERENCES teams(id, organization_id) ON DELETE CASCADE
 );
-CREATE INDEX contest_teams_contest_id_idx ON contest_teams USING btree (contest_id);
 CREATE INDEX contest_teams_team_id_idx ON contest_teams USING btree (team_id);
 
 CREATE TABLE contest_problems (
@@ -500,8 +490,6 @@ CREATE TABLE contest_problems (
     CONSTRAINT contest_problems_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE RESTRICT,
     CONSTRAINT contest_problems_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE RESTRICT
 );
-CREATE INDEX contest_problems_contest_id_idx ON contest_problems USING btree (contest_id);
-CREATE INDEX contest_problems_ordinal_idx ON contest_problems USING btree (contest_id, ordinal);
 CREATE INDEX contest_problems_package_id_idx ON contest_problems USING btree (package_id);
 CREATE INDEX contest_problems_problem_id_idx ON contest_problems USING btree (problem_id);
 
@@ -521,21 +509,22 @@ CREATE TABLE contest_user_problem_blocks (
 CREATE INDEX contest_user_problem_blocks_contest_idx ON contest_user_problem_blocks USING btree (contest_id);
 
 CREATE TABLE contest_join_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     contest_id uuid NOT NULL,
     user_id uuid NOT NULL,
     message text,
-    status varchar(32) DEFAULT 'pending'::varchar NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
     reviewed_by uuid,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT contest_join_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'canceled'::text]))),
     CONSTRAINT contest_join_requests_pkey PRIMARY KEY (id),
     CONSTRAINT contest_join_requests_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
     CONSTRAINT contest_join_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT contest_join_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX contest_join_requests_contest_idx ON contest_join_requests USING btree (contest_id, status);
-CREATE UNIQUE INDEX contest_join_requests_pending_unique_idx ON contest_join_requests USING btree (contest_id, user_id) WHERE ((status)::text = 'pending'::text);
+CREATE UNIQUE INDEX contest_join_requests_pending_unique_idx ON contest_join_requests USING btree (contest_id, user_id) WHERE (status = 'pending'::text);
 CREATE INDEX contest_join_requests_user_idx ON contest_join_requests USING btree (user_id, status);
 
 -- A named invitation (user_id) is accepted or declined once; a join link (token) has no user and is reusable.
@@ -566,7 +555,7 @@ CREATE INDEX invitations_team_id_idx ON invitations USING btree (team_id);
 CREATE INDEX invitations_contest_id_idx ON invitations USING btree (contest_id);
 
 CREATE TABLE contest_announcements (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     contest_id uuid NOT NULL,
     problem_id uuid,
     author_id uuid NOT NULL,
@@ -582,17 +571,18 @@ CREATE TABLE contest_announcements (
 CREATE INDEX contest_announcements_contest_idx ON contest_announcements USING btree (contest_id, created_at DESC);
 
 CREATE TABLE contest_clarifications (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     contest_id uuid NOT NULL,
     problem_id uuid,
     user_id uuid NOT NULL,
     question text NOT NULL,
     answer text,
     answered_by uuid,
-    status varchar(32) DEFAULT 'pending'::varchar NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     answered_at timestamptz,
     updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT contest_clarifications_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'answered'::text]))),
     CONSTRAINT contest_clarifications_pkey PRIMARY KEY (id),
     CONSTRAINT contest_clarifications_answered_by_fkey FOREIGN KEY (answered_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT contest_clarifications_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
@@ -603,7 +593,7 @@ CREATE INDEX contest_clarifications_contest_status_idx ON contest_clarifications
 CREATE INDEX contest_clarifications_contest_user_idx ON contest_clarifications USING btree (contest_id, user_id, created_at DESC);
 
 CREATE TABLE contest_drafts (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     contest_id uuid NOT NULL,
     user_id uuid NOT NULL,
     code text NOT NULL,
@@ -614,22 +604,6 @@ CREATE TABLE contest_drafts (
     CONSTRAINT contest_drafts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX contest_drafts_contest_user_idx ON contest_drafts USING btree (contest_id, user_id, created_at DESC);
-
-CREATE TABLE contest_problem_results (
-    contest_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    problem_id uuid NOT NULL,
-    solved boolean DEFAULT false NOT NULL,
-    failed_attempts integer DEFAULT 0 NOT NULL,
-    first_ac_time timestamptz,
-    time_minutes integer,
-    updated_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT contest_problem_results_pkey PRIMARY KEY (contest_id, user_id, problem_id),
-    CONSTRAINT contest_problem_results_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
-    CONSTRAINT contest_problem_results_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
-    CONSTRAINT contest_problem_results_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE INDEX contest_problem_results_contest_idx ON contest_problem_results USING btree (contest_id);
 
 -- A personal replay of a finished contest; the window is fixed at start so later edits of the contest times keep the run.
 CREATE TABLE contest_virtual_runs (
@@ -664,26 +638,8 @@ END;
 $$;
 -- +goose StatementEnd
 
--- +goose StatementBegin
-CREATE FUNCTION check_max_problems_on_contest() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    max_problems_on_contest_count integer := 50;
-BEGIN
-    IF (SELECT count(*)
-        FROM contest_problems
-        WHERE contest_id = NEW.contest_id) >= max_problems_on_contest_count THEN
-        RAISE EXCEPTION 'Exceeded max problems for this contest (limit: %)', max_problems_on_contest_count;
-    END IF;
-    RETURN NEW;
-END;
-$$;
--- +goose StatementEnd
-
 CREATE TRIGGER manual_freeze_changed BEFORE INSERT OR UPDATE OF freeze_status, freeze_started_at ON contests FOR EACH ROW EXECUTE FUNCTION capture_manual_freeze();
 CREATE TRIGGER on_contests_update BEFORE UPDATE ON contests FOR EACH ROW EXECUTE FUNCTION updated_at_update();
-CREATE TRIGGER max_problems_on_contest_check BEFORE INSERT ON contest_problems FOR EACH ROW EXECUTE FUNCTION check_max_problems_on_contest();
 
 
 CREATE TABLE submissions (
@@ -702,12 +658,10 @@ CREATE TABLE submissions (
     test_details jsonb,
     ban_reason text,
     revision bigint DEFAULT 1 NOT NULL,
-    generation bigint DEFAULT 1 NOT NULL,
     package_id uuid,
     -- Strict mode: the time limit factor and the benchmark that measured it.
     judge_k double precision,
     judge_benchmark text,
-    CONSTRAINT submissions_generation_check CHECK ((generation > 0)),
     CONSTRAINT submissions_calibration_check CHECK (((judge_k IS NULL) = (judge_benchmark IS NULL))),
     CONSTRAINT submissions_pkey PRIMARY KEY (id),
     CONSTRAINT submissions_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE SET NULL,
@@ -715,7 +669,6 @@ CREATE TABLE submissions (
     CONSTRAINT submissions_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id),
     CONSTRAINT submissions_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE SET NULL
 );
-CREATE INDEX submissions_contest_id_idx ON submissions USING btree (contest_id);
 CREATE INDEX submissions_contest_problem_idx ON submissions USING btree (contest_id, problem_id);
 CREATE INDEX submissions_created_at_idx ON submissions USING btree (created_at DESC, id DESC);
 CREATE INDEX submissions_owner_id_idx ON submissions USING btree (owner_id);
@@ -727,7 +680,8 @@ CREATE INDEX submissions_state_idx ON submissions USING btree (state);
 CREATE TABLE judge_jobs (
     id uuid NOT NULL,
     submission_id uuid NOT NULL,
-    generation bigint NOT NULL,
+    -- The submission revision the job judges; a later revision supersedes it.
+    revision bigint NOT NULL,
     package_id uuid,
     package_hash text NOT NULL,
     state text DEFAULT 'pending'::text NOT NULL,
@@ -737,10 +691,10 @@ CREATE TABLE judge_jobs (
     created_at timestamptz DEFAULT now() NOT NULL,
     available_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT judge_jobs_attempt_check CHECK ((attempt >= 0)),
-    CONSTRAINT judge_jobs_generation_check CHECK ((generation > 0)),
+    CONSTRAINT judge_jobs_revision_check CHECK ((revision > 0)),
     CONSTRAINT judge_jobs_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'processing'::text]))),
     CONSTRAINT judge_jobs_pkey PRIMARY KEY (id),
-    CONSTRAINT judge_jobs_submission_id_generation_key UNIQUE (submission_id, generation),
+    CONSTRAINT judge_jobs_submission_id_revision_key UNIQUE (submission_id, revision),
     CONSTRAINT judge_jobs_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE SET NULL,
     CONSTRAINT judge_jobs_submission_id_fkey FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
 );
@@ -753,7 +707,7 @@ CREATE TRIGGER on_submissions_update BEFORE UPDATE ON submissions FOR EACH ROW E
 
 
 CREATE TABLE notifications (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
     type varchar(64) NOT NULL,
     title text NOT NULL,
@@ -775,12 +729,12 @@ CREATE TABLE posts (
     title text NOT NULL,
     text text NOT NULL,
     description text NOT NULL,
-    author_uuid uuid NOT NULL,
-    author_name text NOT NULL,
+    author_id uuid NOT NULL,
     image_key text NOT NULL,
-    CONSTRAINT posts_pkey PRIMARY KEY (id)
+    CONSTRAINT posts_pkey PRIMARY KEY (id),
+    CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_posts_author_uuid ON posts USING btree (author_uuid);
+CREATE INDEX idx_posts_author_id ON posts USING btree (author_id);
 CREATE INDEX idx_posts_created_at ON posts USING btree (created_at DESC);
 
 CREATE TRIGGER posts_updated_at_trigger BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION updated_at_update();

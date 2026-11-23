@@ -74,18 +74,6 @@ func (r *JudgeJobs) Release(ctx context.Context, job judgingmodel.Job) error {
 }
 
 func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool, error) {
-	identifiers, err := r.queries.GetSubmissionIdentifiers(ctx, job.SubmissionID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, dbError("complete job", err)
-	}
-	if identifiers.ContestID != nil && identifiers.OwnerID != nil && identifiers.ProblemID != nil {
-		if err := r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(*identifiers.ContestID, *identifiers.OwnerID, *identifiers.ProblemID)); err != nil {
-			return false, dbError("complete job", err)
-		}
-	}
 	sub, err := r.queries.LockSubmission(ctx, job.SubmissionID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -93,14 +81,14 @@ func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool
 		}
 		return false, dbError("complete job", err)
 	}
-	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, SubmissionID: job.SubmissionID, Generation: job.Generation, LeaseToken: job.LeaseToken})
+	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, SubmissionID: job.SubmissionID, Revision: job.Revision, LeaseToken: job.LeaseToken})
 	if err != nil {
 		return false, dbError("complete job", err)
 	}
 	if count > 0 {
 		return true, nil
 	}
-	if sub.Generation != job.Generation || sub.State == submissionsmodel.Disqualified {
+	if sub.Revision != job.Revision || sub.State == submissionsmodel.Disqualified {
 		return false, nil
 	}
 	return false, judging.ErrLeaseLost
@@ -116,7 +104,7 @@ func (r *JudgeJobs) PickStalledJobs(ctx context.Context, limit int32) ([]judging
 		jobs[i] = judgingmodel.Job{
 			ID:           row.ID,
 			SubmissionID: row.SubmissionID,
-			Generation:   row.Generation,
+			Revision:     row.Revision,
 			Attempt:      row.Attempt,
 		}
 	}
@@ -124,18 +112,6 @@ func (r *JudgeJobs) PickStalledJobs(ctx context.Context, limit int32) ([]judging
 }
 
 func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.JobRef) (bool, error) {
-	identifiers, err := r.queries.GetSubmissionIdentifiers(ctx, reference.SubmissionID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, r.completeStalled(ctx, reference)
-	}
-	if err != nil {
-		return false, dbError("fail stalled job", err)
-	}
-	if identifiers.ContestID != nil && identifiers.OwnerID != nil && identifiers.ProblemID != nil {
-		if err := r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(*identifiers.ContestID, *identifiers.OwnerID, *identifiers.ProblemID)); err != nil {
-			return false, dbError("fail stalled job", err)
-		}
-	}
 	sub, err := r.queries.LockSubmission(ctx, reference.SubmissionID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -143,10 +119,10 @@ func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.J
 		}
 		return false, dbError("fail stalled job", err)
 	}
-	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
+	if sub.Revision != reference.Revision || sub.State == submissionsmodel.Disqualified {
 		return false, r.completeStalled(ctx, reference)
 	}
-	count, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+	count, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Revision: reference.Revision})
 	if err != nil {
 		return false, dbError("fail stalled job", err)
 	}
@@ -161,10 +137,10 @@ func (r *JudgeJobs) RequeueStalledJob(ctx context.Context, reference judgingmode
 		}
 		return false, dbError("requeue stalled job", err)
 	}
-	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
+	if sub.Revision != reference.Revision || sub.State == submissionsmodel.Disqualified {
 		return false, r.completeStalled(ctx, reference)
 	}
-	count, err := r.queries.RequeueStalledJudgeJob(ctx, sqlc.RequeueStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+	count, err := r.queries.RequeueStalledJudgeJob(ctx, sqlc.RequeueStalledJudgeJobParams{ID: reference.ID, Revision: reference.Revision})
 	if err != nil {
 		return false, dbError("requeue stalled job", err)
 	}
@@ -175,7 +151,7 @@ func (r *JudgeJobs) RequeueStalledJob(ctx context.Context, reference judgingmode
 }
 
 func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
-	job := judgingmodel.Job{ID: row.ID, SubmissionID: row.SubmissionID, Generation: row.Generation,
+	job := judgingmodel.Job{ID: row.ID, SubmissionID: row.SubmissionID, Revision: row.Revision,
 		PackageID: row.PackageID, PackageHash: row.PackageHash, Attempt: row.Attempt, CreatedAt: row.CreatedAt}
 	if row.LeaseToken != nil {
 		job.LeaseToken = *row.LeaseToken
@@ -188,7 +164,7 @@ func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
 
 // completeStalled retires a job whose submission is gone or superseded.
 func (r *JudgeJobs) completeStalled(ctx context.Context, reference judgingmodel.JobRef) error {
-	if _, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation}); err != nil {
+	if _, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Revision: reference.Revision}); err != nil {
 		return dbError("complete stalled judge job", err)
 	}
 	return nil

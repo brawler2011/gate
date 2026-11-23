@@ -58,7 +58,7 @@ export const ContestJoinButton = ({
     return null;
   }
 
-  if (contest.participation_mode !== "by_request") {
+  if (contest.join_policy !== "by_request") {
     return null;
   }
 

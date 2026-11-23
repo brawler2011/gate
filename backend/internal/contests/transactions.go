@@ -31,13 +31,6 @@ type ContestEventsTransactions interface {
 	Within(context.Context, func(ContestEventsTxStore) error) error
 }
 
-type ScoreboardStore interface {
-	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
-	GetContestMember(context.Context, *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error)
-	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)
-	UpsertContestProblemResult(context.Context, *contestsmodel.UpsertContestProblemResultParams) error
-}
-
 type CommandTxStore interface {
 	LockContestProblemOrder(context.Context, uuid.UUID) error
 	LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
@@ -65,7 +58,8 @@ type CommandTxStore interface {
 	FinishVirtualRun(context.Context, uuid.UUID, uuid.UUID, time.Time) error
 
 	access.Loader
-	ScoreboardStore
+	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
+	GetContestMember(context.Context, *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error)
 	eventdata.Writer
 	CreateContest(context.Context, *contestsmodel.CreateContestParams) error
 	CreateContestMember(context.Context, *contestsmodel.CreateContestMemberParams) error

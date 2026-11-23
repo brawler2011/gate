@@ -2629,7 +2629,7 @@ export interface components {
          *       "submissions_review_scope": "moderator",
          *       "submission_details_scope": "moderator",
          *       "freeze_status": "auto",
-         *       "participation_mode": "open",
+         *       "join_policy": "open",
          *       "hide_statements": false,
          *       "allow_clarifications": true,
          *       "enable_drafts": true,
@@ -2679,7 +2679,7 @@ export interface components {
             enable_upsolving: boolean;
             allow_virtual: boolean;
             /** @enum {string} */
-            participation_mode: "open" | "by_request" | "invite_only";
+            join_policy: "open" | "by_request" | "invite_only";
             hide_statements: boolean;
             /** @description Language configurations contestants may submit in; empty allows the whole catalog. */
             languages: string[];
@@ -2712,7 +2712,7 @@ export interface components {
          *           "submissions_review_scope": "moderator",
          *           "submission_details_scope": "moderator",
          *           "freeze_status": "auto",
-         *           "participation_mode": "open",
+         *           "join_policy": "open",
          *           "hide_statements": false,
          *           "allow_clarifications": true,
          *           "enable_drafts": true,
@@ -2762,7 +2762,7 @@ export interface components {
          *           "submissions_review_scope": "moderator",
          *           "submission_details_scope": "moderator",
          *           "freeze_status": "auto",
-         *           "participation_mode": "open",
+         *           "join_policy": "open",
          *           "hide_statements": false,
          *           "allow_clarifications": true,
          *           "enable_drafts": true,
@@ -2851,7 +2851,7 @@ export interface components {
          *         "submissions_review_scope": "moderator",
          *         "submission_details_scope": "moderator",
          *         "freeze_status": "auto",
-         *         "participation_mode": "open",
+         *         "join_policy": "open",
          *         "hide_statements": false,
          *         "allow_clarifications": true,
          *         "enable_drafts": true,
@@ -2939,7 +2939,7 @@ export interface components {
          *       "enable_drafts": false,
          *       "allow_clarifications": false,
          *       "enable_upsolving": false,
-         *       "participation_mode": "open",
+         *       "join_policy": "open",
          *       "hide_statements": false
          *     }
          */
@@ -2974,7 +2974,7 @@ export interface components {
             allow_virtual?: boolean;
             enable_upsolving?: boolean;
             /** @enum {string} */
-            participation_mode?: "open" | "by_request" | "invite_only";
+            join_policy?: "open" | "by_request" | "invite_only";
             hide_statements?: boolean;
             /** @description Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves the current list. */
             languages?: string[];

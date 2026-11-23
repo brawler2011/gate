@@ -53,7 +53,6 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -79,7 +78,7 @@ RETURNING s.id, previous.state AS previous_state, s.revision;
 
 -- name: BlockSubmission :exec
 UPDATE submissions
-SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
+SET state = 300, score = 0, ban_reason = @ban_reason,
     updated_at = NOW(), revision = revision + 1
 WHERE id = @id::uuid;
 
@@ -89,7 +88,7 @@ WITH previous AS (
   WHERE id = ANY(@ids::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
-SET generation = s.generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
+SET state = 300, score = 0, ban_reason = @ban_reason,
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;
@@ -117,7 +116,6 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -183,7 +181,7 @@ WHERE (
   );
 
 -- name: SubmissionCandidates :many
-SELECT id, contest_id, owner_id, problem_id FROM submissions
+SELECT id FROM submissions
 WHERE contest_id = @contest_id::uuid
   AND (sqlc.narg('problem_id')::uuid IS NULL OR problem_id = sqlc.narg('problem_id')::uuid)
   AND (sqlc.narg('submission_id')::uuid IS NULL OR id = sqlc.narg('submission_id')::uuid)
@@ -191,10 +189,7 @@ WHERE contest_id = @contest_id::uuid
 ORDER BY id;
 
 -- name: LockSubmission :one
-SELECT id, generation, state FROM submissions WHERE id = @id::uuid FOR UPDATE;
-
--- name: GetSubmissionIdentifiers :one
-SELECT contest_id, owner_id, problem_id FROM submissions WHERE id = @id::uuid;
+SELECT id, revision, state FROM submissions WHERE id = @id::uuid FOR UPDATE;
 
 -- name: ResetSubmissionsState :many
 WITH previous AS (
@@ -202,7 +197,7 @@ WITH previous AS (
   WHERE id = ANY(@ids::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
-SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL,
+SET state = 1, score = 0, test_details = NULL,
     ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;

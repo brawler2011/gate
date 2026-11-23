@@ -361,49 +361,6 @@ func (ns NullPackageStatus) Value() (driver.Value, error) {
 	return string(ns.PackageStatus), nil
 }
 
-type ParticipationMode string
-
-const (
-	ParticipationModeOpen       ParticipationMode = "open"
-	ParticipationModeByRequest  ParticipationMode = "by_request"
-	ParticipationModeInviteOnly ParticipationMode = "invite_only"
-)
-
-func (e *ParticipationMode) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ParticipationMode(s)
-	case string:
-		*e = ParticipationMode(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ParticipationMode: %T", src)
-	}
-	return nil
-}
-
-type NullParticipationMode struct {
-	ParticipationMode ParticipationMode `json:"participation_mode"`
-	Valid             bool              `json:"valid"` // Valid is true if ParticipationMode is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullParticipationMode) Scan(value interface{}) error {
-	if value == nil {
-		ns.ParticipationMode, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ParticipationMode.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullParticipationMode) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ParticipationMode), nil
-}
-
 type ProblemRole string
 
 const (
@@ -634,7 +591,7 @@ type Contest struct {
 	Title                  string                          `json:"title"`
 	Login                  string                          `json:"login"`
 	Description            string                          `json:"description"`
-	ParticipationMode      contestsmodel.ParticipationMode `json:"participation_mode"`
+	JoinPolicy             accessmodel.JoinPolicy          `json:"join_policy"`
 	MonitorScope           contestsmodel.ContestScope      `json:"monitor_scope"`
 	SubmissionsListScope   contestsmodel.ContestScope      `json:"submissions_list_scope"`
 	SubmissionsReviewScope contestsmodel.ContestScope      `json:"submissions_review_scope"`
@@ -720,17 +677,6 @@ type ContestProblem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type ContestProblemResult struct {
-	ContestID      uuid.UUID  `json:"contest_id"`
-	UserID         uuid.UUID  `json:"user_id"`
-	ProblemID      uuid.UUID  `json:"problem_id"`
-	Solved         bool       `json:"solved"`
-	FailedAttempts int32      `json:"failed_attempts"`
-	FirstAcTime    *time.Time `json:"first_ac_time"`
-	TimeMinutes    *int32     `json:"time_minutes"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
 type ContestTeam struct {
 	ContestID      uuid.UUID               `json:"contest_id"`
 	TeamID         uuid.UUID               `json:"team_id"`
@@ -771,7 +717,7 @@ type Invitation struct {
 type JudgeJob struct {
 	ID           uuid.UUID  `json:"id"`
 	SubmissionID uuid.UUID  `json:"submission_id"`
-	Generation   int64      `json:"generation"`
+	Revision     int64      `json:"revision"`
 	PackageID    *uuid.UUID `json:"package_id"`
 	PackageHash  string     `json:"package_hash"`
 	State        string     `json:"state"`
@@ -830,8 +776,7 @@ type Post struct {
 	Title       string    `json:"title"`
 	Text        string    `json:"text"`
 	Description string    `json:"description"`
-	AuthorUuid  uuid.UUID `json:"author_uuid"`
-	AuthorName  string    `json:"author_name"`
+	AuthorID    uuid.UUID `json:"author_id"`
 	ImageKey    string    `json:"image_key"`
 }
 
@@ -970,7 +915,6 @@ type Submission struct {
 	TestDetails    []byte                 `json:"test_details"`
 	BanReason      *string                `json:"ban_reason"`
 	Revision       int64                  `json:"revision"`
-	Generation     int64                  `json:"generation"`
 	PackageID      *uuid.UUID             `json:"package_id"`
 	JudgeK         *float64               `json:"judge_k"`
 	JudgeBenchmark *string                `json:"judge_benchmark"`

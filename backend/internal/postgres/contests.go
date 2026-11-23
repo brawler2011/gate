@@ -102,7 +102,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		Title:                  c.Title,
 		Description:            c.Description,
 		Visibility:             c.Visibility,
-		ParticipationMode:      s.ParticipationMode,
+		JoinPolicy:             s.JoinPolicy,
 		MonitorScope:           s.MonitorScope,
 		SubmissionsListScope:   s.SubmissionsListScope,
 		SubmissionsReviewScope: s.SubmissionsReviewScope,
@@ -469,7 +469,7 @@ func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 		Login:             c.Login,
 		Description:       c.Description,
 		Settings: contestsmodel.ContestSettings{
-			ParticipationMode:      c.ParticipationMode,
+			JoinPolicy:             c.JoinPolicy,
 			MonitorScope:           c.MonitorScope,
 			SubmissionsListScope:   c.SubmissionsListScope,
 			SubmissionsReviewScope: c.SubmissionsReviewScope,
@@ -555,83 +555,16 @@ func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UU
 	return contests, nil
 }
 
-func (r *ContestsRepo) UpsertContestProblemResult(ctx context.Context, params *contestsmodel.UpsertContestProblemResultParams) error {
-	firstACTime := params.FirstACTime
-
-	err := r.queries.UpsertContestProblemResult(ctx, sqlc.UpsertContestProblemResultParams{
-		ContestID:      params.ContestID,
-		UserID:         params.UserID,
-		ProblemID:      params.ProblemID,
-		Solved:         params.Solved,
-		FailedAttempts: params.FailedAttempts,
-		FirstAcTime:    firstACTime,
-		TimeMinutes:    params.TimeMinutes,
-	})
+func (r *ContestsRepo) ListContestParticipants(ctx context.Context, contestID uuid.UUID) (map[uuid.UUID]string, error) {
+	rows, err := r.queries.ListContestParticipants(ctx, contestID)
 	if err != nil {
-		return dbError("upsert contest problem result", err)
+		return nil, dbError("list contest participants", err)
 	}
-	return nil
-}
-
-func (r *ContestsRepo) GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestProblemResult, error) {
-	row, err := r.queries.GetContestProblemResult(ctx, sqlc.GetContestProblemResultParams{
-		ContestID: contestID,
-		UserID:    userID,
-		ProblemID: problemID,
-	})
-	if err != nil {
-		return nil, dbError("get contest problem result", err)
-	}
-
-	firstAC := row.FirstAcTime
-
-	return &contestsmodel.ContestProblemResult{
-		ContestID:      row.ContestID,
-		UserID:         row.UserID,
-		ProblemID:      row.ProblemID,
-		Solved:         row.Solved,
-		FailedAttempts: row.FailedAttempts,
-		FirstACTime:    firstAC,
-		TimeMinutes:    row.TimeMinutes,
-	}, nil
-}
-
-func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error) {
-	rows, err := r.queries.GetContestScoreboardFromStandings(ctx, contestID)
-	if err != nil {
-		return nil, nil, dbError("get contest scoreboard from standings", err)
-	}
-
-	userMap := make(map[uuid.UUID]string)
-	results := make([]contestsmodel.ContestProblemResult, 0, len(rows))
-
+	users := make(map[uuid.UUID]string, len(rows))
 	for _, row := range rows {
-		userMap[row.UserID] = row.Username
-		if row.ProblemID != nil {
-			probID := *row.ProblemID
-			var solved bool
-			if row.Solved != nil {
-				solved = *row.Solved
-			}
-			var failedAttempts int32
-			if row.FailedAttempts != nil {
-				failedAttempts = *row.FailedAttempts
-			}
-			firstAC := row.FirstAcTime
-
-			results = append(results, contestsmodel.ContestProblemResult{
-				ContestID:      contestID,
-				UserID:         row.UserID,
-				ProblemID:      probID,
-				Solved:         solved,
-				FailedAttempts: failedAttempts,
-				FirstACTime:    firstAC,
-				TimeMinutes:    row.TimeMinutes,
-			})
-		}
+		users[row.UserID] = row.Username
 	}
-
-	return results, userMap, nil
+	return users, nil
 }
 
 func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
@@ -656,26 +589,6 @@ func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contest
 	for i, row := range rows {
 		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
 			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
-	}
-	return subs, nil
-}
-
-func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error) {
-	rows, err := r.queries.GetSubmissionsForScoreboard(ctx, sqlc.GetSubmissionsForScoreboardParams{
-		ContestID: &contestID,
-		OwnerID:   &userID,
-		ProblemID: &problemID,
-	})
-	if err != nil {
-		return nil, dbError("get submissions for scoreboard", err)
-	}
-
-	subs := make([]contestsmodel.SubmissionForScoreboard, len(rows))
-	for i, row := range rows {
-		subs[i] = contestsmodel.SubmissionForScoreboard{
-			State:     row.State,
-			CreatedAt: row.CreatedAt,
-		}
 	}
 	return subs, nil
 }

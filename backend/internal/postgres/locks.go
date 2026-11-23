@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"math"
-	"slices"
 
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/google/uuid"
@@ -25,8 +24,7 @@ func submissionTupleKey(contest, user, problem uuid.UUID) int64 {
 	return advisoryKey("gate:submission-tuple:", contest, user, problem)
 }
 
-// Transaction only: acquire before submission rows and retain through standings recalculation.
-// The lock also protects absent standings rows and the user/problem block predicate.
+// Transaction only: serializes submitting against blocking the same user and problem.
 func (r *ContestsRepo) LockSubmissionTuple(ctx context.Context, contest, user, problem uuid.UUID) error {
 	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(contest, user, problem)))
 }
@@ -35,27 +33,12 @@ func (r *DraftsRepo) LockDraftOwner(ctx context.Context, contest, user uuid.UUID
 	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:draft-owner:", contest, user)))
 }
 
-// Snapshot bulk candidates before waiting, then lock all tuples in key order before submission rows.
+// Candidate IDs define row-lock order even if foreign-key targets have been deleted.
 func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.SubmissionCandidatesParams) ([]uuid.UUID, error) {
-	candidates, err := r.queries.SubmissionCandidates(ctx, filter)
+	ids, err := r.queries.SubmissionCandidates(ctx, filter)
 	if err != nil {
 		return nil, dbError("lock candidates", err)
 	}
-	ids := make([]uuid.UUID, 0, len(candidates))
-	keys := make([]int64, 0, len(candidates))
-	for _, candidate := range candidates {
-		ids = append(ids, candidate.ID)
-		if candidate.ContestID != nil && candidate.OwnerID != nil && candidate.ProblemID != nil {
-			keys = append(keys, submissionTupleKey(*candidate.ContestID, *candidate.OwnerID, *candidate.ProblemID))
-		}
-	}
-	slices.Sort(keys)
-	for _, key := range slices.Compact(keys) {
-		if err := r.queries.AdvisoryTransactionLock(ctx, key); err != nil {
-			return nil, dbError("lock candidates", err)
-		}
-	}
-	// Candidate IDs define row-lock order even if foreign-key targets have been deleted.
 	for _, id := range ids {
 		if _, err := r.queries.LockSubmission(ctx, id); err != nil {
 			return nil, dbError("lock candidates", err)

@@ -200,31 +200,17 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 		rows int
 	}{{"small", 1000}, {"large", 100000}} {
 		b.Run(size.name, func(b *testing.B) {
-			for _, scenario := range []string{"Standings", "SubmissionHistory"} {
+			for _, scenario := range []string{"Contest", "User"} {
 				b.Run(scenario, func(b *testing.B) {
 					pool := benchmarkPool(b)
 					f := seedSubmissions(b, pool, size.rows)
 					repo := NewContestsRepo(pool)
 					ctx := context.Background()
 					operation := func(_ int) error {
-						if scenario == "Standings" {
-							results, users, err := repo.GetContestScoreboardFromStandings(ctx, f.contest)
-							if err != nil {
-								return err
-							}
-							if len(results) != f.participants*10 || len(users) != f.participants {
-								return fmt.Errorf("incomplete standings")
-							}
-						} else {
-							subs, err := repo.GetSubmissionsForScoreboard(ctx, f.contest, f.user, f.problem)
-							if err != nil {
-								return err
-							}
-							if len(subs) != f.rows/(f.participants*10) {
-								return fmt.Errorf("incomplete submission history")
-							}
+						if scenario == "Contest" {
+							return contestScoreboardQueries(ctx, repo, f)
 						}
-						return nil
+						return userScoreboardQueries(ctx, repo, f)
 					}
 					require.NoError(b, operation(0))
 					benchmarkWork(b, 1, operation)
@@ -235,22 +221,22 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 }
 
 var databaseBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
-	"BenchmarkScoreboardQueries/large/Standings":         {25889000, 38.62, 10681088, 158437},
-	"BenchmarkScoreboardQueries/large/SubmissionHistory": {285000, 3509.5, 5248, 115},
-	"BenchmarkScoreboardQueries/small/Standings":         {2575000, 388.45, 854144, 15905},
-	"BenchmarkScoreboardQueries/small/SubmissionHistory": {232000, 4312.5, 3008, 89},
-	"BenchmarkSubmissions/large/Create":                  {681892, 1466.50, 4032, 93},
-	"BenchmarkSubmissions/large/Get":                     {667000, 1501.5, 6336, 97},
-	"BenchmarkSubmissions/large/Latest":                  {15112000, 66.15, 128640, 1952},
-	"BenchmarkSubmissions/large/UpdateRevision":          {564854, 1770.50, 1856, 44},
-	"BenchmarkSubmissions/large/WriteRead/workers16":     {814294, 1228.00, 11776, 203},
-	"BenchmarkSubmissions/large/WriteRead/workers4":      {833538, 1199.50, 10688, 192},
-	"BenchmarkSubmissions/small/Create":                  {560530, 1784.00, 4032, 93},
-	"BenchmarkSubmissions/small/Get":                     {846000, 1182.5, 6336, 97},
-	"BenchmarkSubmissions/small/Latest":                  {6031000, 165.85, 128640, 1952},
-	"BenchmarkSubmissions/small/UpdateRevision":          {540754, 1849.50, 1856, 44},
-	"BenchmarkSubmissions/small/WriteRead/workers16":     {808556, 1237.00, 11776, 203},
-	"BenchmarkSubmissions/small/WriteRead/workers4":      {844640, 1184.00, 10688, 192},
+	"BenchmarkScoreboardQueries/large/Contest":       {240000000, 4.17, 80000000, 1010000},
+	"BenchmarkScoreboardQueries/large/User":          {420000, 2381.0, 70000, 1100},
+	"BenchmarkScoreboardQueries/small/Contest":       {2100000, 476.2, 650000, 10800},
+	"BenchmarkScoreboardQueries/small/User":          {215000, 4651.0, 9000, 165},
+	"BenchmarkSubmissions/large/Create":              {681892, 1466.50, 4032, 93},
+	"BenchmarkSubmissions/large/Get":                 {667000, 1501.5, 6336, 97},
+	"BenchmarkSubmissions/large/Latest":              {15112000, 66.15, 128640, 1952},
+	"BenchmarkSubmissions/large/UpdateRevision":      {564854, 1770.50, 1856, 44},
+	"BenchmarkSubmissions/large/WriteRead/workers16": {814294, 1228.00, 11776, 203},
+	"BenchmarkSubmissions/large/WriteRead/workers4":  {833538, 1199.50, 10688, 192},
+	"BenchmarkSubmissions/small/Create":              {560530, 1784.00, 4032, 93},
+	"BenchmarkSubmissions/small/Get":                 {846000, 1182.5, 6336, 97},
+	"BenchmarkSubmissions/small/Latest":              {6031000, 165.85, 128640, 1952},
+	"BenchmarkSubmissions/small/UpdateRevision":      {540754, 1849.50, 1856, 44},
+	"BenchmarkSubmissions/small/WriteRead/workers16": {808556, 1237.00, 11776, 203},
+	"BenchmarkSubmissions/small/WriteRead/workers4":  {844640, 1184.00, 10688, 192},
 }
 
 func checkDatabaseBenchmarkBudget(b *testing.B, before runtime.MemStats) {

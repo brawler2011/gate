@@ -35,7 +35,7 @@ var updateQueryWork = flag.Bool("update", false, "raise "+queryWorkBudgets+" bud
 // Sequential-scan metrics count only tables populated by the benchmark seeds.
 var queryWorkLargeTables = map[string]bool{
 	"submissions": true,
-	"users":       true, "contest_members": true, "contest_problem_results": true,
+	"users":       true, "contest_members": true,
 }
 
 type statementRecorder struct {
@@ -176,19 +176,11 @@ func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario 
 			}
 			return err
 		}},
-		{name: "ScoreboardQueries/Standings", run: func(ctx context.Context, _ pgx.Tx) error {
-			results, users, err := contests.GetContestScoreboardFromStandings(ctx, f.contest)
-			if err == nil && (len(results) != f.participants*10 || len(users) != f.participants) {
-				err = errors.New("incomplete standings")
-			}
-			return err
+		{name: "ScoreboardQueries/Contest", run: func(ctx context.Context, _ pgx.Tx) error {
+			return contestScoreboardQueries(ctx, contests, f)
 		}},
-		{name: "ScoreboardQueries/SubmissionHistory", run: func(ctx context.Context, _ pgx.Tx) error {
-			subs, err := contests.GetSubmissionsForScoreboard(ctx, f.contest, f.user, f.problem)
-			if err == nil && len(subs) != f.rows/(f.participants*10) {
-				err = errors.New("incomplete submission history")
-			}
-			return err
+		{name: "ScoreboardQueries/User", run: func(ctx context.Context, _ pgx.Tx) error {
+			return userScoreboardQueries(ctx, contests, f)
 		}},
 	}
 }

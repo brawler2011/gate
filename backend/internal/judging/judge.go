@@ -8,7 +8,6 @@ import (
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
-	contests "github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -142,9 +141,6 @@ func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judgingmodel.J
 		}
 		sub, err := tx.GetSubmission(ctx, job.SubmissionID)
 		if err != nil {
-			return err
-		}
-		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 			return err
 		}
 		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})

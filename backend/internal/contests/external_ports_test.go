@@ -44,10 +44,7 @@ type ContestsRepo interface {
 	UpdateContestTeamRole(ctx context.Context, contestID, teamID uuid.UUID, role accessmodel.ContestRole) error
 	DeleteContestTeam(ctx context.Context, contestID, teamID uuid.UUID) error
 
-	UpsertContestProblemResult(ctx context.Context, params *contestsmodel.UpsertContestProblemResultParams) error
-	GetContestProblemResult(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestProblemResult, error)
-	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error)
-	GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)
+	ListContestParticipants(ctx context.Context, contestID uuid.UUID) (map[uuid.UUID]string, error)
 
 	CreateContestUserProblemBlock(ctx context.Context, params *contestsmodel.CreateContestUserProblemBlockParams) error
 	DeleteContestUserProblemBlock(ctx context.Context, contestID, userID, problemID uuid.UUID) error

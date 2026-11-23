@@ -27,7 +27,6 @@ type ContestsUseCase struct {
 	transactions    CommandTransactions
 	access          access.Loader
 	notificationsUC NotificationsUC
-	cache           *contestCache
 }
 
 func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, loader access.Loader) *ContestsUseCase {
@@ -36,7 +35,6 @@ func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, tr
 		orgsRepo:     orgsRepo,
 		transactions: transactions,
 		access:       loader,
-		cache:        newContestCache(5 * time.Minute),
 	}
 }
 
@@ -44,22 +42,7 @@ func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(
 	ctx context.Context,
 	orgLogin, contestLogin string,
 ) (contestsmodel.Contest, error) {
-	if uc.cache != nil {
-		if c, found := uc.cache.Get(orgLogin, contestLogin); found {
-			return c, nil
-		}
-	}
-
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return contestsmodel.Contest{}, err
-	}
-
-	if uc.cache != nil {
-		uc.cache.Set(orgLogin, contestLogin, contest)
-	}
-
-	return contest, nil
+	return uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 }
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
@@ -95,67 +78,15 @@ func (uc *ContestsUseCase) CreateContest(
 }
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
-	var oldContest contestsmodel.Contest
-	if uc.cache != nil {
-		if cached, ok := uc.cache.GetByID(c.ID); ok {
-			oldContest = cached
-		}
-	}
-
-	err := access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
-		if oldContest.ID == uuid.Nil {
-			existing, err := tx.GetContest(ctx, c.ID)
-			if err != nil {
-				return err
-			}
-			oldContest = existing
-		}
+	return access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		return tx.UpdateContest(ctx, c)
 	})
-	if err != nil {
-		return err
-	}
-
-	if uc.cache != nil {
-		if oldContest.ID != uuid.Nil {
-			uc.cache.Delete(oldContest.OrganizationLogin, oldContest.Login)
-		}
-		uc.cache.DeleteByID(c.ID)
-	}
-
-	return nil
 }
 
 func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
-	var oldContest contestsmodel.Contest
-	if uc.cache != nil {
-		if cached, ok := uc.cache.GetByID(id); ok {
-			oldContest = cached
-		}
-	}
-
-	err := access.WithinContest(ctx, uc.transactions, id, accessmodel.ContestDelete, func(tx CommandTxStore, _ access.ContestAccess) error {
-		if oldContest.ID == uuid.Nil {
-			existing, err := tx.GetContest(ctx, id)
-			if err != nil {
-				return err
-			}
-			oldContest = existing
-		}
+	return access.WithinContest(ctx, uc.transactions, id, accessmodel.ContestDelete, func(tx CommandTxStore, _ access.ContestAccess) error {
 		return tx.DeleteContest(ctx, id)
 	})
-	if err != nil {
-		return err
-	}
-
-	if uc.cache != nil {
-		if oldContest.ID != uuid.Nil {
-			uc.cache.Delete(oldContest.OrganizationLogin, oldContest.Login)
-		}
-		uc.cache.DeleteByID(id)
-	}
-
-	return nil
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
@@ -227,97 +158,28 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 	if err != nil {
 		return nil, err
 	}
-
-	isFrozen := contest.IsFrozenAt(accessmodel.ReadTime(ctx))
-	freezeTime := contest.GetFreezeTime()
-	penaltyPerAttempt := contestsmodel.PenaltyPerAttempt
-
 	problems, err := uc.contestRepo.GetContestProblems(ctx, contestID)
 	if err != nil {
 		return nil, err
 	}
-
-	problemHeaders := make([]contestsmodel.ScoreboardProblemHeader, len(problems))
-	for i, p := range problems {
-		problemHeaders[i] = contestsmodel.ScoreboardProblemHeader{
-			ProblemID: p.ProblemID,
-			Title:     p.Title,
-			ShortName: p.ShortName,
-			Ordinal:   int32(p.Ordinal), // #nosec G115
-		}
-	}
-
-	if !isFrozen || unfrozen {
-		results, userMap, err := uc.contestRepo.GetContestScoreboardFromStandings(ctx, contestID)
-		if err != nil {
-			return nil, err
-		}
-
-		userResults := make(map[uuid.UUID][]contestsmodel.ContestProblemResult)
-		for _, res := range results {
-			res.Penalty = 0
-			if res.Solved {
-				res.Penalty = res.FailedAttempts * penaltyPerAttempt
-			}
-			res.PendingAttempts = 0
-			userResults[res.UserID] = append(userResults[res.UserID], res)
-		}
-
-		items := make([]contestsmodel.ScoreboardItem, 0, len(userMap))
-		for uID, username := range userMap {
-			pResults := userResults[uID]
-			if pResults == nil {
-				pResults = []contestsmodel.ContestProblemResult{}
-			}
-
-			items = append(items, scoreboardItem(uID, username, pResults))
-		}
-
-		sortScoreboardItems(items)
-
-		return &contestsmodel.ScoreboardResponse{
-			ContestID:         contestID,
-			ContestLogin:      contest.Login,
-			OrganizationLogin: contest.OrganizationLogin,
-			PenaltyPerAttempt: penaltyPerAttempt,
-			IsFrozen:          isFrozen,
-			FreezeTime:        freezeTime,
-			Problems:          problemHeaders,
-			Items:             items,
-		}, nil
-	}
-
-	_, userMap, err := uc.contestRepo.GetContestScoreboardFromStandings(ctx, contestID)
+	users, err := uc.contestRepo.ListContestParticipants(ctx, contestID)
 	if err != nil {
 		return nil, err
 	}
-
 	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contestID)
 	if err != nil {
 		return nil, err
 	}
-	userResults := scoreboardResults(contest, problems, userMap, true, subs)
-	items := make([]contestsmodel.ScoreboardItem, 0, len(userMap))
-	for uID, username := range userMap {
-		pResults := userResults[uID]
-		if pResults == nil {
-			pResults = []contestsmodel.ContestProblemResult{}
-		}
-		items = append(items, scoreboardItem(uID, username, pResults))
+	isFrozen := contest.IsFrozenAt(accessmodel.ReadTime(ctx))
+	results := scoreboardResults(contest, problems, users, isFrozen && !unfrozen, subs)
+	items := make([]contestsmodel.ScoreboardItem, 0, len(users))
+	for id, username := range users {
+		items = append(items, scoreboardItem(id, username, nonNil(results[id])))
 	}
-
 	sortScoreboardItems(items)
-
-	return &contestsmodel.ScoreboardResponse{
-		ContestID:         contestID,
-		ContestLogin:      contest.Login,
-		OrganizationLogin: contest.OrganizationLogin,
-		PenaltyPerAttempt: penaltyPerAttempt,
-		IsFrozen:          isFrozen,
-		FreezeTime:        freezeTime,
-		Problems:          problemHeaders,
-		Items:             items,
-	}, nil
+	response := uc.scoreboardResponse(contest, problems, isFrozen, contest.GetFreezeTime())
+	response.Items = items
+	return response, nil
 }
 
 func sortScoreboardItems(items []contestsmodel.ScoreboardItem) {
@@ -411,7 +273,7 @@ func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, u
 				return err
 			}
 		}
-		return ApplySubmissionResult(ctx, tx, &submissionsmodel.Submission{ContestID: &contestID, CreatedBy: &userID, ProblemID: &problemID})
+		return nil
 	})
 }
 
@@ -437,7 +299,7 @@ func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID,
 				}
 			}
 		}
-		return ApplySubmissionResult(ctx, tx, &submissionsmodel.Submission{ContestID: &contestID, CreatedBy: &userID, ProblemID: &problemID})
+		return nil
 	})
 }
 
@@ -489,11 +351,11 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		if !errors.Is(err, pkg.ErrNotFound) {
 			return err
 		}
-		mode := contest.Settings.ParticipationMode
-		if mode == contestsmodel.ParticipationModeInviteOnly {
+		mode := contest.Settings.JoinPolicy
+		if mode == accessmodel.JoinInviteOnly {
 			return pkg.Wrap(pkg.ErrInviteOnly, nil, "the contest accepts participants by invitation only")
 		}
-		if mode == contestsmodel.ParticipationModeOpen {
+		if mode == accessmodel.JoinOpen {
 			if _, err := tx.GetMember(ctx, contest.OrganizationID, userID); err != nil {
 				return pkg.OnNotFound(err, pkg.ErrNotOrgMember, "user must be a member of the organization")
 			}
@@ -870,23 +732,6 @@ func newScoreboardRules(contest contestsmodel.Contest, frozen bool) scoreboardRu
 	return scoreboardRules{contest: contest, frozen: frozen, freezeTime: contest.GetFreezeTime(), manualFreeze: contest.Settings.FreezeStatus == contestsmodel.FreezeStatusFrozen, penaltyPerAttempt: contestsmodel.PenaltyPerAttempt}
 }
 
-func scoreboardUserResults(ctx context.Context, store interface {
-	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)
-}, contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, userID uuid.UUID, frozen bool) ([]contestsmodel.ContestProblemResult, error) {
-	results := make([]contestsmodel.ContestProblemResult, 0, len(problems))
-	rules := newScoreboardRules(contest, frozen)
-	for _, problem := range problems {
-		subs, err := store.GetSubmissionsForScoreboard(ctx, contest.ID, userID, problem.ProblemID)
-		if err != nil {
-			return nil, err
-		}
-		if result, ok := calculateScoreboardProblem(rules, userID, problem.ProblemID, subs, func(sub contestsmodel.SubmissionForScoreboard) contestsmodel.SubmissionForScoreboard { return sub }); ok {
-			results = append(results, result)
-		}
-	}
-	return results, nil
-}
-
 func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID uuid.UUID, subs []T, submission func(T) contestsmodel.SubmissionForScoreboard) (contestsmodel.ContestProblemResult, bool) {
 	contest, frozen, freezeTime := rules.contest, rules.frozen, rules.freezeTime
 
@@ -963,48 +808,4 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 		}, true
 	}
 	return contestsmodel.ContestProblemResult{}, false
-}
-
-// Hold the submission tuple lock through mutation and standings commit.
-func ApplySubmissionResult(ctx context.Context, store ScoreboardStore, submission *submissionsmodel.Submission) error {
-	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
-		return nil
-	}
-
-	contestID := *submission.ContestID
-	userID := *submission.CreatedBy
-	problemID := *submission.ProblemID
-
-	member, err := store.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
-		ContestId: contestID,
-		UserId:    userID,
-	})
-	if err != nil {
-		if errors.Is(err, pkg.ErrNotFound) {
-			return nil
-		}
-		return err
-	}
-	if member.ContestRole != accessmodel.ContestParticipant {
-		return nil
-	}
-
-	contest, err := store.GetContest(ctx, contestID)
-	if err != nil {
-		return err
-	}
-
-	results, err := scoreboardUserResults(ctx, store, contest, []contestsmodel.ContestProblem{{ProblemID: problemID}}, userID, false)
-	if err != nil {
-		return err
-	}
-	var result contestsmodel.ContestProblemResult
-	if len(results) > 0 {
-		result = results[0]
-	}
-	return store.UpsertContestProblemResult(ctx, &contestsmodel.UpsertContestProblemResultParams{
-		ContestID: contestID, UserID: userID, ProblemID: problemID,
-		Solved: result.Solved, FailedAttempts: result.FailedAttempts,
-		FirstACTime: result.FirstACTime, TimeMinutes: result.TimeMinutes,
-	})
 }

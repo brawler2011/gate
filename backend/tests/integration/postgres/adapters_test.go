@@ -325,7 +325,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Equal(t, title, c.Title)
 	require.Equal(t, orgID, c.OrganizationID)
 	require.Equal(t, contestsmodel.ContestSettings{
-		ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopeParticipant,
+		JoinPolicy: accessmodel.JoinOpen, MonitorScope: contestsmodel.ScopeParticipant,
 		SubmissionsListScope: contestsmodel.ScopeModerator, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator,
 		FreezeStatus: contestsmodel.FreezeStatusAuto, AllowClarifications: true, EnableDrafts: true, EnableUpsolving: true, Languages: []string{},
 	}, c.Settings)
@@ -499,14 +499,15 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
 	authorID := uuid.New()
 	authorName := "author_" + suffix
+	_, err := pool.Exec(ctx, `INSERT INTO users (id, username, password_hash) VALUES ($1, $2, 'unused')`, authorID, authorName)
+	require.NoError(t, err)
 	imgKey := "blogs/cover_" + suffix + ".jpg"
 
 	postID, err := repo.CreatePost(ctx, blogsmodel.CreatePostParams{
 		Title:       "Blog Post " + suffix,
 		Text:        "Full markdown text content " + suffix,
 		Description: "Short summary " + suffix,
-		AuthorUUID:  authorID,
-		AuthorName:  authorName,
+		AuthorID:    authorID,
 		ImageKey:    imgKey,
 	})
 	require.NoError(t, err)
@@ -518,7 +519,7 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	require.Equal(t, "Blog Post "+suffix, post.Title)
 	require.Equal(t, "Full markdown text content "+suffix, post.Text)
 	require.Equal(t, "Short summary "+suffix, post.Description)
-	require.Equal(t, authorID, post.AuthorUUID)
+	require.Equal(t, authorID, post.AuthorID)
 	require.Equal(t, authorName, post.AuthorName)
 	require.Equal(t, imgKey, post.ImageKey)
 

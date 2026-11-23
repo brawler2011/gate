@@ -3462,8 +3462,8 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 		e.Bool(s.AllowVirtual)
 	}
 	{
-		e.FieldStart("participation_mode")
-		s.ParticipationMode.Encode(e)
+		e.FieldStart("join_policy")
+		s.JoinPolicy.Encode(e)
 	}
 	{
 		e.FieldStart("hide_statements")
@@ -3502,7 +3502,7 @@ var jsonFieldsNameOfContestModel = [25]string{
 	19: "allow_clarifications",
 	20: "enable_upsolving",
 	21: "allow_virtual",
-	22: "participation_mode",
+	22: "join_policy",
 	23: "hide_statements",
 	24: "languages",
 }
@@ -3762,15 +3762,15 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"allow_virtual\"")
 			}
-		case "participation_mode":
+		case "join_policy":
 			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
-				if err := s.ParticipationMode.Decode(d); err != nil {
+				if err := s.JoinPolicy.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"participation_mode\"")
+				return errors.Wrap(err, "decode field \"join_policy\"")
 			}
 		case "hide_statements":
 			requiredBitSet[2] |= 1 << 7
@@ -3905,44 +3905,44 @@ func (s *ContestModelFreezeStatus) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ContestModelParticipationMode as json.
-func (s ContestModelParticipationMode) Encode(e *jx.Encoder) {
+// Encode encodes ContestModelJoinPolicy as json.
+func (s ContestModelJoinPolicy) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes ContestModelParticipationMode from json.
-func (s *ContestModelParticipationMode) Decode(d *jx.Decoder) error {
+// Decode decodes ContestModelJoinPolicy from json.
+func (s *ContestModelJoinPolicy) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode ContestModelParticipationMode to nil")
+		return errors.New("invalid: unable to decode ContestModelJoinPolicy to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch ContestModelParticipationMode(v) {
-	case ContestModelParticipationModeOpen:
-		*s = ContestModelParticipationModeOpen
-	case ContestModelParticipationModeByRequest:
-		*s = ContestModelParticipationModeByRequest
-	case ContestModelParticipationModeInviteOnly:
-		*s = ContestModelParticipationModeInviteOnly
+	switch ContestModelJoinPolicy(v) {
+	case ContestModelJoinPolicyOpen:
+		*s = ContestModelJoinPolicyOpen
+	case ContestModelJoinPolicyByRequest:
+		*s = ContestModelJoinPolicyByRequest
+	case ContestModelJoinPolicyInviteOnly:
+		*s = ContestModelJoinPolicyInviteOnly
 	default:
-		*s = ContestModelParticipationMode(v)
+		*s = ContestModelJoinPolicy(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s ContestModelParticipationMode) MarshalJSON() ([]byte, error) {
+func (s ContestModelJoinPolicy) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ContestModelParticipationMode) UnmarshalJSON(data []byte) error {
+func (s *ContestModelJoinPolicy) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -13761,18 +13761,18 @@ func (s *OptUpdateContestRequestModelFreezeStatus) UnmarshalJSON(data []byte) er
 	return s.Decode(d)
 }
 
-// Encode encodes UpdateContestRequestModelParticipationMode as json.
-func (o OptUpdateContestRequestModelParticipationMode) Encode(e *jx.Encoder) {
+// Encode encodes UpdateContestRequestModelJoinPolicy as json.
+func (o OptUpdateContestRequestModelJoinPolicy) Encode(e *jx.Encoder) {
 	if !o.Set {
 		return
 	}
 	e.Str(string(o.Value))
 }
 
-// Decode decodes UpdateContestRequestModelParticipationMode from json.
-func (o *OptUpdateContestRequestModelParticipationMode) Decode(d *jx.Decoder) error {
+// Decode decodes UpdateContestRequestModelJoinPolicy from json.
+func (o *OptUpdateContestRequestModelJoinPolicy) Decode(d *jx.Decoder) error {
 	if o == nil {
-		return errors.New("invalid: unable to decode OptUpdateContestRequestModelParticipationMode to nil")
+		return errors.New("invalid: unable to decode OptUpdateContestRequestModelJoinPolicy to nil")
 	}
 	o.Set = true
 	if err := o.Value.Decode(d); err != nil {
@@ -13782,14 +13782,14 @@ func (o *OptUpdateContestRequestModelParticipationMode) Decode(d *jx.Decoder) er
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s OptUpdateContestRequestModelParticipationMode) MarshalJSON() ([]byte, error) {
+func (s OptUpdateContestRequestModelJoinPolicy) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptUpdateContestRequestModelParticipationMode) UnmarshalJSON(data []byte) error {
+func (s *OptUpdateContestRequestModelJoinPolicy) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -25606,9 +25606,9 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.ParticipationMode.Set {
-			e.FieldStart("participation_mode")
-			s.ParticipationMode.Encode(e)
+		if s.JoinPolicy.Set {
+			e.FieldStart("join_policy")
+			s.JoinPolicy.Encode(e)
 		}
 	}
 	{
@@ -25646,7 +25646,7 @@ var jsonFieldsNameOfUpdateContestRequestModel = [19]string{
 	13: "allow_clarifications",
 	14: "allow_virtual",
 	15: "enable_upsolving",
-	16: "participation_mode",
+	16: "join_policy",
 	17: "hide_statements",
 	18: "languages",
 }
@@ -25819,15 +25819,15 @@ func (s *UpdateContestRequestModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"enable_upsolving\"")
 			}
-		case "participation_mode":
+		case "join_policy":
 			if err := func() error {
-				s.ParticipationMode.Reset()
-				if err := s.ParticipationMode.Decode(d); err != nil {
+				s.JoinPolicy.Reset()
+				if err := s.JoinPolicy.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"participation_mode\"")
+				return errors.Wrap(err, "decode field \"join_policy\"")
 			}
 		case "hide_statements":
 			if err := func() error {
@@ -25924,44 +25924,44 @@ func (s *UpdateContestRequestModelFreezeStatus) UnmarshalJSON(data []byte) error
 	return s.Decode(d)
 }
 
-// Encode encodes UpdateContestRequestModelParticipationMode as json.
-func (s UpdateContestRequestModelParticipationMode) Encode(e *jx.Encoder) {
+// Encode encodes UpdateContestRequestModelJoinPolicy as json.
+func (s UpdateContestRequestModelJoinPolicy) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes UpdateContestRequestModelParticipationMode from json.
-func (s *UpdateContestRequestModelParticipationMode) Decode(d *jx.Decoder) error {
+// Decode decodes UpdateContestRequestModelJoinPolicy from json.
+func (s *UpdateContestRequestModelJoinPolicy) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode UpdateContestRequestModelParticipationMode to nil")
+		return errors.New("invalid: unable to decode UpdateContestRequestModelJoinPolicy to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch UpdateContestRequestModelParticipationMode(v) {
-	case UpdateContestRequestModelParticipationModeOpen:
-		*s = UpdateContestRequestModelParticipationModeOpen
-	case UpdateContestRequestModelParticipationModeByRequest:
-		*s = UpdateContestRequestModelParticipationModeByRequest
-	case UpdateContestRequestModelParticipationModeInviteOnly:
-		*s = UpdateContestRequestModelParticipationModeInviteOnly
+	switch UpdateContestRequestModelJoinPolicy(v) {
+	case UpdateContestRequestModelJoinPolicyOpen:
+		*s = UpdateContestRequestModelJoinPolicyOpen
+	case UpdateContestRequestModelJoinPolicyByRequest:
+		*s = UpdateContestRequestModelJoinPolicyByRequest
+	case UpdateContestRequestModelJoinPolicyInviteOnly:
+		*s = UpdateContestRequestModelJoinPolicyInviteOnly
 	default:
-		*s = UpdateContestRequestModelParticipationMode(v)
+		*s = UpdateContestRequestModelJoinPolicy(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s UpdateContestRequestModelParticipationMode) MarshalJSON() ([]byte, error) {
+func (s UpdateContestRequestModelJoinPolicy) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateContestRequestModelParticipationMode) UnmarshalJSON(data []byte) error {
+func (s *UpdateContestRequestModelJoinPolicy) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

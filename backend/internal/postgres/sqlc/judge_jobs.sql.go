@@ -17,12 +17,12 @@ SET state='processing',attempt=j.attempt+1,lease_token=$1::uuid,
     deadline_at=now()+interval '30 seconds'
 WHERE j.id=(
     SELECT c.id FROM judge_jobs c JOIN submissions s ON s.id=c.submission_id
-    WHERE c.state='pending' AND c.available_at<=now() AND c.generation=s.generation AND s.state<>300
+    WHERE c.state='pending' AND c.available_at<=now() AND c.revision=s.revision AND s.state<>300
     ORDER BY c.created_at
     LIMIT 1
     FOR UPDATE OF c SKIP LOCKED
 )
-RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.available_at
+RETURNING j.id, j.submission_id, j.revision, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.available_at
 `
 
 func (q *Queries) ClaimNextJudgeJob(ctx context.Context, leaseToken uuid.UUID) (JudgeJob, error) {
@@ -31,7 +31,7 @@ func (q *Queries) ClaimNextJudgeJob(ctx context.Context, leaseToken uuid.UUID) (
 	err := row.Scan(
 		&i.ID,
 		&i.SubmissionID,
-		&i.Generation,
+		&i.Revision,
 		&i.PackageID,
 		&i.PackageHash,
 		&i.State,
@@ -48,16 +48,16 @@ const completeJudgeJob = `-- name: CompleteJudgeJob :execrows
 DELETE FROM judge_jobs j
 USING submissions s
 WHERE j.id=$1::uuid AND j.lease_token=$2::uuid
-  AND j.submission_id=$3::uuid AND j.generation=$4::bigint
+  AND j.submission_id=$3::uuid AND j.revision=$4::bigint
   AND j.state='processing' AND j.deadline_at>clock_timestamp()
-  AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300
+  AND s.id=j.submission_id AND s.revision=j.revision AND s.state<>300
 `
 
 type CompleteJudgeJobParams struct {
 	ID           uuid.UUID `json:"id"`
 	LeaseToken   uuid.UUID `json:"lease_token"`
 	SubmissionID uuid.UUID `json:"submission_id"`
-	Generation   int64     `json:"generation"`
+	Revision     int64     `json:"revision"`
 }
 
 func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobParams) (int64, error) {
@@ -65,7 +65,7 @@ func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobPara
 		arg.ID,
 		arg.LeaseToken,
 		arg.SubmissionID,
-		arg.Generation,
+		arg.Revision,
 	)
 	if err != nil {
 		return 0, err
@@ -77,7 +77,7 @@ const deleteObsoleteJudgeJobs = `-- name: DeleteObsoleteJudgeJobs :execrows
 DELETE FROM judge_jobs j
 WHERE j.state = 'pending' AND NOT EXISTS (
     SELECT 1 FROM submissions s
-    WHERE s.id = j.submission_id AND s.generation = j.generation AND s.state <> 300
+    WHERE s.id = j.submission_id AND s.revision = j.revision AND s.state <> 300
 )
 `
 
@@ -91,17 +91,17 @@ func (q *Queries) DeleteObsoleteJudgeJobs(ctx context.Context) (int64, error) {
 
 const deleteStalledJudgeJob = `-- name: DeleteStalledJudgeJob :execrows
 DELETE FROM judge_jobs
-WHERE id = $1::uuid AND generation = $2::bigint
+WHERE id = $1::uuid AND revision = $2::bigint
   AND state = 'processing' AND deadline_at < clock_timestamp()
 `
 
 type DeleteStalledJudgeJobParams struct {
-	ID         uuid.UUID `json:"id"`
-	Generation int64     `json:"generation"`
+	ID       uuid.UUID `json:"id"`
+	Revision int64     `json:"revision"`
 }
 
 func (q *Queries) DeleteStalledJudgeJob(ctx context.Context, arg DeleteStalledJudgeJobParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteStalledJudgeJob, arg.ID, arg.Generation)
+	result, err := q.db.Exec(ctx, deleteStalledJudgeJob, arg.ID, arg.Revision)
 	if err != nil {
 		return 0, err
 	}
@@ -109,7 +109,7 @@ func (q *Queries) DeleteStalledJudgeJob(ctx context.Context, arg DeleteStalledJu
 }
 
 const pickStalledJudgeJobs = `-- name: PickStalledJudgeJobs :many
-SELECT j.id, j.submission_id, j.generation, j.attempt
+SELECT j.id, j.submission_id, j.revision, j.attempt
 FROM judge_jobs j
 WHERE j.state = 'processing' AND j.deadline_at < clock_timestamp()
 ORDER BY j.deadline_at
@@ -119,7 +119,7 @@ LIMIT $1::int
 type PickStalledJudgeJobsRow struct {
 	ID           uuid.UUID `json:"id"`
 	SubmissionID uuid.UUID `json:"submission_id"`
-	Generation   int64     `json:"generation"`
+	Revision     int64     `json:"revision"`
 	Attempt      int32     `json:"attempt"`
 }
 
@@ -135,7 +135,7 @@ func (q *Queries) PickStalledJudgeJobs(ctx context.Context, limitCount int32) ([
 		if err := rows.Scan(
 			&i.ID,
 			&i.SubmissionID,
-			&i.Generation,
+			&i.Revision,
 			&i.Attempt,
 		); err != nil {
 			return nil, err
@@ -172,7 +172,7 @@ UPDATE judge_jobs j SET deadline_at=now()+interval '30 seconds'
 FROM submissions s
 WHERE j.id=$1::uuid AND j.lease_token=$2::uuid
   AND j.state='processing' AND j.deadline_at>now()
-  AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300
+  AND s.id=j.submission_id AND s.revision=j.revision AND s.state<>300
 `
 
 type RenewJudgeJobParams struct {
@@ -191,17 +191,17 @@ func (q *Queries) RenewJudgeJob(ctx context.Context, arg RenewJudgeJobParams) (i
 const requeueStalledJudgeJob = `-- name: RequeueStalledJudgeJob :execrows
 UPDATE judge_jobs
 SET state = 'pending', lease_token = NULL, deadline_at = NULL
-WHERE id = $1::uuid AND generation = $2::bigint
+WHERE id = $1::uuid AND revision = $2::bigint
   AND state = 'processing' AND deadline_at < clock_timestamp()
 `
 
 type RequeueStalledJudgeJobParams struct {
-	ID         uuid.UUID `json:"id"`
-	Generation int64     `json:"generation"`
+	ID       uuid.UUID `json:"id"`
+	Revision int64     `json:"revision"`
 }
 
 func (q *Queries) RequeueStalledJudgeJob(ctx context.Context, arg RequeueStalledJudgeJobParams) (int64, error) {
-	result, err := q.db.Exec(ctx, requeueStalledJudgeJob, arg.ID, arg.Generation)
+	result, err := q.db.Exec(ctx, requeueStalledJudgeJob, arg.ID, arg.Revision)
 	if err != nil {
 		return 0, err
 	}
@@ -209,11 +209,11 @@ func (q *Queries) RequeueStalledJudgeJob(ctx context.Context, arg RequeueStalled
 }
 
 const scheduleJudgeJob = `-- name: ScheduleJudgeJob :one
-INSERT INTO judge_jobs(id,submission_id,generation,package_id,package_hash)
-SELECT $1::uuid,s.id,s.generation,p.id,p.package_hash
+INSERT INTO judge_jobs(id,submission_id,revision,package_id,package_hash)
+SELECT $1::uuid,s.id,s.revision,p.id,p.package_hash
 FROM submissions s JOIN problem_packages p ON p.id=s.package_id
 WHERE s.id=$2::uuid
-RETURNING id, submission_id, generation, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at, available_at
+RETURNING id, submission_id, revision, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at, available_at
 `
 
 type ScheduleJudgeJobParams struct {
@@ -227,7 +227,7 @@ func (q *Queries) ScheduleJudgeJob(ctx context.Context, arg ScheduleJudgeJobPara
 	err := row.Scan(
 		&i.ID,
 		&i.SubmissionID,
-		&i.Generation,
+		&i.Revision,
 		&i.PackageID,
 		&i.PackageHash,
 		&i.State,

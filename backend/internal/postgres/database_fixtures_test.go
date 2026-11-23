@@ -149,12 +149,36 @@ func seedSubmissions(tb testing.TB, pool *pgxpool.Pool, size int) submissionBenc
  repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,1,
  '2026-01-01'::timestamptz + ((i-1)/($3::int*10))*interval '10 minutes'
  FROM generate_series(1,$2::int) i`, f.contest, size, participants)
-	fixtureExec(tb, pool, `INSERT INTO contest_problem_results(contest_id,user_id,problem_id,solved,failed_attempts,first_ac_time,time_minutes)
- SELECT $1,md5('user'||u)::uuid,md5('problem'||p)::uuid,(u+p)%3=0,(u+p)%4,CASE WHEN (u+p)%3=0 THEN '2026-01-01 00:30Z'::timestamptz END,CASE WHEN (u+p)%3=0 THEN 30 END
- FROM generate_series(1,$2::int) u CROSS JOIN generate_series(1,10) p`, f.contest, participants)
 	require.NoError(tb, pool.QueryRow(ctx, `SELECT md5('user1')::uuid,md5('problem1')::uuid,md5('submission1')::uuid`).Scan(&f.user, &f.problem, &f.submission))
-	for _, table := range []string{"submissions", "contests", "users", "problems", "contest_problems", "contest_members", "contest_problem_results"} {
+	for _, table := range []string{"submissions", "contests", "users", "problems", "contest_problems", "contest_members"} {
 		fixtureExec(tb, pool, "VACUUM ANALYZE "+table)
 	}
 	return f
+}
+
+// The scoreboard reads every participant and every contest submission.
+func contestScoreboardQueries(ctx context.Context, repo *ContestsRepo, f submissionBenchFixture) error {
+	users, err := repo.ListContestParticipants(ctx, f.contest)
+	if err != nil {
+		return err
+	}
+	subs, err := repo.GetContestScoreboardSubmissions(ctx, f.contest)
+	if err != nil {
+		return err
+	}
+	if len(users) != f.participants || len(subs) != f.rows {
+		return fmt.Errorf("incomplete scoreboard: %d users, %d submissions", len(users), len(subs))
+	}
+	return nil
+}
+
+func userScoreboardQueries(ctx context.Context, repo *ContestsRepo, f submissionBenchFixture) error {
+	subs, err := repo.GetUserScoreboardSubmissions(ctx, f.contest, f.user)
+	if err != nil {
+		return err
+	}
+	if len(subs) != f.rows/f.participants {
+		return fmt.Errorf("incomplete user history: %d submissions", len(subs))
+	}
+	return nil
 }

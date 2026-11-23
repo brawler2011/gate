@@ -1,23 +1,23 @@
 -- name: CreatePost :one
-INSERT INTO posts (title, text, description, author_uuid, author_name, image_key)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO posts (title, text, description, author_id, image_key)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id;
 
 -- name: GetPostByID :one
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-WHERE id = $1;
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+WHERE p.id = $1;
 
 -- name: ListPostsDesc :many
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-ORDER BY created_at DESC, id DESC
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+ORDER BY p.created_at DESC, p.id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: ListPostsAsc :many
-SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
-FROM posts
-ORDER BY created_at ASC, id ASC
+SELECT p.id, p.created_at, p.updated_at, p.title, p.text, p.description, p.author_id, u.username AS author_name, p.image_key
+FROM posts p JOIN users u ON u.id = p.author_id
+ORDER BY p.created_at ASC, p.id ASC
 LIMIT $1 OFFSET $2;
 
 -- name: CountPosts :one

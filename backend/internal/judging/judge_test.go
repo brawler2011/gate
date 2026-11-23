@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/brawler2011/gate/backend/internal/contests"
 	"github.com/brawler2011/gate/backend/internal/events"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -24,7 +23,6 @@ func (j *terminalJobs) Release(context.Context, judgingmodel.Job) error {
 }
 
 type terminalStore struct {
-	contests.ScoreboardStore
 	submission submissionsmodel.Submission
 	current    bool
 	update     *submissionsmodel.SubmissionUpdate
@@ -68,7 +66,7 @@ func TestJudgeMissingProblemPersistsTerminalFailure(t *testing.T) {
 			name = "stale attempt"
 		}
 		t.Run(name, func(t *testing.T) {
-			job := judgingmodel.Job{ID: uuid.New(), SubmissionID: uuid.New(), Generation: 1}
+			job := judgingmodel.Job{ID: uuid.New(), SubmissionID: uuid.New(), Revision: 1}
 			jobs := &terminalJobs{job: job}
 			store := &terminalStore{current: current, submission: submissionsmodel.Submission{ID: job.SubmissionID, State: submissionsmodel.Saved, Revision: 1}}
 			judge := NewJudgeUseCase(jobs, store, store, nil, nil, terminalProgress{})
