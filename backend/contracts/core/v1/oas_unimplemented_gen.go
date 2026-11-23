@@ -500,6 +500,15 @@ func (UnimplementedHandler) ExportProblemDraft(ctx context.Context, params Expor
 	return r, ht.ErrNotImplemented
 }
 
+// FinishVirtualRun implements FinishVirtualRun operation.
+//
+// Finish the caller's virtual run early.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
+func (UnimplementedHandler) FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error {
+	return ht.ErrNotImplemented
+}
+
 // ForgotPassword implements ForgotPassword operation.
 //
 // Forgot password.
@@ -732,6 +741,15 @@ func (UnimplementedHandler) GetUser(ctx context.Context, params GetUserParams) (
 //
 // GET /users/{username}/avatar
 func (UnimplementedHandler) GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (r GetUserAvatarRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetVirtualRun implements GetVirtualRun operation.
+//
+// Get the caller's virtual run.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/virtual
+func (UnimplementedHandler) GetVirtualRun(ctx context.Context, params GetVirtualRunParams) (r *VirtualRunResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1200,6 +1218,15 @@ func (UnimplementedHandler) ResetPassword(ctx context.Context, req *ResetPasswor
 //
 // PUT /problems/{id}/draft
 func (UnimplementedHandler) SaveProblemDraft(ctx context.Context, req *ProblemDraft, params SaveProblemDraftParams) (r *ProblemDraft, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartVirtualRun implements StartVirtualRun operation.
+//
+// Start a virtual run of a finished contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual
+func (UnimplementedHandler) StartVirtualRun(ctx context.Context, params StartVirtualRunParams) (r *VirtualRunModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

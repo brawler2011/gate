@@ -333,6 +333,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}/draft/export
 	ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (ExportProblemDraftOK, error)
+	// FinishVirtualRun implements FinishVirtualRun operation.
+	//
+	// Finish the caller's virtual run early.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
+	FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error
 	// ForgotPassword implements ForgotPassword operation.
 	//
 	// Forgot password.
@@ -490,6 +496,12 @@ type Handler interface {
 	//
 	// GET /users/{username}/avatar
 	GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (GetUserAvatarRes, error)
+	// GetVirtualRun implements GetVirtualRun operation.
+	//
+	// Get the caller's virtual run.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/virtual
+	GetVirtualRun(ctx context.Context, params GetVirtualRunParams) (*VirtualRunResponseModel, error)
 	// ImportProblem implements ImportProblem operation.
 	//
 	// Replace the draft with the contents of a problem archive.
@@ -802,6 +814,12 @@ type Handler interface {
 	//
 	// PUT /problems/{id}/draft
 	SaveProblemDraft(ctx context.Context, req *ProblemDraft, params SaveProblemDraftParams) (*ProblemDraft, error)
+	// StartVirtualRun implements StartVirtualRun operation.
+	//
+	// Start a virtual run of a finished contest.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/virtual
+	StartVirtualRun(ctx context.Context, params StartVirtualRunParams) (*VirtualRunModel, error)
 	// UnblockProblemForUser implements UnblockProblemForUser operation.
 	//
 	// Unblock problem for user.

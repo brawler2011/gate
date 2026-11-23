@@ -32,6 +32,9 @@ type ContestsRepo interface {
 	ListOrganizationContests(context.Context, string, string, int32, int32) (*contestsmodel.ContestsList, error)
 	ListContestMembers(context.Context, contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
 	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
+	ListVirtualRuns(context.Context, uuid.UUID) ([]contestsmodel.VirtualRun, error)
+	// Rows group by user and problem, chronologically within each group.
+	GetVirtualScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 }
 
 type NotificationsUC interface {

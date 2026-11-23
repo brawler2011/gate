@@ -24,7 +24,9 @@ const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
   const {slug, contestLogin, contestResponse} = data;
   let isManager = false;
+  let allowVirtual = false;
   if (contestResponse?.contest) {
+    allowVirtual = contestResponse.contest.allow_virtual;
     isManager = contestResponse.contest.permissions.manage;
 
     if (!contestResponse.contest.permissions.view_scoreboard) {
@@ -38,6 +40,7 @@ const Page = (): ReactNode => {
         orgLogin={slug}
         contestLogin={contestLogin}
         isManager={isManager}
+        allowVirtual={allowVirtual}
       />
     </Container>
   );

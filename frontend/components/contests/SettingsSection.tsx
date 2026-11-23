@@ -140,6 +140,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     participation_mode: corev1.UpdateContestRequestModel["participation_mode"];
     enable_drafts: boolean;
     enable_upsolving: boolean;
+    allow_virtual: boolean;
     hide_statements: boolean;
     languages: string[];
   }>({
@@ -151,6 +152,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       participation_mode: contest.participation_mode,
       enable_drafts: contest.enable_drafts,
       enable_upsolving: contest.enable_upsolving,
+      allow_virtual: contest.allow_virtual,
       hide_statements: contest.hide_statements,
       languages: contest.languages,
       monitor_scope: contest.monitor_scope,
@@ -206,6 +208,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       participation_mode: values.participation_mode as corev1.UpdateContestRequestModel["participation_mode"],
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
+      allow_virtual: values.allow_virtual,
       hide_statements: values.hide_statements,
     };
     const {error} = await api.PATCH(
@@ -352,6 +355,14 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             <Switch
               checked={form.values.enable_upsolving}
               onChange={(event) => form.setFieldValue("enable_upsolving", event.currentTarget.checked)}
+            />
+          </Group>
+
+          <Group justify="space-between">
+            <Text size="sm">Разрешить виртуальное участие после окончания</Text>
+            <Switch
+              checked={form.values.allow_virtual}
+              onChange={(event) => form.setFieldValue("allow_virtual", event.currentTarget.checked)}
             />
           </Group>
 

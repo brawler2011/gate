@@ -539,6 +539,7 @@ type SubmissionKind string
 const (
 	SubmissionKindContest   SubmissionKind = "contest"
 	SubmissionKindUpsolving SubmissionKind = "upsolving"
+	SubmissionKindVirtual   SubmissionKind = "virtual"
 )
 
 func (e *SubmissionKind) Scan(src interface{}) error {
@@ -690,6 +691,7 @@ type Contest struct {
 	AllowClarifications    bool                            `json:"allow_clarifications"`
 	EnableDrafts           bool                            `json:"enable_drafts"`
 	EnableUpsolving        bool                            `json:"enable_upsolving"`
+	AllowVirtual           bool                            `json:"allow_virtual"`
 	Languages              []string                        `json:"languages"`
 	StartTime              *time.Time                      `json:"start_time"`
 	EndTime                *time.Time                      `json:"end_time"`
@@ -789,6 +791,14 @@ type ContestUserProblemBlock struct {
 	Reason    *string    `json:"reason"`
 	CreatedBy *uuid.UUID `json:"created_by"`
 	CreatedAt time.Time  `json:"created_at"`
+}
+
+type ContestVirtualRun struct {
+	ContestID  uuid.UUID  `json:"contest_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	StartedAt  time.Time  `json:"started_at"`
+	EndsAt     time.Time  `json:"ends_at"`
+	FinishedAt *time.Time `json:"finished_at"`
 }
 
 type EventAggregate struct {

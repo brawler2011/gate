@@ -203,6 +203,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 		EnableDrafts:           s.EnableDrafts,
 		AllowClarifications:    s.AllowClarifications,
 		EnableUpsolving:        s.EnableUpsolving,
+		AllowVirtual:           s.AllowVirtual,
 		ParticipationMode:      corev1.ContestModelParticipationMode(s.ParticipationMode),
 		HideStatements:         s.HideStatements,
 		Languages:              append([]string{}, s.Languages...),
@@ -605,6 +606,9 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 			TotalPenalty:   item.TotalPenalty,
 			LastAcceptedAt: timePtrToOptDateTime(item.LastAcceptedAt),
 			ProblemResults: pResults,
+		}
+		if item.Virtual {
+			items[i].Virtual = corev1.NewOptBool(true)
 		}
 	}
 

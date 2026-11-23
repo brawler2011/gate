@@ -44,6 +44,7 @@ const (
 	ContestListSubmissions    ContestAction = "list_submissions"
 	ContestListOwnSubmissions ContestAction = "list_own_submissions"
 	ContestSubmit             ContestAction = "submit"
+	ContestStartVirtual       ContestAction = "start_virtual"
 )
 
 // SubmissionAction depends on who authored the submission.

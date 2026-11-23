@@ -80,7 +80,8 @@ CREATE TYPE problem_visibility AS ENUM (
 -- Only contest submissions count toward the standings.
 CREATE TYPE submission_kind AS ENUM (
     'contest',
-    'upsolving'
+    'upsolving',
+    'virtual'
 );
 
 -- manager is only derived from organization admins; nobody holds it directly.
@@ -652,6 +653,7 @@ CREATE TABLE contests (
     allow_clarifications boolean DEFAULT true NOT NULL,
     enable_drafts boolean DEFAULT true NOT NULL,
     enable_upsolving boolean DEFAULT true NOT NULL,
+    allow_virtual boolean DEFAULT false NOT NULL,
     languages text[] DEFAULT '{}'::text[] NOT NULL,
     start_time timestamptz,
     end_time timestamptz,
@@ -814,6 +816,20 @@ CREATE TABLE contest_problem_results (
     CONSTRAINT contest_problem_results_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX contest_problem_results_contest_idx ON contest_problem_results USING btree (contest_id);
+
+-- A personal replay of a finished contest; the window is fixed at start so later edits of the contest times keep the run.
+CREATE TABLE contest_virtual_runs (
+    contest_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    started_at timestamptz NOT NULL,
+    ends_at timestamptz NOT NULL,
+    finished_at timestamptz,
+    CONSTRAINT contest_virtual_runs_check CHECK ((ends_at > started_at)),
+    CONSTRAINT contest_virtual_runs_finished_check CHECK ((finished_at >= started_at AND finished_at < ends_at)),
+    CONSTRAINT contest_virtual_runs_pkey PRIMARY KEY (contest_id, user_id),
+    CONSTRAINT contest_virtual_runs_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
+    CONSTRAINT contest_virtual_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
 -- +goose StatementBegin
 CREATE FUNCTION capture_manual_freeze() RETURNS trigger

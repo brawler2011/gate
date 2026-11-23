@@ -188,6 +188,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		AllowClarifications:    optBool(req.AllowClarifications),
 		EnableDrafts:           optBool(req.EnableDrafts),
 		EnableUpsolving:        optBool(req.EnableUpsolving),
+		AllowVirtual:           optBool(req.AllowVirtual),
 	}
 	if v, ok := req.FreezeDurationMinutes.Get(); ok {
 		settings.FreezeDurationMinutes = &v
@@ -688,7 +689,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 		since = safeInt64(lastSeq)
 	}
 
-	sb, err := h.Contests.GetContestScoreboard(ctx, contest.ID, unfrozen)
+	sb, err := h.Contests.GetContestScoreboard(ctx, contest.ID, unfrozen, params.Virtual.Or(false))
 	if err != nil {
 		return nil, err
 	}
@@ -909,4 +910,47 @@ func optBool(v corev1.OptBool) *bool {
 		return nil
 	}
 	return &v.Value
+}
+
+func virtualRunDTO(run contestsmodel.VirtualRun) corev1.VirtualRunModel {
+	return corev1.VirtualRunModel{StartedAt: run.StartedAt, EndsAt: run.Over()}
+}
+
+func (h *CoreServer) GetVirtualRun(ctx context.Context, params corev1.GetVirtualRunParams) (*corev1.VirtualRunResponseModel, error) {
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+	run, err := h.Contests.GetVirtualRun(ctx, contest.ID)
+	if err != nil {
+		return nil, err
+	}
+	var response corev1.VirtualRunResponseModel
+	if run != nil {
+		response.VirtualRun.SetTo(virtualRunDTO(*run))
+	} else {
+		response.VirtualRun.SetToNull()
+	}
+	return &response, nil
+}
+
+func (h *CoreServer) StartVirtualRun(ctx context.Context, params corev1.StartVirtualRunParams) (*corev1.VirtualRunModel, error) {
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	if err != nil {
+		return nil, err
+	}
+	run, err := h.Contests.StartVirtualRun(ctx, contest.ID)
+	if err != nil {
+		return nil, err
+	}
+	dto := virtualRunDTO(run)
+	return &dto, nil
+}
+
+func (h *CoreServer) FinishVirtualRun(ctx context.Context, params corev1.FinishVirtualRunParams) error {
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	if err != nil {
+		return err
+	}
+	return h.Contests.FinishVirtualRun(ctx, contest.ID)
 }

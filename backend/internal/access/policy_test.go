@@ -182,6 +182,45 @@ func TestContestPolicy(t *testing.T) {
 	}
 }
 
+func TestVirtualRunPolicy(t *testing.T) {
+	cols := actors("participant", "moderator", "owner")
+	replayable := func(c *cm.Contest) { public(c); monitor(cm.ScopeParticipant)(c); c.Settings.AllowVirtual = true }
+	// active is under way at the finished-phase clock, over has already ended.
+	active := func(now time.Time) *cm.VirtualRun { return &cm.VirtualRun{StartedAt: now, EndsAt: now.Add(time.Hour)} }
+	over := func(now time.Time) *cm.VirtualRun { return &cm.VirtualRun{StartedAt: now.Add(-2 * time.Hour), EndsAt: now} }
+	for _, tc := range []struct {
+		name     string
+		action   m.ContestAction
+		phase    phase
+		change   func(*cm.Contest)
+		run      func(time.Time) *cm.VirtualRun
+		competed bool
+		want     string
+	}{
+		{"finished", m.ContestStartVirtual, finished, replayable, nil, false, "011111"},
+		{"not allowed", m.ContestStartVirtual, finished, public, nil, false, "000000"},
+		{"running", m.ContestStartVirtual, running, replayable, nil, false, "000000"},
+		{"competed", m.ContestStartVirtual, finished, replayable, nil, true, "000000"},
+		{"second run", m.ContestStartVirtual, finished, replayable, over, false, "000000"},
+		{"private", m.ContestStartVirtual, finished, func(c *cm.Contest) { c.Settings.AllowVirtual = true }, nil, false, "001111"},
+		{"during the run without upsolving", m.ContestSubmit, finished, replayable, active, false, "011111"},
+		{"during the run after the end moved later", m.ContestSubmit, running, replayable, active, false, "011111"},
+		{"after the run without upsolving", m.ContestSubmit, finished, replayable, over, false, "000000"},
+		{"participant scope without a run", m.ContestViewScoreboard, finished, replayable, nil, false, "001111"},
+		{"participant scope with a run", m.ContestViewScoreboard, finished, replayable, over, false, "011111"},
+		{"own submissions after the run", m.ContestListOwnSubmissions, finished, replayable, over, false, "011111"},
+	} {
+		c, now := contest(tc.phase, tc.change)
+		var run *cm.VirtualRun
+		if tc.run != nil {
+			run = tc.run(now)
+		}
+		check(t, fmt.Sprint(tc.action, " ", tc.name), cols, tc.want, func(a actor) bool {
+			return access.ContestAllows(a.user, access.ContestFacts{Contest: c, Role: m.ContestRole(a.role), Now: now, Run: run, Competed: tc.competed}, tc.action)
+		})
+	}
+}
+
 func TestSubmissionPolicy(t *testing.T) {
 	cols := actors("participant", "moderator", "owner")
 	author := cols[2].user.Id

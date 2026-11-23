@@ -5705,6 +5705,105 @@ func (s *Server) handleExportProblemDraftRequest(args [1]string, argsEscaped boo
 	}
 }
 
+// handleFinishVirtualRunRequest handles FinishVirtualRun operation.
+//
+// Finish the caller's virtual run early.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
+func (s *Server) handleFinishVirtualRunRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: FinishVirtualRunOperation,
+			ID:   "FinishVirtualRun",
+		}
+	)
+	params, err := decodeFinishVirtualRunParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *FinishVirtualRunNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    FinishVirtualRunOperation,
+			OperationSummary: "Finish the caller's virtual run early",
+			OperationID:      "FinishVirtualRun",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = FinishVirtualRunParams
+			Response = *FinishVirtualRunNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackFinishVirtualRunParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.FinishVirtualRun(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.FinishVirtualRun(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeFinishVirtualRunResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleForgotPasswordRequest handles ForgotPassword operation.
 //
 // Forgot password.
@@ -6162,6 +6261,10 @@ func (s *Server) handleGetContestScoreboardRequest(args [2]string, argsEscaped b
 					Name: "unfrozen",
 					In:   "query",
 				}: params.Unfrozen,
+				{
+					Name: "virtual",
+					In:   "query",
+				}: params.Virtual,
 			},
 			Raw: r,
 		}
@@ -8122,6 +8225,105 @@ func (s *Server) handleGetUserAvatarRequest(args [1]string, argsEscaped bool, w 
 	}
 
 	if err := encodeGetUserAvatarResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetVirtualRunRequest handles GetVirtualRun operation.
+//
+// Get the caller's virtual run.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/virtual
+func (s *Server) handleGetVirtualRunRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetVirtualRunOperation,
+			ID:   "GetVirtualRun",
+		}
+	)
+	params, err := decodeGetVirtualRunParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *VirtualRunResponseModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetVirtualRunOperation,
+			OperationSummary: "Get the caller's virtual run",
+			OperationID:      "GetVirtualRun",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetVirtualRunParams
+			Response = *VirtualRunResponseModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetVirtualRunParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetVirtualRun(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetVirtualRun(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetVirtualRunResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -13542,6 +13744,105 @@ func (s *Server) handleSaveProblemDraftRequest(args [1]string, argsEscaped bool,
 	}
 
 	if err := encodeSaveProblemDraftResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleStartVirtualRunRequest handles StartVirtualRun operation.
+//
+// Start a virtual run of a finished contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual
+func (s *Server) handleStartVirtualRunRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: StartVirtualRunOperation,
+			ID:   "StartVirtualRun",
+		}
+	)
+	params, err := decodeStartVirtualRunParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *VirtualRunModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    StartVirtualRunOperation,
+			OperationSummary: "Start a virtual run of a finished contest",
+			OperationID:      "StartVirtualRun",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = StartVirtualRunParams
+			Response = *VirtualRunModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackStartVirtualRunParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.StartVirtualRun(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.StartVirtualRun(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeStartVirtualRunResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

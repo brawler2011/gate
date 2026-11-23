@@ -5,6 +5,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -85,7 +86,11 @@ func (a Access) ContestFacts(ctx context.Context, actor uuid.UUID, ids []uuid.UU
 	}
 	facts := make(map[uuid.UUID]access.ContestFacts, len(rows))
 	for _, r := range rows {
-		facts[r.Contest.ID] = access.ContestFacts{Contest: mapContest(r.Contest, r.OrgLogin), Role: accessmodel.ContestRole(r.Role), Now: r.Now, Blocked: r.Blocked}
+		f := access.ContestFacts{Contest: mapContest(r.Contest, r.OrgLogin), Role: accessmodel.ContestRole(r.Role), Now: r.Now, Blocked: r.Blocked, Competed: r.Competed}
+		if r.RunStartedAt != nil && r.RunEndsAt != nil {
+			f.Run = &contestsmodel.VirtualRun{UserID: actor, StartedAt: *r.RunStartedAt, EndsAt: *r.RunEndsAt, FinishedAt: r.RunFinishedAt}
+		}
+		facts[r.Contest.ID] = f
 	}
 	return facts, nil
 }

@@ -32,6 +32,7 @@ var constraintErrors = map[string]struct {
 	"org_join_requests_pending_unique_idx":          {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_join_requests_pending_unique_idx":      {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_problems_pkey":                         {pkg.ErrProblemInContest, "problem is already in the contest"},
+	"contest_virtual_runs_pkey":                     {pkg.ErrConflict, "a virtual run was already started"},
 	"contests_check":                                {pkg.ErrEndBeforeStart, "end time must be after start time"},
 	"contests_login_check":                          {pkg.ErrLength, "contest login must be 3 to 64 characters"},
 	"contest_problems_ordinal_check":                {pkg.ErrRange, "problem positions must be non-negative"},

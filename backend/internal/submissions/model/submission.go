@@ -34,6 +34,7 @@ type Kind string
 const (
 	KindContest   Kind = "contest"
 	KindUpsolving Kind = "upsolving"
+	KindVirtual   Kind = "virtual"
 )
 
 type TestDetailItem struct {

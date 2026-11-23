@@ -67,10 +67,15 @@ func (a ContestAccess) Role() m.ContestRole {
 // Participates reports whether the caller competes as a participant; upsolvers only see their own submissions.
 func (a ContestAccess) Participates() bool { return newContestState(a.Actor, a.Facts).participant }
 
+// Replaying reports whether the caller's virtual run is under way.
+func (a ContestAccess) Replaying() bool { return newContestState(a.Actor, a.Facts).replaying }
+
 // Submit authorizes a submission made now and classifies it.
 func (a ContestAccess) Submit() (submissionsmodel.Kind, error) {
 	s := newContestState(a.Actor, a.Facts)
 	switch {
+	case a.Can(m.ContestSubmit) && s.replaying:
+		return submissionsmodel.KindVirtual, nil
 	case a.Can(m.ContestSubmit) && s.finished:
 		return submissionsmodel.KindUpsolving, nil
 	case a.Can(m.ContestSubmit):

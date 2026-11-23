@@ -1130,6 +1130,12 @@ paths:
           description: "Whether to return unfrozen scoreboard (managers only)"
           schema:
             type: boolean
+        - name: virtual
+          in: query
+          required: false
+          description: "Whether to rank virtual runs with the official participants"
+          schema:
+            type: boolean
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -1139,6 +1145,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScoreboardResponseModel"
+  /organizations/{org_login}/contests/{contest_login}/virtual:
+    get:
+      summary: "Get the caller's virtual run"
+      tags: [contests]
+      operationId: GetVirtualRun
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VirtualRunResponseModel"
+    post:
+      summary: "Start a virtual run of a finished contest"
+      tags: [contests]
+      operationId: StartVirtualRun
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VirtualRunModel"
+  /organizations/{org_login}/contests/{contest_login}/virtual/finish:
+    post:
+      summary: "Finish the caller's virtual run early"
+      tags: [contests]
+      operationId: FinishVirtualRun
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "204":
+          description: No Content
   /organizations/{org_login}/contests/{contest_login}/drafts:
     post:
       summary: "Create contest draft"
@@ -4205,6 +4257,7 @@ components:
         - view_scoreboard
         - manage
         - delete
+        - start_virtual
       properties:
         view_problems:
           type: boolean
@@ -4221,6 +4274,8 @@ components:
         manage:
           type: boolean
         delete:
+          type: boolean
+        start_virtual:
           type: boolean
     ContestProblemPermissionsModel:
       description: What the caller may do with the contest problem.
@@ -4553,7 +4608,7 @@ components:
     ContestModel:
       description: "Contest data."
       example:
-        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         login: contest-1
         organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4594,6 +4649,7 @@ components:
         - allow_clarifications
         - enable_drafts
         - enable_upsolving
+        - allow_virtual
         - languages
         - created_at
         - updated_at
@@ -4659,6 +4715,8 @@ components:
           type: boolean
         enable_upsolving:
           type: boolean
+        allow_virtual:
+          type: boolean
         participation_mode:
           type: string
           enum:
@@ -4676,7 +4734,7 @@ components:
       description: "Paginated collection of contests."
       example:
         contests:
-        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4717,7 +4775,7 @@ components:
       description: "Paginated collection of user contests."
       example:
         contests:
-        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4805,7 +4863,7 @@ components:
       description: "Result of get contest."
       example:
         contest:
-          permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+          permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           organization_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4958,6 +5016,8 @@ components:
           type: boolean
         allow_clarifications:
           type: boolean
+        allow_virtual:
+          type: boolean
         enable_upsolving:
           type: boolean
         participation_mode:
@@ -5025,12 +5085,35 @@ components:
             $ref: "#/components/schemas/SubmissionsListItemModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
+    VirtualRunModel:
+      description: A personal replay of a finished contest within [started_at, ends_at).
+      type: object
+      required:
+        - started_at
+        - ends_at
+      properties:
+        started_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+    VirtualRunResponseModel:
+      type: object
+      required:
+        - virtual_run
+      properties:
+        virtual_run:
+          allOf:
+            - $ref: "#/components/schemas/VirtualRunModel"
+          nullable: true
     SubmissionKind:
       description: How the author took part; only contest submissions count toward the standings.
       type: string
       enum:
         - contest
         - upsolving
+        - virtual
     SubmissionsListItemModel:
       description: "Submissions list item data."
       example:
@@ -5415,7 +5498,7 @@ components:
     DashboardContestModel:
       description: "Dashboard contest data."
       example:
-        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
         id: 123e4567-e89b-42d3-a456-426614174000
         login: contest-1
         title: A + B
@@ -5521,7 +5604,7 @@ components:
       description: "Result of get user dashboard."
       example:
         recent_contests:
-        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false}
+        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
           id: 123e4567-e89b-42d3-a456-426614174000
           login: contest-1
           title: A + B
@@ -5815,6 +5898,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ScoreboardProblemResultModel"
+        virtual:
+          description: The row is a virtual run, ranked by its own timeline.
+          type: boolean
     ScoreboardProblemHeaderModel:
       description: "Scoreboard problem header data."
       example:

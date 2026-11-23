@@ -25,7 +25,8 @@ func usableProblemPackage(ctx context.Context, tx CommandTxStore, problemID, pac
 	return pack.ID, nil
 }
 
-func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
+// GetContestScoreboard adds virtual rows when asked; a caller replaying the contest always gets the replayed standings.
+func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen, virtual bool) (*contestsmodel.ScoreboardResponse, error) {
 	a, err := access.Contest(ctx, uc.access, contestID, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
@@ -39,6 +40,9 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 	}
 	if unfrozen && !a.Can(accessmodel.ContestManage) {
 		return nil, pkg.ErrForbidden
+	}
+	if virtual || a.Replaying() {
+		return uc.virtualScoreboard(ctx, a, unfrozen, virtual)
 	}
 	return uc.ProjectScoreboard(ctx, contestID, unfrozen)
 }

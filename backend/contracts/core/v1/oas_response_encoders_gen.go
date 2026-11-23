@@ -500,6 +500,12 @@ func encodeExportProblemDraftResponse(response ExportProblemDraftOK, w http.Resp
 	return nil
 }
 
+func encodeFinishVirtualRunResponse(response *FinishVirtualRunNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
+
+	return nil
+}
+
 func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
@@ -1000,6 +1006,19 @@ func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWrite
 	default:
 		return errors.Errorf("unexpected response type: %T", response)
 	}
+}
+
+func encodeGetVirtualRunResponse(response *VirtualRunResponseModel, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
 }
 
 func encodeImportProblemResponse(response *ProblemDraft, w http.ResponseWriter) error {
@@ -1605,6 +1624,19 @@ func encodeResetPasswordResponse(response *ResetPasswordOK, w http.ResponseWrite
 func encodeSaveProblemDraftResponse(response *ProblemDraft, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
+func encodeStartVirtualRunResponse(response *VirtualRunModel, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(201)
 
 	e := new(jx.Encoder)
 	response.Encode(e)

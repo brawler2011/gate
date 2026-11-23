@@ -146,7 +146,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         if (message.event_type === 'scoreboard.updated') {
           for (const query of client.getQueryCache().findAll(scoreboard)) {
             const apply = () => {
-              if (disposed || Boolean(query.meta?.unfrozen) !== message.payload.unfrozen) {
+              if (disposed || query.meta?.polled || Boolean(query.meta?.unfrozen) !== message.payload.unfrozen) {
                 return;
               }
               client.setQueryData<LiveScoreboard>(query.queryKey,

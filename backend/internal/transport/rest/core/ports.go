@@ -55,7 +55,10 @@ type ContestsUC interface {
 	DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error
 
-	GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
+	GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen, virtual bool) (*contestsmodel.ScoreboardResponse, error)
+	StartVirtualRun(ctx context.Context, contestID uuid.UUID) (contestsmodel.VirtualRun, error)
+	FinishVirtualRun(ctx context.Context, contestID uuid.UUID) error
+	GetVirtualRun(ctx context.Context, contestID uuid.UUID) (*contestsmodel.VirtualRun, error)
 
 	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error

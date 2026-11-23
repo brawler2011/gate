@@ -15,5 +15,6 @@ type ScoreboardItemModel struct {
 	TotalPenalty         int32                          `json:"total_penalty" binding:"required"`
 	LastAcceptedAt       *time.Time                     `json:"last_accepted_at,omitempty"`
 	ProblemResults       []ScoreboardProblemResultModel `json:"problem_results" binding:"required"`
+	Virtual              *bool                          `json:"virtual,omitempty"`
 	AdditionalProperties map[string]interface{}         `json:"-,omitempty"`
 }

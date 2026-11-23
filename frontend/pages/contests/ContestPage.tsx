@@ -3,6 +3,7 @@ import {useParams} from "react-router-dom";
 
 import {ContestCountdown} from "@/components/contests/ContestCountdown";
 import {ContestJoinButton} from "@/components/contests/ContestJoinButton";
+import {VirtualRunPanel} from "@/components/contests/VirtualRunPanel";
 import {QueryState} from "@/components/shared/QueryState";
 import {useContestData} from "@/hooks/useContestData";
 
@@ -32,6 +33,7 @@ const Contest = ({contest, orgLogin, problems, isManager, isAuthenticated, hasAc
         isAuthenticated={isAuthenticated}
         hasAccess={hasAccess || isManager}
       />
+      {isAuthenticated && <VirtualRunPanel contest={contest} orgLogin={orgLogin} />}
       {showCountdown && <ContestCountdown startTime={contest.start_time!} title={contest.title} />}
       {!showCountdown && problems.length === 0 && (
         <Center py={{base: "xl", md: "3xl"}}>

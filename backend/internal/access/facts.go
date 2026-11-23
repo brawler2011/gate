@@ -38,6 +38,9 @@ type ContestFacts struct {
 	Now     time.Time
 	// Blocked lists problems the actor may no longer submit to.
 	Blocked []uuid.UUID
+	// Run is the actor's virtual run; Competed means the actor made official submissions.
+	Run      *contestsmodel.VirtualRun
+	Competed bool
 }
 
 // Loader reads facts the same way over the pool and inside transactions; missing ids are absent from the map.

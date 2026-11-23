@@ -43,6 +43,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     allow_clarifications = COALESCE(sqlc.narg('allow_clarifications'), allow_clarifications),
     enable_drafts = COALESCE(sqlc.narg('enable_drafts'), enable_drafts),
     enable_upsolving = COALESCE(sqlc.narg('enable_upsolving'), enable_upsolving),
+    allow_virtual = COALESCE(sqlc.narg('allow_virtual'), allow_virtual),
     languages = COALESCE(sqlc.narg('languages')::text[], languages),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END
@@ -236,9 +237,20 @@ SELECT contest_id, user_id, problem_id, reason, created_by, created_at
 FROM contest_user_problem_blocks
 WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id')::uuid);
 
+-- name: CreateVirtualRun :exec
+INSERT INTO contest_virtual_runs (contest_id, user_id, started_at, ends_at) VALUES ($1, $2, $3, $4);
 
+-- name: FinishVirtualRun :exec
+UPDATE contest_virtual_runs SET finished_at = sqlc.arg('finished_at')::timestamptz
+WHERE contest_id = $1 AND user_id = $2 AND finished_at IS NULL AND ends_at > sqlc.arg('finished_at')::timestamptz;
 
+-- name: ListVirtualRuns :many
+SELECT r.user_id, u.username, r.started_at, r.ends_at, r.finished_at
+FROM contest_virtual_runs r JOIN users u ON u.id = r.user_id
+WHERE r.contest_id = $1;
 
-
-
-
+-- name: GetVirtualScoreboardSubmissions :many
+SELECT s.owner_id, s.problem_id, s.state, s.created_at
+FROM submissions s
+WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.kind = 'virtual' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+ORDER BY s.owner_id, s.problem_id, s.created_at ASC;

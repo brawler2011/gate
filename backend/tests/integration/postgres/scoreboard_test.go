@@ -165,7 +165,7 @@ func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 	}
 	read := func(actor accessmodel.User, at time.Time, live bool) *contestsmodel.ScoreboardResponse {
 		t.Helper()
-		board, err := f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, actor), at), f.contest, live)
+		board, err := f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, actor), at), f.contest, live, false)
 		require.NoError(t, err)
 		return board
 	}
@@ -191,7 +191,7 @@ func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 			require.Zero(t, item.ProblemsSolved)
 		}
 	}
-	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, true)
+	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, true, false)
 	require.ErrorIs(t, err, pkg.ErrForbidden)
 	live := read(accessmodel.UserFromContext(f.ctx), now, true)
 	require.NotEqual(t, masked.Items, live.Items)

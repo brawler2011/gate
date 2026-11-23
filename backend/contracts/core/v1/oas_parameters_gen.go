@@ -6496,6 +6496,126 @@ func decodeExportProblemDraftParams(args [1]string, argsEscaped bool, r *http.Re
 	return params, nil
 }
 
+// FinishVirtualRunParams is parameters of FinishVirtualRun operation.
+type FinishVirtualRunParams struct {
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+}
+
+func unpackFinishVirtualRunParams(packed middleware.Parameters) (params FinishVirtualRunParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "org_login",
+			In:   "path",
+		}
+		params.OrgLogin = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_login",
+			In:   "path",
+		}
+		params.ContestLogin = packed[key].(string)
+	}
+	return params
+}
+
+func decodeFinishVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params FinishVirtualRunParams, _ error) {
+	// Decode path: org_login.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "org_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.OrgLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "org_login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: contest_login.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetContestParams is parameters of GetContest operation.
 type GetContestParams struct {
 	// Organization login.
@@ -7046,6 +7166,8 @@ type GetContestScoreboardParams struct {
 	ContestLogin string
 	// Whether to return unfrozen scoreboard (managers only).
 	Unfrozen OptBool `json:",omitempty,omitzero"`
+	// Whether to rank virtual runs with the official participants.
+	Virtual OptBool `json:",omitempty,omitzero"`
 }
 
 func unpackGetContestScoreboardParams(packed middleware.Parameters) (params GetContestScoreboardParams) {
@@ -7070,6 +7192,15 @@ func unpackGetContestScoreboardParams(packed middleware.Parameters) (params GetC
 		}
 		if v, ok := packed[key]; ok {
 			params.Unfrozen = v.(OptBool)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "virtual",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Virtual = v.(OptBool)
 		}
 	}
 	return params
@@ -7204,6 +7335,47 @@ func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "unfrozen",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: virtual.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "virtual",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotVirtualVal bool
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToBool(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotVirtualVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Virtual.SetTo(paramsDotVirtualVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "virtual",
 			In:   "query",
 			Err:  err,
 		}
@@ -8674,6 +8846,126 @@ func decodeGetUserAvatarParams(args [1]string, argsEscaped bool, r *http.Request
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "username",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetVirtualRunParams is parameters of GetVirtualRun operation.
+type GetVirtualRunParams struct {
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+}
+
+func unpackGetVirtualRunParams(packed middleware.Parameters) (params GetVirtualRunParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "org_login",
+			In:   "path",
+		}
+		params.OrgLogin = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_login",
+			In:   "path",
+		}
+		params.ContestLogin = packed[key].(string)
+	}
+	return params
+}
+
+func decodeGetVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params GetVirtualRunParams, _ error) {
+	// Decode path: org_login.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "org_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.OrgLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "org_login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: contest_login.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_login",
 			In:   "path",
 			Err:  err,
 		}
@@ -18703,6 +18995,126 @@ func decodeSaveProblemDraftParams(args [1]string, argsEscaped bool, r *http.Requ
 		return params, &ogenerrors.DecodeParamError{
 			Name: "Idempotency-Key",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// StartVirtualRunParams is parameters of StartVirtualRun operation.
+type StartVirtualRunParams struct {
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+}
+
+func unpackStartVirtualRunParams(packed middleware.Parameters) (params StartVirtualRunParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "org_login",
+			In:   "path",
+		}
+		params.OrgLogin = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_login",
+			In:   "path",
+		}
+		params.ContestLogin = packed[key].(string)
+	}
+	return params
+}
+
+func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params StartVirtualRunParams, _ error) {
+	// Decode path: org_login.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "org_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.OrgLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "org_login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: contest_login.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestLogin = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_login",
+			In:   "path",
 			Err:  err,
 		}
 	}
