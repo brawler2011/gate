@@ -88,7 +88,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
       }
       return unwrap(
         api.POST("/problems/{id}/packages/build", {
-          params: {path: {id: problemId}, header: {"Idempotency-Key": crypto.randomUUID()}},
+          params: {path: {id: problemId}},
           body: {expected_revision: current.revision},
         }),
       );
@@ -118,7 +118,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
     mutationFn: (buildId: string) =>
       unwrap(
         api.POST("/problems/{id}/builds/{buildId}/cancel", {
-          params: {path: {id: problemId, buildId}, header: {"Idempotency-Key": crypto.randomUUID()}},
+          params: {path: {id: problemId, buildId}},
         }),
       ),
     onSuccess: refresh,

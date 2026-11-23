@@ -20,7 +20,7 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 	if req == nil || req.Package.File == nil {
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "expected 'package' field")
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
+	return draftResult(h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, req.Package.File))
 }
 
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {

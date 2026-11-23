@@ -160,7 +160,7 @@ func (s *IntegrationTestSuite) initApp() {
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	loader := pgstore.NewAccess(s.dbPool)
 	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
-	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas, time.Minute)
+	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas)
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}

@@ -88,7 +88,7 @@ func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
 	change(&current)
-	_, err = h.repo.SaveDraft(h.ctx, mutationKey(h.org, "edit", current), current)
+	_, err = h.repo.SaveDraft(h.ctx, current)
 	require.NoError(t, err)
 }
 
@@ -112,7 +112,7 @@ func (h *pipelineHarness) uploadPair(t *testing.T, test model.DraftTest, size in
 	defer answer.Close()
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &test}, map[string]io.Reader{"input": in, "answer": answer})
+	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, model.UploadChange{Test: &test}, map[string]io.Reader{"input": in, "answer": answer})
 	require.NoError(t, err)
 }
 
@@ -120,7 +120,7 @@ func (h *pipelineHarness) enqueueAndClaim(t *testing.T) model.ProblemBuild {
 	t.Helper()
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", current.Revision), current.ProblemID, current.Revision, h.options)
+	_, err = h.repo.EnqueueBuild(h.ctx, current.ProblemID, current.Revision, h.options)
 	require.NoError(t, err)
 	build, err := h.repo.ClaimBuild(h.ctx, h.options.Lease)
 	require.NoError(t, err)
@@ -280,7 +280,7 @@ func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
 	h.generatorBuild(t, "import sys\nsys.stdout.write('x' * (8 << 20))\n")
-	_, err := h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", "overflow"), h.draft.ProblemID, mustRevision(t, h), h.options)
+	_, err := h.repo.EnqueueBuild(h.ctx, h.draft.ProblemID, mustRevision(t, h), h.options)
 	require.NoError(t, err)
 	h.runWorker(t)
 	build := waitBuild(t, h, mustBuildID(t, h), "failed", "succeeded")
@@ -306,18 +306,18 @@ func TestPipelineCancelFreesWorkerForNextBuild(t *testing.T) {
 	h := newPipelineHarness(t, 1<<20, 256<<20)
 	h.options.Limits.Auxiliary = h.options.Limits.WithCPU(h.options.Limits.Auxiliary, 10*time.Minute)
 	h.generatorBuild(t, "import time\ntime.sleep(300)\n")
-	_, err := h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", "slow"), h.draft.ProblemID, mustRevision(t, h), h.options)
+	_, err := h.repo.EnqueueBuild(h.ctx, h.draft.ProblemID, mustRevision(t, h), h.options)
 	require.NoError(t, err)
 	slow := mustBuildID(t, h)
 	h.runWorker(t)
 	waitBuild(t, h, slow, "running")
 	time.Sleep(2 * time.Second) // Cancellation must interrupt a running generator.
 
-	_, err = h.repo.CancelBuild(h.ctx, mutationKey(h.org, "cancel", slow), slow)
+	err = h.repo.CancelBuild(h.ctx, slow)
 	require.NoError(t, err)
 
 	h.generatorBuild(t, "print(1)\n")
-	_, err = h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", "fast"), h.draft.ProblemID, mustRevision(t, h), h.options)
+	_, err = h.repo.EnqueueBuild(h.ctx, h.draft.ProblemID, mustRevision(t, h), h.options)
 	require.NoError(t, err)
 	builds, err := h.repo.ListBuilds(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestPipelineBuildsTestsSharingAnInput(t *testing.T) {
 	first := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &first},
+	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, model.UploadChange{Test: &first},
 		map[string]io.Reader{"input": bytes.NewReader(make([]byte, 3<<20)), "answer": strings.NewReader("0\n")})
 	require.NoError(t, err)
 	h.save(t, func(d *model.Draft) {

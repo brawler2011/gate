@@ -230,7 +230,7 @@ func TestExportRoundTripKeepsSavedStatements(t *testing.T) {
 	uc := &DraftUseCase{Repo: repo, Problems: singleProblem{uuid.New()}, Access: ownedProblems{}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 	plan.draft.Statements[0].Legend = "    indented code\n\nText\n"
-	_, err = uc.SaveDraft(ctx, plan.draft.ProblemID, plan.draft.Revision, "key", plan.draft)
+	_, err = uc.SaveDraft(ctx, plan.draft.ProblemID, plan.draft.Revision, plan.draft)
 	require.NoError(t, err)
 	plan.draft = repo.saved[0]
 	require.Equal(t, "    indented code\n\nText", plan.draft.Statements[0].Legend)

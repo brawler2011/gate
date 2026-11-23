@@ -1,6 +1,6 @@
 import {Button, Modal, Select, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
@@ -106,15 +106,6 @@ export const CreateProblemModal = ({
   const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
   const selectedTemplate = templateList.find((t) => t.id === templateId);
 
-  // Reuse the key on retries after a lost response; changed fields require a new key.
-  const attempt = useRef<{signature: string; key: string} | null>(null);
-  const idempotencyKeyFor = (signature: string): string => {
-    if (attempt.current?.signature !== signature) {
-      attempt.current = {signature, key: crypto.randomUUID()};
-    }
-    return attempt.current.key;
-  };
-
   const handleSubmit = async () => {
     if (!orgId || !templateId) {
       return;
@@ -132,9 +123,6 @@ export const CreateProblemModal = ({
               organization_id: orgId || undefined,
               template_id: templateId,
             },
-            header: {
-              "Idempotency-Key": idempotencyKeyFor(JSON.stringify([orgId, templateId, problemTitle])),
-            },
           },
         },
       );
@@ -145,7 +133,6 @@ export const CreateProblemModal = ({
         throw new Error("Не получен ID задачи");
       }
 
-      attempt.current = null;
       const problemId = createResponse.id;
       const selectedOrg = orgs.find((o) => o.id === orgId);
       const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";

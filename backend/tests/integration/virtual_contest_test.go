@@ -22,7 +22,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	runner := s.createUser("runner_virtual", accessmodel.UserRoleUser)
 	watcher := s.createUser("watcher_virtual", accessmodel.UserRoleUser)
 	org := s.createOrganization("virtual-org", "Virtual Organization", admin.Id)
-	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 		Title: "Virtual Problem", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	contestID := uuid.New()

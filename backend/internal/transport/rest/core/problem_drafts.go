@@ -17,13 +17,13 @@ import (
 type ProblemDraftUC interface {
 	CreateProblem(context.Context, *model.CreateProblemInput) (uuid.UUID, error)
 	GetDraft(context.Context, uuid.UUID) (model.Draft, error)
-	SaveDraft(context.Context, uuid.UUID, int64, string, model.Draft) (model.MutationResult, error)
-	RequestBuild(context.Context, uuid.UUID, int64, string) (model.MutationResult, error)
+	SaveDraft(context.Context, uuid.UUID, int64, model.Draft) (model.Draft, error)
+	RequestBuild(context.Context, uuid.UUID, int64) (uuid.UUID, error)
 	GetBuild(context.Context, uuid.UUID, uuid.UUID) (model.ProblemBuild, error)
 	ListBuilds(context.Context, uuid.UUID) ([]model.ProblemBuild, error)
-	CancelBuild(context.Context, uuid.UUID, uuid.UUID, string) (model.MutationResult, error)
-	Upload(context.Context, uuid.UUID, int64, string, model.UploadChange, map[string]io.Reader) (model.MutationResult, error)
-	Import(context.Context, uuid.UUID, int64, string, io.Reader) (model.MutationResult, error)
+	CancelBuild(context.Context, uuid.UUID, uuid.UUID) error
+	Upload(context.Context, uuid.UUID, int64, model.UploadChange, map[string]io.Reader) (model.Draft, error)
+	Import(context.Context, uuid.UUID, int64, io.Reader) (model.Draft, error)
 	DownloadObject(context.Context, uuid.UUID, uuid.UUID) (io.ReadCloser, string, error)
 	Export(context.Context, uuid.UUID) (io.ReadCloser, error)
 }
@@ -54,15 +54,11 @@ func draftModel(source *corev1.ProblemDraft) (*model.Draft, error) {
 	}
 	return &d, nil
 }
-func draftResult[T any](result model.MutationResult, err error) (*T, error) {
+func draftResult(d model.Draft, err error) (*corev1.ProblemDraft, error) {
 	if err != nil {
 		return nil, err
 	}
-	var value T
-	if err := json.Unmarshal(result.Body, &value); err != nil {
-		return nil, fmt.Errorf("unmarshal: %w", err)
-	}
-	return &value, nil
+	return draftContract[corev1.ProblemDraft](d)
 }
 func (h *CoreServer) GetProblemDraft(ctx context.Context, p corev1.GetProblemDraftParams) (*corev1.ProblemDraft, error) {
 	d, err := h.ProblemDrafts.GetDraft(ctx, p.ID)
@@ -79,13 +75,17 @@ func (h *CoreServer) SaveProblemDraft(ctx context.Context, req *corev1.ProblemDr
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.SaveDraft(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, *d))
+	return draftResult(h.ProblemDrafts.SaveDraft(ctx, p.ID, p.ExpectedRevision, *d))
 }
 func (h *CoreServer) BuildProblemPackage(ctx context.Context, req *corev1.BuildProblemPackageReq, p corev1.BuildProblemPackageParams) (*corev1.ProblemBuildAccepted, error) {
 	if req == nil {
 		return nil, pkg.ErrInvalid
 	}
-	return draftResult[corev1.ProblemBuildAccepted](h.ProblemDrafts.RequestBuild(ctx, p.ID, req.ExpectedRevision, p.IdempotencyKey))
+	id, err := h.ProblemDrafts.RequestBuild(ctx, p.ID, req.ExpectedRevision)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.ProblemBuildAccepted{BuildID: id, Revision: req.ExpectedRevision}, nil
 }
 func (h *CoreServer) GetProblemBuild(ctx context.Context, p corev1.GetProblemBuildParams) (*corev1.ProblemBuild, error) {
 	b, err := h.ProblemDrafts.GetBuild(ctx, p.ID, p.BuildId)
@@ -106,7 +106,10 @@ func (h *CoreServer) ListProblemBuilds(ctx context.Context, p corev1.ListProblem
 	return *result, nil
 }
 func (h *CoreServer) CancelProblemBuild(ctx context.Context, p corev1.CancelProblemBuildParams) (*corev1.ProblemBuildCancelled, error) {
-	return draftResult[corev1.ProblemBuildCancelled](h.ProblemDrafts.CancelBuild(ctx, p.ID, p.BuildId, p.IdempotencyKey))
+	if err := h.ProblemDrafts.CancelBuild(ctx, p.ID, p.BuildId); err != nil {
+		return nil, err
+	}
+	return &corev1.ProblemBuildCancelled{BuildID: p.BuildId, State: corev1.ProblemBuildCancelledStateCancelled}, nil
 }
 func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadProblemDraftReq, p corev1.UploadProblemDraftParams) (*corev1.ProblemDraft, error) {
 	if req == nil {
@@ -124,7 +127,7 @@ func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadP
 			files[slot] = file.Value.File
 		}
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, files))
+	return draftResult(h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, change, files))
 }
 func (h *CoreServer) ExportProblemDraft(ctx context.Context, p corev1.ExportProblemDraftParams) (corev1.ExportProblemDraftOK, error) {
 	reader, err := h.ProblemDrafts.Export(ctx, p.ID)

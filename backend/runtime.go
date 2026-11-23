@@ -144,7 +144,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		return fmt.Errorf("create problem work directory: %w", err)
 	}
 
-	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft, cfg.Problems.OperationLease)}
+	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft)}
 
 	var services []appService
 	var languages *sandbox.Config

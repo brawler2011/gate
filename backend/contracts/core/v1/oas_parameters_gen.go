@@ -1634,8 +1634,6 @@ func decodeBlockSubmissionParams(args [3]string, argsEscaped bool, r *http.Reque
 type BuildProblemPackageParams struct {
 	// UUID of the problem.
 	ID uuid.UUID
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 }
 
 func unpackBuildProblemPackageParams(packed middleware.Parameters) (params BuildProblemPackageParams) {
@@ -1646,18 +1644,10 @@ func unpackBuildProblemPackageParams(packed middleware.Parameters) (params Build
 		}
 		params.ID = packed[key].(uuid.UUID)
 	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
-	}
 	return params
 }
 
 func decodeBuildProblemPackageParams(args [1]string, argsEscaped bool, r *http.Request) (params BuildProblemPackageParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -1700,60 +1690,6 @@ func decodeBuildProblemPackageParams(args [1]string, argsEscaped bool, r *http.R
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -2072,8 +2008,6 @@ type CancelProblemBuildParams struct {
 	ID uuid.UUID
 	// Build identifier.
 	BuildId uuid.UUID
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 }
 
 func unpackCancelProblemBuildParams(packed middleware.Parameters) (params CancelProblemBuildParams) {
@@ -2091,18 +2025,10 @@ func unpackCancelProblemBuildParams(packed middleware.Parameters) (params Cancel
 		}
 		params.BuildId = packed[key].(uuid.UUID)
 	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
-	}
 	return params
 }
 
 func decodeCancelProblemBuildParams(args [2]string, argsEscaped bool, r *http.Request) (params CancelProblemBuildParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -2190,60 +2116,6 @@ func decodeCancelProblemBuildParams(args [2]string, argsEscaped bool, r *http.Re
 		return params, &ogenerrors.DecodeParamError{
 			Name: "buildId",
 			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -3763,8 +3635,6 @@ func decodeCreateOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 type CreateProblemParams struct {
 	// Title of the new problem.
 	Title string
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 	// UUID of the organization.
 	OrganizationID OptUUID `json:",omitempty,omitzero"`
 	// Problem template identifier, including the builtin: prefix for built-in templates.
@@ -3778,13 +3648,6 @@ func unpackCreateProblemParams(packed middleware.Parameters) (params CreateProbl
 			In:   "query",
 		}
 		params.Title = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -3807,7 +3670,6 @@ func unpackCreateProblemParams(packed middleware.Parameters) (params CreateProbl
 
 func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateProblemParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode query: title.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -3841,60 +3703,6 @@ func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request
 		return params, &ogenerrors.DecodeParamError{
 			Name: "title",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -8979,8 +8787,6 @@ type ImportProblemParams struct {
 	ID uuid.UUID
 	// Revision last read by the author. A different current revision returns 409.
 	ExpectedRevision int64
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 }
 
 func unpackImportProblemParams(packed middleware.Parameters) (params ImportProblemParams) {
@@ -8998,19 +8804,11 @@ func unpackImportProblemParams(packed middleware.Parameters) (params ImportProbl
 		}
 		params.ExpectedRevision = packed[key].(int64)
 	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
-	}
 	return params
 }
 
 func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request) (params ImportProblemParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -9107,60 +8905,6 @@ func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request
 		return params, &ogenerrors.DecodeParamError{
 			Name: "expected_revision",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -18813,8 +18557,6 @@ type SaveProblemDraftParams struct {
 	ID uuid.UUID
 	// Revision last read by the author. A different current revision returns 409.
 	ExpectedRevision int64
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 }
 
 func unpackSaveProblemDraftParams(packed middleware.Parameters) (params SaveProblemDraftParams) {
@@ -18832,19 +18574,11 @@ func unpackSaveProblemDraftParams(packed middleware.Parameters) (params SaveProb
 		}
 		params.ExpectedRevision = packed[key].(int64)
 	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
-	}
 	return params
 }
 
 func decodeSaveProblemDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params SaveProblemDraftParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -18941,60 +18675,6 @@ func decodeSaveProblemDraftParams(args [1]string, argsEscaped bool, r *http.Requ
 		return params, &ogenerrors.DecodeParamError{
 			Name: "expected_revision",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -20970,8 +20650,6 @@ type UploadProblemDraftParams struct {
 	ID uuid.UUID
 	// Revision last read by the author. A different current revision returns 409.
 	ExpectedRevision int64
-	// Stable identifier for retries of exactly this request.
-	IdempotencyKey string
 }
 
 func unpackUploadProblemDraftParams(packed middleware.Parameters) (params UploadProblemDraftParams) {
@@ -20989,19 +20667,11 @@ func unpackUploadProblemDraftParams(packed middleware.Parameters) (params Upload
 		}
 		params.ExpectedRevision = packed[key].(int64)
 	}
-	{
-		key := middleware.ParameterKey{
-			Name: "Idempotency-Key",
-			In:   "header",
-		}
-		params.IdempotencyKey = packed[key].(string)
-	}
 	return params
 }
 
 func decodeUploadProblemDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params UploadProblemDraftParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -21098,60 +20768,6 @@ func decodeUploadProblemDraftParams(args [1]string, argsEscaped bool, r *http.Re
 		return params, &ogenerrors.DecodeParamError{
 			Name: "expected_revision",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode header: Idempotency-Key.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.IdempotencyKey = c
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(params.IdempotencyKey)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "Idempotency-Key",
-			In:   "header",
 			Err:  err,
 		}
 	}

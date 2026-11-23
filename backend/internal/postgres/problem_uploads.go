@@ -12,18 +12,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// A completed operation replays its stored result before any upload.
-func (r *ProblemDraftsRepo) BeginOperation(ctx context.Context, k model.MutationKey) (*model.MutationResult, error) {
-	tx, err := beginReadCommitted(ctx, r.pool)
-	if err != nil {
-		return nil, err
+func objectIDs(objects []model.StoredObject) []uuid.UUID {
+	ids := make([]uuid.UUID, len(objects))
+	for i, o := range objects {
+		ids[i] = o.ID
 	}
-	defer rollback(ctx, tx)
-	replay, err := r.reserveOperation(ctx, tx, k)
-	if err != nil || replay != nil {
-		return replay, err
-	}
-	return nil, commitTx(ctx, tx)
+	return ids
 }
 
 // Insert objects with their first references in the same transaction.
@@ -111,12 +105,12 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, objects map[st
 }
 
 // The caller must store uploads with verified SHA-256 values before finalization.
-func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, change model.UploadChange, objects map[string]model.StoredObject) (model.MutationResult, error) {
-	return r.finalizeUploadDraft(ctx, k, id, expected, slices.Collect(maps.Values(objects)), func(d *model.Draft) error { return applyUploadChange(d, change, objects) })
+func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, id uuid.UUID, expected int64, change model.UploadChange, objects map[string]model.StoredObject) (model.Draft, error) {
+	return r.finalizeUploadDraft(ctx, id, expected, slices.Collect(maps.Values(objects)), func(d *model.Draft) error { return applyUploadChange(d, change, objects) })
 }
 
-func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
-	return r.finalizeUploadDraft(ctx, k, id, expected, objects, func(d *model.Draft) error {
+func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, id uuid.UUID, expected int64, draft model.Draft, objects []model.StoredObject) (model.Draft, error) {
+	return r.finalizeUploadDraft(ctx, id, expected, objects, func(d *model.Draft) error {
 		draft.ProblemID = id
 		draft.Revision = expected
 		*d = draft
@@ -124,75 +118,64 @@ func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.Mutation
 	})
 }
 
-func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.MutationResult, error) {
-	return authorizedMutation(func() (model.MutationResult, error) {
-		return r.finalizeUploadDraftOnce(ctx, k, id, expected, objects, apply)
+func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.Draft, error) {
+	return serializableRetry(func() (model.Draft, error) {
+		return r.finalizeUploadDraftOnce(ctx, id, expected, objects, apply)
 	})
 }
 
-func (r *ProblemDraftsRepo) finalizeUploadDraftOnce(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) finalizeUploadDraftOnce(ctx context.Context, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.Draft, error) {
 	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	defer rollback(ctx, tx)
 	q := sqlc.New(tx)
-	// Finalization cannot take over expired operations; a new executor must begin explicitly.
-	operation, err := q.LockOperationForFinalize(ctx, sqlc.LockOperationForFinalizeParams{OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key})
-	if err != nil {
-		return model.MutationResult{}, dbError("finalize upload draft", err)
-	}
-	if operation.Fingerprint != k.Fingerprint {
-		return model.MutationResult{}, pkg.ErrConflict
-	}
-	if operation.HttpStatus != nil {
-		return model.MutationResult{Status: int(*operation.HttpStatus), Body: operation.Result}, nil
-	}
-	if operation.Token != k.Token {
-		return model.MutationResult{}, pkg.ErrConflict
-	}
 	if err := authorizeEdit(ctx, q, id); err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	revision, err := q.LockProblemDraft(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, dbError("finalize upload draft", err)
+		return model.Draft{}, dbError("finalize upload draft", err)
 	}
 	if revision != expected {
-		return model.MutationResult{}, pkg.ErrStaleRevision
+		return model.Draft{}, pkg.ErrStaleRevision
 	}
 	draft, err := readProblemDraft(ctx, q, id)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	org, err := q.ProblemOrganizationID(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, dbError("finalize upload draft", err)
+		return model.Draft{}, dbError("finalize upload draft", err)
 	}
-	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.ErrForbidden
+	for _, o := range objects {
+		if o.OrganizationID != org {
+			return model.Draft{}, pkg.ErrForbidden
+		}
 	}
+	known, err := q.DraftObjectIDs(ctx, id)
+	if err != nil {
+		return model.Draft{}, dbError("finalize upload draft", err)
+	}
+	known = append(known, objectIDs(objects)...)
 	before := draft
 	before.Statements = slices.Clone(draft.Statements)
 	if err := apply(&draft); err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
+		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
 	if err := draft.Validate(r.quotas, &before); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid upload change")
+		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid upload change")
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	draft.Revision++
-	if err := writeDraft(ctx, tx, draft); err != nil {
-		return model.MutationResult{}, err
+	if err := writeDraft(ctx, tx, draft, known); err != nil {
+		return model.Draft{}, err
 	}
-	result, err := finishOperation(ctx, tx, k, 200, draft)
-	if err != nil {
-		return result, err
-	}
-	return r.resolveMutation(ctx, tx, k, result)
+	return draft, commitTx(ctx, tx)
 }

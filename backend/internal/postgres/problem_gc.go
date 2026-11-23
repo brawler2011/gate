@@ -6,34 +6,18 @@ import (
 	"time"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
-	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *ProblemDraftsRepo) ListUnreferencedObjects(ctx context.Context) ([]model.StoredObject, error) {
-	rows, err := sqlc.New(r.pool).ListUnreferencedObjects(ctx)
+// DeleteUnreferencedObjects returns the storage keys of the deleted rows.
+func (r *ProblemDraftsRepo) DeleteUnreferencedObjects(ctx context.Context) ([]string, error) {
+	keys, err := sqlc.New(r.pool).DeleteUnreferencedObjects(ctx)
 	if err != nil {
-		return nil, dbError("list unreferenced objects", err)
+		return nil, dbError("delete unreferenced objects", err)
 	}
-	objects := make([]model.StoredObject, len(rows))
-	for i, row := range rows {
-		objects[i] = model.StoredObject{ID: row.ID, Key: row.Key}
-	}
-	return objects, nil
-}
-
-// Foreign keys arbitrate deletion against references committed concurrently.
-func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (bool, error) {
-	err := sqlc.New(r.pool).DeleteStoredObject(ctx, id)
-	if isForeignKeyViolation(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, dbError("delete stored object", err)
-	}
-	return true, nil
+	return keys, nil
 }
 
 func (r *ProblemDraftsRepo) ExistingObjectKeys(ctx context.Context, keys []string) (map[string]bool, error) {

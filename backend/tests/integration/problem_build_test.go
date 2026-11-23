@@ -27,7 +27,7 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problemID})
 	s.Require().NoError(err)
 	accepted, err := s.client.BuildProblemPackage(ctx, &corev1.BuildProblemPackageReq{ExpectedRevision: draft.Revision},
-		corev1.BuildProblemPackageParams{ID: problemID, IdempotencyKey: uuid.NewString()})
+		corev1.BuildProblemPackageParams{ID: problemID})
 	s.Require().NoError(err)
 	client, files := newGoJudge(s.T())
 	options := testBuildOptions(s.T())

@@ -89,26 +89,20 @@ var (
 	rn106AllowedHeaders = map[string]string{
 		"GET": "If-None-Match",
 	}
-	rn70AllowedHeaders = map[string]string{
-		"POST": "Idempotency-Key",
-	}
 	rn42AllowedHeaders = map[string]string{
 		"PATCH": "Content-Type",
 	}
-	rn51AllowedHeaders = map[string]string{
-		"POST": "Idempotency-Key",
-	}
 	rn107AllowedHeaders = map[string]string{
-		"PUT": "Content-Type,Idempotency-Key",
+		"PUT": "Content-Type",
 	}
 	rn163AllowedHeaders = map[string]string{
-		"POST": "Content-Type,Idempotency-Key",
+		"POST": "Content-Type",
 	}
 	rn117AllowedHeaders = map[string]string{
-		"POST": "Content-Type,Idempotency-Key",
+		"POST": "Content-Type",
 	}
 	rn43AllowedHeaders = map[string]string{
-		"POST": "Content-Type,Idempotency-Key",
+		"POST": "Content-Type",
 	}
 	rn73AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
@@ -2757,7 +2751,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET,POST",
-									allowedHeaders: rn70AllowedHeaders,
+									allowedHeaders: nil,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -2902,7 +2896,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn51AllowedHeaders,
+														allowedHeaders: nil,
 														acceptPost:     "",
 														acceptPatch:    "",
 													})

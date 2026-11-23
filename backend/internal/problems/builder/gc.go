@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
@@ -19,8 +18,7 @@ type GCRepository interface {
 	RecoverBuilds(context.Context) error
 	PrunePackages(context.Context, time.Duration) error
 	PruneBuilds(context.Context, time.Duration) error
-	ListUnreferencedObjects(context.Context) ([]model.StoredObject, error)
-	DeleteObject(context.Context, uuid.UUID) (bool, error)
+	DeleteUnreferencedObjects(context.Context) ([]string, error)
 	ExistingObjectKeys(context.Context, []string) (map[string]bool, error)
 	ActiveBuildAttempt(context.Context, uuid.UUID, uuid.UUID) (bool, error)
 }
@@ -68,20 +66,13 @@ func (g *GC) Collect(ctx context.Context) error {
 	if err := g.Repo.PruneBuilds(ctx, g.BuildRetention); err != nil {
 		return err
 	}
-	objects, err := g.Repo.ListUnreferencedObjects(ctx)
+	keys, err := g.Repo.DeleteUnreferencedObjects(ctx)
 	if err != nil {
 		return err
 	}
-	for _, o := range objects {
-		deleted, err := g.Repo.DeleteObject(ctx, o.ID)
-		if err != nil {
-			return err
-		}
-		if !deleted {
-			continue
-		}
+	for _, key := range keys {
 		// Failed byte deletion leaves an orphan for the next sweep.
-		if err := g.Store.DeleteFile(ctx, g.Bucket, o.Key); err != nil {
+		if err := g.Store.DeleteFile(ctx, g.Bucket, key); err != nil {
 			return err
 		}
 	}

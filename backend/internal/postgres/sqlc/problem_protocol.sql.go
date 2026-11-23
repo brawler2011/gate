@@ -106,15 +106,6 @@ func (q *Queries) CancelBuildRow(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const deleteDraftObjects = `-- name: DeleteDraftObjects :exec
-DELETE FROM problem_draft_objects WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftObjects(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftObjects, problemID)
-	return err
-}
-
 const deleteProblemBuild = `-- name: DeleteProblemBuild :exec
 DELETE FROM problem_builds WHERE id=$1
 `
@@ -133,13 +124,38 @@ func (q *Queries) DeleteProblemPackage(ctx context.Context, id uuid.UUID) error 
 	return err
 }
 
-const deleteStoredObject = `-- name: DeleteStoredObject :exec
-DELETE FROM stored_objects WHERE id=$1
+const deleteUnreferencedObjects = `-- name: DeleteUnreferencedObjects :many
+
+DELETE FROM stored_objects WHERE id IN (
+ SELECT o.id FROM stored_objects o
+ WHERE NOT EXISTS(SELECT 1 FROM problem_drafts d WHERE o.id=ANY(d.object_ids))
+  AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
+  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
+ ORDER BY o.id LIMIT 100)
+RETURNING key
 `
 
-func (q *Queries) DeleteStoredObject(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteStoredObject, id)
-	return err
+// Lock-then-recheck queries use separate statements so each sees a fresh snapshot.
+// A reference is only ever copied from a committed one, so any statement snapshot sees every live object referenced.
+func (q *Queries) DeleteUnreferencedObjects(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, deleteUnreferencedObjects)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const failExhaustedBuild = `-- name: FailExhaustedBuild :exec
@@ -175,80 +191,19 @@ func (q *Queries) FinishBuildAttemptRow(ctx context.Context, arg FinishBuildAtte
 	return err
 }
 
-const finishOperationRow = `-- name: FinishOperationRow :execrows
-UPDATE request_idempotency SET result=$1::jsonb,http_status=$2
-WHERE organization_id=$3 AND operation=$4 AND key=$5 AND token=$6
- AND lease_deadline>clock_timestamp() AND result IS NULL
-`
-
-type FinishOperationRowParams struct {
-	Result         []byte    `json:"result"`
-	HttpStatus     *int32    `json:"http_status"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-	Token          uuid.UUID `json:"token"`
-}
-
-func (q *Queries) FinishOperationRow(ctx context.Context, arg FinishOperationRowParams) (int64, error) {
-	result, err := q.db.Exec(ctx, finishOperationRow,
-		arg.Result,
-		arg.HttpStatus,
-		arg.OrganizationID,
-		arg.Operation,
-		arg.Key,
-		arg.Token,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const insertBuildInput = `-- name: InsertBuildInput :exec
-INSERT INTO problem_build_inputs(build_id,organization_id,object_id)VALUES($1,$2,$3)
-`
-
-type InsertBuildInputParams struct {
-	BuildID        uuid.UUID `json:"build_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ObjectID       uuid.UUID `json:"object_id"`
-}
-
-func (q *Queries) InsertBuildInput(ctx context.Context, arg InsertBuildInputParams) error {
-	_, err := q.db.Exec(ctx, insertBuildInput, arg.BuildID, arg.OrganizationID, arg.ObjectID)
-	return err
-}
-
-const insertDraftObject = `-- name: InsertDraftObject :exec
-INSERT INTO problem_draft_objects(problem_id,organization_id,object_id)
-SELECT d.problem_id,d.organization_id,$1::uuid FROM problem_drafts d WHERE d.problem_id=$2::uuid
-`
-
-type InsertDraftObjectParams struct {
-	ObjectID  uuid.UUID `json:"object_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-}
-
-func (q *Queries) InsertDraftObject(ctx context.Context, arg InsertDraftObjectParams) error {
-	_, err := q.db.Exec(ctx, insertDraftObject, arg.ObjectID, arg.ProblemID)
-	return err
-}
-
 const insertPackageAssets = `-- name: InsertPackageAssets :exec
-INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
-SELECT $1::uuid,$2::uuid,a.name,a.object_id
-FROM jsonb_to_recordset($3::jsonb) a(name text,object_id uuid)
+INSERT INTO problem_package_assets(package_id,name,object_id)
+SELECT $1::uuid,a.name,a.object_id
+FROM jsonb_to_recordset($2::jsonb) a(name text,object_id uuid)
 `
 
 type InsertPackageAssetsParams struct {
-	PackageID      uuid.UUID `json:"package_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Assets         []byte    `json:"assets"`
+	PackageID uuid.UUID `json:"package_id"`
+	Assets    []byte    `json:"assets"`
 }
 
 func (q *Queries) InsertPackageAssets(ctx context.Context, arg InsertPackageAssetsParams) error {
-	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.OrganizationID, arg.Assets)
+	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.Assets)
 	return err
 }
 
@@ -372,39 +327,6 @@ func (q *Queries) ListBuildIDsPastRetention(ctx context.Context, retentionMs int
 			return nil, err
 		}
 		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listBuildInputObjects = `-- name: ListBuildInputObjects :many
-SELECT o.id, o.organization_id, o.purpose, o.key, o.sha256, o.size, o.created_at FROM problem_build_inputs bi JOIN stored_objects o ON o.id=bi.object_id
-WHERE bi.build_id=$1 ORDER BY o.id
-`
-
-func (q *Queries) ListBuildInputObjects(ctx context.Context, buildID uuid.UUID) ([]StoredObject, error) {
-	rows, err := q.db.Query(ctx, listBuildInputObjects, buildID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []StoredObject{}
-	for rows.Next() {
-		var i StoredObject
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.Purpose,
-			&i.Key,
-			&i.Sha256,
-			&i.Size,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -545,33 +467,28 @@ func (q *Queries) ListStoredObjectKeys(ctx context.Context, keys []string) ([]st
 	return items, nil
 }
 
-const listUnreferencedObjects = `-- name: ListUnreferencedObjects :many
-
-SELECT o.id,o.key FROM stored_objects o
-WHERE NOT EXISTS(SELECT 1 FROM problem_draft_objects d WHERE d.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_build_inputs b WHERE b.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
-ORDER BY o.id LIMIT 100
+const listStoredObjects = `-- name: ListStoredObjects :many
+SELECT id, organization_id, purpose, key, sha256, size, created_at FROM stored_objects WHERE id=ANY($1::uuid[]) ORDER BY id
 `
 
-type ListUnreferencedObjectsRow struct {
-	ID  uuid.UUID `json:"id"`
-	Key string    `json:"key"`
-}
-
-// Lock-then-recheck queries use separate statements so each sees a fresh snapshot.
-// Foreign keys arbitrate deletion; this query only narrows candidates.
-func (q *Queries) ListUnreferencedObjects(ctx context.Context) ([]ListUnreferencedObjectsRow, error) {
-	rows, err := q.db.Query(ctx, listUnreferencedObjects)
+func (q *Queries) ListStoredObjects(ctx context.Context, ids []uuid.UUID) ([]StoredObject, error) {
+	rows, err := q.db.Query(ctx, listStoredObjects, ids)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListUnreferencedObjectsRow{}
+	items := []StoredObject{}
 	for rows.Next() {
-		var i ListUnreferencedObjectsRow
-		if err := rows.Scan(&i.ID, &i.Key); err != nil {
+		var i StoredObject
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Purpose,
+			&i.Key,
+			&i.Sha256,
+			&i.Size,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -580,68 +497,6 @@ func (q *Queries) ListUnreferencedObjects(ctx context.Context) ([]ListUnreferenc
 		return nil, err
 	}
 	return items, nil
-}
-
-const lockOperationForFinalize = `-- name: LockOperationForFinalize :one
-SELECT token,fingerprint,result,http_status FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 FOR UPDATE
-`
-
-type LockOperationForFinalizeParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-}
-
-type LockOperationForFinalizeRow struct {
-	Token       uuid.UUID `json:"token"`
-	Fingerprint string    `json:"fingerprint"`
-	Result      []byte    `json:"result"`
-	HttpStatus  *int32    `json:"http_status"`
-}
-
-func (q *Queries) LockOperationForFinalize(ctx context.Context, arg LockOperationForFinalizeParams) (LockOperationForFinalizeRow, error) {
-	row := q.db.QueryRow(ctx, lockOperationForFinalize, arg.OrganizationID, arg.Operation, arg.Key)
-	var i LockOperationForFinalizeRow
-	err := row.Scan(
-		&i.Token,
-		&i.Fingerprint,
-		&i.Result,
-		&i.HttpStatus,
-	)
-	return i, err
-}
-
-const lockOperationRow = `-- name: LockOperationRow :one
-SELECT fingerprint,token,result,http_status,(lease_deadline>clock_timestamp())::boolean AS active FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 FOR UPDATE
-`
-
-type LockOperationRowParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-}
-
-type LockOperationRowRow struct {
-	Fingerprint string    `json:"fingerprint"`
-	Token       uuid.UUID `json:"token"`
-	Result      []byte    `json:"result"`
-	HttpStatus  *int32    `json:"http_status"`
-	Active      bool      `json:"active"`
-}
-
-func (q *Queries) LockOperationRow(ctx context.Context, arg LockOperationRowParams) (LockOperationRowRow, error) {
-	row := q.db.QueryRow(ctx, lockOperationRow, arg.OrganizationID, arg.Operation, arg.Key)
-	var i LockOperationRowRow
-	err := row.Scan(
-		&i.Fingerprint,
-		&i.Token,
-		&i.Result,
-		&i.HttpStatus,
-		&i.Active,
-	)
-	return i, err
 }
 
 const lockProblemPackage = `-- name: LockProblemPackage :one
@@ -668,24 +523,6 @@ type MarkBuildSucceededParams struct {
 func (q *Queries) MarkBuildSucceeded(ctx context.Context, arg MarkBuildSucceededParams) error {
 	_, err := q.db.Exec(ctx, markBuildSucceeded, arg.ID, arg.LeaseToken)
 	return err
-}
-
-const operationLeaseActive = `-- name: OperationLeaseActive :one
-SELECT (lease_deadline>clock_timestamp())::boolean AS active FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3
-`
-
-type OperationLeaseActiveParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-}
-
-func (q *Queries) OperationLeaseActive(ctx context.Context, arg OperationLeaseActiveParams) (bool, error) {
-	row := q.db.QueryRow(ctx, operationLeaseActive, arg.OrganizationID, arg.Operation, arg.Key)
-	var active bool
-	err := row.Scan(&active)
-	return active, err
 }
 
 const packageBuildID = `-- name: PackageBuildID :one
@@ -728,35 +565,6 @@ func (q *Queries) ProblemOrganizationID(ctx context.Context, id uuid.UUID) (uuid
 	var organization_id uuid.UUID
 	err := row.Scan(&organization_id)
 	return organization_id, err
-}
-
-const readOperationResult = `-- name: ReadOperationResult :one
-SELECT result,http_status FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 AND fingerprint=$4
-`
-
-type ReadOperationResultParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-	Fingerprint    string    `json:"fingerprint"`
-}
-
-type ReadOperationResultRow struct {
-	Result     []byte `json:"result"`
-	HttpStatus *int32 `json:"http_status"`
-}
-
-func (q *Queries) ReadOperationResult(ctx context.Context, arg ReadOperationResultParams) (ReadOperationResultRow, error) {
-	row := q.db.QueryRow(ctx, readOperationResult,
-		arg.OrganizationID,
-		arg.Operation,
-		arg.Key,
-		arg.Fingerprint,
-	)
-	var i ReadOperationResultRow
-	err := row.Scan(&i.Result, &i.HttpStatus)
-	return i, err
 }
 
 const readPackageDescriptor = `-- name: ReadPackageDescriptor :one
@@ -871,33 +679,6 @@ func (q *Queries) RequeueExpiredBuild(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const reserveOperationRow = `-- name: ReserveOperationRow :exec
-INSERT INTO request_idempotency(organization_id,operation,key,fingerprint,token,lease_deadline)
-VALUES($1,$2,$3,$4,$5,
- clock_timestamp()+$6::bigint*interval '1 millisecond') ON CONFLICT DO NOTHING
-`
-
-type ReserveOperationRowParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-	Fingerprint    string    `json:"fingerprint"`
-	Token          uuid.UUID `json:"token"`
-	LeaseMs        int64     `json:"lease_ms"`
-}
-
-func (q *Queries) ReserveOperationRow(ctx context.Context, arg ReserveOperationRowParams) error {
-	_, err := q.db.Exec(ctx, reserveOperationRow,
-		arg.OrganizationID,
-		arg.Operation,
-		arg.Key,
-		arg.Fingerprint,
-		arg.Token,
-		arg.LeaseMs,
-	)
-	return err
-}
-
 const startBuildAttempt = `-- name: StartBuildAttempt :exec
 UPDATE problem_builds SET state='running',attempt=attempt+1,lease_token=$1,
  lease_deadline=LEAST(deadline,clock_timestamp()+$2::bigint*interval '1 millisecond') WHERE id=$3
@@ -924,33 +705,9 @@ func (q *Queries) SucceededBuildPackageID(ctx context.Context, id uuid.UUID) (uu
 	return id, err
 }
 
-const takeOverOperation = `-- name: TakeOverOperation :exec
-UPDATE request_idempotency SET token=$1,lease_deadline=clock_timestamp()+$2::bigint*interval '1 millisecond'
-WHERE organization_id=$3 AND operation=$4 AND key=$5
-`
-
-type TakeOverOperationParams struct {
-	Token          uuid.UUID `json:"token"`
-	LeaseMs        int64     `json:"lease_ms"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-}
-
-func (q *Queries) TakeOverOperation(ctx context.Context, arg TakeOverOperationParams) error {
-	_, err := q.db.Exec(ctx, takeOverOperation,
-		arg.Token,
-		arg.LeaseMs,
-		arg.OrganizationID,
-		arg.Operation,
-		arg.Key,
-	)
-	return err
-}
-
 const updateProblemDraftRow = `-- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- content=$9 WHERE problem_id=$1
+ content=$9,object_ids=$10 WHERE problem_id=$1
 `
 
 type UpdateProblemDraftRowParams struct {
@@ -963,6 +720,7 @@ type UpdateProblemDraftRowParams struct {
 	MemoryLimitMb int32         `json:"memory_limit_mb"`
 	MaxScore      *points.Value `json:"max_score"`
 	Content       []byte        `json:"content"`
+	ObjectIds     []uuid.UUID   `json:"object_ids"`
 }
 
 func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDraftRowParams) error {
@@ -976,6 +734,7 @@ func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDr
 		arg.MemoryLimitMb,
 		arg.MaxScore,
 		arg.Content,
+		arg.ObjectIds,
 	)
 	return err
 }

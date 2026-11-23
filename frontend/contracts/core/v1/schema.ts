@@ -2097,7 +2097,7 @@ export interface components {
             detail?: string;
         };
         /** @enum {string} */
-        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_required" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "drafts_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "operation_running" | "build_finished" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_required" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "drafts_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "build_finished" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
         /**
          * @description Result of creation.
          * @example {
@@ -5368,8 +5368,6 @@ export interface components {
     parameters: {
         /** @description Revision last read by the author. A different current revision returns 409. */
         ExpectedRevisionQuery: number;
-        /** @description Stable identifier for retries of exactly this request. */
-        IdempotencyKeyHeader: string;
         /** @description Build identifier. */
         BuildIDPath: string;
         /** @description Page number */
@@ -5643,7 +5641,6 @@ export type ListContestClarificationsResponseModel = components['schemas']['List
 export type ResponseProblem = components['responses']['Problem'];
 export type ResponseVerifyEmailResponse = components['responses']['VerifyEmailResponse'];
 export type ParameterExpectedRevisionQuery = components['parameters']['ExpectedRevisionQuery'];
-export type ParameterIdempotencyKeyHeader = components['parameters']['IdempotencyKeyHeader'];
 export type ParameterBuildIdPath = components['parameters']['BuildIDPath'];
 export type ParameterPageQuery = components['parameters']['PageQuery'];
 export type ParameterPageSizeQuery = components['parameters']['PageSizeQuery'];
@@ -5715,10 +5712,7 @@ export interface operations {
                 /** @description Revision last read by the author. A different current revision returns 409. */
                 expected_revision: components["parameters"]["ExpectedRevisionQuery"];
             };
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
@@ -5747,10 +5741,7 @@ export interface operations {
     BuildProblemPackage: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
@@ -5832,10 +5823,7 @@ export interface operations {
     CancelProblemBuild: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
@@ -5864,10 +5852,7 @@ export interface operations {
                 /** @description Revision last read by the author. A different current revision returns 409. */
                 expected_revision: components["parameters"]["ExpectedRevisionQuery"];
             };
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
@@ -6054,10 +6039,7 @@ export interface operations {
                  */
                 template_id: string;
             };
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -8576,10 +8558,7 @@ export interface operations {
                 /** @description Revision last read by the author. A different current revision returns 409. */
                 expected_revision: components["parameters"]["ExpectedRevisionQuery"];
             };
-            header: {
-                /** @description Stable identifier for retries of exactly this request. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
-            };
+            header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];

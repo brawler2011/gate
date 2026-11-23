@@ -98,7 +98,6 @@ describe("List pagination through production components", () => {
     fireEvent.click(view.getByRole("button", {name: "Собрать пакет"}));
     await waitFor(() => expect(built).toBeDefined());
     expect(JSON.parse(String(built?.init?.body))).toEqual({expected_revision: 7});
-    expect(new Headers(built?.init?.headers).get("Idempotency-Key")).toBeTruthy();
   });
 
   it("keeps an old package reachable across pages with retryable errors", async () => {

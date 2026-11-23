@@ -14,8 +14,8 @@ import (
 func mapStoredObject(o sqlc.StoredObject) model.StoredObject {
 	return model.StoredObject{ID: o.ID, OrganizationID: o.OrganizationID, Purpose: o.Purpose, Key: o.Key, SHA256: o.Sha256, Size: o.Size}
 }
-func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID) ([]model.StoredObject, error) {
-	rows, err := sqlc.New(r.pool).ListBuildInputObjects(ctx, id)
+func (r *ProblemDraftsRepo) StoredObjects(ctx context.Context, ids []uuid.UUID) ([]model.StoredObject, error) {
+	rows, err := sqlc.New(r.pool).ListStoredObjects(ctx, ids)
 	if err != nil {
 		return nil, dbError("list build inputs", err)
 	}
@@ -80,7 +80,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	}); err != nil {
 		return uuid.Nil, dbError("insert package", err)
 	}
-	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, OrganizationID: b.OrganizationID, Assets: encode(index.Assets)}); err != nil {
+	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, Assets: encode(index.Assets)}); err != nil {
 		return uuid.Nil, dbError("insert package assets", err)
 	}
 	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {

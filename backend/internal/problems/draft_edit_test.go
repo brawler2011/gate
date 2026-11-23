@@ -31,9 +31,9 @@ type savingRepo struct {
 	saved []model.Draft
 }
 
-func (r *savingRepo) SaveDraft(_ context.Context, _ model.MutationKey, d model.Draft) (model.MutationResult, error) {
+func (r *savingRepo) SaveDraft(_ context.Context, d model.Draft) (model.Draft, error) {
 	r.saved = append(r.saved, d)
-	return model.MutationResult{Status: 200}, nil
+	return d, nil
 }
 
 type singleProblem struct{ org uuid.UUID }
@@ -51,7 +51,7 @@ func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 
 	draft := model.Draft{ProblemID: problem, Revision: 4, Title: "Renamed", DraftContent: model.DraftContent{Statements: []model.DraftStatement{{Language: "en", Legend: "New statement"}}}}
-	_, err := uc.SaveDraft(ctx, problem, 4, "key-1", draft)
+	_, err := uc.SaveDraft(ctx, problem, 4, draft)
 	require.NoError(t, err)
 	require.Len(t, repo.saved, 1)
 	require.Equal(t, "Renamed", repo.saved[0].Title)
@@ -75,7 +75,7 @@ func TestSavingDraftRejectsMismatchedRevision(t *testing.T) {
 	problem := uuid.New()
 	uc := &DraftUseCase{Repo: repo, Problems: singleProblem{uuid.New()}, Access: ownedProblems{}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
-	_, err := uc.SaveDraft(ctx, problem, 3, "key-1", model.Draft{ProblemID: problem, Revision: 4})
+	_, err := uc.SaveDraft(ctx, problem, 3, model.Draft{ProblemID: problem, Revision: 4})
 	require.Error(t, err)
 	require.Empty(t, repo.saved)
 }

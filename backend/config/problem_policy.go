@@ -20,7 +20,6 @@ type ProblemPolicy struct {
 	Lease            time.Duration     `yaml:"lease"`
 	Poll             time.Duration     `yaml:"poll"`
 	Duration         time.Duration     `yaml:"duration"`
-	OperationLease   time.Duration     `yaml:"operation_lease"`
 	UploadTTL        time.Duration     `yaml:"upload_ttl"`
 	GCInterval       time.Duration     `yaml:"gc_interval"`
 	ObjectRetention  time.Duration     `yaml:"object_retention"`
@@ -54,10 +53,9 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.Poll > 0, "problems.poll", "must be positive")
 	v.check(p.Duration > p.Lease, "problems.duration", "must exceed problems.lease")
 	v.check(p.UploadTTL > 0, "problems.upload_ttl", "must be positive")
-	v.check(p.OperationLease > p.UploadTTL, "problems.operation_lease", "must exceed problems.upload_ttl")
 	v.check(p.GCInterval > 0, "problems.gc_interval", "must be positive")
-	// Object retention must outlast uploads that can still commit under an operation lease or build deadline.
-	v.check(p.ObjectRetention > p.OperationLease && p.ObjectRetention > p.Duration, "problems.object_retention", "must exceed problems.operation_lease and problems.duration")
+	// Object retention must outlast uploads that can still commit after their bytes are stored.
+	v.check(p.ObjectRetention > p.UploadTTL && p.ObjectRetention > p.Duration, "problems.object_retention", "must exceed problems.upload_ttl and problems.duration")
 	v.check(p.BuildRetention > 0, "problems.build_retention", "must be positive")
 	v.check(p.PackageRetention > 0, "problems.package_retention", "must be positive")
 	v.check(p.RequestBytes >= p.Draft.TextBytes, "problems.request_bytes", "must be at least problems.draft.text_bytes")

@@ -1483,10 +1483,6 @@ func (s *Server) handleBuildProblemPackageRequest(args [1]string, argsEscaped bo
 					Name: "id",
 					In:   "path",
 				}: params.ID,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -1879,10 +1875,6 @@ func (s *Server) handleCancelProblemBuildRequest(args [2]string, argsEscaped boo
 					Name: "buildId",
 					In:   "path",
 				}: params.BuildId,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -3493,10 +3485,6 @@ func (s *Server) handleCreateProblemRequest(args [0]string, argsEscaped bool, w 
 					Name: "title",
 					In:   "query",
 				}: params.Title,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 				{
 					Name: "organization_id",
 					In:   "query",
@@ -8395,10 +8383,6 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 					Name: "expected_revision",
 					In:   "query",
 				}: params.ExpectedRevision,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -13697,10 +13681,6 @@ func (s *Server) handleSaveProblemDraftRequest(args [1]string, argsEscaped bool,
 					Name: "expected_revision",
 					In:   "query",
 				}: params.ExpectedRevision,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -15315,10 +15295,6 @@ func (s *Server) handleUploadProblemDraftRequest(args [1]string, argsEscaped boo
 					Name: "expected_revision",
 					In:   "query",
 				}: params.ExpectedRevision,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}

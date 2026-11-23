@@ -96,7 +96,6 @@ var (
 	ErrLanguageNotAllowed = NewCode("language_not_allowed", CodeInvalid)
 	ErrPackageNotReady    = NewCode("package_not_ready", CodeInvalid)
 	ErrStaleRevision      = NewCode("stale_revision", CodeConflict)
-	ErrOperationRunning   = NewCode("operation_running", CodeConflict)
 	ErrBuildFinished      = NewCode("build_finished", CodeConflict)
 
 	// Field validation; params carry the violated bounds (min, max).

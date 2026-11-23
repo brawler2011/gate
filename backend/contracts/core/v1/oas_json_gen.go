@@ -6922,8 +6922,6 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodePackageNotReady
 	case ErrorCodeStaleRevision:
 		*s = ErrorCodeStaleRevision
-	case ErrorCodeOperationRunning:
-		*s = ErrorCodeOperationRunning
 	case ErrorCodeBuildFinished:
 		*s = ErrorCodeBuildFinished
 	case ErrorCodeRequired:

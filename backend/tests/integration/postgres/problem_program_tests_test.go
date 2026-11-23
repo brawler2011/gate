@@ -21,7 +21,7 @@ func (h *pipelineHarness) upload(t *testing.T, change model.UploadChange, files 
 	for slot, text := range files {
 		readers[slot] = strings.NewReader(text)
 	}
-	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), change, readers)
+	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, change, readers)
 	require.NoError(t, err)
 }
 

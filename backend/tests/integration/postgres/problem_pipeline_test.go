@@ -74,7 +74,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 
 func TestProblemPipelineRealServices(t *testing.T) {
 	t.Parallel()
-	ctx, pool, repo, org, d := draftFixture(t)
+	ctx, pool, repo, _, d := draftFixture(t)
 	services := startPipelineServices(t)
 	store, client, files := services.store, services.client, services.files
 	cfg := &sandbox.Config{Langs: services.langs}
@@ -87,16 +87,16 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	d.MainSolution = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
 	limits := dbfixtures.BuildLimits(t)
-	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
+	_, err = repo.EnqueueBuild(ctx, d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	d.Title = "Changed after enqueue"
 	d.Solutions[0].Source = "invalid later source"
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err = repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	b, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
@@ -162,11 +162,11 @@ func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsR
 	limits := dbfixtures.BuildLimits(t)
 	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
 		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", *d), *d)
+	_, err := repo.SaveDraft(ctx, *d)
 	require.NoError(t, err)
 	*d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
+	_, err = repo.EnqueueBuild(ctx, d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	b, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)

@@ -54,7 +54,7 @@ func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, imag
 	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problemID})
 	s.Require().NoError(err)
 	_, err = s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "package.zip", File: bytes.NewReader(archive.Bytes()), Size: int64(archive.Len())}},
-		corev1.ImportProblemParams{ID: problemID, ExpectedRevision: draft.Revision, IdempotencyKey: uuid.NewString()})
+		corev1.ImportProblemParams{ID: problemID, ExpectedRevision: draft.Revision})
 	s.Require().NoError(err)
 }
 
@@ -77,7 +77,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	org := s.createOrganization("asset-org", "Asset Organization", owner.Id)
 	ctx := withTestUser(s.ctx, owner.Id)
 
-	created, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+	created, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{
 		Title: "Asset problem", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	problemID := created.ID
