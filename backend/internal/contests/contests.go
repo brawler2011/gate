@@ -304,7 +304,7 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 		return nil, err
 	}
 
-	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(accessmodel.WithScoreboardFreeze(ctx, freezeTime), contestID)
+	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contestID)
 	if err != nil {
 		return nil, err
 	}
@@ -821,11 +821,7 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 	if member.ContestRole != accessmodel.ContestParticipant {
 		return response, nil
 	}
-	historyCtx := ctx
-	if response.IsFrozen && !unfrozen {
-		historyCtx = accessmodel.WithScoreboardFreeze(ctx, response.FreezeTime)
-	}
-	subs, err := uc.contestRepo.GetUserScoreboardSubmissions(historyCtx, contestID, userID)
+	subs, err := uc.contestRepo.GetUserScoreboardSubmissions(ctx, contestID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -920,24 +916,15 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 			continue
 		}
 
-		if sub.State == 0 && !solved {
+		if solved {
+			continue
+		}
+		// ICPC freeze: verdicts of submissions made after the freeze stay hidden, earlier ones show whenever judged.
+		if frozen && (freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) || freezeTime == nil && rules.manualFreeze) {
 			pendingAttempts++
 			continue
 		}
-		if sub.State == submissionsmodel.Saved || solved {
-			continue
-		}
-
-		if frozen && freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) {
-			pendingAttempts++
-			continue
-		}
-		if frozen && freezeTime == nil && rules.manualFreeze {
-			pendingAttempts++
-			continue
-		}
-
-		if sub.State == submissionsmodel.GotCE {
+		if sub.State == submissionsmodel.Saved || sub.State == submissionsmodel.GotCE {
 			continue
 		}
 

@@ -1064,13 +1064,6 @@ type Submission struct {
 	JudgeBenchmark *string                `json:"judge_benchmark"`
 }
 
-type SubmissionStateHistory struct {
-	ID           int64     `json:"id"`
-	SubmissionID uuid.UUID `json:"submission_id"`
-	ObservedAt   time.Time `json:"observed_at"`
-	State        int32     `json:"state"`
-}
-
 type Team struct {
 	ID             uuid.UUID  `json:"id"`
 	OrganizationID uuid.UUID  `json:"organization_id"`
