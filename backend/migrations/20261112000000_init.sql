@@ -280,41 +280,10 @@ CREATE TABLE stored_objects (
     CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
-    CONSTRAINT stored_objects_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
     CONSTRAINT stored_objects_pkey PRIMARY KEY (id),
     CONSTRAINT stored_objects_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
 );
-
-CREATE TABLE request_idempotency (
-    organization_id uuid NOT NULL,
-    operation text NOT NULL,
-    key text NOT NULL,
-    fingerprint text NOT NULL,
-    token uuid NOT NULL,
-    lease_deadline timestamptz NOT NULL,
-    result jsonb,
-    http_status integer,
-    created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
-    CONSTRAINT request_idempotency_check CHECK (((result IS NULL) = (http_status IS NULL))),
-    CONSTRAINT request_idempotency_fingerprint_check CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text)),
-    CONSTRAINT request_idempotency_http_status_check CHECK (((http_status >= 200) AND (http_status <= 299))),
-    CONSTRAINT request_idempotency_key_check CHECK (((octet_length(key) >= 1) AND (octet_length(key) <= 200))),
-    CONSTRAINT request_idempotency_pkey PRIMARY KEY (organization_id, operation, key),
-    CONSTRAINT request_idempotency_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
-);
-
--- Publish verified bytes with their first reference; object rows are immutable.
--- +goose StatementBegin
-CREATE FUNCTION guard_stored_object() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN RAISE EXCEPTION 'stored object is immutable'; END;
-$$;
--- +goose StatementEnd
-
-CREATE TRIGGER stored_object_guard BEFORE UPDATE ON stored_objects FOR EACH ROW EXECUTE FUNCTION guard_stored_object();
-
 
 CREATE TABLE problems (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -374,6 +343,8 @@ CREATE TABLE problem_drafts (
     max_score numeric(12,2),
     -- The draft is validated and written as one document.
     content jsonb DEFAULT '{}'::jsonb NOT NULL,
+    -- Stored objects the content references; written with it so GC need not parse drafts.
+    object_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
     CONSTRAINT problem_drafts_content_check CHECK ((jsonb_typeof(content) = 'object'::text)),
     CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
     CONSTRAINT problem_drafts_max_score_check CHECK ((max_score >= (0)::numeric)),
@@ -385,21 +356,10 @@ CREATE TABLE problem_drafts (
     CONSTRAINT problem_drafts_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
     CONSTRAINT problem_drafts_organization_id_short_name_key UNIQUE (organization_id, short_name),
     CONSTRAINT problem_drafts_pkey PRIMARY KEY (problem_id),
-    CONSTRAINT problem_drafts_problem_id_organization_id_key UNIQUE (problem_id, organization_id),
-    CONSTRAINT problem_drafts_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE CASCADE
+    CONSTRAINT problem_drafts_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+    CONSTRAINT problem_drafts_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 CREATE INDEX problem_drafts_title_trgm ON problem_drafts USING gin (title gin_trgm_ops);
-
--- Derived references keep every object in the draft alive.
-CREATE TABLE problem_draft_objects (
-    problem_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
-    object_id uuid NOT NULL,
-    CONSTRAINT problem_draft_objects_pkey PRIMARY KEY (problem_id, object_id),
-    CONSTRAINT problem_draft_objects_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE,
-    CONSTRAINT problem_draft_objects_object_id_organization_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT
-);
-CREATE INDEX problem_draft_objects_object ON problem_draft_objects USING btree (object_id);
 
 CREATE VIEW problem_catalog AS
  SELECT p.id,
@@ -445,24 +405,12 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_solutions_check CHECK ((jsonb_typeof(solutions) = 'array'::text)),
     CONSTRAINT problem_builds_program_tests_check CHECK ((jsonb_typeof(program_tests) = 'array'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
-    CONSTRAINT problem_builds_id_problem_id_organization_id_key UNIQUE (id, problem_id, organization_id),
-    CONSTRAINT problem_builds_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_builds_pkey PRIMARY KEY (id),
-    CONSTRAINT problem_builds_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE RESTRICT
+    CONSTRAINT problem_builds_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_builds_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
 );
 CREATE INDEX problem_builds_queue ON problem_builds USING btree (created_at, id) WHERE (state = 'queued'::text);
 CREATE INDEX problem_builds_recovery ON problem_builds USING btree (lease_deadline) WHERE (state = 'running'::text);
-
--- Snapshot inputs stay alive for the lifetime of the build.
-CREATE TABLE problem_build_inputs (
-    build_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
-    object_id uuid NOT NULL,
-    CONSTRAINT problem_build_inputs_pkey PRIMARY KEY (build_id, object_id),
-    CONSTRAINT problem_build_inputs_build_id_fkey FOREIGN KEY (build_id, organization_id) REFERENCES problem_builds(id, organization_id) ON DELETE CASCADE,
-    CONSTRAINT problem_build_inputs_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT
-);
-CREATE INDEX problem_build_inputs_object ON problem_build_inputs USING btree (object_id);
 
 CREATE TABLE problem_packages (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -489,10 +437,9 @@ CREATE TABLE problem_packages (
     CONSTRAINT problem_packages_statements_check CHECK ((jsonb_typeof(statements) = 'array'::text)),
     CONSTRAINT problem_packages_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
-    CONSTRAINT problem_packages_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
+    CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT problem_packages_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
@@ -504,136 +451,13 @@ CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (pr
 
 CREATE TABLE problem_package_assets (
     package_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
     name text NOT NULL,
     object_id uuid NOT NULL,
     CONSTRAINT problem_package_assets_pkey PRIMARY KEY (package_id, name),
-    CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
-    CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id, organization_id) REFERENCES problem_packages(id, organization_id) ON DELETE CASCADE
+    CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE CASCADE
 );
 CREATE INDEX problem_package_assets_object ON problem_package_assets USING btree (object_id);
-
--- +goose StatementBegin
-CREATE FUNCTION check_build_publication() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE bid uuid; s text; has_package boolean;
-BEGIN
- IF TG_TABLE_NAME='problem_builds' THEN bid=COALESCE(NEW.id,OLD.id); ELSE bid=COALESCE(NEW.build_id,OLD.build_id); END IF;
- SELECT state INTO s FROM problem_builds WHERE id=bid;
- IF NOT FOUND THEN RETURN NULL; END IF;
- SELECT EXISTS(SELECT 1 FROM problem_packages WHERE build_id=bid) INTO has_package;
- IF (s='succeeded')<>has_package THEN RAISE EXCEPTION 'build publication must be atomic'; END IF;
- RETURN NULL;
-END;
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION guard_problem_build() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF (NEW.id,NEW.problem_id,NEW.organization_id,NEW.revision,NEW.snapshot,NEW.created_at,NEW.max_attempts,NEW.deadline)
-      IS DISTINCT FROM (OLD.id,OLD.problem_id,OLD.organization_id,OLD.revision,OLD.snapshot,OLD.created_at,OLD.max_attempts,OLD.deadline) THEN
-        RAISE EXCEPTION 'immutable build snapshot and settings';
-    END IF;
-    IF OLD.state IN ('succeeded','failed','cancelled') THEN RAISE EXCEPTION 'terminal build is immutable'; END IF;
-    IF NEW.state<>OLD.state AND NOT (
-        (OLD.state='queued' AND NEW.state IN ('running','failed','cancelled')) OR
-        (OLD.state='running' AND NEW.state IN ('queued','succeeded','failed','cancelled'))) THEN
-        RAISE EXCEPTION 'invalid build transition';
-    END IF;
-    IF NEW.state='running' AND OLD.state='running' AND
-      (NEW.lease_token<>OLD.lease_token OR OLD.lease_deadline<=clock_timestamp()) THEN
-        RAISE EXCEPTION 'cannot revive an expired lease';
-    END IF;
-    RETURN NEW;
-END;
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION check_build_inputs() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $_$
-DECLARE bid uuid; snap jsonb; actual uuid[]; declared uuid[]; embedded uuid[];
-BEGIN
-    IF TG_TABLE_NAME='problem_builds' THEN bid=COALESCE(NEW.id,OLD.id); ELSE bid=COALESCE(NEW.build_id,OLD.build_id); END IF;
-    SELECT snapshot INTO snap FROM problem_builds WHERE id=bid;
-    IF NOT FOUND THEN RETURN NULL; END IF;
-    SELECT COALESCE(array_agg(object_id ORDER BY object_id),'{}') INTO actual
-      FROM problem_build_inputs WHERE build_id=bid;
-    SELECT COALESCE(array_agg(DISTINCT v::uuid ORDER BY v::uuid),'{}') INTO declared
-      FROM jsonb_array_elements_text(snap->'input_objects') e(v);
-    SELECT COALESCE(array_agg(DISTINCT (v#>>'{}')::uuid ORDER BY (v#>>'{}')::uuid),'{}') INTO embedded FROM (
-      SELECT v FROM jsonb_path_query(snap,'$.draft.tests[*].input.object_id') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.tests[*].answer.object_id') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.assets[*].object_id') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].input') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].output') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].answer') e(v)
-      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.validators[*].tests[*].input') e(v)
-    ) refs WHERE v<>'null'::jsonb;
-    IF actual<>declared OR actual<>embedded THEN RAISE EXCEPTION 'snapshot input object set mismatch'; END IF;
-    IF (snap->'draft'->>'revision')::bigint<>(SELECT revision FROM problem_builds WHERE id=bid)
-      OR (snap->'draft'->>'problem_id')::uuid<>(SELECT problem_id FROM problem_builds WHERE id=bid)
-      OR (snap->>'organization_id')::uuid<>(SELECT organization_id FROM problem_builds WHERE id=bid) THEN
-        RAISE EXCEPTION 'snapshot identity mismatch';
-    END IF;
-    RETURN NULL;
-END;
-$_$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION guard_build_input() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF TG_OP='UPDATE' OR EXISTS(SELECT 1 FROM problem_builds WHERE id=OLD.build_id) THEN
-        RAISE EXCEPTION 'build inputs are immutable';
-    END IF;
-    RETURN OLD;
-END;
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION guard_package_immutable() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN RAISE EXCEPTION 'package is immutable'; END;
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION check_package_build() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE b problem_builds; o stored_objects;
-BEGIN
-    IF NEW.build_id IS NULL OR NEW.object_id IS NULL THEN RAISE EXCEPTION 'package requires build and object'; END IF;
-    SELECT * INTO b FROM problem_builds WHERE id=NEW.build_id;
-    SELECT * INTO o FROM stored_objects WHERE id=NEW.object_id;
-    IF b.state<>'running' OR b.lease_deadline<=clock_timestamp() OR b.problem_id<>NEW.problem_id
-       OR b.organization_id<>NEW.organization_id OR o.organization_id<>NEW.organization_id
-       OR o.purpose<>'package' OR o.sha256<>NEW.package_hash THEN RAISE EXCEPTION 'invalid package publication'; END IF;
-    NEW.revision=b.revision;
-    RETURN NEW;
-END;
-$$;
--- +goose StatementEnd
-
-CREATE CONSTRAINT TRIGGER build_publication AFTER INSERT OR UPDATE ON problem_builds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
-CREATE TRIGGER problem_build_guard BEFORE UPDATE ON problem_builds FOR EACH ROW EXECUTE FUNCTION guard_problem_build();
-CREATE CONSTRAINT TRIGGER problem_build_inputs_snapshot AFTER INSERT OR UPDATE ON problem_builds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
-CREATE TRIGGER problem_build_input_guard BEFORE DELETE OR UPDATE ON problem_build_inputs FOR EACH ROW EXECUTE FUNCTION guard_build_input();
-CREATE CONSTRAINT TRIGGER problem_build_inputs_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_inputs DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
-CREATE TRIGGER package_immutable BEFORE UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
-CREATE TRIGGER package_asset_immutable BEFORE UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
-CREATE TRIGGER package_build BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION check_package_build();
-CREATE CONSTRAINT TRIGGER package_publication AFTER INSERT ON problem_packages DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
 
 
 CREATE TABLE contests (

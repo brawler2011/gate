@@ -11,49 +11,39 @@ import (
 	"github.com/google/uuid"
 )
 
-func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.MutationKey, user uuid.UUID, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, org, user uuid.UUID, draft model.Draft, objects []model.StoredObject) error {
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
 	if err := draft.Validate(r.quotas, nil); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid template")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid template")
 	}
-	return authorizedMutation(func() (model.MutationResult, error) { return r.finalizeCreate(ctx, k, user, draft, objects) })
+	_, err := serializableRetry(func() (struct{}, error) { return struct{}{}, r.finalizeCreate(ctx, org, user, draft, objects) })
+	return err
 }
 
-func (r *ProblemDraftsRepo) finalizeCreate(ctx context.Context, k model.MutationKey, user uuid.UUID, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) finalizeCreate(ctx context.Context, org, user uuid.UUID, draft model.Draft, objects []model.StoredObject) error {
 	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
-		return model.MutationResult{}, err
+		return err
 	}
 	defer rollback(ctx, tx)
-	replay, err := r.reserveOperation(ctx, tx, k)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	if replay != nil {
-		return *replay, nil
-	}
 	q := sqlc.New(tx)
-	if _, err := access.Organization(ctx, commandAccess(q), k.OrganizationID, accessmodel.OrganizationManage); err != nil {
-		return model.MutationResult{}, err
+	if _, err := access.Organization(ctx, commandAccess(q), org, accessmodel.OrganizationManage); err != nil {
+		return err
 	}
 	repo := &ProblemsRepo{queries: q}
-	if err := repo.CreateProblem(ctx, &model.CreateProblemParams{ID: draft.ProblemID, OrganizationID: k.OrganizationID, Title: draft.Title, ShortName: draft.ShortName, Visibility: model.ProblemVisibilityPrivate}); err != nil {
-		return model.MutationResult{}, err
+	if err := repo.CreateProblem(ctx, &model.CreateProblemParams{ID: draft.ProblemID, OrganizationID: org, Title: draft.Title, ShortName: draft.ShortName, Visibility: model.ProblemVisibilityPrivate}); err != nil {
+		return err
 	}
 	if err := repo.CreateProblemMember(ctx, &model.CreateProblemMemberParams{ProblemID: draft.ProblemID, UserID: user, Role: accessmodel.ProblemOwner}); err != nil {
-		return model.MutationResult{}, err
+		return err
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {
-		return model.MutationResult{}, err
+		return err
 	}
-	if err := writeDraft(ctx, tx, draft); err != nil {
-		return model.MutationResult{}, err
+	if err := writeDraft(ctx, tx, draft, objectIDs(objects)); err != nil {
+		return err
 	}
-	result, err := finishOperation(ctx, tx, k, 200, map[string]uuid.UUID{"id": draft.ProblemID})
-	if err != nil {
-		return result, err
-	}
-	return r.resolveMutation(ctx, tx, k, result)
+	return commitTx(ctx, tx)
 }

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -20,10 +19,7 @@ type sweepRepo struct {
 func (r *sweepRepo) RecoverBuilds(context.Context) error                { return nil }
 func (r *sweepRepo) PrunePackages(context.Context, time.Duration) error { return nil }
 func (r *sweepRepo) PruneBuilds(context.Context, time.Duration) error   { return nil }
-func (r *sweepRepo) ListUnreferencedObjects(context.Context) ([]model.StoredObject, error) {
-	return nil, nil
-}
-func (r *sweepRepo) DeleteObject(context.Context, uuid.UUID) (bool, error) { return false, nil }
+func (r *sweepRepo) DeleteUnreferencedObjects(context.Context) ([]string, error) { return nil, nil }
 func (r *sweepRepo) ActiveBuildAttempt(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
 	return false, nil
 }

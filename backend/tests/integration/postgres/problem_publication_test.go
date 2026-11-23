@@ -82,7 +82,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	require.NoError(t, err)
 	test := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100,
 		Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
-	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &test}, map[string]io.Reader{"input": strings.NewReader("original input\n"), "answer": strings.NewReader("original answer\n")})
+	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, model.UploadChange{Test: &test}, map[string]io.Reader{"input": strings.NewReader("original input\n"), "answer": strings.NewReader("original answer\n")})
 	require.NoError(t, err)
 	return h
 }
@@ -157,7 +157,7 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 			candidate, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 			require.NoError(t, err)
 			tc.change(&candidate)
-			_, err = h.repo.SaveDraft(h.ctx, mutationKey(h.org, "edit", candidate), candidate)
+			_, err = h.repo.SaveDraft(h.ctx, candidate)
 			require.ErrorContains(t, err, tc.message)
 			after, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 			require.NoError(t, err)
@@ -323,7 +323,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	})
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &current.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("later input\n"), "answer": strings.NewReader("later answer\n")})
+	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, model.UploadChange{Test: &current.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("later input\n"), "answer": strings.NewReader("later answer\n")})
 	require.NoError(t, err)
 	release <- struct{}{}
 	r := <-done
@@ -438,7 +438,7 @@ func TestPublicationPartialPairUpload(t *testing.T) {
 		}
 		return nil
 	}}
-	_, err = uploads.Upload(h.ctx, before.ProblemID, before.Revision, uuid.NewString(), model.UploadChange{Test: &before.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("replacement input\n"), "answer": strings.NewReader("replacement answer\n")})
+	_, err = uploads.Upload(h.ctx, before.ProblemID, before.Revision, model.UploadChange{Test: &before.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("replacement input\n"), "answer": strings.NewReader("replacement answer\n")})
 	require.ErrorContains(t, err, "injected answer upload failure")
 	after, err := h.repo.GetDraft(h.ctx, before.ProblemID)
 	require.NoError(t, err)
@@ -474,10 +474,17 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 			h.save(t, tc.change)
 			current, err := h.repo.GetDraft(h.ctx, before.ProblemID)
 			require.NoError(t, err)
-			_, err = h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", current.Revision), current.ProblemID, current.Revision, h.options)
+			_, err = h.repo.EnqueueBuild(h.ctx, current.ProblemID, current.Revision, h.options)
 			require.ErrorContains(t, err, tc.message)
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_builds WHERE problem_id=$1`, current.ProblemID))
-			h.save(t, func(d *model.Draft) { revision := d.Revision; *d = before; d.Revision = revision })
+			// A dropped object cannot come back, so the test is uploaded again as an author would.
+			h.save(t, func(d *model.Draft) { revision := d.Revision; *d = before; d.Revision = revision; d.Tests = nil })
+			current, err = h.repo.GetDraft(h.ctx, before.ProblemID)
+			require.NoError(t, err)
+			test := before.Tests[0]
+			_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, model.UploadChange{Test: &test},
+				map[string]io.Reader{"input": strings.NewReader("original input\n"), "answer": strings.NewReader("original answer\n")})
+			require.NoError(t, err)
 		})
 	}
 }
@@ -502,7 +509,7 @@ func TestPublicationReimportsPackage(t *testing.T) {
 
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Import(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), &archive)
+	_, err = h.uploads.Import(h.ctx, current.ProblemID, current.Revision, &archive)
 	require.NoError(t, err)
 	imported, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)

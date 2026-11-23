@@ -3375,7 +3375,6 @@ const (
 	ErrorCodeLanguageNotAllowed          ErrorCode = "language_not_allowed"
 	ErrorCodePackageNotReady             ErrorCode = "package_not_ready"
 	ErrorCodeStaleRevision               ErrorCode = "stale_revision"
-	ErrorCodeOperationRunning            ErrorCode = "operation_running"
 	ErrorCodeBuildFinished               ErrorCode = "build_finished"
 	ErrorCodeRequired                    ErrorCode = "required"
 	ErrorCodeLength                      ErrorCode = "length"
@@ -3443,7 +3442,6 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeLanguageNotAllowed,
 		ErrorCodePackageNotReady,
 		ErrorCodeStaleRevision,
-		ErrorCodeOperationRunning,
 		ErrorCodeBuildFinished,
 		ErrorCodeRequired,
 		ErrorCodeLength,
@@ -3555,8 +3553,6 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodePackageNotReady:
 		return []byte(s), nil
 	case ErrorCodeStaleRevision:
-		return []byte(s), nil
-	case ErrorCodeOperationRunning:
 		return []byte(s), nil
 	case ErrorCodeBuildFinished:
 		return []byte(s), nil
@@ -3733,9 +3729,6 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeStaleRevision:
 		*s = ErrorCodeStaleRevision
-		return nil
-	case ErrorCodeOperationRunning:
-		*s = ErrorCodeOperationRunning
 		return nil
 	case ErrorCodeBuildFinished:
 		*s = ErrorCodeBuildFinished

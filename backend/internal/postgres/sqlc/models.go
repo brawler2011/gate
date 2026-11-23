@@ -868,12 +868,6 @@ type ProblemBuild struct {
 	FinishedAt     *time.Time `json:"finished_at"`
 }
 
-type ProblemBuildInput struct {
-	BuildID        uuid.UUID `json:"build_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ObjectID       uuid.UUID `json:"object_id"`
-}
-
 type ProblemCatalog struct {
 	ID             uuid.UUID `json:"id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
@@ -899,12 +893,7 @@ type ProblemDraft struct {
 	MemoryLimitMb  int32         `json:"memory_limit_mb"`
 	MaxScore       *points.Value `json:"max_score"`
 	Content        []byte        `json:"content"`
-}
-
-type ProblemDraftObject struct {
-	ProblemID      uuid.UUID `json:"problem_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ObjectID       uuid.UUID `json:"object_id"`
+	ObjectIds      []uuid.UUID   `json:"object_ids"`
 }
 
 type ProblemMember struct {
@@ -935,10 +924,9 @@ type ProblemPackage struct {
 }
 
 type ProblemPackageAsset struct {
-	PackageID      uuid.UUID `json:"package_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Name           string    `json:"name"`
-	ObjectID       uuid.UUID `json:"object_id"`
+	PackageID uuid.UUID `json:"package_id"`
+	Name      string    `json:"name"`
+	ObjectID  uuid.UUID `json:"object_id"`
 }
 
 type ProblemTeam struct {
@@ -954,18 +942,6 @@ type RateLimit struct {
 	Hits         []time.Time `json:"hits"`
 	BlockedUntil *time.Time  `json:"blocked_until"`
 	ExpiresAt    time.Time   `json:"expires_at"`
-}
-
-type RequestIdempotency struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Operation      string    `json:"operation"`
-	Key            string    `json:"key"`
-	Fingerprint    string    `json:"fingerprint"`
-	Token          uuid.UUID `json:"token"`
-	LeaseDeadline  time.Time `json:"lease_deadline"`
-	Result         []byte    `json:"result"`
-	HttpStatus     *int32    `json:"http_status"`
-	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Session struct {

@@ -41,7 +41,6 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         params: {
           path: {id: problemId},
           query: {expected_revision: draft.revision},
-          header: {"Idempotency-Key": crypto.randomUUID()},
         },
         body: body as unknown as {package: string},
       });

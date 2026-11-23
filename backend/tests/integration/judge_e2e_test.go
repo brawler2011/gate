@@ -5,9 +5,6 @@ package integration
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"io"
 	"log/slog"
 	"maps"
@@ -84,7 +81,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	usersRepo := pgstore.NewUsersRepo(dbPool)
 	contestsRepo := pgstore.NewContestsRepo(dbPool)
 	submissionsRepo := pgstore.NewSubmissionsRepo(dbPool)
-	drafts := pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
+	drafts := pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
 
 	userID := uuid.New()
 	email := "test@example.com"
@@ -112,14 +109,13 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 			Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	d.Tests = []problemsmodel.DraftTest{test(1, 40*points.Unit, "1", "2"), test(2, 60*points.Unit, "3", "2")}
-	saved, err := drafts.SaveDraft(ctx, mutationKey(org.ID, "edit", d), d)
+	_, err = drafts.SaveDraft(ctx, d)
 	require.NoError(t, err)
-	require.NotEmpty(t, saved.Body)
 	d, err = drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 
 	limits := dbfixtures.BuildLimits(t)
-	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
+	_, err = drafts.EnqueueBuild(ctx, problemID, d.Revision, problemsmodel.BuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
@@ -279,7 +275,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	usersRepo := pgstore.NewUsersRepo(dbPool)
 	h.contests = pgstore.NewContestsRepo(dbPool)
 	h.submissions = pgstore.NewSubmissionsRepo(dbPool)
-	h.drafts = pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
+	h.drafts = pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
 
 	email := "test@example.com"
 	require.NoError(t, usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{Id: h.userID, Username: "testuser", Email: &email, PasswordHash: "hashed_password", Role: accessmodel.UserRoleUser}))
@@ -312,12 +308,11 @@ func (h *judgeHarness) build(t *testing.T, shortName string, edit func(*problems
 	d, err := h.drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	edit(&d)
-	saved, err := h.drafts.SaveDraft(ctx, mutationKey(h.orgID, "edit", d), d)
+	_, err = h.drafts.SaveDraft(ctx, d)
 	require.NoError(t, err)
-	require.NotEmpty(t, saved.Body)
 	d, err = h.drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
-	_, err = h.drafts.EnqueueBuild(ctx, mutationKey(h.orgID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: h.pipeline.Languages.Langs, Limits: h.limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
+	_, err = h.drafts.EnqueueBuild(ctx, problemID, d.Revision, problemsmodel.BuildOptions{Languages: h.pipeline.Languages.Langs, Limits: h.limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	build, err := h.drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
@@ -433,11 +428,6 @@ func TestStandardCheckerE2E(t *testing.T) {
 	}
 }
 
-func mutationKey(org uuid.UUID, operation string, body any) problemsmodel.MutationKey {
-	data, _ := json.Marshal(body)
-	sum := sha256.Sum256(data)
-	return problemsmodel.MutationKey{OrganizationID: org, Operation: operation, Key: uuid.NewString(), Fingerprint: hex.EncodeToString(sum[:]), Token: uuid.New()}
-}
 
 // contestOwner keeps the judged user a plain participant.
 func contestOwner(t *testing.T, ctx context.Context, db dbfixtures.Execer) uuid.UUID {

@@ -68,7 +68,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	id, err := h.ProblemDrafts.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID, IdempotencyKey: params.IdempotencyKey})
+	id, err := h.ProblemDrafts.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
 	if err != nil {
 		return nil, err
 	}

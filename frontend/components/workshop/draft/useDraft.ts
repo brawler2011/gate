@@ -114,7 +114,6 @@ export const useSaveDraft = (problemId: string): SaveDraft => {
           params: {
             path: {id: problemId},
             query: {expected_revision: next.revision},
-            header: {"Idempotency-Key": crypto.randomUUID()},
           },
           body: next,
         }),
@@ -189,7 +188,6 @@ export const useUploadToDraft = (
           params: {
             path: {id: problemId},
             query: {expected_revision: current.revision},
-            header: {"Idempotency-Key": crypto.randomUUID()},
           },
           body: body as unknown as {metadata: string},
         }),

@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -32,9 +33,9 @@ func testBuildOptions() postgres.ProblemBuildOptions {
 func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d := draftFixture(t)
-	oid := insertAvailableObject(t, ctx, pool, org)
+	oid := draftObject(t, ctx, pool, org, d.ProblemID)
 	d = makeBuildableDraft(d, oid)
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -43,7 +44,7 @@ func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.P
 
 func enqueue(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d model.Draft) {
 	t.Helper()
-	_, err := repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, testBuildOptions())
+	_, err := repo.EnqueueBuild(ctx, d.ProblemID, d.Revision, testBuildOptions())
 	require.NoError(t, err)
 }
 
@@ -63,14 +64,14 @@ func countRows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, query stri
 // A racing build snapshots its requested revision or conflicts; it never mixes revisions.
 func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 	t.Parallel()
-	ctx, _, repo, org, d, _ := buildableFixture(t)
+	ctx, _, repo, _, d, _ := buildableFixture(t)
 	built, conflicted := 0, 0
 	for attempt := 0; attempt < 8; attempt++ {
 		current, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
 		before := current
 		before.Title = "before " + uuid.NewString()
-		_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", before), before)
+		_, err = repo.SaveDraft(ctx, before)
 		require.NoError(t, err)
 		requested, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
@@ -84,12 +85,12 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			_, buildErr = repo.EnqueueBuild(ctx, mutationKey(org, "build", requested.Revision), requested.ProblemID, requested.Revision, testBuildOptions())
+			_, buildErr = repo.EnqueueBuild(ctx, requested.ProblemID, requested.Revision, testBuildOptions())
 		}()
 		go func() {
 			defer wg.Done()
 			<-start
-			_, editErr = repo.SaveDraft(ctx, mutationKey(org, "edit", edited), edited)
+			_, editErr = repo.SaveDraft(ctx, edited)
 		}()
 		close(start)
 		wg.Wait()
@@ -108,21 +109,24 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 	t.Logf("built=%d conflicted=%d", built, conflicted)
 }
 
-// The database rejects mismatches between snapshot objects and held references.
-func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
-	t.Parallel()
-	ctx, pool, _, org, d, oid := buildableFixture(t)
-	snapshot := `{"organization_id":"` + org.String() + `",` +
-		`"input_objects":["` + oid.String() + `"],"draft":{"problem_id":"` + d.ProblemID.String() + `","revision":` + "2" + `,` +
-		`"tests":[{"input":{"object_id":"` + oid.String() + `"},"answer":{"object_id":null}}],"assets":[]}}`
-	_, err := pool.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,state,max_attempts,deadline)
- VALUES($1,$2,$3,2,$4::jsonb,'queued',1,clock_timestamp()+interval '1 minute')`,
-		uuid.New(), d.ProblemID, org, snapshot)
-	require.ErrorContains(t, err, "snapshot input object set mismatch")
-}
-
 func packageObject(org uuid.UUID) model.StoredObject {
 	return model.NewStoredObject(org, model.UploadSpec{Purpose: "package", SHA256: strings.Repeat("a", 64), Size: 10})
+}
+
+// An attempt whose lease ran out publishes nothing, even before recovery requeues it.
+func TestExpiredLeaseCannotPublish(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d, _ := buildableFixture(t)
+	enqueue(t, ctx, repo, org, d)
+	build, err := repo.ClaimBuild(ctx, time.Minute)
+	require.NoError(t, err)
+	expireLease(t, ctx, pool, build.ID)
+	output := packageObject(org)
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
+	require.ErrorIs(t, err, pkg.ErrConflict)
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, output.ID))
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_builds WHERE id=$1 AND state='running'`, build.ID))
 }
 
 // Recovered attempts cannot publish; the current attempt publishes one replayable package.
@@ -155,29 +159,20 @@ func TestStaleAttemptCannotPublish(t *testing.T) {
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
 }
 
-// Foreign keys prevent referenced-object deletion and references across organizations.
-func TestObjectReferencesAreForeignKeys(t *testing.T) {
+// GC keeps every object a draft, build or package still references.
+func TestGCKeepsReferencedObjects(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	input := insertAvailableObject(t, ctx, pool, org)
-	answer := insertAvailableObject(t, ctx, pool, org)
-	asset := insertAvailableObject(t, ctx, pool, org)
-	packageAsset := insertAvailableObject(t, ctx, pool, org)
+	input := draftObject(t, ctx, pool, org, d.ProblemID)
+	answer := draftObject(t, ctx, pool, org, d.ProblemID)
+	asset := draftObject(t, ctx, pool, org, d.ProblemID)
 	d = makeBuildableDraft(d, input)
 	d.Tests[0].Answer.ObjectID = &answer
 	d.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: asset}}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
-	requireHeld := func(object uuid.UUID, constraint string) {
-		t.Helper()
-		deleted, err := repo.DeleteObject(ctx, object)
-		require.NoError(t, err)
-		require.False(t, deleted)
-		_, err = pool.Exec(ctx, `DELETE FROM stored_objects WHERE id=$1`, object)
-		require.ErrorContains(t, err, constraint)
-	}
 	for _, object := range []uuid.UUID{input, answer, asset} {
-		requireHeld(object, "problem_draft_objects_object_id_organization_id_fkey")
+		require.True(t, objectExists(t, ctx, pool, repo, object), "the draft references it")
 	}
 
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -186,155 +181,88 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	output := packageObject(org)
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	d.Tests, d.Assets = nil, nil
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	d.Tests = nil
+	_, err = repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
-	requireHeld(input, "problem_build_inputs_object_id_fkey")
-	requireHeld(output.ID, "problem_packages_object_id_fkey")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'b.png',$3)`, packageID, org, packageAsset)
-	require.NoError(t, err)
-	requireHeld(packageAsset, "problem_package_assets_object_id_fkey")
-
-	other := helperCreateOrg(t, ctx, pool, "other-"+uuid.NewString(), "Other")
-	foreign := insertAvailableObject(t, ctx, pool, other)
-	d, err = repo.GetDraft(ctx, d.ProblemID)
-	require.NoError(t, err)
-	d.Assets = []model.DraftAsset{{Name: "f.png", ObjectID: foreign}}
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
-	require.ErrorIs(t, err, pkg.ErrConflict, "a draft cannot reference another organization's object")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'f.png',$3)`, packageID, org, foreign)
-	require.ErrorContains(t, err, "problem_package_assets_object_id_fkey")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'f.png',$3)`, packageID, other, foreign)
-	require.ErrorContains(t, err, "problem_package_assets_package_id_fkey", "the reference's organization is its owner's")
+	require.True(t, objectExists(t, ctx, pool, repo, input), "the build snapshot references it")
+	require.True(t, objectExists(t, ctx, pool, repo, output.ID), "the package references it")
+	require.True(t, objectExists(t, ctx, pool, repo, asset), "the package assets reference it")
 
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
-	for _, object := range []uuid.UUID{input, answer, asset, packageAsset, output.ID} {
-		deleted, err := repo.DeleteObject(ctx, object)
-		require.NoError(t, err)
-		require.True(t, deleted)
+	require.True(t, objectExists(t, ctx, pool, repo, asset), "the draft still references it")
+	for _, object := range []uuid.UUID{input, answer, output.ID} {
+		require.False(t, objectExists(t, ctx, pool, repo, object))
 	}
 }
 
-// A reference committed while GC waits prevents object deletion.
-func TestObjectDeletionWaitsForConcurrentReference(t *testing.T) {
+// A draft only references objects stored with it, so GC never races a new reference.
+func TestDraftRejectsObjectsItDoesNotHold(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	object := insertAvailableObject(t, ctx, pool, org)
-
-	tx, err := pool.Begin(ctx)
-	require.NoError(t, err)
-	defer func() { _ = tx.Rollback(ctx) }()
-	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_objects(problem_id,organization_id,object_id) VALUES($1,$2,$3)`, d.ProblemID, org, object)
-	require.NoError(t, err)
-
-	type outcome struct {
-		deleted bool
-		err     error
+	other := helperCreateOrg(t, ctx, pool, "other-"+uuid.NewString(), "Other")
+	for name, object := range map[string]uuid.UUID{
+		"another organization's object": insertAvailableObject(t, ctx, pool, other),
+		"an unattached object":          insertAvailableObject(t, ctx, pool, org),
+	} {
+		candidate := d
+		candidate.Assets = []model.DraftAsset{{Name: "f.png", ObjectID: object}}
+		_, err := repo.SaveDraft(ctx, candidate)
+		require.ErrorIs(t, err, pkg.ErrConflict, name)
 	}
-	done := make(chan outcome, 1)
-	go func() {
-		deleted, err := repo.DeleteObject(ctx, object)
-		done <- outcome{deleted, err}
-	}()
-	select {
-	case <-done:
-		t.Fatal("the deletion must wait for the referencing transaction")
-	case <-time.After(300 * time.Millisecond):
-	}
-	require.NoError(t, tx.Commit(ctx))
 
-	got := <-done
-	require.NoError(t, got.err)
-	require.False(t, got.deleted, "a reference committed during the wait forbids deletion")
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
+	asset := draftObject(t, ctx, pool, org, d.ProblemID)
+	d.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: asset}}
+	_, err := repo.SaveDraft(ctx, d)
+	require.NoError(t, err)
+	d, err = repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+	removed := d
+	removed.Assets = nil
+	_, err = repo.SaveDraft(ctx, removed)
+	require.NoError(t, err)
+	d.Revision++
+	_, err = repo.SaveDraft(ctx, d)
+	require.ErrorIs(t, err, pkg.ErrConflict, "a dropped object cannot come back")
 }
 
-// Concurrent GC and reference creation cannot leave a dangling reference.
-func TestObjectDeletionRacingWithNewReference(t *testing.T) {
+// GC racing with edits that keep an object never deletes it.
+func TestObjectDeletionRacingWithEdits(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	for attempt := 0; attempt < 10; attempt++ {
-		object := insertAvailableObject(t, ctx, pool, org)
+	object := draftObject(t, ctx, pool, org, d.ProblemID)
+	d.Assets = []model.DraftAsset{{Name: "a0.png", ObjectID: object}}
+	_, err := repo.SaveDraft(ctx, d)
+	require.NoError(t, err)
+	for attempt := 1; attempt <= 10; attempt++ {
 		current, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
-		candidate := current
-		candidate.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: object}}
-
-		var deleted bool
-		var deleteErr, linkErr error
+		current.Assets[0].Name = fmt.Sprintf("a%d.png", attempt)
+		var gcErr, editErr error
 		var wg sync.WaitGroup
 		start := make(chan struct{})
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
 			<-start
-			deleted, deleteErr = repo.DeleteObject(ctx, object)
+			_, gcErr = repo.DeleteUnreferencedObjects(ctx)
 		}()
 		go func() {
 			defer wg.Done()
 			<-start
-			_, linkErr = repo.SaveDraft(ctx, mutationKey(org, "edit", candidate), candidate)
+			_, editErr = repo.SaveDraft(ctx, current)
 		}()
 		close(start)
 		wg.Wait()
-		require.NoError(t, deleteErr)
-		if deleted {
-			require.ErrorIs(t, linkErr, pkg.ErrConflict, "a deleted object cannot gain a reference")
-			require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
-			continue
-		}
-		require.NoError(t, linkErr)
-		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, object))
-		cleared, err := repo.GetDraft(ctx, d.ProblemID)
-		require.NoError(t, err)
-		cleared.Assets = nil
-		_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", cleared), cleared)
-		require.NoError(t, err)
+		require.NoError(t, gcErr)
+		require.NoError(t, editErr)
+		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
 	}
-}
-
-// An expired executor cannot finalize or publish its uploaded objects after takeover.
-func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
-	t.Parallel()
-	ctx, pool, repo, org, d := draftFixture(t)
-	change := model.UploadChange{AssetName: "a.png"}
-	key := mutationKey(org, "upload", change)
-	replay, err := repo.BeginOperation(ctx, key)
-	require.NoError(t, err)
-	require.Nil(t, replay)
-	spec := model.UploadSpec{Purpose: "asset", SHA256: strings.Repeat("a", 64), Size: 5}
-	stale := model.NewStoredObject(org, spec)
-	_, err = pool.Exec(ctx, `UPDATE request_idempotency SET lease_deadline=clock_timestamp()-interval '1 second' WHERE key=$1`, key.Key)
-	require.NoError(t, err)
-	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": stale})
-	require.ErrorIs(t, err, pkg.ErrConflict, "an expired executor cannot finalize")
-
-	retry := key
-	retry.Token = uuid.New()
-	replay, err = repo.BeginOperation(ctx, retry)
-	require.NoError(t, err)
-	require.Nil(t, replay)
-	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": stale})
-	require.ErrorIs(t, err, pkg.ErrConflict, "a taken-over executor cannot finalize")
-	fresh := model.NewStoredObject(org, spec)
-	result, err := repo.FinalizeUploads(ctx, retry, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": fresh})
-	require.NoError(t, err)
-	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, fresh.ID))
-
-	// A lost response replays the stored result before anything is uploaded again.
-	again := retry
-	again.Token = uuid.New()
-	replay, err = repo.BeginOperation(ctx, again)
-	require.NoError(t, err)
-	require.NotNil(t, replay)
-	require.JSONEq(t, string(result.Body), string(replay.Body))
 }
 
 type sweepStore struct {
@@ -360,16 +288,17 @@ func (s *sweepStore) ListObjects(context.Context, string, string) ([]storage.Obj
 func TestGCDeletesUnreferencedObjectsAndOrphanedBytes(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	referenced := insertAvailableObject(t, ctx, pool, org)
+	referenced := draftObject(t, ctx, pool, org, d.ProblemID)
 	unreferenced := insertAvailableObject(t, ctx, pool, org)
 	d.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: referenced}}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	key := func(id uuid.UUID) string { return "objects/" + org.String() + "/" + id.String() }
 	old, young := time.Now().Add(-2*time.Hour), time.Now()
 	orphanOld, orphanYoung := key(uuid.New()), key(uuid.New())
 	store := &sweepStore{objects: map[string]time.Time{
-		key(referenced): old, key(unreferenced): young, orphanOld: old, orphanYoung: young,
+		// Old bytes: a parallel test's GC may delete the unreferenced row first, leaving them to the orphan sweep.
+		key(referenced): old, key(unreferenced): old, orphanOld: old, orphanYoung: young,
 	}}
 	gc := builder.GC{Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Repo: repo, Store: store, Bucket: "objects", TempDir: t.TempDir(),
 		ObjectRetention: time.Hour, BuildRetention: time.Hour, PackageRetention: time.Hour, Interval: time.Minute}
@@ -387,7 +316,7 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))
 	unused := f.pack(t, f.problem, time.Now().Add(-2*time.Hour))
-	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10}, time.Minute)
+	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10})
 
 	var unusedObject, pinnedObject uuid.UUID
 	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT object_id FROM problem_packages WHERE id=$1`, unused).Scan(&unusedObject))
@@ -396,12 +325,8 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 
 	require.Zero(t, countRows(t, f.ctx, f.pool, `SELECT count(*) FROM problem_packages WHERE id=$1`, unused))
 	require.Equal(t, 1, countRows(t, f.ctx, f.pool, `SELECT count(*) FROM problem_packages WHERE id=$1`, f.original), "pinned package is kept")
-	deleted, err := drafts.DeleteObject(f.ctx, unusedObject)
-	require.NoError(t, err)
-	require.True(t, deleted, "the archive of the removed Package becomes collectable")
-	deleted, err = drafts.DeleteObject(f.ctx, pinnedObject)
-	require.NoError(t, err)
-	require.False(t, deleted)
+	require.False(t, objectExists(t, f.ctx, f.pool, drafts, unusedObject), "the archive of the removed Package becomes collectable")
+	require.True(t, objectExists(t, f.ctx, f.pool, drafts, pinnedObject))
 
 	// Even direct SQL cannot remove a pinned Package: the foreign keys restrict it.
 	require.Error(t, func() error {
@@ -413,10 +338,10 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, model.ProblemBuild, model.StoredObject, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
-	asset := insertAvailableObject(t, ctx, pool, org)
+	asset := draftObject(t, ctx, pool, org, d.ProblemID)
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: asset}}
 	d.Statements = []model.DraftStatement{{Language: "ru", Legend: "Сложите числа"}}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -447,23 +372,17 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	// The draft drops the asset and changes its statement; the Package keeps both.
 	d.Assets = nil
 	d.Statements = []model.DraftStatement{{Language: "ru", Legend: "changed"}}
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err = repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	statement, err = repo.GetPackageStatement(ctx, packageID)
 	require.NoError(t, err)
 	require.Equal(t, "Сложите числа", statement.Statements[0].Legend)
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
-	deleted, err := repo.DeleteObject(ctx, asset)
-	require.NoError(t, err)
-	require.False(t, deleted, "an asset of a live Package is not collected")
-	_, err = pool.Exec(ctx, `UPDATE problem_package_assets SET name='other.png' WHERE package_id=$1`, packageID)
-	require.ErrorContains(t, err, "package is immutable")
+	require.True(t, objectExists(t, ctx, pool, repo, asset), "an asset of a live Package is not collected")
 
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_package_assets WHERE package_id=$1`, packageID))
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
-	deleted, err = repo.DeleteObject(ctx, asset)
-	require.NoError(t, err)
-	require.True(t, deleted, "the asset of a pruned Package becomes collectable")
+	require.False(t, objectExists(t, ctx, pool, repo, asset), "the asset of a pruned Package becomes collectable")
 }

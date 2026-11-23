@@ -24,7 +24,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	contestOrg := s.createOrganization("contest-org", "Contest Organization", admin.Id)
 
 	problemTitle := "Submission Problem"
-	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 		Title:          problemTitle,
 		OrganizationID: corev1.NewOptUUID(problemOrg.ID),
 		TemplateID:     "builtin:a-plus-b",
@@ -170,7 +170,7 @@ func (s *IntegrationTestSuite) TestUpsolving() {
 	participant := s.createUser("participant_upsolving", accessmodel.UserRoleUser)
 	outsider := s.createUser("outsider_upsolving", accessmodel.UserRoleUser)
 	org := s.createOrganization("upsolving-org", "Upsolving Organization", admin.Id)
-	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 		Title: "Upsolving Problem", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	contestID := uuid.New()

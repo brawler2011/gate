@@ -1,16 +1,15 @@
 -- Lock-then-recheck queries use separate statements so each sees a fresh snapshot.
 
--- name: ListUnreferencedObjects :many
--- Foreign keys arbitrate deletion; this query only narrows candidates.
-SELECT o.id,o.key FROM stored_objects o
-WHERE NOT EXISTS(SELECT 1 FROM problem_draft_objects d WHERE d.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_build_inputs b WHERE b.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
-ORDER BY o.id LIMIT 100;
-
--- name: DeleteStoredObject :exec
-DELETE FROM stored_objects WHERE id=$1;
+-- name: DeleteUnreferencedObjects :many
+-- A reference is only ever copied from a committed one, so any statement snapshot sees every live object referenced.
+DELETE FROM stored_objects WHERE id IN (
+ SELECT o.id FROM stored_objects o
+ WHERE NOT EXISTS(SELECT 1 FROM problem_drafts d WHERE o.id=ANY(d.object_ids))
+  AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
+  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
+ ORDER BY o.id LIMIT 100)
+RETURNING key;
 
 -- name: ListStoredObjectKeys :many
 SELECT key FROM stored_objects WHERE key=ANY(sqlc.arg(keys)::text[]);
@@ -54,13 +53,8 @@ DELETE FROM problem_builds WHERE id=$1;
 -- name: BuildAttemptActive :one
 SELECT EXISTS(SELECT 1 FROM problem_builds WHERE id=$1 AND state='running' AND lease_token=$2 AND lease_deadline>clock_timestamp())::boolean AS active;
 
--- name: ListBuildInputObjects :many
-SELECT o.* FROM problem_build_inputs bi JOIN stored_objects o ON o.id=bi.object_id
-WHERE bi.build_id=$1 ORDER BY o.id;
-
--- name: BuildLeaseValid :one
-SELECT (state='running' AND lease_token=sqlc.arg(token) AND lease_deadline>clock_timestamp() AND deadline>clock_timestamp())::boolean AS valid
-FROM problem_builds WHERE id=sqlc.arg(id);
+-- name: ListStoredObjects :many
+SELECT * FROM stored_objects WHERE id=ANY(sqlc.arg(ids)::uuid[]) ORDER BY id;
 
 -- name: SucceededBuildPackageID :one
 SELECT p.id FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE b.id=$1 AND b.state='succeeded';
@@ -74,8 +68,8 @@ INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,pa
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16);
 
 -- name: InsertPackageAssets :exec
-INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
-SELECT sqlc.arg(package_id)::uuid,sqlc.arg(organization_id)::uuid,a.name,a.object_id
+INSERT INTO problem_package_assets(package_id,name,object_id)
+SELECT sqlc.arg(package_id)::uuid,a.name,a.object_id
 FROM jsonb_to_recordset(sqlc.arg(assets)::jsonb) a(name text,object_id uuid);
 
 -- name: ReadPackageStatement :one
@@ -87,16 +81,12 @@ FROM problem_packages p WHERE p.id=$1;
 SELECT a.name,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
 WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.name;
 
--- name: MarkBuildSucceeded :exec
+-- name: MarkBuildSucceeded :execrows
 UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL,finished_at=clock_timestamp()
 WHERE id=$1 AND state='running' AND lease_token=$2 AND lease_deadline>clock_timestamp();
 
 -- name: ReadPackageDescriptor :one
 SELECT id,problem_id,object_id FROM problem_packages WHERE id=$1;
-
--- name: LockOperationForFinalize :one
-SELECT token,fingerprint,result,http_status FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 FOR UPDATE;
 
 -- name: ProblemOrganizationID :one
 SELECT organization_id FROM problems WHERE id=$1;
@@ -105,9 +95,6 @@ SELECT organization_id FROM problems WHERE id=$1;
 INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,state,max_attempts,deadline)
 VALUES(sqlc.arg(id),sqlc.arg(problem_id),sqlc.arg(organization_id),sqlc.arg(revision),sqlc.arg(snapshot)::jsonb,
  'queued',sqlc.arg(max_attempts),clock_timestamp()+sqlc.arg(duration_ms)::bigint*interval '1 millisecond');
-
--- name: InsertBuildInput :exec
-INSERT INTO problem_build_inputs(build_id,organization_id,object_id)VALUES($1,$2,$3);
 
 -- name: BuildExhausted :one
 SELECT (deadline<=clock_timestamp() OR attempt>=max_attempts)::boolean AS exhausted FROM problem_builds WHERE id=$1;
@@ -156,40 +143,7 @@ UPDATE problem_builds SET state='cancelled',lease_token=NULL,lease_deadline=NULL
 -- name: ListProblemBuildIDs :many
 SELECT id FROM problem_builds WHERE problem_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100;
 
--- name: ReserveOperationRow :exec
-INSERT INTO request_idempotency(organization_id,operation,key,fingerprint,token,lease_deadline)
-VALUES(sqlc.arg(organization_id),sqlc.arg(operation),sqlc.arg(key),sqlc.arg(fingerprint),sqlc.arg(token),
- clock_timestamp()+sqlc.arg(lease_ms)::bigint*interval '1 millisecond') ON CONFLICT DO NOTHING;
-
--- name: LockOperationRow :one
-SELECT fingerprint,token,result,http_status,(lease_deadline>clock_timestamp())::boolean AS active FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 FOR UPDATE;
-
--- name: OperationLeaseActive :one
-SELECT (lease_deadline>clock_timestamp())::boolean AS active FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3;
-
--- name: TakeOverOperation :exec
-UPDATE request_idempotency SET token=sqlc.arg(token),lease_deadline=clock_timestamp()+sqlc.arg(lease_ms)::bigint*interval '1 millisecond'
-WHERE organization_id=sqlc.arg(organization_id) AND operation=sqlc.arg(operation) AND key=sqlc.arg(key);
-
--- name: FinishOperationRow :execrows
-UPDATE request_idempotency SET result=sqlc.arg(result)::jsonb,http_status=sqlc.arg(http_status)
-WHERE organization_id=sqlc.arg(organization_id) AND operation=sqlc.arg(operation) AND key=sqlc.arg(key) AND token=sqlc.arg(token)
- AND lease_deadline>clock_timestamp() AND result IS NULL;
-
--- name: ReadOperationResult :one
-SELECT result,http_status FROM request_idempotency
-WHERE organization_id=$1 AND operation=$2 AND key=$3 AND fingerprint=$4;
-
 -- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- content=$9 WHERE problem_id=$1;
-
--- name: DeleteDraftObjects :exec
-DELETE FROM problem_draft_objects WHERE problem_id=$1;
-
--- name: InsertDraftObject :exec
-INSERT INTO problem_draft_objects(problem_id,organization_id,object_id)
-SELECT d.problem_id,d.organization_id,sqlc.arg(object_id)::uuid FROM problem_drafts d WHERE d.problem_id=sqlc.arg(problem_id)::uuid;
+ content=$9,object_ids=$10 WHERE problem_id=$1;
 

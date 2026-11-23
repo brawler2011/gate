@@ -12,6 +12,17 @@ import (
 	"github.com/google/uuid"
 )
 
+const draftObjectIDs = `-- name: DraftObjectIDs :one
+SELECT object_ids FROM problem_drafts WHERE problem_id=$1
+`
+
+func (q *Queries) DraftObjectIDs(ctx context.Context, problemID uuid.UUID) ([]uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, draftObjectIDs, problemID)
+	var object_ids []uuid.UUID
+	err := row.Scan(&object_ids)
+	return object_ids, err
+}
+
 const insertProblemDraft = `-- name: InsertProblemDraft :exec
 INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
 SELECT id,organization_id,$1,$2,'pass-fail',1000,256 FROM problems WHERE id=$3

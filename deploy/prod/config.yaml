@@ -61,7 +61,6 @@ problems:
   lease: 30s
   poll: 1s
   duration: 30m
-  operation_lease: 10m
   upload_ttl: 5m
   gc_interval: 1m
   object_retention: 24h

@@ -15,73 +15,54 @@ import (
 
 type ProblemBuildOptions = model.BuildOptions
 
-func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, options ProblemBuildOptions) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, id uuid.UUID, expected int64, options ProblemBuildOptions) (uuid.UUID, error) {
 	if options.MaxAttempts < 1 || options.Duration <= 0 || options.Lease <= 0 {
-		return model.MutationResult{}, pkg.ErrInvalid
+		return uuid.Nil, pkg.ErrInvalid
 	}
-	return authorizedMutation(func() (model.MutationResult, error) { return r.enqueueBuild(ctx, k, id, expected, options) })
+	return serializableRetry(func() (uuid.UUID, error) { return r.enqueueBuild(ctx, id, expected, options) })
 }
 
-func (r *ProblemDraftsRepo) enqueueBuild(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, options ProblemBuildOptions) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) enqueueBuild(ctx context.Context, id uuid.UUID, expected int64, options ProblemBuildOptions) (uuid.UUID, error) {
 	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
-		return model.MutationResult{}, err
+		return uuid.Nil, err
 	}
 	defer rollback(ctx, tx)
-	replay, err := r.reserveOperation(ctx, tx, k)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	if replay != nil {
-		return *replay, nil
-	}
 	q := sqlc.New(tx)
 	if err := authorizeEdit(ctx, q, id); err != nil {
-		return model.MutationResult{}, err
+		return uuid.Nil, err
 	}
 	revision, err := q.LockProblemDraft(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, dbError("enqueue build", err)
+		return uuid.Nil, dbError("enqueue build", err)
 	}
 	if revision != expected {
-		return model.MutationResult{}, pkg.ErrStaleRevision
+		return uuid.Nil, pkg.ErrStaleRevision
 	}
 	org, err := q.ProblemOrganizationID(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, dbError("enqueue build", err)
-	}
-	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.ErrForbidden
+		return uuid.Nil, dbError("enqueue build", err)
 	}
 	draft, err := readProblemDraft(ctx, q, id)
 	if err != nil {
-		return model.MutationResult{}, err
+		return uuid.Nil, err
 	}
 	if err := draft.ValidateBuild(r.quotas, options.Languages); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "draft cannot be built")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "draft cannot be built")
 	}
 	snapshot := model.BuildSnapshot{OrganizationID: org, Draft: draft, Limits: options.Limits, InputObjects: draft.InputObjects()}
 	data, err := json.Marshal(snapshot)
 	if err != nil {
-		return model.MutationResult{}, dbError("encode build snapshot", err)
+		return uuid.Nil, dbError("encode build snapshot", err)
 	}
 	buildID := uuid.New()
 	if err := q.InsertProblemBuild(ctx, sqlc.InsertProblemBuildParams{
 		ID: buildID, ProblemID: id, OrganizationID: org, Revision: revision, Snapshot: data,
 		MaxAttempts: int32(options.MaxAttempts), DurationMs: options.Duration.Milliseconds(), //nolint:gosec // validated small attempt count
 	}); err != nil {
-		return model.MutationResult{}, dbError("insert build", err)
+		return uuid.Nil, dbError("insert build", err)
 	}
-	for _, oid := range snapshot.InputObjects {
-		if err := q.InsertBuildInput(ctx, sqlc.InsertBuildInputParams{BuildID: buildID, OrganizationID: org, ObjectID: oid}); err != nil {
-			return model.MutationResult{}, objectReferenceErr(err, "insert build input")
-		}
-	}
-	result, err := finishOperation(ctx, tx, k, 202, map[string]any{"build_id": buildID, "revision": revision})
-	if err != nil {
-		return result, err
-	}
-	return r.resolveMutation(ctx, tx, k, result)
+	return buildID, commitTx(ctx, tx)
 }
 
 func mapProblemBuild(b sqlc.ProblemBuild) (model.ProblemBuild, error) {
@@ -274,45 +255,32 @@ func (r *ProblemDraftsRepo) recoverBuild(ctx context.Context, id uuid.UUID) erro
 	return commitTx(ctx, tx)
 }
 
-func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey, id uuid.UUID) (model.MutationResult, error) {
-	return authorizedMutation(func() (model.MutationResult, error) { return r.cancelBuild(ctx, k, id) })
+func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, id uuid.UUID) error {
+	_, err := serializableRetry(func() (struct{}, error) { return struct{}{}, r.cancelBuild(ctx, id) })
+	return err
 }
 
-func (r *ProblemDraftsRepo) cancelBuild(ctx context.Context, k model.MutationKey, id uuid.UUID) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) cancelBuild(ctx context.Context, id uuid.UUID) error {
 	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
-		return model.MutationResult{}, err
+		return err
 	}
 	defer rollback(ctx, tx)
-	replay, err := r.reserveOperation(ctx, tx, k)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	if replay != nil {
-		return *replay, nil
-	}
 	q := sqlc.New(tx)
 	b, err := q.LockProblemBuild(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, dbError("cancel build", err)
-	}
-	if b.OrganizationID != k.OrganizationID {
-		return model.MutationResult{}, pkg.ErrForbidden
+		return dbError("cancel build", err)
 	}
 	if err := authorizeEdit(ctx, q, b.ProblemID); err != nil {
-		return model.MutationResult{}, err
+		return err
 	}
 	if b.State != "queued" && b.State != "running" {
-		return model.MutationResult{}, pkg.ErrBuildFinished
+		return pkg.ErrBuildFinished
 	}
 	if err := q.CancelBuildRow(ctx, id); err != nil {
-		return model.MutationResult{}, dbError("cancel build", err)
+		return dbError("cancel build", err)
 	}
-	result, err := finishOperation(ctx, tx, k, 200, map[string]any{"build_id": id, "state": "cancelled"})
-	if err != nil {
-		return result, err
-	}
-	return r.resolveMutation(ctx, tx, k, result)
+	return commitTx(ctx, tx)
 }
 
 func (r *ProblemDraftsRepo) ListBuilds(ctx context.Context, id uuid.UUID) ([]model.ProblemBuild, error) {

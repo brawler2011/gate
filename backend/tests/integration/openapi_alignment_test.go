@@ -147,7 +147,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 
 		// Imports without a package return Bad Request.
 		org := s.createOrganization("import_prob_org", "Import Prob Org", admin.Id)
-		problemResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		problemResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 			Title:          "Import Problem",
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",

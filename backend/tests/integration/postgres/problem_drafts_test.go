@@ -4,8 +4,6 @@ package postgres_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -34,15 +32,10 @@ func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.Probl
 	// Draft writes authorize the caller, so the fixture acts as the problem owner.
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
 	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Owner: owner, Title: "Initial", ShortName: "draft"}))
-	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
+	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
 	d, err := repo.GetDraft(ctx, id)
 	require.NoError(t, err)
 	return ctx, pool, repo, org, d
-}
-func mutationKey(org uuid.UUID, op string, body any) model.MutationKey {
-	b, _ := json.Marshal(body)
-	hash := sha256.Sum256(b)
-	return model.MutationKey{OrganizationID: org, Operation: op, Key: uuid.NewString(), Fingerprint: hex.EncodeToString(hash[:]), Token: uuid.New()}
 }
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	g := uuid.New()
@@ -59,9 +52,30 @@ func insertAvailableObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	require.NoError(t, err)
 	return id
 }
-func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
+
+// draftObject stores an object as an upload does, so the draft may reference it.
+func draftObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool, org, problem uuid.UUID) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := pool.Exec(ctx, `WITH o AS (INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size) VALUES($1,$2,'test-input',$4,$3,0))
+UPDATE problem_drafts SET object_ids=array_append(object_ids,$1) WHERE problem_id=$5`,
+		id, org, strings.Repeat("0", 64), "objects/"+org.String()+"/"+id.String(), problem)
+	require.NoError(t, err)
+	return id
+}
+
+// objectExists runs object GC and reports whether the object survived it.
+func objectExists(t *testing.T, ctx context.Context, pool *pgxpool.Pool, repo *postgres.ProblemDraftsRepo, id uuid.UUID) bool {
+	t.Helper()
+	_, err := repo.DeleteUnreferencedObjects(ctx)
+	require.NoError(t, err)
+	var n int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM stored_objects WHERE id=$1`, id).Scan(&n))
+	return n == 1
+}
+func TestProblemDraftConcurrentEdits(t *testing.T) {
 	t.Parallel()
-	ctx, pool, repo, org, d := draftFixture(t)
+	ctx, _, repo, _, d := draftFixture(t)
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original"}}
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -73,7 +87,7 @@ func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", candidate), candidate)
+			_, err := repo.SaveDraft(ctx, candidate)
 			errs <- err
 		}()
 	}
@@ -95,47 +109,25 @@ func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
 	current, err := repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
 	require.Equal(t, int64(2), current.Revision)
-	current.Title = "After retry"
-	key := mutationKey(org, "edit", current)
-	first, err := repo.SaveDraft(ctx, key, current)
-	require.NoError(t, err)
-	key.Token = uuid.New() // lost HTTP response: a new executor must replay the result.
-	second, err := repo.SaveDraft(ctx, key, current)
-	require.NoError(t, err)
-	require.JSONEq(t, string(first.Body), string(second.Body))
-	var revision int64
-	require.NoError(t, pool.QueryRow(ctx, `SELECT revision FROM problem_drafts WHERE problem_id=$1`, d.ProblemID).Scan(&revision))
-	require.Equal(t, int64(3), revision)
-	key.Fingerprint = strings.Repeat("f", 64)
-	_, err = repo.SaveDraft(ctx, key, current)
-	require.ErrorIs(t, err, pkg.ErrConflict)
 }
 func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	oid := insertAvailableObject(t, ctx, pool, org)
+	oid := draftObject(t, ctx, pool, org, d.ProblemID)
 	d = makeBuildableDraft(d, oid)
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
 	options := postgres.ProblemBuildOptions{Languages: map[string]sandbox.Language{"cpp17": {Type: "compiler"}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
-	key := mutationKey(org, "build", d.Revision)
-	result, err := repo.EnqueueBuild(ctx, key, d.ProblemID, d.Revision, options)
+	buildID, err := repo.EnqueueBuild(ctx, d.ProblemID, d.Revision, options)
 	require.NoError(t, err)
-	var body struct {
-		BuildID uuid.UUID `json:"build_id"`
-	}
-	require.NoError(t, json.Unmarshal(result.Body, &body))
-	replay, err := repo.EnqueueBuild(ctx, key, d.ProblemID, d.Revision, options)
-	require.NoError(t, err)
-	require.JSONEq(t, string(result.Body), string(replay.Body))
 	d.Title = "Edited after snapshot"
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err = repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	b, err := repo.ClaimBuild(ctx, time.Millisecond)
 	require.NoError(t, err)
-	require.Equal(t, body.BuildID, b.ID)
+	require.Equal(t, buildID, b.ID)
 	require.Equal(t, "Initial", b.Snapshot.Draft.Title)
 	require.Equal(t, int64(2), b.Revision)
 	// Let database time pass the lease; heartbeat must never revive it.
@@ -149,15 +141,7 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.NotEqual(t, *b.LeaseToken, *next.LeaseToken)
 	require.Equal(t, b.Snapshot, next.Snapshot)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, b.ID, *b.LeaseToken, json.RawMessage(`{"message":"late"}`), false), pkg.ErrConflict)
-	var roots int
-	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_build_inputs WHERE build_id=$1`, b.ID).Scan(&roots))
-	require.Equal(t, 1, roots)
-	// Snapshot and root set cannot be corrupted even by a direct DB writer.
-	_, err = pool.Exec(ctx, `UPDATE problem_builds SET snapshot=jsonb_set(snapshot,'{draft,title}','"Tampered"') WHERE id=$1`, b.ID)
-	require.ErrorContains(t, err, "immutable build")
-	_, err = pool.Exec(ctx, `DELETE FROM problem_build_inputs WHERE build_id=$1`, b.ID)
-	require.ErrorContains(t, err, "immutable")
-	_, err = repo.CancelBuild(ctx, mutationKey(org, "cancel", b.ID), b.ID)
+	err = repo.CancelBuild(ctx, b.ID)
 	require.NoError(t, err)
 	require.ErrorIs(t, repo.HeartbeatBuild(ctx, next.ID, *next.LeaseToken, time.Minute), pkg.ErrConflict)
 }
@@ -166,14 +150,14 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	object := insertAvailableObject(t, ctx, pool, org)
+	object := draftObject(t, ctx, pool, org, d.ProblemID)
 	generator, subtask := "gen", uuid.New()
 	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
 	d.Generators = []model.DraftNamedProgram{named(generator, "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
-	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	saved, err := repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -182,7 +166,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	saved.Generators[0].Name = "random"
 	saved.Tests[0].Input.Generator = &saved.Generators[0].Name
 	saved.Assets[0].Name = "graph.png"
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", saved), saved)
+	_, err = repo.SaveDraft(ctx, saved)
 	require.NoError(t, err)
 	renamed, err := repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -193,8 +177,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 
 	// Renaming a program must preserve objects still used by its tests.
 	renamed.Assets = nil
-	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", renamed), renamed)
+	_, err = repo.SaveDraft(ctx, renamed)
 	require.NoError(t, err)
-	_, err = pool.Exec(ctx, `DELETE FROM stored_objects WHERE id=$1`, object)
-	require.Error(t, err, "a draft reference keeps the object")
+	require.True(t, objectExists(t, ctx, pool, repo, object), "a draft reference keeps the object")
 }

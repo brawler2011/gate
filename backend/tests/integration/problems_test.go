@@ -20,7 +20,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 
 	s.Run("CreateProblem", func() {
 		title := "Test Problem"
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -60,7 +60,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 	})
 
 	s.Run("ListProblemsOrdering", func() {
-		secondResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		secondResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 			Title:          "Second Problem",
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -123,7 +123,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 
 	s.Run("CreateProblemA", func() {
 		title := "Problem A"
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -179,7 +179,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 	s.Run("CreateProblemFromTemplate", func() {
 		title := "Problem B"
 		templateID := problemID.String()
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     templateID,

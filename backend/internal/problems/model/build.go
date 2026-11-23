@@ -17,19 +17,6 @@ type BuildOptions struct {
 	Lease       time.Duration
 }
 
-type MutationKey struct {
-	OrganizationID uuid.UUID
-	Operation      string
-	Key            string
-	Fingerprint    string
-	Token          uuid.UUID
-}
-
-type MutationResult struct {
-	Status int
-	Body   json.RawMessage
-}
-
 type ProblemBuild struct {
 	ID             uuid.UUID           `json:"id"`
 	ProblemID      uuid.UUID           `json:"problem_id"`

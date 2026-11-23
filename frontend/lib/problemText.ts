@@ -123,7 +123,6 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   language_not_allowed: languageText("Язык не разрешён в этом контесте"),
   package_not_ready: "У задачи нет собранного пакета",
   stale_revision: "Черновик изменился в другом окне. Обновите страницу",
-  operation_running: "Операция ещё выполняется. Подождите",
   build_finished: "Сборка уже завершена",
   required: "Обязательное поле",
   length: lengthText,

@@ -3,8 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"time"
+	"slices"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -17,13 +16,12 @@ import (
 )
 
 type ProblemDraftsRepo struct {
-	pool           *pgxpool.Pool
-	quotas         model.DraftQuotas
-	operationLease time.Duration
+	pool   *pgxpool.Pool
+	quotas model.DraftQuotas
 }
 
-func NewProblemDraftsRepo(pool *pgxpool.Pool, quotas model.DraftQuotas, operationLease time.Duration) *ProblemDraftsRepo {
-	return &ProblemDraftsRepo{pool: pool, quotas: quotas, operationLease: operationLease}
+func NewProblemDraftsRepo(pool *pgxpool.Pool, quotas model.DraftQuotas) *ProblemDraftsRepo {
+	return &ProblemDraftsRepo{pool: pool, quotas: quotas}
 }
 
 func readProblemDraft(ctx context.Context, q *sqlc.Queries, id uuid.UUID) (model.Draft, error) {
@@ -60,10 +58,9 @@ func beginSerializable(ctx context.Context, pool *pgxpool.Pool) (pgx.Tx, error) 
 	return tx, nil
 }
 
-// authorizedMutation reruns a draft mutation that authorizes inside its serializable transaction after a lost race;
-// operation keys make the rerun idempotent.
-func authorizedMutation(run func() (model.MutationResult, error)) (model.MutationResult, error) {
-	var result model.MutationResult
+// serializableRetry reruns a serializable transaction that lost a race.
+func serializableRetry[T any](run func() (T, error)) (T, error) {
+	var result T
 	var err error
 	for range serializationAttempts {
 		if result, err = run(); !isRetryable(err) {
@@ -87,167 +84,68 @@ func commitTx(ctx context.Context, tx pgx.Tx) error {
 
 func rollback(ctx context.Context, tx pgx.Tx) { _ = tx.Rollback(context.WithoutCancel(ctx)) }
 
-// reserveOperation must precede every owner/object lock in the transaction.
-func (r *ProblemDraftsRepo) reserveOperation(ctx context.Context, tx pgx.Tx, k model.MutationKey) (*model.MutationResult, error) {
-	if k.OrganizationID == uuid.Nil || k.Token == uuid.Nil || len(k.Key) == 0 || len(k.Key) > 200 || r.operationLease <= 0 {
-		return nil, pkg.ErrInvalid
-	}
-	q := sqlc.New(tx)
-	if err := q.ReserveOperationRow(ctx, sqlc.ReserveOperationRowParams{
-		OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key, Fingerprint: k.Fingerprint, Token: k.Token,
-		LeaseMs: r.operationLease.Milliseconds(),
-	}); err != nil {
-		return nil, dbError("reserve operation", err)
-	}
-	row, err := q.LockOperationRow(ctx, sqlc.LockOperationRowParams{OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key})
-	if err != nil {
-		return nil, dbError("lock operation", err)
-	}
-	if row.Fingerprint != k.Fingerprint {
-		return nil, pkg.Wrap(pkg.ErrConflict, nil, "idempotency key reused for different request")
-	}
-	if row.HttpStatus != nil {
-		return &model.MutationResult{Status: int(*row.HttpStatus), Body: row.Result}, nil
-	}
-	// Time is checked again after acquiring the row lock, in a separate statement.
-	active, err := q.OperationLeaseActive(ctx, sqlc.OperationLeaseActiveParams{OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key})
-	if err != nil {
-		return nil, dbError("check operation lease", err)
-	}
-	if active && row.Token != k.Token {
-		return nil, pkg.Wrap(pkg.ErrOperationRunning, nil, "operation is running")
-	}
-	if row.Token != k.Token {
-		if err := q.TakeOverOperation(ctx, sqlc.TakeOverOperationParams{
-			Token: k.Token, LeaseMs: r.operationLease.Milliseconds(), OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key,
-		}); err != nil {
-			return nil, dbError("take over operation", err)
-		}
-	}
-	return nil, nil
-}
-
-func finishOperation(ctx context.Context, tx pgx.Tx, k model.MutationKey, status int, body any) (model.MutationResult, error) {
-	data, err := json.Marshal(body)
-	if err != nil {
-		return model.MutationResult{}, dbError("encode operation result", err)
-	}
-	code := int32(status) //nolint:gosec // HTTP status codes are small constants.
-	updated, err := sqlc.New(tx).FinishOperationRow(ctx, sqlc.FinishOperationRowParams{
-		Result: data, HttpStatus: &code, OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key, Token: k.Token,
-	})
-	if err != nil {
-		return model.MutationResult{}, dbError("store operation result", err)
-	}
-	if updated != 1 {
-		return model.MutationResult{}, pkg.ErrConflict
-	}
-	return model.MutationResult{Status: status, Body: data}, nil
-}
-
-// Retries retain the key and fingerprint to resolve a lost commit response without duplication.
-func (r *ProblemDraftsRepo) resolveMutation(ctx context.Context, tx pgx.Tx, k model.MutationKey, result model.MutationResult) (model.MutationResult, error) {
-	err := commitTx(ctx, tx)
-	if err == nil {
-		return result, nil
-	}
-	resolveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-	defer cancel()
-	stored, readErr := sqlc.New(r.pool).ReadOperationResult(resolveCtx, sqlc.ReadOperationResultParams{
-		OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key, Fingerprint: k.Fingerprint,
-	})
-	if readErr == nil && stored.HttpStatus != nil {
-		return model.MutationResult{Status: int(*stored.HttpStatus), Body: stored.Result}, nil
-	}
-	return model.MutationResult{}, err
-}
-
-func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, draft model.Draft) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, draft model.Draft) (model.Draft, error) {
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
+		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
-	return authorizedMutation(func() (model.MutationResult, error) { return r.saveDraft(ctx, k, draft) })
+	return serializableRetry(func() (model.Draft, error) { return r.saveDraft(ctx, draft) })
 }
 
-func (r *ProblemDraftsRepo) saveDraft(ctx context.Context, k model.MutationKey, draft model.Draft) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) saveDraft(ctx context.Context, draft model.Draft) (model.Draft, error) {
 	tx, err := beginSerializable(ctx, r.pool)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	defer rollback(ctx, tx)
-	replay, err := r.reserveOperation(ctx, tx, k)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	if replay != nil {
-		return *replay, nil
-	}
 	q := sqlc.New(tx)
 	if err := authorizeEdit(ctx, q, draft.ProblemID); err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	revision, err := q.LockProblemDraft(ctx, draft.ProblemID)
 	if err != nil {
-		return model.MutationResult{}, dbError("save draft", err)
+		return model.Draft{}, dbError("save draft", err)
 	}
 	if revision != draft.Revision {
-		return model.MutationResult{}, pkg.ErrStaleRevision
-	}
-	org, err := q.ProblemOrganizationID(ctx, draft.ProblemID)
-	if err != nil {
-		return model.MutationResult{}, dbError("save draft", err)
-	}
-	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.ErrForbidden
+		return model.Draft{}, pkg.ErrStaleRevision
 	}
 	old, err := readProblemDraft(ctx, q, draft.ProblemID)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	if err := draft.Validate(r.quotas, &old); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
+		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
+	}
+	known, err := q.DraftObjectIDs(ctx, draft.ProblemID)
+	if err != nil {
+		return model.Draft{}, dbError("save draft", err)
 	}
 	draft.Revision++
-	if err := writeDraft(ctx, tx, draft); err != nil {
-		return model.MutationResult{}, err
+	if err := writeDraft(ctx, tx, draft, known); err != nil {
+		return model.Draft{}, err
 	}
-	result, err := finishOperation(ctx, tx, k, 200, draft)
-	if err != nil {
-		return result, err
-	}
-	return r.resolveMutation(ctx, tx, k, result)
+	return draft, commitTx(ctx, tx)
 }
 
-// Foreign keys reject missing or cross-organization draft objects with ErrConflict.
-func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
+// writeDraft accepts only objects in known, so a reference is always created with its object or copied from a live one,
+// which object GC relies on.
+func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft, known []uuid.UUID) error {
 	d.Normalize()
+	objects := d.InputObjects()
+	for _, id := range objects {
+		if !slices.Contains(known, id) {
+			return pkg.Wrap(pkg.ErrConflict, nil, "object "+id.String()+" is not part of this draft")
+		}
+	}
 	content, err := json.Marshal(d.DraftContent)
 	if err != nil {
 		return dbError("encode draft content", err)
 	}
-	q := sqlc.New(tx)
-	if err := q.UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
+	if err := sqlc.New(tx).UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
 		ProblemID: d.ProblemID, Revision: d.Revision, Title: d.Title, ShortName: d.ShortName, Type: d.Type,
 		TimeLimitMs: int32(d.TimeLimitMs), MemoryLimitMb: int32(d.MemoryLimitMb), MaxScore: d.MaxScore, //nolint:gosec // validated against quotas
-		Content: content,
+		Content: content, ObjectIds: objects,
 	}); err != nil {
 		return dbError("update draft", err)
 	}
-	// Derive references from content under the revision lock to replace both atomically.
-	if err := q.DeleteDraftObjects(ctx, d.ProblemID); err != nil {
-		return dbError("clear draft objects", err)
-	}
-	for _, oid := range d.InputObjects() {
-		if err := q.InsertDraftObject(ctx, sqlc.InsertDraftObjectParams{ProblemID: d.ProblemID, ObjectID: oid}); err != nil {
-			return objectReferenceErr(err, "insert draft object")
-		}
-	}
 	return nil
-}
-
-func objectReferenceErr(err error, action string) error {
-	if isForeignKeyViolation(err) {
-		return pkg.Wrap(pkg.ErrConflict, err, "object is missing or belongs to another organization")
-	}
-	return fmt.Errorf("%s: %w", action, err)
 }

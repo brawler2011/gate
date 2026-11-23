@@ -44,12 +44,6 @@ var constraintErrors = map[string]struct {
 	"contest_user_problem_blocks_problem_id_fkey":   {pkg.ErrNotFound, "problem not found"},
 }
 
-// Deletion under ON DELETE RESTRICT uses 23001, not the missing-reference code 23503.
-func isForeignKeyViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && (pgErr.Code == pgerrcode.ForeignKeyViolation || pgErr.Code == pgerrcode.RestrictViolation)
-}
-
 // isRetryable reports a lost race that a fresh transaction may win.
 func isRetryable(err error) bool {
 	var pgErr *pgconn.PgError

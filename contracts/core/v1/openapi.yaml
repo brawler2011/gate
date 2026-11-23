@@ -54,7 +54,6 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/ExpectedRevisionQuery'
-      - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -79,7 +78,6 @@ paths:
       summary: Queue an immutable draft snapshot
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
-      - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -148,7 +146,6 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/BuildIDPath'
-      - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -167,7 +164,6 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/ExpectedRevisionQuery'
-      - $ref: '#/components/parameters/IdempotencyKeyHeader'
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -335,7 +331,6 @@ paths:
           schema:
             type: string
           example: Problem 1
-        - $ref: '#/components/parameters/IdempotencyKeyHeader'
         - $ref: "#/components/parameters/OrganizationIDQuery"
         - name: template_id
           description: "Problem template identifier, including the builtin: prefix for built-in templates."
@@ -2005,7 +2000,6 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ProblemIDPath'
         - $ref: '#/components/parameters/ExpectedRevisionQuery'
-        - $ref: '#/components/parameters/IdempotencyKeyHeader'
       requestBody:
         required: true
         content:
@@ -3029,15 +3023,6 @@ components:
         type: integer
         format: int64
         minimum: 1
-    IdempotencyKeyHeader:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: Stable identifier for retries of exactly this request.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 200
     BuildIDPath:
       name: buildId
       in: path
@@ -4064,7 +4049,6 @@ components:
         - language_not_allowed
         - package_not_ready
         - stale_revision
-        - operation_running
         - build_finished
         - required
         - length

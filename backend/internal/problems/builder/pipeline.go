@@ -34,7 +34,7 @@ type BuildRepository interface {
 	ClaimBuild(context.Context, time.Duration) (model.ProblemBuild, error)
 	HeartbeatBuild(context.Context, uuid.UUID, uuid.UUID, time.Duration) error
 	RecoverBuilds(context.Context) error
-	BuildInputObjects(context.Context, uuid.UUID) ([]model.StoredObject, error)
+	StoredObjects(context.Context, []uuid.UUID) ([]model.StoredObject, error)
 	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, model.PackageIndex) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 	RecordBuildSolutions(context.Context, uuid.UUID, uuid.UUID, []model.SolutionResult) error
@@ -211,7 +211,7 @@ func testFiles(d model.Draft) map[uuid.UUID]archive.BuiltTest {
 
 func (e *execution) materialize(ctx context.Context) error {
 	s := e.build.Snapshot
-	objects, err := e.pipeline.Repo.BuildInputObjects(ctx, e.build.ID)
+	objects, err := e.pipeline.Repo.StoredObjects(ctx, s.InputObjects)
 	if err != nil {
 		return err
 	}

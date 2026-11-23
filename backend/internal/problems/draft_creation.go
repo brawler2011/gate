@@ -3,7 +3,6 @@ package problems
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,85 +17,54 @@ import (
 	"github.com/google/uuid"
 )
 
-// Idempotent replays return the stored result without uploading objects again.
-func (uc *DraftUseCase) uploadImport(ctx context.Context, k model.MutationKey, plan *draftImport) (*model.MutationResult, []model.StoredObject, error) {
-	replay, err := uc.Repo.BeginOperation(ctx, k)
-	if err != nil || replay != nil {
-		return replay, nil, err
-	}
+func (uc *DraftUseCase) uploadImport(ctx context.Context, org uuid.UUID, plan *draftImport) ([]model.StoredObject, error) {
 	objects := make([]model.StoredObject, len(plan.objects))
 	ids := make([]uuid.UUID, len(plan.objects))
 	for i, o := range plan.objects {
 		f, err := os.Open(o.path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("open: %w", err)
+			return nil, fmt.Errorf("open: %w", err)
 		}
-		object, uploadErr := uc.storeObject(ctx, k.OrganizationID, o.spec, f)
+		object, uploadErr := uc.storeObject(ctx, org, o.spec, f)
 		closeErr := f.Close()
 		if err := errors.Join(uploadErr, closeErr); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		objects[i], ids[i] = object, object.ID
 	}
 	if err := plan.bind(ids); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return nil, objects, nil
+	return objects, nil
 }
-func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64, key string, reader io.Reader) (model.MutationResult, error) {
+func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64, reader io.Reader) (model.Draft, error) {
 	p, err := uc.authorize(ctx, id, true)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, uc.UploadTTL)
 	defer cancel()
 	plan, err := uc.parseImport(ctx, reader, id, expected)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	defer plan.Close()
 	current, err := uc.Repo.GetDraft(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, err
+		return model.Draft{}, err
 	}
 	plan.draft.ShortName = current.ShortName
 	if strings.TrimSpace(plan.draft.Title) == "" {
 		plan.draft.Title = current.Title
 	}
-	// The isolated import has only one root-level body file: the original archive spool.
-	files, err := os.ReadDir(plan.root)
+	objects, err := uc.uploadImport(ctx, p.OrganizationID, plan)
 	if err != nil {
-		return model.MutationResult{}, fmt.Errorf("readdir: %w", err)
-	}
-	var archiveDigest string
-	for _, entry := range files {
-		if !entry.IsDir() {
-			object, err := uc.importObject(plan.root+"/"+entry.Name(), "asset", uuid.Nil)
-			if err != nil {
-				return model.MutationResult{}, err
-			}
-			archiveDigest = object.spec.SHA256
-			break
-		}
-	}
-	k, err := uc.key(p.OrganizationID, id, "import", key, struct {
-		Revision int64
-		Digest   string
-	}{expected, archiveDigest})
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	replay, objects, err := uc.uploadImport(ctx, k, plan)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	if replay != nil {
-		return *replay, nil
+		return model.Draft{}, err
 	}
 	if len(plan.converted) > 0 {
 		slog.InfoContext(ctx, "import converted text files to UTF-8", "problem_id", id, "files", plan.converted)
 	}
-	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects)
+	return uc.Repo.FinalizeImport(ctx, id, expected, plan.draft, objects)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {
 	user, err := accessmodel.RequireUser(ctx)
@@ -167,39 +135,12 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	}
 	plan.draft.Title = input.Title
 	plan.draft.ShortName = "problem-" + id.String()[:8]
-	k, err := uc.key(org, uuid.Nil, "create", input.IdempotencyKey, struct {
-		Organization    uuid.UUID
-		Title, Template string
-	}{org, input.Title, input.TemplateID})
+	objects, err := uc.uploadImport(ctx, org, plan)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	var objects []model.StoredObject
-	if len(plan.objects) > 0 {
-		replay, uploaded, err := uc.uploadImport(ctx, k, plan)
-		if err != nil {
-			return uuid.Nil, err
-		}
-		if replay != nil {
-			var result struct {
-				ID uuid.UUID `json:"id"`
-			}
-			if err := json.Unmarshal(replay.Body, &result); err != nil {
-				return uuid.Nil, fmt.Errorf("unmarshal: %w", err)
-			}
-			return result.ID, nil
-		}
-		objects = uploaded
-	}
-	result, err := uc.Repo.FinalizeCreate(ctx, k, user.Id, plan.draft, objects)
-	if err != nil {
+	if err := uc.Repo.FinalizeCreate(ctx, org, user.Id, plan.draft, objects); err != nil {
 		return uuid.Nil, err
 	}
-	var created struct {
-		ID uuid.UUID `json:"id"`
-	}
-	if err := json.Unmarshal(result.Body, &created); err != nil {
-		return uuid.Nil, fmt.Errorf("unmarshal: %w", err)
-	}
-	return created.ID, nil
+	return id, nil
 }

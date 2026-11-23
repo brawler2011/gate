@@ -2093,19 +2093,6 @@ func (c *Client) sendBuildProblemPackage(ctx context.Context, request *BuildProb
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -2408,19 +2395,6 @@ func (c *Client) sendCancelProblemBuild(ctx context.Context, params CancelProble
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
-	}
-
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -3648,19 +3622,6 @@ func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemPara
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
-	}
-
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -7432,19 +7393,6 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 	}
 	if err := encodeImportProblemRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
-	}
-
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -12318,19 +12266,6 @@ func (c *Client) sendSaveProblemDraft(ctx context.Context, request *ProblemDraft
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -13638,19 +13573,6 @@ func (c *Client) sendUploadProblemDraft(ctx context.Context, request *UploadProb
 	}
 	if err := encodeUploadProblemDraftRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
-	}
-
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)

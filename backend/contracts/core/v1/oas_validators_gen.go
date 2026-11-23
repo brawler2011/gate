@@ -574,8 +574,6 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "stale_revision":
 		return nil
-	case "operation_running":
-		return nil
 	case "build_finished":
 		return nil
 	case "required":

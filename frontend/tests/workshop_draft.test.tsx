@@ -50,7 +50,7 @@ const Editor = () => {
 };
 
 describe("workshop draft editing", () => {
-  it("saves with the revision the author read and an idempotency key, then shows the stored draft", async () => {
+  it("saves with the revision the author read , then shows the stored draft", async () => {
     const calls = mockApi(({method}) => (method === "PUT" ? Response.json(draft(4, "Mine")) : Response.json(draft(3, "Original"))));
     const view = renderWithProviders(<Editor />);
     await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Original"));
@@ -59,7 +59,6 @@ describe("workshop draft editing", () => {
     const put = calls.find((c) => c.method === "PUT") as Call;
     expect(put.url.pathname).toBe("/api/problems/problem/draft");
     expect(put.url.searchParams.get("expected_revision")).toBe("3");
-    expect(new Headers(put.init?.headers).get("Idempotency-Key")).toBeTruthy();
     expect(JSON.parse(String(put.init?.body)).title).toBe("Mine");
   });
 

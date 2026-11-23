@@ -16,7 +16,6 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
 )
 
@@ -39,12 +38,12 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 			w := zip.NewWriter(&archive)
 			s.Require().NoError(w.AddFS(os.DirFS(dir)))
 			s.Require().NoError(w.Close())
-			problem, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(), Title: name, OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
+			problem, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{Title: name, OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 			s.Require().NoError(err)
 			current, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
 			draft, err := s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "package.zip", File: bytes.NewReader(archive.Bytes()), Size: int64(archive.Len())}},
-				corev1.ImportProblemParams{ID: problem.ID, ExpectedRevision: current.Revision, IdempotencyKey: uuid.NewString()})
+				corev1.ImportProblemParams{ID: problem.ID, ExpectedRevision: current.Revision})
 			s.Require().NoError(err)
 			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
 			built := pkg.Format.Problem

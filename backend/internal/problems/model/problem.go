@@ -122,7 +122,6 @@ type ProblemPackage struct {
 }
 
 type CreateProblemInput struct {
-	IdempotencyKey string
 	OrganizationID uuid.UUID
 	Title          string
 	TemplateID     string
