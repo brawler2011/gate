@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/brawler2011/gate/backend/internal/invitations"
+
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	"github.com/brawler2011/gate/backend/internal/blogs"
@@ -40,8 +42,6 @@ type ContestsUC interface {
 	CreateContest(ctx context.Context, c *contestsmodel.CreateContestInput) (uuid.UUID, error)
 	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
-
-	CreateParticipant(ctx context.Context, c contestsmodel.ParticipantCreation) error
 
 	UpdateContestMember(ctx context.Context, contestID, userID uuid.UUID, role accessmodel.ContestRole) error
 	DeleteParticipant(ctx context.Context, c contestsmodel.ParticipantDeletion) error
@@ -104,18 +104,29 @@ type OrganizationsUC interface {
 	RemoveMemberByLogin(ctx context.Context, login string, userID uuid.UUID) error
 	BatchCreateUsers(ctx context.Context, input organizationsmodel.BatchCreateOrganizationUsersInput) (*organizationsmodel.BatchCreateOrganizationUsersResult, error)
 
-	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role accessmodel.OrganizationRole) (*organizationsmodel.OrganizationInvitation, error)
-	ListInvitations(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationInvitation, error)
-	CancelInvitation(ctx context.Context, orgLogin string, invitationID uuid.UUID) error
-	AcceptInvitation(ctx context.Context, invitationID uuid.UUID) error
-	DeclineInvitation(ctx context.Context, invitationID uuid.UUID) error
-
 	CreateJoinRequest(ctx context.Context, orgLogin string, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationJoinRequest, error)
 	CancelJoinRequest(ctx context.Context, orgLogin string) error
 	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID, role accessmodel.OrganizationRole) error
 	RejectJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error
 	GetMyPendingJoinRequest(ctx context.Context, orgLogin string) (*organizationsmodel.OrganizationJoinRequest, error)
+}
+
+type InvitationsUC interface {
+	InviteToOrganization(ctx context.Context, orgLogin string, userID uuid.UUID, role accessmodel.OrganizationRole) (*invitations.Invitation, error)
+	InviteToContest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*invitations.Invitation, error)
+	ListOrganizationInvitations(ctx context.Context, orgLogin string) ([]invitations.Invitation, error)
+	ListContestInvitations(ctx context.Context, orgLogin, contestLogin string) ([]invitations.Invitation, error)
+	CancelInvitation(ctx context.Context, id uuid.UUID) error
+	AcceptInvitation(ctx context.Context, id uuid.UUID) error
+	DeclineInvitation(ctx context.Context, id uuid.UUID) error
+
+	ContestTarget(ctx context.Context, orgLogin, contestLogin string) (invitations.Target, error)
+	JoinLink(ctx context.Context, target invitations.Target) (*string, error)
+	ResetJoinLink(ctx context.Context, target invitations.Target) (string, error)
+	DisableJoinLink(ctx context.Context, target invitations.Target) error
+	LinkTarget(ctx context.Context, token string) (invitations.Target, error)
+	FollowJoinLink(ctx context.Context, token string) (invitations.Target, error)
 }
 
 type ProblemsUC interface {

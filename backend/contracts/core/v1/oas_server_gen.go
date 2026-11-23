@@ -8,12 +8,12 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
-	// AcceptOrganizationInvitation implements AcceptOrganizationInvitation operation.
+	// AcceptInvitation implements AcceptInvitation operation.
 	//
-	// Accept organization invitation.
+	// Accept an invitation addressed to the caller.
 	//
 	// POST /invitations/{id}/accept
-	AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error
+	AcceptInvitation(ctx context.Context, params AcceptInvitationParams) error
 	// AddOrganizationMember implements AddOrganizationMember operation.
 	//
 	// Add member to organization without an invitation (site administrators only).
@@ -98,12 +98,12 @@ type Handler interface {
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
 	CancelContestJoinRequest(ctx context.Context, params CancelContestJoinRequestParams) error
-	// CancelOrganizationInvitation implements CancelOrganizationInvitation operation.
+	// CancelInvitation implements CancelInvitation operation.
 	//
-	// Cancel organization invitation.
+	// Withdraw a pending invitation.
 	//
-	// DELETE /organizations/{login}/invitations/{id}
-	CancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) error
+	// DELETE /invitations/{id}
+	CancelInvitation(ctx context.Context, params CancelInvitationParams) error
 	// CancelOrganizationJoinRequest implements CancelOrganizationJoinRequest operation.
 	//
 	// Cancel my join request to organization.
@@ -164,12 +164,6 @@ type Handler interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/requests
 	CreateContestJoinRequest(ctx context.Context, req OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (*ContestJoinRequestResponseModel, error)
-	// CreateContestMember implements CreateContestMember operation.
-	//
-	// Create contest member.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/members
-	CreateContestMember(ctx context.Context, params CreateContestMemberParams) error
 	// CreateContestProblem implements CreateContestProblem operation.
 	//
 	// Create contest problem.
@@ -224,12 +218,12 @@ type Handler interface {
 	//
 	// POST /teams
 	CreateTeam(ctx context.Context, req *CreateTeamReq) (*CreationResponseModel, error)
-	// DeclineOrganizationInvitation implements DeclineOrganizationInvitation operation.
+	// DeclineInvitation implements DeclineInvitation operation.
 	//
-	// Decline organization invitation.
+	// Decline an invitation addressed to the caller.
 	//
 	// POST /invitations/{id}/decline
-	DeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) error
+	DeclineInvitation(ctx context.Context, params DeclineInvitationParams) error
 	// DeleteAvatar implements DeleteAvatar operation.
 	//
 	// Delete user avatar.
@@ -302,6 +296,18 @@ type Handler interface {
 	//
 	// DELETE /teams/{id}
 	DeleteTeam(ctx context.Context, params DeleteTeamParams) error
+	// DisableContestJoinLink implements DisableContestJoinLink operation.
+	//
+	// Turn off the contest join link.
+	//
+	// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+	DisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) error
+	// DisableTeamJoinLink implements DisableTeamJoinLink operation.
+	//
+	// Turn off the team join link.
+	//
+	// DELETE /teams/{id}/join-link
+	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
 	// DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 	//
 	// Download PDF booklet with contest statements.
@@ -327,6 +333,13 @@ type Handler interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
 	FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error
+	// FollowJoinLink implements FollowJoinLink operation.
+	//
+	// A team link also makes the caller an organization member, whatever its join policy. Following a link
+	// again changes nothing.
+	//
+	// POST /join-links/{token}
+	FollowJoinLink(ctx context.Context, params FollowJoinLinkParams) (*JoinLinkTargetModel, error)
 	// ForgotPassword implements ForgotPassword operation.
 	//
 	// Forgot password.
@@ -339,6 +352,12 @@ type Handler interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}
 	GetContest(ctx context.Context, params GetContestParams) (*GetContestResponseModel, error)
+	// GetContestJoinLink implements GetContestJoinLink operation.
+	//
+	// Get the contest join link.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/join-link
+	GetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (*JoinLinkModel, error)
 	// GetContestProblem implements GetContestProblem operation.
 	//
 	// Get contest problem.
@@ -364,6 +383,12 @@ type Handler interface {
 	//
 	// GET /health
 	GetHealth(ctx context.Context) (*GetHealthResponseModel, error)
+	// GetJoinLinkTarget implements GetJoinLinkTarget operation.
+	//
+	// Show where a join link leads.
+	//
+	// GET /join-links/{token}
+	GetJoinLinkTarget(ctx context.Context, params GetJoinLinkTargetParams) (*JoinLinkTargetModel, error)
 	// GetLanguages implements GetLanguages operation.
 	//
 	// Get supported programming languages.
@@ -472,6 +497,12 @@ type Handler interface {
 	//
 	// GET /teams/{id}
 	GetTeam(ctx context.Context, params GetTeamParams) (*GetTeamResponseModel, error)
+	// GetTeamJoinLink implements GetTeamJoinLink operation.
+	//
+	// Get the team join link.
+	//
+	// GET /teams/{id}/join-link
+	GetTeamJoinLink(ctx context.Context, params GetTeamJoinLinkParams) (*JoinLinkModel, error)
 	// GetUnreadNotificationsCount implements GetUnreadNotificationsCount operation.
 	//
 	// Get count of unread notifications.
@@ -502,12 +533,18 @@ type Handler interface {
 	//
 	// POST /problems/{id}/import
 	ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
+	// InviteContestParticipant implements InviteContestParticipant operation.
+	//
+	// Invite a user to take part in the contest.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/invitations
+	InviteContestParticipant(ctx context.Context, req *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (*InvitationModel, error)
 	// InviteOrganizationMember implements InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
 	//
 	// POST /organizations/{login}/invitations
-	InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*OrganizationInvitationModel, error)
+	InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*InvitationModel, error)
 	// ListAdminContests implements ListAdminContests operation.
 	//
 	// List admin contests.
@@ -532,6 +569,12 @@ type Handler interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/drafts
 	ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error)
+	// ListContestInvitations implements ListContestInvitations operation.
+	//
+	// List pending contest invitations.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/invitations
+	ListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (*ListInvitationsResponseModel, error)
 	// ListContestJoinRequests implements ListContestJoinRequests operation.
 	//
 	// List pending contest join requests.
@@ -579,7 +622,7 @@ type Handler interface {
 	// List pending organization invitations.
 	//
 	// GET /organizations/{login}/invitations
-	ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListOrganizationInvitationsResponseModel, error)
+	ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListInvitationsResponseModel, error)
 	// ListOrganizationJoinRequests implements ListOrganizationJoinRequests operation.
 	//
 	// List pending organization join requests.
@@ -784,12 +827,24 @@ type Handler interface {
 	//
 	// POST /auth/resend-verification
 	ResendVerification(ctx context.Context, req *ResendVerificationRequestModel) error
+	// ResetContestJoinLink implements ResetContestJoinLink operation.
+	//
+	// Turn on the contest join link with a new token.
+	//
+	// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+	ResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (*JoinLinkModel, error)
 	// ResetPassword implements ResetPassword operation.
 	//
 	// Reset password.
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, req *ResetPasswordRequestModel) error
+	// ResetTeamJoinLink implements ResetTeamJoinLink operation.
+	//
+	// Turn on the team join link with a new token.
+	//
+	// PUT /teams/{id}/join-link
+	ResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (*JoinLinkModel, error)
 	// SaveProblemDraft implements SaveProblemDraft operation.
 	//
 	// Replace the draft in one revision change.

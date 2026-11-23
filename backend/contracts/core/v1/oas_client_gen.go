@@ -22,12 +22,12 @@ func trimTrailingSlashes(u *url.URL) {
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
-	// AcceptOrganizationInvitation invokes AcceptOrganizationInvitation operation.
+	// AcceptInvitation invokes AcceptInvitation operation.
 	//
-	// Accept organization invitation.
+	// Accept an invitation addressed to the caller.
 	//
 	// POST /invitations/{id}/accept
-	AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error
+	AcceptInvitation(ctx context.Context, params AcceptInvitationParams) error
 	// AddOrganizationMember invokes AddOrganizationMember operation.
 	//
 	// Add member to organization without an invitation (site administrators only).
@@ -112,12 +112,12 @@ type Invoker interface {
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
 	CancelContestJoinRequest(ctx context.Context, params CancelContestJoinRequestParams) error
-	// CancelOrganizationInvitation invokes CancelOrganizationInvitation operation.
+	// CancelInvitation invokes CancelInvitation operation.
 	//
-	// Cancel organization invitation.
+	// Withdraw a pending invitation.
 	//
-	// DELETE /organizations/{login}/invitations/{id}
-	CancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) error
+	// DELETE /invitations/{id}
+	CancelInvitation(ctx context.Context, params CancelInvitationParams) error
 	// CancelOrganizationJoinRequest invokes CancelOrganizationJoinRequest operation.
 	//
 	// Cancel my join request to organization.
@@ -178,12 +178,6 @@ type Invoker interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/requests
 	CreateContestJoinRequest(ctx context.Context, request OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (*ContestJoinRequestResponseModel, error)
-	// CreateContestMember invokes CreateContestMember operation.
-	//
-	// Create contest member.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/members
-	CreateContestMember(ctx context.Context, params CreateContestMemberParams) error
 	// CreateContestProblem invokes CreateContestProblem operation.
 	//
 	// Create contest problem.
@@ -238,12 +232,12 @@ type Invoker interface {
 	//
 	// POST /teams
 	CreateTeam(ctx context.Context, request *CreateTeamReq) (*CreationResponseModel, error)
-	// DeclineOrganizationInvitation invokes DeclineOrganizationInvitation operation.
+	// DeclineInvitation invokes DeclineInvitation operation.
 	//
-	// Decline organization invitation.
+	// Decline an invitation addressed to the caller.
 	//
 	// POST /invitations/{id}/decline
-	DeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) error
+	DeclineInvitation(ctx context.Context, params DeclineInvitationParams) error
 	// DeleteAvatar invokes DeleteAvatar operation.
 	//
 	// Delete user avatar.
@@ -316,6 +310,18 @@ type Invoker interface {
 	//
 	// DELETE /teams/{id}
 	DeleteTeam(ctx context.Context, params DeleteTeamParams) error
+	// DisableContestJoinLink invokes DisableContestJoinLink operation.
+	//
+	// Turn off the contest join link.
+	//
+	// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+	DisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) error
+	// DisableTeamJoinLink invokes DisableTeamJoinLink operation.
+	//
+	// Turn off the team join link.
+	//
+	// DELETE /teams/{id}/join-link
+	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
 	// DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 	//
 	// Download PDF booklet with contest statements.
@@ -341,6 +347,13 @@ type Invoker interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
 	FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error
+	// FollowJoinLink invokes FollowJoinLink operation.
+	//
+	// A team link also makes the caller an organization member, whatever its join policy. Following a link
+	// again changes nothing.
+	//
+	// POST /join-links/{token}
+	FollowJoinLink(ctx context.Context, params FollowJoinLinkParams) (*JoinLinkTargetModel, error)
 	// ForgotPassword invokes ForgotPassword operation.
 	//
 	// Forgot password.
@@ -353,6 +366,12 @@ type Invoker interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}
 	GetContest(ctx context.Context, params GetContestParams) (*GetContestResponseModel, error)
+	// GetContestJoinLink invokes GetContestJoinLink operation.
+	//
+	// Get the contest join link.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/join-link
+	GetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (*JoinLinkModel, error)
 	// GetContestProblem invokes GetContestProblem operation.
 	//
 	// Get contest problem.
@@ -378,6 +397,12 @@ type Invoker interface {
 	//
 	// GET /health
 	GetHealth(ctx context.Context) (*GetHealthResponseModel, error)
+	// GetJoinLinkTarget invokes GetJoinLinkTarget operation.
+	//
+	// Show where a join link leads.
+	//
+	// GET /join-links/{token}
+	GetJoinLinkTarget(ctx context.Context, params GetJoinLinkTargetParams) (*JoinLinkTargetModel, error)
 	// GetLanguages invokes GetLanguages operation.
 	//
 	// Get supported programming languages.
@@ -486,6 +511,12 @@ type Invoker interface {
 	//
 	// GET /teams/{id}
 	GetTeam(ctx context.Context, params GetTeamParams) (*GetTeamResponseModel, error)
+	// GetTeamJoinLink invokes GetTeamJoinLink operation.
+	//
+	// Get the team join link.
+	//
+	// GET /teams/{id}/join-link
+	GetTeamJoinLink(ctx context.Context, params GetTeamJoinLinkParams) (*JoinLinkModel, error)
 	// GetUnreadNotificationsCount invokes GetUnreadNotificationsCount operation.
 	//
 	// Get count of unread notifications.
@@ -516,12 +547,18 @@ type Invoker interface {
 	//
 	// POST /problems/{id}/import
 	ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
+	// InviteContestParticipant invokes InviteContestParticipant operation.
+	//
+	// Invite a user to take part in the contest.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/invitations
+	InviteContestParticipant(ctx context.Context, request *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (*InvitationModel, error)
 	// InviteOrganizationMember invokes InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
 	//
 	// POST /organizations/{login}/invitations
-	InviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*OrganizationInvitationModel, error)
+	InviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*InvitationModel, error)
 	// ListAdminContests invokes ListAdminContests operation.
 	//
 	// List admin contests.
@@ -546,6 +583,12 @@ type Invoker interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/drafts
 	ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error)
+	// ListContestInvitations invokes ListContestInvitations operation.
+	//
+	// List pending contest invitations.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/invitations
+	ListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (*ListInvitationsResponseModel, error)
 	// ListContestJoinRequests invokes ListContestJoinRequests operation.
 	//
 	// List pending contest join requests.
@@ -593,7 +636,7 @@ type Invoker interface {
 	// List pending organization invitations.
 	//
 	// GET /organizations/{login}/invitations
-	ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListOrganizationInvitationsResponseModel, error)
+	ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListInvitationsResponseModel, error)
 	// ListOrganizationJoinRequests invokes ListOrganizationJoinRequests operation.
 	//
 	// List pending organization join requests.
@@ -798,12 +841,24 @@ type Invoker interface {
 	//
 	// POST /auth/resend-verification
 	ResendVerification(ctx context.Context, request *ResendVerificationRequestModel) error
+	// ResetContestJoinLink invokes ResetContestJoinLink operation.
+	//
+	// Turn on the contest join link with a new token.
+	//
+	// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+	ResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (*JoinLinkModel, error)
 	// ResetPassword invokes ResetPassword operation.
 	//
 	// Reset password.
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, request *ResetPasswordRequestModel) error
+	// ResetTeamJoinLink invokes ResetTeamJoinLink operation.
+	//
+	// Turn on the team join link with a new token.
+	//
+	// PUT /teams/{id}/join-link
+	ResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (*JoinLinkModel, error)
 	// SaveProblemDraft invokes SaveProblemDraft operation.
 	//
 	// Replace the draft in one revision change.
@@ -943,17 +998,17 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 	return u
 }
 
-// AcceptOrganizationInvitation invokes AcceptOrganizationInvitation operation.
+// AcceptInvitation invokes AcceptInvitation operation.
 //
-// Accept organization invitation.
+// Accept an invitation addressed to the caller.
 //
 // POST /invitations/{id}/accept
-func (c *Client) AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error {
-	_, err := c.sendAcceptOrganizationInvitation(ctx, params)
+func (c *Client) AcceptInvitation(ctx context.Context, params AcceptInvitationParams) error {
+	_, err := c.sendAcceptInvitation(ctx, params)
 	return err
 }
 
-func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) (res *AcceptOrganizationInvitationOK, err error) {
+func (c *Client) sendAcceptInvitation(ctx context.Context, params AcceptInvitationParams) (res *AcceptInvitationOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -997,7 +1052,7 @@ func (c *Client) sendAcceptOrganizationInvitation(ctx context.Context, params Ac
 		_ = body.Close()
 	}()
 
-	result, err := decodeAcceptOrganizationInvitationResponse(resp)
+	result, err := decodeAcceptInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2171,40 +2226,21 @@ func (c *Client) sendCancelContestJoinRequest(ctx context.Context, params Cancel
 	return result, nil
 }
 
-// CancelOrganizationInvitation invokes CancelOrganizationInvitation operation.
+// CancelInvitation invokes CancelInvitation operation.
 //
-// Cancel organization invitation.
+// Withdraw a pending invitation.
 //
-// DELETE /organizations/{login}/invitations/{id}
-func (c *Client) CancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) error {
-	_, err := c.sendCancelOrganizationInvitation(ctx, params)
+// DELETE /invitations/{id}
+func (c *Client) CancelInvitation(ctx context.Context, params CancelInvitationParams) error {
+	_, err := c.sendCancelInvitation(ctx, params)
 	return err
 }
 
-func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) (res *CancelOrganizationInvitationOK, err error) {
+func (c *Client) sendCancelInvitation(ctx context.Context, params CancelInvitationParams) (res *CancelInvitationOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/organizations/"
-	{
-		// Encode "login" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "login",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Login))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/invitations/"
+	var pathParts [2]string
+	pathParts[0] = "/invitations/"
 	{
 		// Encode "id" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
@@ -2221,7 +2257,7 @@ func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params Ca
 		if err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
-		pathParts[3] = encoded
+		pathParts[1] = encoded
 	}
 	uri.AddPathParts(u, pathParts[:]...)
 
@@ -2243,7 +2279,7 @@ func (c *Client) sendCancelOrganizationInvitation(ctx context.Context, params Ca
 		_ = body.Close()
 	}()
 
-	result, err := decodeCancelOrganizationInvitationResponse(resp)
+	result, err := decodeCancelInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2957,104 +2993,6 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 	}()
 
 	result, err := decodeCreateContestJoinRequestResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateContestMember invokes CreateContestMember operation.
-//
-// Create contest member.
-//
-// POST /organizations/{org_login}/contests/{contest_login}/members
-func (c *Client) CreateContestMember(ctx context.Context, params CreateContestMemberParams) error {
-	_, err := c.sendCreateContestMember(ctx, params)
-	return err
-}
-
-func (c *Client) sendCreateContestMember(ctx context.Context, params CreateContestMemberParams) (res *CreateContestMemberNoContent, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [5]string
-	pathParts[0] = "/organizations/"
-	{
-		// Encode "org_login" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "org_login",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.OrgLogin))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/contests/"
-	{
-		// Encode "contest_login" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "contest_login",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.ContestLogin))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	pathParts[4] = "/members"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "user_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "user_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.UUIDToString(params.UserID))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateContestMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3868,17 +3806,17 @@ func (c *Client) sendCreateTeam(ctx context.Context, request *CreateTeamReq) (re
 	return result, nil
 }
 
-// DeclineOrganizationInvitation invokes DeclineOrganizationInvitation operation.
+// DeclineInvitation invokes DeclineInvitation operation.
 //
-// Decline organization invitation.
+// Decline an invitation addressed to the caller.
 //
 // POST /invitations/{id}/decline
-func (c *Client) DeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) error {
-	_, err := c.sendDeclineOrganizationInvitation(ctx, params)
+func (c *Client) DeclineInvitation(ctx context.Context, params DeclineInvitationParams) error {
+	_, err := c.sendDeclineInvitation(ctx, params)
 	return err
 }
 
-func (c *Client) sendDeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) (res *DeclineOrganizationInvitationOK, err error) {
+func (c *Client) sendDeclineInvitation(ctx context.Context, params DeclineInvitationParams) (res *DeclineInvitationOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -3922,7 +3860,7 @@ func (c *Client) sendDeclineOrganizationInvitation(ctx context.Context, params D
 		_ = body.Close()
 	}()
 
-	result, err := decodeDeclineOrganizationInvitationResponse(resp)
+	result, err := decodeDeclineInvitationResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4921,6 +4859,149 @@ func (c *Client) sendDeleteTeam(ctx context.Context, params DeleteTeamParams) (r
 	return result, nil
 }
 
+// DisableContestJoinLink invokes DisableContestJoinLink operation.
+//
+// Turn off the contest join link.
+//
+// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+func (c *Client) DisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) error {
+	_, err := c.sendDisableContestJoinLink(ctx, params)
+	return err
+}
+
+func (c *Client) sendDisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) (res *DisableContestJoinLinkNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDisableContestJoinLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DisableTeamJoinLink invokes DisableTeamJoinLink operation.
+//
+// Turn off the team join link.
+//
+// DELETE /teams/{id}/join-link
+func (c *Client) DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error {
+	_, err := c.sendDisableTeamJoinLink(ctx, params)
+	return err
+}
+
+func (c *Client) sendDisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) (res *DisableTeamJoinLinkNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/teams/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDisableTeamJoinLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 //
 // Download PDF booklet with contest statements.
@@ -5247,6 +5328,68 @@ func (c *Client) sendFinishVirtualRun(ctx context.Context, params FinishVirtualR
 	return result, nil
 }
 
+// FollowJoinLink invokes FollowJoinLink operation.
+//
+// A team link also makes the caller an organization member, whatever its join policy. Following a link
+// again changes nothing.
+//
+// POST /join-links/{token}
+func (c *Client) FollowJoinLink(ctx context.Context, params FollowJoinLinkParams) (*JoinLinkTargetModel, error) {
+	res, err := c.sendFollowJoinLink(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendFollowJoinLink(ctx context.Context, params FollowJoinLinkParams) (res *JoinLinkTargetModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/join-links/"
+	{
+		// Encode "token" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "token",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Token))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeFollowJoinLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ForgotPassword invokes ForgotPassword operation.
 //
 // Forgot password.
@@ -5366,6 +5509,87 @@ func (c *Client) sendGetContest(ctx context.Context, params GetContestParams) (r
 	}()
 
 	result, err := decodeGetContestResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetContestJoinLink invokes GetContestJoinLink operation.
+//
+// Get the contest join link.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/join-link
+func (c *Client) GetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (*JoinLinkModel, error) {
+	res, err := c.sendGetContestJoinLink(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (res *JoinLinkModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetContestJoinLinkResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -5745,6 +5969,67 @@ func (c *Client) sendGetHealth(ctx context.Context) (res *GetHealthResponseModel
 	}()
 
 	result, err := decodeGetHealthResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetJoinLinkTarget invokes GetJoinLinkTarget operation.
+//
+// Show where a join link leads.
+//
+// GET /join-links/{token}
+func (c *Client) GetJoinLinkTarget(ctx context.Context, params GetJoinLinkTargetParams) (*JoinLinkTargetModel, error) {
+	res, err := c.sendGetJoinLinkTarget(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetJoinLinkTarget(ctx context.Context, params GetJoinLinkTargetParams) (res *JoinLinkTargetModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/join-links/"
+	{
+		// Encode "token" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "token",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Token))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetJoinLinkTargetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -6952,6 +7237,68 @@ func (c *Client) sendGetTeam(ctx context.Context, params GetTeamParams) (res *Ge
 	return result, nil
 }
 
+// GetTeamJoinLink invokes GetTeamJoinLink operation.
+//
+// Get the team join link.
+//
+// GET /teams/{id}/join-link
+func (c *Client) GetTeamJoinLink(ctx context.Context, params GetTeamJoinLinkParams) (*JoinLinkModel, error) {
+	res, err := c.sendGetTeamJoinLink(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetTeamJoinLink(ctx context.Context, params GetTeamJoinLinkParams) (res *JoinLinkModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/teams/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetTeamJoinLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetUnreadNotificationsCount invokes GetUnreadNotificationsCount operation.
 //
 // Get count of unread notifications.
@@ -7297,17 +7644,101 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 	return result, nil
 }
 
+// InviteContestParticipant invokes InviteContestParticipant operation.
+//
+// Invite a user to take part in the contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/invitations
+func (c *Client) InviteContestParticipant(ctx context.Context, request *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (*InvitationModel, error) {
+	res, err := c.sendInviteContestParticipant(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendInviteContestParticipant(ctx context.Context, request *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (res *InvitationModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/invitations"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeInviteContestParticipantRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeInviteContestParticipantResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // InviteOrganizationMember invokes InviteOrganizationMember operation.
 //
 // Invite user to organization.
 //
 // POST /organizations/{login}/invitations
-func (c *Client) InviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*OrganizationInvitationModel, error) {
+func (c *Client) InviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*InvitationModel, error) {
 	res, err := c.sendInviteOrganizationMember(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (res *OrganizationInvitationModel, err error) {
+func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (res *InvitationModel, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -7891,6 +8322,87 @@ func (c *Client) sendListContestDrafts(ctx context.Context, params ListContestDr
 	}()
 
 	result, err := decodeListContestDraftsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListContestInvitations invokes ListContestInvitations operation.
+//
+// List pending contest invitations.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/invitations
+func (c *Client) ListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (*ListInvitationsResponseModel, error) {
+	res, err := c.sendListContestInvitations(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (res *ListInvitationsResponseModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/invitations"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeListContestInvitationsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -8642,12 +9154,12 @@ func (c *Client) sendListOrganizationContests(ctx context.Context, params ListOr
 // List pending organization invitations.
 //
 // GET /organizations/{login}/invitations
-func (c *Client) ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListOrganizationInvitationsResponseModel, error) {
+func (c *Client) ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (*ListInvitationsResponseModel, error) {
 	res, err := c.sendListOrganizationInvitations(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (res *ListOrganizationInvitationsResponseModel, err error) {
+func (c *Client) sendListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (res *ListInvitationsResponseModel, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -11879,6 +12391,87 @@ func (c *Client) sendResendVerification(ctx context.Context, request *ResendVeri
 	return result, nil
 }
 
+// ResetContestJoinLink invokes ResetContestJoinLink operation.
+//
+// Turn on the contest join link with a new token.
+//
+// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+func (c *Client) ResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (*JoinLinkModel, error) {
+	res, err := c.sendResetContestJoinLink(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (res *JoinLinkModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeResetContestJoinLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ResetPassword invokes ResetPassword operation.
 //
 // Reset password.
@@ -11918,6 +12511,68 @@ func (c *Client) sendResetPassword(ctx context.Context, request *ResetPasswordRe
 	}()
 
 	result, err := decodeResetPasswordResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ResetTeamJoinLink invokes ResetTeamJoinLink operation.
+//
+// Turn on the team join link with a new token.
+//
+// PUT /teams/{id}/join-link
+func (c *Client) ResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (*JoinLinkModel, error) {
+	res, err := c.sendResetTeamJoinLink(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (res *JoinLinkModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/teams/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/join-link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeResetTeamJoinLinkResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

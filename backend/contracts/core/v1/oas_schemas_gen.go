@@ -17,8 +17,8 @@ func (s *ProblemStatusCodeWithHeaders) Error() string {
 	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
 }
 
-// AcceptOrganizationInvitationOK is response for AcceptOrganizationInvitation operation.
-type AcceptOrganizationInvitationOK struct{}
+// AcceptInvitationOK is response for AcceptInvitation operation.
+type AcceptInvitationOK struct{}
 
 // AddOrganizationMemberOK is response for AddOrganizationMember operation.
 type AddOrganizationMemberOK struct{}
@@ -448,8 +448,8 @@ func (s *BuildProblemPackageReq) SetExpectedRevision(val int64) {
 // CancelContestJoinRequestOK is response for CancelContestJoinRequest operation.
 type CancelContestJoinRequestOK struct{}
 
-// CancelOrganizationInvitationOK is response for CancelOrganizationInvitation operation.
-type CancelOrganizationInvitationOK struct{}
+// CancelInvitationOK is response for CancelInvitation operation.
+type CancelInvitationOK struct{}
 
 // CancelOrganizationJoinRequestOK is response for CancelOrganizationJoinRequest operation.
 type CancelOrganizationJoinRequestOK struct{}
@@ -2642,9 +2642,6 @@ func (s *CreateContestJoinRequestModel) SetMessage(val OptString) {
 	s.Message = val
 }
 
-// CreateContestMemberNoContent is response for CreateContestMember operation.
-type CreateContestMemberNoContent struct{}
-
 // CreateContestProblemNoContent is response for CreateContestProblem operation.
 type CreateContestProblemNoContent struct{}
 
@@ -3213,8 +3210,8 @@ func (s *DashboardProblemModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
-// DeclineOrganizationInvitationOK is response for DeclineOrganizationInvitation operation.
-type DeclineOrganizationInvitationOK struct{}
+// DeclineInvitationOK is response for DeclineInvitation operation.
+type DeclineInvitationOK struct{}
 
 // DeleteAvatarOK is response for DeleteAvatar operation.
 type DeleteAvatarOK struct{}
@@ -3251,6 +3248,12 @@ type DeleteProblemOK struct{}
 
 // DeleteTeamOK is response for DeleteTeam operation.
 type DeleteTeamOK struct{}
+
+// DisableContestJoinLinkNoContent is response for DisableContestJoinLink operation.
+type DisableContestJoinLinkNoContent struct{}
+
+// DisableTeamJoinLinkNoContent is response for DisableTeamJoinLink operation.
+type DisableTeamJoinLinkNoContent struct{}
 
 type DownloadContestStatementsPdfOK struct {
 	Data io.Reader
@@ -4418,6 +4421,198 @@ func (s *ImportProblemReq) SetPackage(val ht.MultipartFile) {
 	s.Package = val
 }
 
+// What an invitation or join link leads to.
+// Ref: #/components/schemas/InvitationKind
+type InvitationKind string
+
+const (
+	InvitationKindOrganization InvitationKind = "organization"
+	InvitationKindTeam         InvitationKind = "team"
+	InvitationKindContest      InvitationKind = "contest"
+)
+
+// AllValues returns all InvitationKind values.
+func (InvitationKind) AllValues() []InvitationKind {
+	return []InvitationKind{
+		InvitationKindOrganization,
+		InvitationKindTeam,
+		InvitationKindContest,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s InvitationKind) MarshalText() ([]byte, error) {
+	switch s {
+	case InvitationKindOrganization:
+		return []byte(s), nil
+	case InvitationKindTeam:
+		return []byte(s), nil
+	case InvitationKindContest:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *InvitationKind) UnmarshalText(data []byte) error {
+	switch InvitationKind(data) {
+	case InvitationKindOrganization:
+		*s = InvitationKindOrganization
+		return nil
+	case InvitationKindTeam:
+		*s = InvitationKindTeam
+		return nil
+	case InvitationKindContest:
+		*s = InvitationKindContest
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// A pending named invitation.
+// Ref: #/components/schemas/InvitationModel
+type InvitationModel struct {
+	ID                uuid.UUID      `json:"id"`
+	Kind              InvitationKind `json:"kind"`
+	OrganizationLogin string         `json:"organization_login"`
+	OrganizationName  string         `json:"organization_name"`
+	ContestLogin      OptString      `json:"contest_login"`
+	ContestTitle      OptString      `json:"contest_title"`
+	UserID            uuid.UUID      `json:"user_id"`
+	Username          string         `json:"username"`
+	InviterUsername   string         `json:"inviter_username"`
+	Role              string         `json:"role"`
+	CreatedAt         time.Time      `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *InvitationModel) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetKind returns the value of Kind.
+func (s *InvitationModel) GetKind() InvitationKind {
+	return s.Kind
+}
+
+// GetOrganizationLogin returns the value of OrganizationLogin.
+func (s *InvitationModel) GetOrganizationLogin() string {
+	return s.OrganizationLogin
+}
+
+// GetOrganizationName returns the value of OrganizationName.
+func (s *InvitationModel) GetOrganizationName() string {
+	return s.OrganizationName
+}
+
+// GetContestLogin returns the value of ContestLogin.
+func (s *InvitationModel) GetContestLogin() OptString {
+	return s.ContestLogin
+}
+
+// GetContestTitle returns the value of ContestTitle.
+func (s *InvitationModel) GetContestTitle() OptString {
+	return s.ContestTitle
+}
+
+// GetUserID returns the value of UserID.
+func (s *InvitationModel) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// GetUsername returns the value of Username.
+func (s *InvitationModel) GetUsername() string {
+	return s.Username
+}
+
+// GetInviterUsername returns the value of InviterUsername.
+func (s *InvitationModel) GetInviterUsername() string {
+	return s.InviterUsername
+}
+
+// GetRole returns the value of Role.
+func (s *InvitationModel) GetRole() string {
+	return s.Role
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *InvitationModel) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *InvitationModel) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetKind sets the value of Kind.
+func (s *InvitationModel) SetKind(val InvitationKind) {
+	s.Kind = val
+}
+
+// SetOrganizationLogin sets the value of OrganizationLogin.
+func (s *InvitationModel) SetOrganizationLogin(val string) {
+	s.OrganizationLogin = val
+}
+
+// SetOrganizationName sets the value of OrganizationName.
+func (s *InvitationModel) SetOrganizationName(val string) {
+	s.OrganizationName = val
+}
+
+// SetContestLogin sets the value of ContestLogin.
+func (s *InvitationModel) SetContestLogin(val OptString) {
+	s.ContestLogin = val
+}
+
+// SetContestTitle sets the value of ContestTitle.
+func (s *InvitationModel) SetContestTitle(val OptString) {
+	s.ContestTitle = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *InvitationModel) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
+// SetUsername sets the value of Username.
+func (s *InvitationModel) SetUsername(val string) {
+	s.Username = val
+}
+
+// SetInviterUsername sets the value of InviterUsername.
+func (s *InvitationModel) SetInviterUsername(val string) {
+	s.InviterUsername = val
+}
+
+// SetRole sets the value of Role.
+func (s *InvitationModel) SetRole(val string) {
+	s.Role = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *InvitationModel) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// The user to invite to the contest.
+// Ref: #/components/schemas/InviteContestParticipantRequestModel
+type InviteContestParticipantRequestModel struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// GetUserID returns the value of UserID.
+func (s *InviteContestParticipantRequestModel) GetUserID() uuid.UUID {
+	return s.UserID
+}
+
+// SetUserID sets the value of UserID.
+func (s *InviteContestParticipantRequestModel) SetUserID(val uuid.UUID) {
+	s.UserID = val
+}
+
 // Fields for the invite organization member request.
 // Ref: #/components/schemas/InviteOrganizationMemberRequestModel
 type InviteOrganizationMemberRequestModel struct {
@@ -4498,6 +4693,104 @@ func (s *InviteOrganizationMemberRequestModelRole) UnmarshalText(data []byte) er
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// A join link's token; absent while the link is off.
+// Ref: #/components/schemas/JoinLinkModel
+type JoinLinkModel struct {
+	Token OptString `json:"token"`
+}
+
+// GetToken returns the value of Token.
+func (s *JoinLinkModel) GetToken() OptString {
+	return s.Token
+}
+
+// SetToken sets the value of Token.
+func (s *JoinLinkModel) SetToken(val OptString) {
+	s.Token = val
+}
+
+// The team or contest a join link leads to.
+// Ref: #/components/schemas/JoinLinkTargetModel
+type JoinLinkTargetModel struct {
+	Kind              InvitationKind `json:"kind"`
+	ID                uuid.UUID      `json:"id"`
+	OrganizationLogin string         `json:"organization_login"`
+	OrganizationName  string         `json:"organization_name"`
+	TeamName          OptString      `json:"team_name"`
+	ContestLogin      OptString      `json:"contest_login"`
+	ContestTitle      OptString      `json:"contest_title"`
+}
+
+// GetKind returns the value of Kind.
+func (s *JoinLinkTargetModel) GetKind() InvitationKind {
+	return s.Kind
+}
+
+// GetID returns the value of ID.
+func (s *JoinLinkTargetModel) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrganizationLogin returns the value of OrganizationLogin.
+func (s *JoinLinkTargetModel) GetOrganizationLogin() string {
+	return s.OrganizationLogin
+}
+
+// GetOrganizationName returns the value of OrganizationName.
+func (s *JoinLinkTargetModel) GetOrganizationName() string {
+	return s.OrganizationName
+}
+
+// GetTeamName returns the value of TeamName.
+func (s *JoinLinkTargetModel) GetTeamName() OptString {
+	return s.TeamName
+}
+
+// GetContestLogin returns the value of ContestLogin.
+func (s *JoinLinkTargetModel) GetContestLogin() OptString {
+	return s.ContestLogin
+}
+
+// GetContestTitle returns the value of ContestTitle.
+func (s *JoinLinkTargetModel) GetContestTitle() OptString {
+	return s.ContestTitle
+}
+
+// SetKind sets the value of Kind.
+func (s *JoinLinkTargetModel) SetKind(val InvitationKind) {
+	s.Kind = val
+}
+
+// SetID sets the value of ID.
+func (s *JoinLinkTargetModel) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrganizationLogin sets the value of OrganizationLogin.
+func (s *JoinLinkTargetModel) SetOrganizationLogin(val string) {
+	s.OrganizationLogin = val
+}
+
+// SetOrganizationName sets the value of OrganizationName.
+func (s *JoinLinkTargetModel) SetOrganizationName(val string) {
+	s.OrganizationName = val
+}
+
+// SetTeamName sets the value of TeamName.
+func (s *JoinLinkTargetModel) SetTeamName(val OptString) {
+	s.TeamName = val
+}
+
+// SetContestLogin sets the value of ContestLogin.
+func (s *JoinLinkTargetModel) SetContestLogin(val OptString) {
+	s.ContestLogin = val
+}
+
+// SetContestTitle sets the value of ContestTitle.
+func (s *JoinLinkTargetModel) SetContestTitle(val OptString) {
+	s.ContestTitle = val
 }
 
 type ListAdminContestsVisibility string
@@ -4724,19 +5017,19 @@ func (s *ListContestsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
-// Paginated collection of organization invitations.
-// Ref: #/components/schemas/ListOrganizationInvitationsResponseModel
-type ListOrganizationInvitationsResponseModel struct {
-	Invitations []OrganizationInvitationModel `json:"invitations"`
+// Pending named invitations, newest first.
+// Ref: #/components/schemas/ListInvitationsResponseModel
+type ListInvitationsResponseModel struct {
+	Invitations []InvitationModel `json:"invitations"`
 }
 
 // GetInvitations returns the value of Invitations.
-func (s *ListOrganizationInvitationsResponseModel) GetInvitations() []OrganizationInvitationModel {
+func (s *ListInvitationsResponseModel) GetInvitations() []InvitationModel {
 	return s.Invitations
 }
 
 // SetInvitations sets the value of Invitations.
-func (s *ListOrganizationInvitationsResponseModel) SetInvitations(val []OrganizationInvitationModel) {
+func (s *ListInvitationsResponseModel) SetInvitations(val []InvitationModel) {
 	s.Invitations = val
 }
 
@@ -7730,165 +8023,6 @@ func (o OptUpdateUserRequestModelRole) Or(d UpdateUserRequestModelRole) UpdateUs
 		return v
 	}
 	return d
-}
-
-// Organization invitation data.
-// Ref: #/components/schemas/OrganizationInvitationModel
-type OrganizationInvitationModel struct {
-	ID                    uuid.UUID `json:"id"`
-	OrganizationID        uuid.UUID `json:"organization_id"`
-	OrganizationName      string    `json:"organization_name"`
-	OrganizationLogin     string    `json:"organization_login"`
-	OrganizationAvatarURL OptString `json:"organization_avatar_url"`
-	UserID                uuid.UUID `json:"user_id"`
-	Username              string    `json:"username"`
-	Email                 OptString `json:"email"`
-	InviterID             uuid.UUID `json:"inviter_id"`
-	InviterUsername       string    `json:"inviter_username"`
-	Role                  string    `json:"role"`
-	Status                string    `json:"status"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
-}
-
-// GetID returns the value of ID.
-func (s *OrganizationInvitationModel) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetOrganizationID returns the value of OrganizationID.
-func (s *OrganizationInvitationModel) GetOrganizationID() uuid.UUID {
-	return s.OrganizationID
-}
-
-// GetOrganizationName returns the value of OrganizationName.
-func (s *OrganizationInvitationModel) GetOrganizationName() string {
-	return s.OrganizationName
-}
-
-// GetOrganizationLogin returns the value of OrganizationLogin.
-func (s *OrganizationInvitationModel) GetOrganizationLogin() string {
-	return s.OrganizationLogin
-}
-
-// GetOrganizationAvatarURL returns the value of OrganizationAvatarURL.
-func (s *OrganizationInvitationModel) GetOrganizationAvatarURL() OptString {
-	return s.OrganizationAvatarURL
-}
-
-// GetUserID returns the value of UserID.
-func (s *OrganizationInvitationModel) GetUserID() uuid.UUID {
-	return s.UserID
-}
-
-// GetUsername returns the value of Username.
-func (s *OrganizationInvitationModel) GetUsername() string {
-	return s.Username
-}
-
-// GetEmail returns the value of Email.
-func (s *OrganizationInvitationModel) GetEmail() OptString {
-	return s.Email
-}
-
-// GetInviterID returns the value of InviterID.
-func (s *OrganizationInvitationModel) GetInviterID() uuid.UUID {
-	return s.InviterID
-}
-
-// GetInviterUsername returns the value of InviterUsername.
-func (s *OrganizationInvitationModel) GetInviterUsername() string {
-	return s.InviterUsername
-}
-
-// GetRole returns the value of Role.
-func (s *OrganizationInvitationModel) GetRole() string {
-	return s.Role
-}
-
-// GetStatus returns the value of Status.
-func (s *OrganizationInvitationModel) GetStatus() string {
-	return s.Status
-}
-
-// GetCreatedAt returns the value of CreatedAt.
-func (s *OrganizationInvitationModel) GetCreatedAt() time.Time {
-	return s.CreatedAt
-}
-
-// GetUpdatedAt returns the value of UpdatedAt.
-func (s *OrganizationInvitationModel) GetUpdatedAt() time.Time {
-	return s.UpdatedAt
-}
-
-// SetID sets the value of ID.
-func (s *OrganizationInvitationModel) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetOrganizationID sets the value of OrganizationID.
-func (s *OrganizationInvitationModel) SetOrganizationID(val uuid.UUID) {
-	s.OrganizationID = val
-}
-
-// SetOrganizationName sets the value of OrganizationName.
-func (s *OrganizationInvitationModel) SetOrganizationName(val string) {
-	s.OrganizationName = val
-}
-
-// SetOrganizationLogin sets the value of OrganizationLogin.
-func (s *OrganizationInvitationModel) SetOrganizationLogin(val string) {
-	s.OrganizationLogin = val
-}
-
-// SetOrganizationAvatarURL sets the value of OrganizationAvatarURL.
-func (s *OrganizationInvitationModel) SetOrganizationAvatarURL(val OptString) {
-	s.OrganizationAvatarURL = val
-}
-
-// SetUserID sets the value of UserID.
-func (s *OrganizationInvitationModel) SetUserID(val uuid.UUID) {
-	s.UserID = val
-}
-
-// SetUsername sets the value of Username.
-func (s *OrganizationInvitationModel) SetUsername(val string) {
-	s.Username = val
-}
-
-// SetEmail sets the value of Email.
-func (s *OrganizationInvitationModel) SetEmail(val OptString) {
-	s.Email = val
-}
-
-// SetInviterID sets the value of InviterID.
-func (s *OrganizationInvitationModel) SetInviterID(val uuid.UUID) {
-	s.InviterID = val
-}
-
-// SetInviterUsername sets the value of InviterUsername.
-func (s *OrganizationInvitationModel) SetInviterUsername(val string) {
-	s.InviterUsername = val
-}
-
-// SetRole sets the value of Role.
-func (s *OrganizationInvitationModel) SetRole(val string) {
-	s.Role = val
-}
-
-// SetStatus sets the value of Status.
-func (s *OrganizationInvitationModel) SetStatus(val string) {
-	s.Status = val
-}
-
-// SetCreatedAt sets the value of CreatedAt.
-func (s *OrganizationInvitationModel) SetCreatedAt(val time.Time) {
-	s.CreatedAt = val
-}
-
-// SetUpdatedAt sets the value of UpdatedAt.
-func (s *OrganizationInvitationModel) SetUpdatedAt(val time.Time) {
-	s.UpdatedAt = val
 }
 
 // Fields for the organization join request.

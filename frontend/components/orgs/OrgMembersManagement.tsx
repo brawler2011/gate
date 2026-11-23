@@ -142,12 +142,9 @@ export const OrgMembersManagement = ({orgLogin, canManageMembers}: Props): React
 
   const handleCancelInvitation = async (invitationId: string) => {
     const error = await mutateInvitations(invitationId, async () => {
-      const {error} = await api.DELETE(
-        "/organizations/{login}/invitations/{id}",
-        {
-          params: {path: {login: orgLogin, id: invitationId}},
-        },
-      );
+      const {error} = await api.DELETE("/invitations/{id}", {
+        params: {path: {id: invitationId}},
+      });
       return error;
     });
     if (error) {
@@ -421,16 +418,9 @@ export const OrgMembersManagement = ({orgLogin, canManageMembers}: Props): React
                     return (
                       <Table.Tr key={inv.id}>
                         <Table.Td>
-                          <Stack gap={2}>
-                            <Text size="sm" fw={500}>
-                              @{inv.username}
-                            </Text>
-                            {inv.email && (
-                              <Text size="xs" c="dimmed">
-                                {inv.email}
-                              </Text>
-                            )}
-                          </Stack>
+                          <Text size="sm" fw={500}>
+                            @{inv.username}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
                           <Badge color={role.color} variant="filled" size="md" tt="none">

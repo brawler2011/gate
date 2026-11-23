@@ -149,11 +149,6 @@ type ContestProblemReorderItem struct {
 	Position  int32     `json:"position"`
 }
 
-type ParticipantCreation struct {
-	ContestId uuid.UUID
-	UserId    uuid.UUID
-}
-
 type ParticipantDeletion struct {
 	ContestId uuid.UUID
 	UserId    uuid.UUID

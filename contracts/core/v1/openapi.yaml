@@ -19,6 +19,8 @@ tags:
   description: Organizations, members, invitations, and join requests.
 - name: teams
   description: Teams and their shared resources.
+- name: invitations
+  description: Named invitations and join links for organizations, teams, and contests.
 - name: posts
   description: Blog posts and preview images.
 - name: submissions
@@ -827,19 +829,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestMembersResponseModel"
-    post:
-      summary: "Create contest member"
-      tags: [contests]
-      operationId: CreateContestMember
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/UserIDQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "204":
-          description: No Content
     delete:
       summary: "Delete contest member"
       tags: [contests]
@@ -867,6 +856,91 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
+  /organizations/{org_login}/contests/{contest_login}/invitations:
+    get:
+      summary: "List pending contest invitations"
+      tags: [invitations]
+      operationId: ListContestInvitations
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInvitationsResponseModel"
+    post:
+      summary: "Invite a user to take part in the contest"
+      tags: [invitations]
+      operationId: InviteContestParticipant
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      requestBody:
+        description: "The user to invite."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteContestParticipantRequestModel"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationModel"
+  /organizations/{org_login}/contests/{contest_login}/join-link:
+    get:
+      summary: "Get the contest join link"
+      tags: [invitations]
+      operationId: GetContestJoinLink
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkModel"
+    put:
+      summary: "Turn on the contest join link with a new token"
+      tags: [invitations]
+      operationId: ResetContestJoinLink
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkModel"
+    delete:
+      summary: "Turn off the contest join link"
+      tags: [invitations]
+      operationId: DisableContestJoinLink
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "204":
+          description: No Content
   /organizations/{org_login}/contests/{contest_login}/teams:
     get:
       summary: "List contest teams"
@@ -2204,7 +2278,7 @@ paths:
                 $ref: "#/components/schemas/BatchCreateOrganizationUsersResponseModel"
   /organizations/{login}/invitations:
     get:
-      tags: [organizations]
+      tags: [invitations]
       operationId: ListOrganizationInvitations
       summary: List pending organization invitations
       parameters:
@@ -2217,9 +2291,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListOrganizationInvitationsResponseModel"
+                $ref: "#/components/schemas/ListInvitationsResponseModel"
     post:
-      tags: [organizations]
+      tags: [invitations]
       operationId: InviteOrganizationMember
       summary: Invite user to organization
       parameters:
@@ -2239,14 +2313,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationInvitationModel"
-  /organizations/{login}/invitations/{id}:
+                $ref: "#/components/schemas/InvitationModel"
+  /invitations/{id}:
     delete:
-      tags: [organizations]
-      operationId: CancelOrganizationInvitation
-      summary: Cancel organization invitation
+      tags: [invitations]
+      operationId: CancelInvitation
+      summary: Withdraw a pending invitation
       parameters:
-        - $ref: "#/components/parameters/OrganizationLoginPath"
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
         default:
@@ -2255,9 +2328,9 @@ paths:
           description: Invitation canceled
   /invitations/{id}/accept:
     post:
-      tags: [organizations]
-      operationId: AcceptOrganizationInvitation
-      summary: Accept organization invitation
+      tags: [invitations]
+      operationId: AcceptInvitation
+      summary: Accept an invitation addressed to the caller
       parameters:
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
@@ -2267,9 +2340,9 @@ paths:
           description: Invitation accepted
   /invitations/{id}/decline:
     post:
-      tags: [organizations]
-      operationId: DeclineOrganizationInvitation
-      summary: Decline organization invitation
+      tags: [invitations]
+      operationId: DeclineInvitation
+      summary: Decline an invitation addressed to the caller
       parameters:
         - $ref: "#/components/parameters/InvitationIDPath"
       responses:
@@ -2277,6 +2350,38 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: Invitation declined
+  /join-links/{token}:
+    get:
+      tags: [invitations]
+      operationId: GetJoinLinkTarget
+      summary: Show where a join link leads
+      parameters:
+        - $ref: "#/components/parameters/JoinLinkTokenPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkTargetModel"
+    post:
+      tags: [invitations]
+      operationId: FollowJoinLink
+      summary: Join the team or contest a link leads to
+      description: "A team link also makes the caller an organization member, whatever its join policy. Following a link again changes nothing."
+      parameters:
+        - $ref: "#/components/parameters/JoinLinkTokenPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkTargetModel"
   /organizations/{login}/requests:
     get:
       tags: [organizations]
@@ -2599,6 +2704,48 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: Member removed successfully
+  /teams/{id}/join-link:
+    get:
+      tags: [invitations]
+      operationId: GetTeamJoinLink
+      summary: Get the team join link
+      parameters:
+        - $ref: "#/components/parameters/TeamIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkModel"
+    put:
+      tags: [invitations]
+      operationId: ResetTeamJoinLink
+      summary: Turn on the team join link with a new token
+      parameters:
+        - $ref: "#/components/parameters/TeamIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinLinkModel"
+    delete:
+      tags: [invitations]
+      operationId: DisableTeamJoinLink
+      summary: Turn off the team join link
+      parameters:
+        - $ref: "#/components/parameters/TeamIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "204":
+          description: No Content
   /teams/{id}/contests:
     get:
       tags: [contests]
@@ -3266,6 +3413,13 @@ components:
       schema:
         type: string
         format: uuid
+    JoinLinkTokenPath:
+      name: token
+      description: Secret token of the join link.
+      in: path
+      required: true
+      schema:
+        type: string
     TeamIDPath:
       name: id
       description: UUID of the team.
@@ -7348,70 +7502,98 @@ components:
           type: integer
           format: int32
 
-    OrganizationInvitationModel:
-      description: "Organization invitation data."
+    InvitationModel:
+      description: "A pending named invitation."
       example:
         id: 123e4567-e89b-42d3-a456-426614174000
-        organization_id: 123e4567-e89b-42d3-a456-426614174000
-        organization_name: example
+        kind: organization
         organization_login: example
+        organization_name: Example
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
-        inviter_id: 123e4567-e89b-42d3-a456-426614174000
-        inviter_username: example
-        role: user
-        status: example
+        inviter_username: bob
+        role: member
         created_at: '2026-01-01T12:00:00Z'
-        updated_at: '2026-01-01T12:00:00Z'
       type: object
-      required:
-        - id
-        - organization_id
-        - organization_name
-        - organization_login
-        - user_id
-        - username
-        - inviter_id
-        - inviter_username
-        - role
-        - status
-        - created_at
-        - updated_at
+      required: [id, kind, organization_login, organization_name, user_id, username, inviter_username, role, created_at]
       properties:
         id:
           type: string
           format: uuid
-        organization_id:
-          type: string
-          format: uuid
-        organization_name:
-          type: string
+        kind:
+          $ref: "#/components/schemas/InvitationKind"
         organization_login:
           type: string
-        organization_avatar_url:
+        organization_name:
+          type: string
+        contest_login:
+          type: string
+        contest_title:
           type: string
         user_id:
           type: string
           format: uuid
         username:
           type: string
-        email:
-          type: string
-        inviter_id:
-          type: string
-          format: uuid
         inviter_username:
           type: string
         role:
           type: string
-        status:
-          type: string
         created_at:
           type: string
           format: date-time
-        updated_at:
+
+    InvitationKind:
+      description: "What an invitation or join link leads to."
+      type: string
+      enum: [organization, team, contest]
+
+    InviteContestParticipantRequestModel:
+      description: "The user to invite to the contest."
+      example:
+        user_id: 123e4567-e89b-42d3-a456-426614174000
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
           type: string
-          format: date-time
+          format: uuid
+
+    JoinLinkModel:
+      description: "A join link's token; absent while the link is off."
+      example:
+        token: q1w2e3r4t5y6u7i8o9p0aa
+      type: object
+      properties:
+        token:
+          type: string
+
+    JoinLinkTargetModel:
+      description: "The team or contest a join link leads to."
+      example:
+        kind: team
+        id: 123e4567-e89b-42d3-a456-426614174000
+        organization_login: example
+        organization_name: Example
+        team_name: 10A
+      type: object
+      required: [kind, id, organization_login, organization_name]
+      properties:
+        kind:
+          $ref: "#/components/schemas/InvitationKind"
+        id:
+          type: string
+          format: uuid
+        organization_login:
+          type: string
+        organization_name:
+          type: string
+        team_name:
+          type: string
+        contest_login:
+          type: string
+        contest_title:
+          type: string
 
     InviteOrganizationMemberRequestModel:
       description: "Fields for the invite organization member request."
@@ -7431,22 +7613,21 @@ components:
           enum: [owner, admin, maintainer, member]
           default: member
 
-    ListOrganizationInvitationsResponseModel:
-      description: "Paginated collection of organization invitations."
+    ListInvitationsResponseModel:
+      description: "Pending named invitations, newest first."
       example:
         invitations:
         - id: 123e4567-e89b-42d3-a456-426614174000
-          organization_id: 123e4567-e89b-42d3-a456-426614174000
-          organization_name: example
+          kind: contest
           organization_login: example
+          organization_name: Example
+          contest_login: final
+          contest_title: Final
           user_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
-          inviter_id: 123e4567-e89b-42d3-a456-426614174000
-          inviter_username: example
-          role: user
-          status: example
+          inviter_username: bob
+          role: participant
           created_at: '2026-01-01T12:00:00Z'
-          updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
         - invitations
@@ -7454,7 +7635,7 @@ components:
         invitations:
           type: array
           items:
-            $ref: "#/components/schemas/OrganizationInvitationModel"
+            $ref: "#/components/schemas/InvitationModel"
 
     OrganizationJoinRequestModel:
       description: "Fields for the organization join request."

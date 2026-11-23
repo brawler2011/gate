@@ -22,6 +22,10 @@ func (r registrationReader) GetOrganizationByLogin(context.Context, string) (*or
 	return &r.org, nil
 }
 
+// unimplementedOrganizationTx sits deeper than the loader so the loader's methods win.
+type unimplementedOrganizationTx struct{ organizationTx }
+type organizationTx struct{ OrganizationTxStore }
+
 type registrationStore struct {
 	unimplementedOrganizationTx
 	accesstest.Loader

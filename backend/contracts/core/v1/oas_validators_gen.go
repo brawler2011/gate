@@ -794,6 +794,42 @@ func (s *GetUserDashboardResponseModel) Validate() error {
 	return nil
 }
 
+func (s InvitationKind) Validate() error {
+	switch s {
+	case "organization":
+		return nil
+	case "team":
+		return nil
+	case "contest":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *InvitationModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *InviteOrganizationMemberRequestModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -830,6 +866,29 @@ func (s InviteOrganizationMemberRequestModelRole) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *JoinLinkTargetModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s ListAdminContestsVisibility) Validate() error {
@@ -1133,7 +1192,7 @@ func (s *ListContestsResponseModel) Validate() error {
 	return nil
 }
 
-func (s *ListOrganizationInvitationsResponseModel) Validate() error {
+func (s *ListInvitationsResponseModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -1142,6 +1201,23 @@ func (s *ListOrganizationInvitationsResponseModel) Validate() error {
 	if err := func() error {
 		if s.Invitations == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Invitations {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {

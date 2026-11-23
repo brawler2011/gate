@@ -37,6 +37,10 @@ export const appRoutes = createRoutesFromElements(
       const page = await import("@/pages/blog/BlogPage");
       return {Component: page.default};
     }} />
+    <Route path="/join/:token" lazy={async () => {
+      const page = await import("@/pages/join/JoinPage");
+      return {Component: page.default};
+    }} />
     <Route path="/notifications" lazy={async () => {
       const page = await import("@/pages/notifications/NotificationsPage");
       return {Component: page.default, loader: page.loader};

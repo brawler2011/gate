@@ -617,35 +617,6 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 	}
 }
 
-func OrganizationInvitationDTO(inv organizationsmodel.OrganizationInvitation) corev1.OrganizationInvitationModel {
-	return corev1.OrganizationInvitationModel{
-		ID:                    inv.ID,
-		OrganizationID:        inv.OrganizationID,
-		OrganizationName:      inv.OrganizationName,
-		OrganizationLogin:     inv.OrganizationLogin,
-		OrganizationAvatarURL: stringPtrToOptString(inv.OrganizationAvatarURL),
-		UserID:                inv.UserID,
-		Username:              inv.Username,
-		Email:                 stringToOptString(inv.Email),
-		InviterID:             inv.InviterID,
-		InviterUsername:       inv.InviterUsername,
-		Role:                  string(inv.Role),
-		Status:                string(inv.Status),
-		CreatedAt:             inv.CreatedAt,
-		UpdatedAt:             inv.UpdatedAt,
-	}
-}
-
-func ListOrganizationInvitationsResponseDTO(invs []organizationsmodel.OrganizationInvitation) *corev1.ListOrganizationInvitationsResponseModel {
-	items := make([]corev1.OrganizationInvitationModel, len(invs))
-	for i, inv := range invs {
-		items[i] = OrganizationInvitationDTO(inv)
-	}
-	return &corev1.ListOrganizationInvitationsResponseModel{
-		Invitations: items,
-	}
-}
-
 func OrganizationJoinRequestDTO(req organizationsmodel.OrganizationJoinRequest) corev1.OrganizationJoinRequestModel {
 	return corev1.OrganizationJoinRequestModel{
 		ID:                req.ID,

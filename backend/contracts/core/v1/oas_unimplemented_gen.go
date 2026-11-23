@@ -13,12 +13,12 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
-// AcceptOrganizationInvitation implements AcceptOrganizationInvitation operation.
+// AcceptInvitation implements AcceptInvitation operation.
 //
-// Accept organization invitation.
+// Accept an invitation addressed to the caller.
 //
 // POST /invitations/{id}/accept
-func (UnimplementedHandler) AcceptOrganizationInvitation(ctx context.Context, params AcceptOrganizationInvitationParams) error {
+func (UnimplementedHandler) AcceptInvitation(ctx context.Context, params AcceptInvitationParams) error {
 	return ht.ErrNotImplemented
 }
 
@@ -148,12 +148,12 @@ func (UnimplementedHandler) CancelContestJoinRequest(ctx context.Context, params
 	return ht.ErrNotImplemented
 }
 
-// CancelOrganizationInvitation implements CancelOrganizationInvitation operation.
+// CancelInvitation implements CancelInvitation operation.
 //
-// Cancel organization invitation.
+// Withdraw a pending invitation.
 //
-// DELETE /organizations/{login}/invitations/{id}
-func (UnimplementedHandler) CancelOrganizationInvitation(ctx context.Context, params CancelOrganizationInvitationParams) error {
+// DELETE /invitations/{id}
+func (UnimplementedHandler) CancelInvitation(ctx context.Context, params CancelInvitationParams) error {
 	return ht.ErrNotImplemented
 }
 
@@ -247,15 +247,6 @@ func (UnimplementedHandler) CreateContestJoinRequest(ctx context.Context, req Op
 	return r, ht.ErrNotImplemented
 }
 
-// CreateContestMember implements CreateContestMember operation.
-//
-// Create contest member.
-//
-// POST /organizations/{org_login}/contests/{contest_login}/members
-func (UnimplementedHandler) CreateContestMember(ctx context.Context, params CreateContestMemberParams) error {
-	return ht.ErrNotImplemented
-}
-
 // CreateContestProblem implements CreateContestProblem operation.
 //
 // Create contest problem.
@@ -337,12 +328,12 @@ func (UnimplementedHandler) CreateTeam(ctx context.Context, req *CreateTeamReq) 
 	return r, ht.ErrNotImplemented
 }
 
-// DeclineOrganizationInvitation implements DeclineOrganizationInvitation operation.
+// DeclineInvitation implements DeclineInvitation operation.
 //
-// Decline organization invitation.
+// Decline an invitation addressed to the caller.
 //
 // POST /invitations/{id}/decline
-func (UnimplementedHandler) DeclineOrganizationInvitation(ctx context.Context, params DeclineOrganizationInvitationParams) error {
+func (UnimplementedHandler) DeclineInvitation(ctx context.Context, params DeclineInvitationParams) error {
 	return ht.ErrNotImplemented
 }
 
@@ -454,6 +445,24 @@ func (UnimplementedHandler) DeleteTeam(ctx context.Context, params DeleteTeamPar
 	return ht.ErrNotImplemented
 }
 
+// DisableContestJoinLink implements DisableContestJoinLink operation.
+//
+// Turn off the contest join link.
+//
+// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+func (UnimplementedHandler) DisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) error {
+	return ht.ErrNotImplemented
+}
+
+// DisableTeamJoinLink implements DisableTeamJoinLink operation.
+//
+// Turn off the team join link.
+//
+// DELETE /teams/{id}/join-link
+func (UnimplementedHandler) DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error {
+	return ht.ErrNotImplemented
+}
+
 // DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 //
 // Download PDF booklet with contest statements.
@@ -491,6 +500,16 @@ func (UnimplementedHandler) FinishVirtualRun(ctx context.Context, params FinishV
 	return ht.ErrNotImplemented
 }
 
+// FollowJoinLink implements FollowJoinLink operation.
+//
+// A team link also makes the caller an organization member, whatever its join policy. Following a link
+// again changes nothing.
+//
+// POST /join-links/{token}
+func (UnimplementedHandler) FollowJoinLink(ctx context.Context, params FollowJoinLinkParams) (r *JoinLinkTargetModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ForgotPassword implements ForgotPassword operation.
 //
 // Forgot password.
@@ -506,6 +525,15 @@ func (UnimplementedHandler) ForgotPassword(ctx context.Context, req *ForgotPassw
 //
 // GET /organizations/{org_login}/contests/{contest_login}
 func (UnimplementedHandler) GetContest(ctx context.Context, params GetContestParams) (r *GetContestResponseModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetContestJoinLink implements GetContestJoinLink operation.
+//
+// Get the contest join link.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/join-link
+func (UnimplementedHandler) GetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (r *JoinLinkModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -543,6 +571,15 @@ func (UnimplementedHandler) GetContestScoreboard(ctx context.Context, params Get
 //
 // GET /health
 func (UnimplementedHandler) GetHealth(ctx context.Context) (r *GetHealthResponseModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetJoinLinkTarget implements GetJoinLinkTarget operation.
+//
+// Show where a join link leads.
+//
+// GET /join-links/{token}
+func (UnimplementedHandler) GetJoinLinkTarget(ctx context.Context, params GetJoinLinkTargetParams) (r *JoinLinkTargetModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -708,6 +745,15 @@ func (UnimplementedHandler) GetTeam(ctx context.Context, params GetTeamParams) (
 	return r, ht.ErrNotImplemented
 }
 
+// GetTeamJoinLink implements GetTeamJoinLink operation.
+//
+// Get the team join link.
+//
+// GET /teams/{id}/join-link
+func (UnimplementedHandler) GetTeamJoinLink(ctx context.Context, params GetTeamJoinLinkParams) (r *JoinLinkModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetUnreadNotificationsCount implements GetUnreadNotificationsCount operation.
 //
 // Get count of unread notifications.
@@ -753,12 +799,21 @@ func (UnimplementedHandler) ImportProblem(ctx context.Context, req *ImportProble
 	return r, ht.ErrNotImplemented
 }
 
+// InviteContestParticipant implements InviteContestParticipant operation.
+//
+// Invite a user to take part in the contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/invitations
+func (UnimplementedHandler) InviteContestParticipant(ctx context.Context, req *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (r *InvitationModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // InviteOrganizationMember implements InviteOrganizationMember operation.
 //
 // Invite user to organization.
 //
 // POST /organizations/{login}/invitations
-func (UnimplementedHandler) InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (r *OrganizationInvitationModel, _ error) {
+func (UnimplementedHandler) InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (r *InvitationModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -795,6 +850,15 @@ func (UnimplementedHandler) ListContestClarifications(ctx context.Context, param
 //
 // GET /organizations/{org_login}/contests/{contest_login}/drafts
 func (UnimplementedHandler) ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (r *ListContestDraftsResponseModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListContestInvitations implements ListContestInvitations operation.
+//
+// List pending contest invitations.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/invitations
+func (UnimplementedHandler) ListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (r *ListInvitationsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -866,7 +930,7 @@ func (UnimplementedHandler) ListOrganizationContests(ctx context.Context, params
 // List pending organization invitations.
 //
 // GET /organizations/{login}/invitations
-func (UnimplementedHandler) ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (r *ListOrganizationInvitationsResponseModel, _ error) {
+func (UnimplementedHandler) ListOrganizationInvitations(ctx context.Context, params ListOrganizationInvitationsParams) (r *ListInvitationsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1176,6 +1240,15 @@ func (UnimplementedHandler) ResendVerification(ctx context.Context, req *ResendV
 	return ht.ErrNotImplemented
 }
 
+// ResetContestJoinLink implements ResetContestJoinLink operation.
+//
+// Turn on the contest join link with a new token.
+//
+// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+func (UnimplementedHandler) ResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (r *JoinLinkModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ResetPassword implements ResetPassword operation.
 //
 // Reset password.
@@ -1183,6 +1256,15 @@ func (UnimplementedHandler) ResendVerification(ctx context.Context, req *ResendV
 // POST /auth/reset-password
 func (UnimplementedHandler) ResetPassword(ctx context.Context, req *ResetPasswordRequestModel) error {
 	return ht.ErrNotImplemented
+}
+
+// ResetTeamJoinLink implements ResetTeamJoinLink operation.
+//
+// Turn on the team join link with a new token.
+//
+// PUT /teams/{id}/join-link
+func (UnimplementedHandler) ResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (r *JoinLinkModel, _ error) {
+	return r, ht.ErrNotImplemented
 }
 
 // SaveProblemDraft implements SaveProblemDraft operation.

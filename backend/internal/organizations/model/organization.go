@@ -13,8 +13,6 @@ type RequestStatus string
 
 const (
 	RequestStatusPending  RequestStatus = "pending"
-	RequestStatusAccepted RequestStatus = "accepted"
-	RequestStatusDeclined RequestStatus = "declined"
 	RequestStatusApproved RequestStatus = "approved"
 	RequestStatusRejected RequestStatus = "rejected"
 	RequestStatusCanceled RequestStatus = "canceled"
@@ -38,23 +36,6 @@ type OrganizationMember struct {
 	Username       string
 	Email          string
 	CreatedAt      time.Time
-}
-
-type OrganizationInvitation struct {
-	ID                    uuid.UUID
-	OrganizationID        uuid.UUID
-	OrganizationName      string
-	OrganizationLogin     string
-	OrganizationAvatarURL *string
-	UserID                uuid.UUID
-	Username              string
-	Email                 string
-	InviterID             uuid.UUID
-	InviterUsername       string
-	Role                  accessmodel.OrganizationRole
-	Status                RequestStatus
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
 }
 
 type OrganizationJoinRequest struct {
@@ -103,13 +84,6 @@ type OrganizationList struct {
 type AddOrganizationMemberInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
-	Role           accessmodel.OrganizationRole
-}
-
-type CreateOrganizationInvitationInput struct {
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	InviterID      uuid.UUID
 	Role           accessmodel.OrganizationRole
 }
 

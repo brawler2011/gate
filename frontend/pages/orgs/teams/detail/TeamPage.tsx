@@ -6,7 +6,9 @@ import {TeamContestsTab} from "@/components/orgs/TeamContestsTab";
 import {TeamMembersManagement} from "@/components/orgs/TeamMembersManagement";
 import {LinkAnchor} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {api} from "@/lib/api";
+import {JoinLinkCard} from "@/components/shared/JoinLinkCard";
+import {api, unwrap} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 import NotFound from "@/pages/NotFoundPage";
 
 import type {ReactNode} from "react";
@@ -71,6 +73,21 @@ const TeamPage = (): ReactNode => {
             )}
           </Stack>
         </Group>
+
+        {team.permissions.manage && (
+          <JoinLinkCard
+            queryKey={["team-join-link", team_id]}
+            load={() => unwrap(api.GET("/teams/{id}/join-link", {params: {path: {id: team_id}}}))}
+            reset={() => unwrap(api.PUT("/teams/{id}/join-link", {params: {path: {id: team_id}}}))}
+            disable={async () => {
+              const {error} = await api.DELETE("/teams/{id}/join-link", {params: {path: {id: team_id}}});
+              if (error) {
+                throw new Error(problemMessage(error, "Не удалось выключить ссылку"));
+              }
+            }}
+            description="Кто откроет ссылку, вступит в эту команду и в организацию, даже если в организацию принимают только по приглашению."
+          />
+        )}
 
         <Paper radius="md" p="md" withBorder>
           <Tabs defaultValue="members">

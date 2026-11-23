@@ -60,58 +60,6 @@ func (q *Queries) CreateContestJoinRequest(ctx context.Context, arg CreateContes
 	return i, err
 }
 
-const createOrganizationInvitation = `-- name: CreateOrganizationInvitation :one
-INSERT INTO organization_invitations (
-    id,
-    organization_id,
-    user_id,
-    inviter_id,
-    role,
-    status,
-    created_at,
-    updated_at
-) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    'pending',
-    NOW(),
-    NOW()
-) RETURNING id, organization_id, user_id, inviter_id, role, status, created_at, updated_at
-`
-
-type CreateOrganizationInvitationParams struct {
-	ID             uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	UserID         uuid.UUID `json:"user_id"`
-	InviterID      uuid.UUID `json:"inviter_id"`
-	Role           string    `json:"role"`
-}
-
-func (q *Queries) CreateOrganizationInvitation(ctx context.Context, arg CreateOrganizationInvitationParams) (OrganizationInvitation, error) {
-	row := q.db.QueryRow(ctx, createOrganizationInvitation,
-		arg.ID,
-		arg.OrganizationID,
-		arg.UserID,
-		arg.InviterID,
-		arg.Role,
-	)
-	var i OrganizationInvitation
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.InviterID,
-		&i.Role,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createOrganizationJoinRequest = `-- name: CreateOrganizationJoinRequest :one
 INSERT INTO organization_join_requests (
     id,
@@ -209,52 +157,6 @@ func (q *Queries) GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (
 	return i, err
 }
 
-const getOrganizationInvitationByID = `-- name: GetOrganizationInvitationByID :one
-SELECT oi.id, oi.organization_id, oi.user_id, oi.inviter_id, oi.role, oi.status, oi.created_at, oi.updated_at, o.name as organization_name, o.login as organization_login, u.username, u.email, inv.username as inviter_username
-FROM organization_invitations oi
-JOIN organizations o ON oi.organization_id = o.id
-JOIN users u ON oi.user_id = u.id
-JOIN users inv ON oi.inviter_id = inv.id
-WHERE oi.id = $1
-`
-
-type GetOrganizationInvitationByIDRow struct {
-	ID                uuid.UUID `json:"id"`
-	OrganizationID    uuid.UUID `json:"organization_id"`
-	UserID            uuid.UUID `json:"user_id"`
-	InviterID         uuid.UUID `json:"inviter_id"`
-	Role              string    `json:"role"`
-	Status            string    `json:"status"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
-	OrganizationName  string    `json:"organization_name"`
-	OrganizationLogin string    `json:"organization_login"`
-	Username          string    `json:"username"`
-	Email             *string   `json:"email"`
-	InviterUsername   string    `json:"inviter_username"`
-}
-
-func (q *Queries) GetOrganizationInvitationByID(ctx context.Context, id uuid.UUID) (GetOrganizationInvitationByIDRow, error) {
-	row := q.db.QueryRow(ctx, getOrganizationInvitationByID, id)
-	var i GetOrganizationInvitationByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.InviterID,
-		&i.Role,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OrganizationName,
-		&i.OrganizationLogin,
-		&i.Username,
-		&i.Email,
-		&i.InviterUsername,
-	)
-	return i, err
-}
-
 const getOrganizationJoinRequestByID = `-- name: GetOrganizationJoinRequestByID :one
 SELECT ojr.id, ojr.organization_id, ojr.user_id, ojr.message, ojr.status, ojr.reviewed_by, ojr.created_at, ojr.updated_at, o.name as organization_name, o.login as organization_login, u.username, u.email, rev.username as reviewer_username
 FROM organization_join_requests ojr
@@ -322,33 +224,6 @@ func (q *Queries) GetPendingContestJoinRequest(ctx context.Context, arg GetPendi
 		&i.Message,
 		&i.Status,
 		&i.ReviewedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getPendingOrganizationInvitation = `-- name: GetPendingOrganizationInvitation :one
-SELECT id, organization_id, user_id, inviter_id, role, status, created_at, updated_at FROM organization_invitations
-WHERE organization_id = $1 AND user_id = $2 AND status = 'pending'
-LIMIT 1
-`
-
-type GetPendingOrganizationInvitationParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	UserID         uuid.UUID `json:"user_id"`
-}
-
-func (q *Queries) GetPendingOrganizationInvitation(ctx context.Context, arg GetPendingOrganizationInvitationParams) (OrganizationInvitation, error) {
-	row := q.db.QueryRow(ctx, getPendingOrganizationInvitation, arg.OrganizationID, arg.UserID)
-	var i OrganizationInvitation
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.InviterID,
-		&i.Role,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -432,67 +307,6 @@ func (q *Queries) ListContestJoinRequests(ctx context.Context, arg ListContestJo
 			&i.Username,
 			&i.Email,
 			&i.ReviewerUsername,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listOrganizationInvitations = `-- name: ListOrganizationInvitations :many
-SELECT oi.id, oi.organization_id, oi.user_id, oi.inviter_id, oi.role, oi.status, oi.created_at, oi.updated_at, u.username, u.email, inv.username as inviter_username
-FROM organization_invitations oi
-JOIN users u ON oi.user_id = u.id
-JOIN users inv ON oi.inviter_id = inv.id
-WHERE oi.organization_id = $1
-  AND ($2::text IS NULL OR oi.status = $2)
-ORDER BY oi.created_at DESC
-`
-
-type ListOrganizationInvitationsParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Status         *string   `json:"status"`
-}
-
-type ListOrganizationInvitationsRow struct {
-	ID              uuid.UUID `json:"id"`
-	OrganizationID  uuid.UUID `json:"organization_id"`
-	UserID          uuid.UUID `json:"user_id"`
-	InviterID       uuid.UUID `json:"inviter_id"`
-	Role            string    `json:"role"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	Username        string    `json:"username"`
-	Email           *string   `json:"email"`
-	InviterUsername string    `json:"inviter_username"`
-}
-
-func (q *Queries) ListOrganizationInvitations(ctx context.Context, arg ListOrganizationInvitationsParams) ([]ListOrganizationInvitationsRow, error) {
-	rows, err := q.db.Query(ctx, listOrganizationInvitations, arg.OrganizationID, arg.Status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListOrganizationInvitationsRow{}
-	for rows.Next() {
-		var i ListOrganizationInvitationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.UserID,
-			&i.InviterID,
-			&i.Role,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Username,
-			&i.Email,
-			&i.InviterUsername,
 		); err != nil {
 			return nil, err
 		}
@@ -620,69 +434,6 @@ func (q *Queries) ListUserContestJoinRequests(ctx context.Context, userID uuid.U
 	return items, nil
 }
 
-const listUserOrganizationInvitations = `-- name: ListUserOrganizationInvitations :many
-SELECT oi.id, oi.organization_id, oi.user_id, oi.inviter_id, oi.role, oi.status, oi.created_at, oi.updated_at, o.name as organization_name, o.login as organization_login, o.avatar_url as organization_avatar_url, inv.username as inviter_username
-FROM organization_invitations oi
-JOIN organizations o ON oi.organization_id = o.id
-JOIN users inv ON oi.inviter_id = inv.id
-WHERE oi.user_id = $1
-  AND ($2::text IS NULL OR oi.status = $2)
-ORDER BY oi.created_at DESC
-`
-
-type ListUserOrganizationInvitationsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Status *string   `json:"status"`
-}
-
-type ListUserOrganizationInvitationsRow struct {
-	ID                    uuid.UUID `json:"id"`
-	OrganizationID        uuid.UUID `json:"organization_id"`
-	UserID                uuid.UUID `json:"user_id"`
-	InviterID             uuid.UUID `json:"inviter_id"`
-	Role                  string    `json:"role"`
-	Status                string    `json:"status"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
-	OrganizationName      string    `json:"organization_name"`
-	OrganizationLogin     string    `json:"organization_login"`
-	OrganizationAvatarUrl *string   `json:"organization_avatar_url"`
-	InviterUsername       string    `json:"inviter_username"`
-}
-
-func (q *Queries) ListUserOrganizationInvitations(ctx context.Context, arg ListUserOrganizationInvitationsParams) ([]ListUserOrganizationInvitationsRow, error) {
-	rows, err := q.db.Query(ctx, listUserOrganizationInvitations, arg.UserID, arg.Status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListUserOrganizationInvitationsRow{}
-	for rows.Next() {
-		var i ListUserOrganizationInvitationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.UserID,
-			&i.InviterID,
-			&i.Role,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrganizationName,
-			&i.OrganizationLogin,
-			&i.OrganizationAvatarUrl,
-			&i.InviterUsername,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listUserOrganizationJoinRequests = `-- name: ListUserOrganizationJoinRequests :many
 SELECT ojr.id, ojr.organization_id, ojr.user_id, ojr.message, ojr.status, ojr.reviewed_by, ojr.created_at, ojr.updated_at, o.name as organization_name, o.login as organization_login
 FROM organization_join_requests ojr
@@ -749,25 +500,6 @@ type UpdateContestJoinRequestStatusParams struct {
 
 func (q *Queries) UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateContestJoinRequestStatus, arg.ID, arg.Status, arg.ReviewedBy)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const updateOrganizationInvitationStatus = `-- name: UpdateOrganizationInvitationStatus :execrows
-UPDATE organization_invitations
-SET status = $2, updated_at = NOW()
-WHERE id = $1 AND status = 'pending'
-`
-
-type UpdateOrganizationInvitationStatusParams struct {
-	ID     uuid.UUID `json:"id"`
-	Status string    `json:"status"`
-}
-
-func (q *Queries) UpdateOrganizationInvitationStatus(ctx context.Context, arg UpdateOrganizationInvitationStatusParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateOrganizationInvitationStatus, arg.ID, arg.Status)
 	if err != nil {
 		return 0, err
 	}

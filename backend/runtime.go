@@ -20,6 +20,7 @@ import (
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
+	"github.com/brawler2011/gate/backend/internal/invitations"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	notifications "github.com/brawler2011/gate/backend/internal/notifications"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
@@ -355,6 +356,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.Book
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(pool), store, defaultS3BlogBucket)
 	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, accessLoader, pgstore.NewOrganizationTransactions(pool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(teamsRepo, accessLoader, pgstore.NewTeamTransactions(pool))
+	invitationsUC := invitations.NewUseCase(pgstore.NewInvitationsRepo(pool), accessLoader, pgstore.NewInvitationTransactions(pool), notificationsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, pgstore.NewSubmissionTransactions(pool), accessLoader)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool), pgstore.NewDraftsRepo(pool), accessLoader)
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool), announcementsRepo, accessLoader)
@@ -391,6 +393,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.Book
 		Avatars:           avatarsUC,
 		Organizations:     orgsUC,
 		Teams:             teamsUC,
+		Invitations:       invitationsUC,
 		Contests:          contestsUC,
 		Access:            accessLoader,
 		ContestDetails:    contestDetails,

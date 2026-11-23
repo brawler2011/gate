@@ -756,6 +756,18 @@ type ContestVirtualRun struct {
 	FinishedAt *time.Time `json:"finished_at"`
 }
 
+type Invitation struct {
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
+	TeamID         *uuid.UUID `json:"team_id"`
+	ContestID      *uuid.UUID `json:"contest_id"`
+	Role           string     `json:"role"`
+	UserID         *uuid.UUID `json:"user_id"`
+	Token          *string    `json:"token"`
+	InviterID      uuid.UUID  `json:"inviter_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
 type JudgeJob struct {
 	ID           uuid.UUID  `json:"id"`
 	SubmissionID uuid.UUID  `json:"submission_id"`
@@ -791,17 +803,6 @@ type Organization struct {
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
 	JoinPolicy  accessmodel.JoinPolicy `json:"join_policy"`
-}
-
-type OrganizationInvitation struct {
-	ID             uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	UserID         uuid.UUID `json:"user_id"`
-	InviterID      uuid.UUID `json:"inviter_id"`
-	Role           string    `json:"role"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type OrganizationJoinRequest struct {

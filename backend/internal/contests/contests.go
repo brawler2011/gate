@@ -200,18 +200,6 @@ func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId
 	})
 }
 
-func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmodel.ParticipantCreation) error {
-	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
-		if err := a.ChangeMember(c.UserId, "", accessmodel.ContestParticipant); err != nil {
-			return err
-		}
-		if _, err := tx.GetMember(ctx, a.Facts.Contest.OrganizationID, c.UserId); err != nil {
-			return pkg.OnNotFound(err, pkg.ErrNotOrgMember, "user must be a member of the organization")
-		}
-		return tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: c.ContestId, UserId: c.UserId, Role: accessmodel.ContestParticipant})
-	})
-}
-
 func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c contestsmodel.ParticipantDeletion) error {
 	return uc.changeMember(ctx, c.ContestId, c.UserId, "", func(tx CommandTxStore) error { return tx.DeleteContestMember(ctx, c.UserId, c.ContestId) })
 }
