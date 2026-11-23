@@ -19,7 +19,7 @@ type TeamPermissions struct{ Manage, Delete, Leave bool }
 type ProblemPermissions struct{ Use, Edit, Manage, Delete bool }
 
 type ContestPermissions struct {
-	ViewProblems, Submit, ListOwnSubmissions, ListSubmissions, ViewSubmissionDetails, ViewScoreboard, Manage, Delete bool
+	ViewProblems, Submit, ListOwnSubmissions, ListSubmissions, ViewSubmissionDetails, ViewScoreboard, Manage, Delete, StartVirtual bool
 }
 
 type ContestProblemPermissions struct{ Submit, Manage, EditProblem bool }
@@ -150,6 +150,7 @@ func (s *PermissionSet) Contest(id uuid.UUID) (ContestPermissions, error) {
 		ViewScoreboard:        a.Can(m.ContestViewScoreboard),
 		Manage:                a.Can(m.ContestManage),
 		Delete:                a.Can(m.ContestDelete),
+		StartVirtual:          a.Can(m.ContestStartVirtual),
 	}, nil
 }
 

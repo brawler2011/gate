@@ -692,6 +692,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{org_login}/contests/{contest_login}/virtual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the caller's virtual run */
+        get: operations["GetVirtualRun"];
+        put?: never;
+        /** Start a virtual run of a finished contest */
+        post: operations["StartVirtualRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{org_login}/contests/{contest_login}/virtual/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish the caller's virtual run early */
+        post: operations["FinishVirtualRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{org_login}/contests/{contest_login}/drafts": {
         parameters: {
             query?: never;
@@ -2184,6 +2219,7 @@ export interface components {
             view_scoreboard: boolean;
             manage: boolean;
             delete: boolean;
+            start_virtual: boolean;
         };
         /** @description What the caller may do with the contest problem. */
         ContestProblemPermissionsModel: {
@@ -2474,7 +2510,8 @@ export interface components {
          *         "view_submission_details": false,
          *         "view_scoreboard": false,
          *         "manage": false,
-         *         "delete": false
+         *         "delete": false,
+         *         "start_virtual": false
          *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
@@ -2536,6 +2573,7 @@ export interface components {
             enable_drafts: boolean;
             allow_clarifications: boolean;
             enable_upsolving: boolean;
+            allow_virtual: boolean;
             /** @enum {string} */
             participation_mode: "open" | "by_request" | "invite_only";
             hide_statements: boolean;
@@ -2555,7 +2593,8 @@ export interface components {
          *             "view_submission_details": false,
          *             "view_scoreboard": false,
          *             "manage": false,
-         *             "delete": false
+         *             "delete": false,
+         *             "start_virtual": false
          *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
@@ -2604,7 +2643,8 @@ export interface components {
          *             "view_submission_details": false,
          *             "view_scoreboard": false,
          *             "manage": false,
-         *             "delete": false
+         *             "delete": false,
+         *             "start_virtual": false
          *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
@@ -2692,7 +2732,8 @@ export interface components {
          *           "view_submission_details": false,
          *           "view_scoreboard": false,
          *           "manage": false,
-         *           "delete": false
+         *           "delete": false,
+         *           "start_virtual": false
          *         },
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "login": "contest-1",
@@ -2826,6 +2867,7 @@ export interface components {
             end_time?: string | null;
             enable_drafts?: boolean;
             allow_clarifications?: boolean;
+            allow_virtual?: boolean;
             enable_upsolving?: boolean;
             /** @enum {string} */
             participation_mode?: "open" | "by_request" | "invite_only";
@@ -2879,11 +2921,21 @@ export interface components {
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /** @description A personal replay of a finished contest within [started_at, ends_at). */
+        VirtualRunModel: {
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            ends_at: string;
+        };
+        VirtualRunResponseModel: {
+            virtual_run: components["schemas"]["VirtualRunModel"] | null;
+        };
         /**
          * @description How the author took part; only contest submissions count toward the standings.
          * @enum {string}
          */
-        SubmissionKind: "contest" | "upsolving";
+        SubmissionKind: "contest" | "upsolving" | "virtual";
         /**
          * @description Submissions list item data.
          * @example {
@@ -3217,7 +3269,8 @@ export interface components {
          *         "view_submission_details": false,
          *         "view_scoreboard": false,
          *         "manage": false,
-         *         "delete": false
+         *         "delete": false,
+         *         "start_virtual": false
          *       },
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
@@ -3298,7 +3351,8 @@ export interface components {
          *             "view_submission_details": false,
          *             "view_scoreboard": false,
          *             "manage": false,
-         *             "delete": false
+         *             "delete": false,
+         *             "start_virtual": false
          *           },
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
@@ -3548,6 +3602,8 @@ export interface components {
             /** Format: date-time */
             last_accepted_at?: string;
             problem_results: components["schemas"]["ScoreboardProblemResultModel"][];
+            /** @description The row is a virtual run, ranked by its own timeline. */
+            virtual?: boolean;
         };
         /**
          * ScoreboardProblemHeaderModel
@@ -5476,6 +5532,8 @@ export type UpdateProblemRequestModel = components['schemas']['UpdateProblemRequ
 export type UpdateContestRequestModel = components['schemas']['UpdateContestRequestModel'];
 export type CreateSubmissionRequestModel = components['schemas']['CreateSubmissionRequestModel'];
 export type ListSubmissionsResponseModel = components['schemas']['ListSubmissionsResponseModel'];
+export type VirtualRunModel = components['schemas']['VirtualRunModel'];
+export type VirtualRunResponseModel = components['schemas']['VirtualRunResponseModel'];
 export type SubmissionKind = components['schemas']['SubmissionKind'];
 export type SubmissionsListItemModel = components['schemas']['SubmissionsListItemModel'];
 export type TestDetailItemModel = components['schemas']['TestDetailItemModel'];
@@ -7257,6 +7315,8 @@ export interface operations {
             query?: {
                 /** @description Whether to return unfrozen scoreboard (managers only) */
                 unfrozen?: boolean;
+                /** @description Whether to rank virtual runs with the official participants */
+                virtual?: boolean;
             };
             header?: never;
             path: {
@@ -7277,6 +7337,82 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ScoreboardResponseModel"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetVirtualRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VirtualRunResponseModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    StartVirtualRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VirtualRunModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    FinishVirtualRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

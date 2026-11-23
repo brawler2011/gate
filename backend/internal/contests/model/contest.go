@@ -281,6 +281,7 @@ type ContestSettings struct {
 	AllowClarifications    bool
 	EnableDrafts           bool
 	EnableUpsolving        bool
+	AllowVirtual           bool
 	Languages              []string
 }
 
@@ -298,6 +299,7 @@ type ContestSettingsPatch struct {
 	AllowClarifications    *bool
 	EnableDrafts           *bool
 	EnableUpsolving        *bool
+	AllowVirtual           *bool
 	Languages              []string
 }
 
@@ -342,6 +344,27 @@ func (c *Contest) IsFrozenAt(t time.Time) bool {
 	}
 }
 
+// VirtualRun is a user's personal replay of a finished contest within [StartedAt, EndsAt).
+type VirtualRun struct {
+	UserID    uuid.UUID
+	Username  string
+	StartedAt time.Time
+	EndsAt    time.Time
+}
+
+// Shift moves a contest with start and end times to begin with the run, keeping its duration and freeze rules.
+func (c *Contest) Shift(run VirtualRun) Contest {
+	shifted := *c
+	offset := run.StartedAt.Sub(*c.StartTime)
+	start, end := run.StartedAt, c.EndTime.Add(offset)
+	shifted.StartTime, shifted.EndTime = &start, &end
+	if c.Settings.FreezeStartedAt != nil {
+		freeze := c.Settings.FreezeStartedAt.Add(offset)
+		shifted.Settings.FreezeStartedAt = &freeze
+	}
+	return shifted
+}
+
 type UpsertContestProblemResultParams struct {
 	ContestID      uuid.UUID
 	UserID         uuid.UUID
@@ -371,6 +394,7 @@ type ScoreboardItem struct {
 	TotalPenalty   int32                  `json:"total_penalty"`
 	LastAcceptedAt *time.Time             `json:"last_accepted_at,omitempty"`
 	ProblemResults []ContestProblemResult `json:"problem_results"`
+	Virtual        bool                   `json:"virtual,omitempty"`
 }
 
 type ScoreboardProblemHeader struct {

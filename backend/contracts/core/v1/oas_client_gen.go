@@ -347,6 +347,12 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/draft/export
 	ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (ExportProblemDraftOK, error)
+	// FinishVirtualRun invokes FinishVirtualRun operation.
+	//
+	// Finish the caller's virtual run early.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
+	FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error
 	// ForgotPassword invokes ForgotPassword operation.
 	//
 	// Forgot password.
@@ -504,6 +510,12 @@ type Invoker interface {
 	//
 	// GET /users/{username}/avatar
 	GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (GetUserAvatarRes, error)
+	// GetVirtualRun invokes GetVirtualRun operation.
+	//
+	// Get the caller's virtual run.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/virtual
+	GetVirtualRun(ctx context.Context, params GetVirtualRunParams) (*VirtualRunResponseModel, error)
 	// ImportProblem invokes ImportProblem operation.
 	//
 	// Replace the draft with the contents of a problem archive.
@@ -816,6 +828,12 @@ type Invoker interface {
 	//
 	// PUT /problems/{id}/draft
 	SaveProblemDraft(ctx context.Context, request *ProblemDraft, params SaveProblemDraftParams) (*ProblemDraft, error)
+	// StartVirtualRun invokes StartVirtualRun operation.
+	//
+	// Start a virtual run of a finished contest.
+	//
+	// POST /organizations/{org_login}/contests/{contest_login}/virtual
+	StartVirtualRun(ctx context.Context, params StartVirtualRunParams) (*VirtualRunModel, error)
 	// UnblockProblemForUser invokes UnblockProblemForUser operation.
 	//
 	// Unblock problem for user.
@@ -5386,6 +5404,87 @@ func (c *Client) sendExportProblemDraft(ctx context.Context, params ExportProble
 	return result, nil
 }
 
+// FinishVirtualRun invokes FinishVirtualRun operation.
+//
+// Finish the caller's virtual run early.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
+func (c *Client) FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error {
+	_, err := c.sendFinishVirtualRun(ctx, params)
+	return err
+}
+
+func (c *Client) sendFinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) (res *FinishVirtualRunNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/virtual/finish"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeFinishVirtualRunResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ForgotPassword invokes ForgotPassword operation.
 //
 // Forgot password.
@@ -5796,6 +5895,23 @@ func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContest
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Unfrozen.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "virtual" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "virtual",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Virtual.Get(); ok {
 				return e.EncodeValue(conv.BoolToString(val))
 			}
 			return nil
@@ -7169,6 +7285,87 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 	}()
 
 	result, err := decodeGetUserAvatarResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetVirtualRun invokes GetVirtualRun operation.
+//
+// Get the caller's virtual run.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/virtual
+func (c *Client) GetVirtualRun(ctx context.Context, params GetVirtualRunParams) (*VirtualRunResponseModel, error) {
+	res, err := c.sendGetVirtualRun(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetVirtualRun(ctx context.Context, params GetVirtualRunParams) (res *VirtualRunResponseModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/virtual"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetVirtualRunResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -12148,6 +12345,87 @@ func (c *Client) sendSaveProblemDraft(ctx context.Context, request *ProblemDraft
 	}()
 
 	result, err := decodeSaveProblemDraftResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// StartVirtualRun invokes StartVirtualRun operation.
+//
+// Start a virtual run of a finished contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/virtual
+func (c *Client) StartVirtualRun(ctx context.Context, params StartVirtualRunParams) (*VirtualRunModel, error) {
+	res, err := c.sendStartVirtualRun(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendStartVirtualRun(ctx context.Context, params StartVirtualRunParams) (res *VirtualRunModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/virtual"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeStartVirtualRunResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -75,9 +75,11 @@ func ProblemAllows(actor m.User, f ProblemFacts, action m.ProblemAction) bool {
 
 type contestState struct {
 	manager, view, started, finished bool
-	// competitor may submit or has submitted: a participant, or anyone upsolving a finished contest.
+	// competitor may submit or has submitted: a participant, a virtual runner, or anyone upsolving a finished contest.
 	participant, competitor bool
-	f                       ContestFacts
+	// virtual: the actor has a virtual run; replaying: it is under way.
+	virtual, replaying bool
+	f                  ContestFacts
 }
 
 func newContestState(actor m.User, f ContestFacts) contestState {
@@ -93,7 +95,9 @@ func newContestState(actor m.User, f ContestFacts) contestState {
 	}
 	user := !actor.IsGuest()
 	s.participant = user && (r >= 1 || public && c.Settings.ParticipationMode == contestsmodel.ParticipationModeOpen)
-	s.competitor = s.participant || user && s.view && s.finished && c.Settings.EnableUpsolving
+	s.virtual = user && s.view && f.Run != nil
+	s.replaying = s.virtual && !f.Now.Before(f.Run.StartedAt) && f.Now.Before(f.Run.EndsAt)
+	s.competitor = s.participant || user && s.view && s.finished && (c.Settings.EnableUpsolving || s.virtual)
 	return s
 }
 
@@ -124,16 +128,19 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 	case m.ContestDelete:
 		return rank(actor, f.Role) >= 3
 	case m.ContestViewScoreboard:
-		return s.audience(settings.MonitorScope)
+		return s.audience(settings.MonitorScope) || s.virtual && settings.MonitorScope != contestsmodel.ScopeModerator
 	case m.ContestListSubmissions:
 		return s.audience(settings.SubmissionsListScope)
 	case m.ContestListOwnSubmissions:
 		return s.competitor
 	case m.ContestSubmit:
 		if s.finished {
-			return settings.EnableUpsolving && s.competitor
+			return s.replaying || settings.EnableUpsolving && s.competitor
 		}
 		return s.started && s.participant
+	case m.ContestStartVirtual:
+		c := f.Contest
+		return !actor.IsGuest() && s.view && s.finished && c.StartTime != nil && settings.AllowVirtual && f.Run == nil && !f.Competed
 	}
 	return false
 }

@@ -79,7 +79,7 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 const createContest = `-- name: CreateContest :one
 INSERT INTO contests (id, organization_id, visibility, title, login, description, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, organization_id, visibility, title, login, description, participation_mode, monitor_scope, submissions_list_scope, submissions_review_scope, submission_details_scope, freeze_status, freeze_duration_minutes, freeze_started_at, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, languages, start_time, end_time, created_at, updated_at
+RETURNING id, organization_id, visibility, title, login, description, participation_mode, monitor_scope, submissions_list_scope, submissions_review_scope, submission_details_scope, freeze_status, freeze_duration_minutes, freeze_started_at, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, languages, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -124,6 +124,7 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.AllowClarifications,
 		&i.EnableDrafts,
 		&i.EnableUpsolving,
+		&i.AllowVirtual,
 		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
@@ -162,6 +163,27 @@ func (q *Queries) CreateContestUserProblemBlock(ctx context.Context, arg CreateC
 	return err
 }
 
+const createVirtualRun = `-- name: CreateVirtualRun :exec
+INSERT INTO contest_virtual_runs (contest_id, user_id, started_at, ends_at) VALUES ($1, $2, $3, $4)
+`
+
+type CreateVirtualRunParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	StartedAt time.Time `json:"started_at"`
+	EndsAt    time.Time `json:"ends_at"`
+}
+
+func (q *Queries) CreateVirtualRun(ctx context.Context, arg CreateVirtualRunParams) error {
+	_, err := q.db.Exec(ctx, createVirtualRun,
+		arg.ContestID,
+		arg.UserID,
+		arg.StartedAt,
+		arg.EndsAt,
+	)
+	return err
+}
+
 const deleteContest = `-- name: DeleteContest :exec
 DELETE FROM contests WHERE id = $1
 `
@@ -187,8 +209,24 @@ func (q *Queries) DeleteContestUserProblemBlock(ctx context.Context, arg DeleteC
 	return err
 }
 
+const finishVirtualRun = `-- name: FinishVirtualRun :exec
+UPDATE contest_virtual_runs SET ends_at = $3::timestamptz
+WHERE contest_id = $1 AND user_id = $2 AND ends_at > $3::timestamptz
+`
+
+type FinishVirtualRunParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	EndsAt    time.Time `json:"ends_at"`
+}
+
+func (q *Queries) FinishVirtualRun(ctx context.Context, arg FinishVirtualRunParams) error {
+	_, err := q.db.Exec(ctx, finishVirtualRun, arg.ContestID, arg.UserID, arg.EndsAt)
+	return err
+}
+
 const getContestByID = `-- name: GetContestByID :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1
@@ -221,6 +259,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 		&i.Contest.AllowClarifications,
 		&i.Contest.EnableDrafts,
 		&i.Contest.EnableUpsolving,
+		&i.Contest.AllowVirtual,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -232,7 +271,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 }
 
 const getContestByLogin = `-- name: GetContestByLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2)
@@ -270,6 +309,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 		&i.Contest.AllowClarifications,
 		&i.Contest.EnableDrafts,
 		&i.Contest.EnableUpsolving,
+		&i.Contest.AllowVirtual,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -281,7 +321,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 }
 
 const getContestByOrgLoginAndContestLogin = `-- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.participation_mode, c.monitor_scope, c.submissions_list_scope, c.submissions_review_scope, c.submission_details_scope, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2)
@@ -319,6 +359,7 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 		&i.Contest.AllowClarifications,
 		&i.Contest.EnableDrafts,
 		&i.Contest.EnableUpsolving,
+		&i.Contest.AllowVirtual,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -653,6 +694,45 @@ func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserS
 	return items, nil
 }
 
+const getVirtualScoreboardSubmissions = `-- name: GetVirtualScoreboardSubmissions :many
+SELECT s.owner_id, s.problem_id, s.state, s.created_at
+FROM submissions s
+WHERE s.contest_id = $1::uuid AND s.kind = 'virtual' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+ORDER BY s.owner_id, s.problem_id, s.created_at ASC
+`
+
+type GetVirtualScoreboardSubmissionsRow struct {
+	OwnerID   *uuid.UUID             `json:"owner_id"`
+	ProblemID *uuid.UUID             `json:"problem_id"`
+	State     submissionsmodel.State `json:"state"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
+func (q *Queries) GetVirtualScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]GetVirtualScoreboardSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getVirtualScoreboardSubmissions, contestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetVirtualScoreboardSubmissionsRow{}
+	for rows.Next() {
+		var i GetVirtualScoreboardSubmissionsRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.ProblemID,
+			&i.State,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listContestMembers = `-- name: ListContestMembers :many
 SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email
 FROM contest_members cm
@@ -934,6 +1014,44 @@ func (q *Queries) ListUserContestMemberships(ctx context.Context, userID uuid.UU
 	return items, nil
 }
 
+const listVirtualRuns = `-- name: ListVirtualRuns :many
+SELECT r.user_id, u.username, r.started_at, r.ends_at
+FROM contest_virtual_runs r JOIN users u ON u.id = r.user_id
+WHERE r.contest_id = $1
+`
+
+type ListVirtualRunsRow struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Username  string    `json:"username"`
+	StartedAt time.Time `json:"started_at"`
+	EndsAt    time.Time `json:"ends_at"`
+}
+
+func (q *Queries) ListVirtualRuns(ctx context.Context, contestID uuid.UUID) ([]ListVirtualRunsRow, error) {
+	rows, err := q.db.Query(ctx, listVirtualRuns, contestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListVirtualRunsRow{}
+	for rows.Next() {
+		var i ListVirtualRunsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Username,
+			&i.StartedAt,
+			&i.EndsAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeContestMember = `-- name: RemoveContestMember :exec
 DELETE FROM contest_members
 WHERE contest_id = $1 AND user_id = $2
@@ -981,9 +1099,10 @@ SET login = COALESCE($2, login),
     allow_clarifications = COALESCE($15, allow_clarifications),
     enable_drafts = COALESCE($16, enable_drafts),
     enable_upsolving = COALESCE($17, enable_upsolving),
-    languages = COALESCE($18::text[], languages),
-    start_time = CASE WHEN $19::boolean THEN $20::timestamptz ELSE start_time END,
-    end_time = CASE WHEN $21::boolean THEN $22::timestamptz ELSE end_time END
+    allow_virtual = COALESCE($18, allow_virtual),
+    languages = COALESCE($19::text[], languages),
+    start_time = CASE WHEN $20::boolean THEN $21::timestamptz ELSE start_time END,
+    end_time = CASE WHEN $22::boolean THEN $23::timestamptz ELSE end_time END
 WHERE id = $1
 `
 
@@ -1005,6 +1124,7 @@ type UpdateContestParams struct {
 	AllowClarifications    *bool                            `json:"allow_clarifications"`
 	EnableDrafts           *bool                            `json:"enable_drafts"`
 	EnableUpsolving        *bool                            `json:"enable_upsolving"`
+	AllowVirtual           *bool                            `json:"allow_virtual"`
 	Languages              []string                         `json:"languages"`
 	StartTimeSet           bool                             `json:"start_time_set"`
 	StartTime              *time.Time                       `json:"start_time"`
@@ -1031,6 +1151,7 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.AllowClarifications,
 		arg.EnableDrafts,
 		arg.EnableUpsolving,
+		arg.AllowVirtual,
 		arg.Languages,
 		arg.StartTimeSet,
 		arg.StartTime,

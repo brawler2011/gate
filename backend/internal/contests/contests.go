@@ -834,12 +834,15 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 }
 
 func scoreboardResults(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, users map[uuid.UUID]string, frozen bool, subs []contestsmodel.ScoreboardSubmission) map[uuid.UUID][]contestsmodel.ContestProblemResult {
+	return rulesResults(newScoreboardRules(contest, frozen), problems, users, subs)
+}
+
+func rulesResults(rules scoreboardRules, problems []contestsmodel.ContestProblem, users map[uuid.UUID]string, subs []contestsmodel.ScoreboardSubmission) map[uuid.UUID][]contestsmodel.ContestProblemResult {
 	ordinals := make(map[uuid.UUID]int, len(problems))
 	for i, problem := range problems {
 		ordinals[problem.ProblemID] = i
 	}
 	results := make(map[uuid.UUID][]contestsmodel.ContestProblemResult, len(users))
-	rules := newScoreboardRules(contest, frozen)
 	for start := 0; start < len(subs); {
 		first := subs[start]
 		end := start + 1
@@ -870,7 +873,9 @@ func scoreboardResults(contest contestsmodel.Contest, problems []contestsmodel.C
 }
 
 type scoreboardRules struct {
-	contest           contestsmodel.Contest
+	contest contestsmodel.Contest
+	// cutoff hides submissions made at or after it, replaying the standings at an earlier moment.
+	cutoff            *time.Time
 	frozen            bool
 	freezeTime        *time.Time
 	manualFreeze      bool
@@ -902,8 +907,7 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 	contest, frozen, freezeTime := rules.contest, rules.frozen, rules.freezeTime
 
 	var solved bool
-	var failedAttempts int32
-	var pendingAttempts int32
+	var failedAttempts, pendingAttempts, considered int32
 	var firstACTime *time.Time
 	var timeMinutes *int32
 
@@ -915,6 +919,10 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 		if contest.EndTime != nil && !sub.CreatedAt.Before(*contest.EndTime) {
 			continue
 		}
+		if rules.cutoff != nil && !sub.CreatedAt.Before(*rules.cutoff) {
+			continue
+		}
+		considered++
 
 		if solved {
 			continue
@@ -948,7 +956,12 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 		}
 	}
 
-	if solved || failedAttempts > 0 || pendingAttempts > 0 || (!frozen && len(subs) > 0) {
+	// A replay must not reveal that a problem will be attempted later.
+	seen := len(subs) > 0
+	if rules.cutoff != nil {
+		seen = considered > 0
+	}
+	if solved || failedAttempts > 0 || pendingAttempts > 0 || (!frozen && seen) {
 		var penalty int32
 		if solved {
 			penalty = failedAttempts * rules.penaltyPerAttempt

@@ -2,6 +2,7 @@ package contests_test
 
 import (
 	"context"
+	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -15,6 +16,10 @@ import (
 
 type ContestsRepo interface {
 	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
+	GetVirtualScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
+	ListVirtualRuns(context.Context, uuid.UUID) ([]contestsmodel.VirtualRun, error)
+	CreateVirtualRun(context.Context, uuid.UUID, contestsmodel.VirtualRun) error
+	FinishVirtualRun(context.Context, uuid.UUID, uuid.UUID, time.Time) error
 	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)

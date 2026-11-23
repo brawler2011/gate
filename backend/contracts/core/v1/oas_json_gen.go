@@ -3456,6 +3456,10 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 		e.Bool(s.EnableUpsolving)
 	}
 	{
+		e.FieldStart("allow_virtual")
+		e.Bool(s.AllowVirtual)
+	}
+	{
 		e.FieldStart("participation_mode")
 		s.ParticipationMode.Encode(e)
 	}
@@ -3473,7 +3477,7 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfContestModel = [24]string{
+var jsonFieldsNameOfContestModel = [25]string{
 	0:  "permissions",
 	1:  "id",
 	2:  "login",
@@ -3495,9 +3499,10 @@ var jsonFieldsNameOfContestModel = [24]string{
 	18: "enable_drafts",
 	19: "allow_clarifications",
 	20: "enable_upsolving",
-	21: "participation_mode",
-	22: "hide_statements",
-	23: "languages",
+	21: "allow_virtual",
+	22: "participation_mode",
+	23: "hide_statements",
+	24: "languages",
 }
 
 // Decode decodes ContestModel from json.
@@ -3505,7 +3510,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ContestModel to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -3743,8 +3748,20 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"enable_upsolving\"")
 			}
-		case "participation_mode":
+		case "allow_virtual":
 			requiredBitSet[2] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.AllowVirtual = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"allow_virtual\"")
+			}
+		case "participation_mode":
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				if err := s.ParticipationMode.Decode(d); err != nil {
 					return err
@@ -3754,7 +3771,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"participation_mode\"")
 			}
 		case "hide_statements":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				v, err := d.Bool()
 				s.HideStatements = bool(v)
@@ -3766,7 +3783,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
 			}
 		case "languages":
-			requiredBitSet[2] |= 1 << 7
+			requiredBitSet[3] |= 1 << 0
 			if err := func() error {
 				s.Languages = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -3794,10 +3811,11 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [4]uint8{
 		0b11111111,
 		0b11101111,
 		0b11111100,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -3968,9 +3986,13 @@ func (s *ContestPermissionsModel) encodeFields(e *jx.Encoder) {
 		e.FieldStart("delete")
 		e.Bool(s.Delete)
 	}
+	{
+		e.FieldStart("start_virtual")
+		e.Bool(s.StartVirtual)
+	}
 }
 
-var jsonFieldsNameOfContestPermissionsModel = [8]string{
+var jsonFieldsNameOfContestPermissionsModel = [9]string{
 	0: "view_problems",
 	1: "submit",
 	2: "list_own_submissions",
@@ -3979,6 +4001,7 @@ var jsonFieldsNameOfContestPermissionsModel = [8]string{
 	5: "view_scoreboard",
 	6: "manage",
 	7: "delete",
+	8: "start_virtual",
 }
 
 // Decode decodes ContestPermissionsModel from json.
@@ -3986,7 +4009,7 @@ func (s *ContestPermissionsModel) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ContestPermissionsModel to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -4086,6 +4109,18 @@ func (s *ContestPermissionsModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"delete\"")
 			}
+		case "start_virtual":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.StartVirtual = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"start_virtual\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -4095,8 +4130,9 @@ func (s *ContestPermissionsModel) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
+	for i, mask := range [2]uint8{
 		0b11111111,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -11813,6 +11849,50 @@ func (s NilUUID) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *NilUUID) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes VirtualRunModel as json.
+func (o NilVirtualRunModel) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes VirtualRunModel from json.
+func (o *NilVirtualRunModel) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilVirtualRunModel to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v VirtualRunModel
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilVirtualRunModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilVirtualRunModel) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -21670,15 +21750,22 @@ func (s *ScoreboardItemModel) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.Virtual.Set {
+			e.FieldStart("virtual")
+			s.Virtual.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfScoreboardItemModel = [6]string{
+var jsonFieldsNameOfScoreboardItemModel = [7]string{
 	0: "user_id",
 	1: "username",
 	2: "problems_solved",
 	3: "total_penalty",
 	4: "last_accepted_at",
 	5: "problem_results",
+	6: "virtual",
 }
 
 // Decode decodes ScoreboardItemModel from json.
@@ -21765,6 +21852,16 @@ func (s *ScoreboardItemModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"problem_results\"")
+			}
+		case "virtual":
+			if err := func() error {
+				s.Virtual.Reset()
+				if err := s.Virtual.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"virtual\"")
 			}
 		default:
 			return d.Skip()
@@ -22440,6 +22537,8 @@ func (s *SubmissionKind) Decode(d *jx.Decoder) error {
 		*s = SubmissionKindContest
 	case SubmissionKindUpsolving:
 		*s = SubmissionKindUpsolving
+	case SubmissionKindVirtual:
+		*s = SubmissionKindVirtual
 	default:
 		*s = SubmissionKind(v)
 	}
@@ -25109,6 +25208,12 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.AllowVirtual.Set {
+			e.FieldStart("allow_virtual")
+			s.AllowVirtual.Encode(e)
+		}
+	}
+	{
 		if s.EnableUpsolving.Set {
 			e.FieldStart("enable_upsolving")
 			s.EnableUpsolving.Encode(e)
@@ -25138,7 +25243,7 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfUpdateContestRequestModel = [18]string{
+var jsonFieldsNameOfUpdateContestRequestModel = [19]string{
 	0:  "login",
 	1:  "title",
 	2:  "description",
@@ -25153,10 +25258,11 @@ var jsonFieldsNameOfUpdateContestRequestModel = [18]string{
 	11: "end_time",
 	12: "enable_drafts",
 	13: "allow_clarifications",
-	14: "enable_upsolving",
-	15: "participation_mode",
-	16: "hide_statements",
-	17: "languages",
+	14: "allow_virtual",
+	15: "enable_upsolving",
+	16: "participation_mode",
+	17: "hide_statements",
+	18: "languages",
 }
 
 // Decode decodes UpdateContestRequestModel from json.
@@ -25306,6 +25412,16 @@ func (s *UpdateContestRequestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"allow_clarifications\"")
+			}
+		case "allow_virtual":
+			if err := func() error {
+				s.AllowVirtual.Reset()
+				if err := s.AllowVirtual.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"allow_virtual\"")
 			}
 		case "enable_upsolving":
 			if err := func() error {
@@ -26372,6 +26488,213 @@ func (s *VerifyEmailRequestModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *VerifyEmailRequestModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *VirtualRunModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *VirtualRunModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("started_at")
+		json.EncodeDateTime(e, s.StartedAt)
+	}
+	{
+		e.FieldStart("ends_at")
+		json.EncodeDateTime(e, s.EndsAt)
+	}
+}
+
+var jsonFieldsNameOfVirtualRunModel = [2]string{
+	0: "started_at",
+	1: "ends_at",
+}
+
+// Decode decodes VirtualRunModel from json.
+func (s *VirtualRunModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode VirtualRunModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "started_at":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.StartedAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"started_at\"")
+			}
+		case "ends_at":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.EndsAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ends_at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode VirtualRunModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfVirtualRunModel) {
+					name = jsonFieldsNameOfVirtualRunModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *VirtualRunModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *VirtualRunModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *VirtualRunResponseModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *VirtualRunResponseModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("virtual_run")
+		s.VirtualRun.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfVirtualRunResponseModel = [1]string{
+	0: "virtual_run",
+}
+
+// Decode decodes VirtualRunResponseModel from json.
+func (s *VirtualRunResponseModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode VirtualRunResponseModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "virtual_run":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.VirtualRun.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"virtual_run\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode VirtualRunResponseModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfVirtualRunResponseModel) {
+					name = jsonFieldsNameOfVirtualRunResponseModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *VirtualRunResponseModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *VirtualRunResponseModel) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -7,6 +7,7 @@ interface ScoreboardItemModel {
   'total_penalty': number;
   'last_accepted_at'?: string;
   'problem_results': ScoreboardProblemResultModel[];
+  'virtual'?: boolean;
   'additionalProperties'?: Map<string, any>;
 }
 export default ScoreboardItemModel;

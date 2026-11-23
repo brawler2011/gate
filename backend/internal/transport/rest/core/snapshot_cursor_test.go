@@ -44,7 +44,7 @@ func (s snapshotUC) ListSubmissions(context.Context, submissionsmodel.Submission
 	return &submissionsmodel.SubmissionsList{}, nil
 }
 
-func (s snapshotUC) GetContestScoreboard(context.Context, uuid.UUID, bool) (*contestsmodel.ScoreboardResponse, error) {
+func (s snapshotUC) GetContestScoreboard(context.Context, uuid.UUID, bool, bool) (*contestsmodel.ScoreboardResponse, error) {
 	s.stream.sequence++
 	return &contestsmodel.ScoreboardResponse{}, nil
 }

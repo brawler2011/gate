@@ -3124,6 +3124,8 @@ func (s SubmissionKind) Validate() error {
 		return nil
 	case "upsolving":
 		return nil
+	case "virtual":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

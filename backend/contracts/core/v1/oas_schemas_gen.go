@@ -1384,6 +1384,7 @@ type ContestModel struct {
 	EnableDrafts        bool                          `json:"enable_drafts"`
 	AllowClarifications bool                          `json:"allow_clarifications"`
 	EnableUpsolving     bool                          `json:"enable_upsolving"`
+	AllowVirtual        bool                          `json:"allow_virtual"`
 	ParticipationMode   ContestModelParticipationMode `json:"participation_mode"`
 	HideStatements      bool                          `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog.
@@ -1493,6 +1494,11 @@ func (s *ContestModel) GetAllowClarifications() bool {
 // GetEnableUpsolving returns the value of EnableUpsolving.
 func (s *ContestModel) GetEnableUpsolving() bool {
 	return s.EnableUpsolving
+}
+
+// GetAllowVirtual returns the value of AllowVirtual.
+func (s *ContestModel) GetAllowVirtual() bool {
+	return s.AllowVirtual
 }
 
 // GetParticipationMode returns the value of ParticipationMode.
@@ -1613,6 +1619,11 @@ func (s *ContestModel) SetAllowClarifications(val bool) {
 // SetEnableUpsolving sets the value of EnableUpsolving.
 func (s *ContestModel) SetEnableUpsolving(val bool) {
 	s.EnableUpsolving = val
+}
+
+// SetAllowVirtual sets the value of AllowVirtual.
+func (s *ContestModel) SetAllowVirtual(val bool) {
+	s.AllowVirtual = val
 }
 
 // SetParticipationMode sets the value of ParticipationMode.
@@ -1738,6 +1749,7 @@ type ContestPermissionsModel struct {
 	ViewScoreboard        bool `json:"view_scoreboard"`
 	Manage                bool `json:"manage"`
 	Delete                bool `json:"delete"`
+	StartVirtual          bool `json:"start_virtual"`
 }
 
 // GetViewProblems returns the value of ViewProblems.
@@ -1780,6 +1792,11 @@ func (s *ContestPermissionsModel) GetDelete() bool {
 	return s.Delete
 }
 
+// GetStartVirtual returns the value of StartVirtual.
+func (s *ContestPermissionsModel) GetStartVirtual() bool {
+	return s.StartVirtual
+}
+
 // SetViewProblems sets the value of ViewProblems.
 func (s *ContestPermissionsModel) SetViewProblems(val bool) {
 	s.ViewProblems = val
@@ -1818,6 +1835,11 @@ func (s *ContestPermissionsModel) SetManage(val bool) {
 // SetDelete sets the value of Delete.
 func (s *ContestPermissionsModel) SetDelete(val bool) {
 	s.Delete = val
+}
+
+// SetStartVirtual sets the value of StartVirtual.
+func (s *ContestPermissionsModel) SetStartVirtual(val bool) {
+	s.StartVirtual = val
 }
 
 // Contest problem list item data.
@@ -3931,6 +3953,9 @@ func (s *FieldProblemParams) init() FieldProblemParams {
 	return m
 }
 
+// FinishVirtualRunNoContent is response for FinishVirtualRun operation.
+type FinishVirtualRunNoContent struct{}
+
 // ForgotPasswordOK is response for ForgotPassword operation.
 type ForgotPasswordOK struct{}
 
@@ -5552,6 +5577,51 @@ func (o NilUUID) Get() (v uuid.UUID, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilVirtualRunModel returns new NilVirtualRunModel with value set to v.
+func NewNilVirtualRunModel(v VirtualRunModel) NilVirtualRunModel {
+	return NilVirtualRunModel{
+		Value: v,
+	}
+}
+
+// NilVirtualRunModel is nullable VirtualRunModel.
+type NilVirtualRunModel struct {
+	Value VirtualRunModel
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilVirtualRunModel) SetTo(v VirtualRunModel) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilVirtualRunModel) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilVirtualRunModel) SetToNull() {
+	o.Null = true
+	var v VirtualRunModel
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilVirtualRunModel) Get() (v VirtualRunModel, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilVirtualRunModel) Or(d VirtualRunModel) VirtualRunModel {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -11558,6 +11628,8 @@ type ScoreboardItemModel struct {
 	TotalPenalty   int32                          `json:"total_penalty"`
 	LastAcceptedAt OptDateTime                    `json:"last_accepted_at"`
 	ProblemResults []ScoreboardProblemResultModel `json:"problem_results"`
+	// The row is a virtual run, ranked by its own timeline.
+	Virtual OptBool `json:"virtual"`
 }
 
 // GetUserID returns the value of UserID.
@@ -11590,6 +11662,11 @@ func (s *ScoreboardItemModel) GetProblemResults() []ScoreboardProblemResultModel
 	return s.ProblemResults
 }
 
+// GetVirtual returns the value of Virtual.
+func (s *ScoreboardItemModel) GetVirtual() OptBool {
+	return s.Virtual
+}
+
 // SetUserID sets the value of UserID.
 func (s *ScoreboardItemModel) SetUserID(val uuid.UUID) {
 	s.UserID = val
@@ -11618,6 +11695,11 @@ func (s *ScoreboardItemModel) SetLastAcceptedAt(val OptDateTime) {
 // SetProblemResults sets the value of ProblemResults.
 func (s *ScoreboardItemModel) SetProblemResults(val []ScoreboardProblemResultModel) {
 	s.ProblemResults = val
+}
+
+// SetVirtual sets the value of Virtual.
+func (s *ScoreboardItemModel) SetVirtual(val OptBool) {
+	s.Virtual = val
 }
 
 // Scoreboard problem header data.
@@ -11913,6 +11995,7 @@ type SubmissionKind string
 const (
 	SubmissionKindContest   SubmissionKind = "contest"
 	SubmissionKindUpsolving SubmissionKind = "upsolving"
+	SubmissionKindVirtual   SubmissionKind = "virtual"
 )
 
 // AllValues returns all SubmissionKind values.
@@ -11920,6 +12003,7 @@ func (SubmissionKind) AllValues() []SubmissionKind {
 	return []SubmissionKind{
 		SubmissionKindContest,
 		SubmissionKindUpsolving,
+		SubmissionKindVirtual,
 	}
 }
 
@@ -11929,6 +12013,8 @@ func (s SubmissionKind) MarshalText() ([]byte, error) {
 	case SubmissionKindContest:
 		return []byte(s), nil
 	case SubmissionKindUpsolving:
+		return []byte(s), nil
+	case SubmissionKindVirtual:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -11943,6 +12029,9 @@ func (s *SubmissionKind) UnmarshalText(data []byte) error {
 		return nil
 	case SubmissionKindUpsolving:
 		*s = SubmissionKindUpsolving
+		return nil
+	case SubmissionKindVirtual:
+		*s = SubmissionKindVirtual
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -13124,6 +13213,7 @@ type UpdateContestRequestModel struct {
 	EndTime             OptNilDateTime                                `json:"end_time"`
 	EnableDrafts        OptBool                                       `json:"enable_drafts"`
 	AllowClarifications OptBool                                       `json:"allow_clarifications"`
+	AllowVirtual        OptBool                                       `json:"allow_virtual"`
 	EnableUpsolving     OptBool                                       `json:"enable_upsolving"`
 	ParticipationMode   OptUpdateContestRequestModelParticipationMode `json:"participation_mode"`
 	HideStatements      OptBool                                       `json:"hide_statements"`
@@ -13200,6 +13290,11 @@ func (s *UpdateContestRequestModel) GetEnableDrafts() OptBool {
 // GetAllowClarifications returns the value of AllowClarifications.
 func (s *UpdateContestRequestModel) GetAllowClarifications() OptBool {
 	return s.AllowClarifications
+}
+
+// GetAllowVirtual returns the value of AllowVirtual.
+func (s *UpdateContestRequestModel) GetAllowVirtual() OptBool {
+	return s.AllowVirtual
 }
 
 // GetEnableUpsolving returns the value of EnableUpsolving.
@@ -13290,6 +13385,11 @@ func (s *UpdateContestRequestModel) SetEnableDrafts(val OptBool) {
 // SetAllowClarifications sets the value of AllowClarifications.
 func (s *UpdateContestRequestModel) SetAllowClarifications(val OptBool) {
 	s.AllowClarifications = val
+}
+
+// SetAllowVirtual sets the value of AllowVirtual.
+func (s *UpdateContestRequestModel) SetAllowVirtual(val OptBool) {
+	s.AllowVirtual = val
 }
 
 // SetEnableUpsolving sets the value of EnableUpsolving.
@@ -13970,4 +14070,46 @@ func (s *VerifyEmailResponseHeaders) SetSetCookie(val OptString) {
 // SetResponse sets the value of Response.
 func (s *VerifyEmailResponseHeaders) SetResponse(val AuthResponseModel) {
 	s.Response = val
+}
+
+// A personal replay of a finished contest within [started_at, ends_at).
+// Ref: #/components/schemas/VirtualRunModel
+type VirtualRunModel struct {
+	StartedAt time.Time `json:"started_at"`
+	EndsAt    time.Time `json:"ends_at"`
+}
+
+// GetStartedAt returns the value of StartedAt.
+func (s *VirtualRunModel) GetStartedAt() time.Time {
+	return s.StartedAt
+}
+
+// GetEndsAt returns the value of EndsAt.
+func (s *VirtualRunModel) GetEndsAt() time.Time {
+	return s.EndsAt
+}
+
+// SetStartedAt sets the value of StartedAt.
+func (s *VirtualRunModel) SetStartedAt(val time.Time) {
+	s.StartedAt = val
+}
+
+// SetEndsAt sets the value of EndsAt.
+func (s *VirtualRunModel) SetEndsAt(val time.Time) {
+	s.EndsAt = val
+}
+
+// Ref: #/components/schemas/VirtualRunResponseModel
+type VirtualRunResponseModel struct {
+	VirtualRun NilVirtualRunModel `json:"virtual_run"`
+}
+
+// GetVirtualRun returns the value of VirtualRun.
+func (s *VirtualRunResponseModel) GetVirtualRun() NilVirtualRunModel {
+	return s.VirtualRun
+}
+
+// SetVirtualRun sets the value of VirtualRun.
+func (s *VirtualRunResponseModel) SetVirtualRun(val NilVirtualRunModel) {
+	s.VirtualRun = val
 }

@@ -6,6 +6,7 @@ import React, {useEffect, useState, useMemo} from "react";
 import {Link} from "react-router-dom";
 
 import {QueryState} from "@/components/shared/QueryState";
+import {useVirtualRun} from "@/hooks/useVirtualRun";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
 
@@ -17,6 +18,7 @@ interface ContestMonitorTableProps {
   orgLogin: string;
   contestLogin: string;
   isManager?: boolean;
+  allowVirtual?: boolean;
 }
 
 const formatTimeMinutes = (timeMinutes?: number | null): string => {
@@ -32,15 +34,20 @@ export const ContestMonitorTable = ({
   orgLogin,
   contestLogin,
   isManager = false,
+  allowVirtual = false,
 }: ContestMonitorTableProps): React.ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showRealMonitor, setShowRealMonitor] = useState(false);
+  const [showVirtual, setShowVirtual] = useState(false);
+  const {replaying} = useVirtualRun(orgLogin, contestLogin);
+  // Live updates carry official rows at the present moment, so replayed and virtual views poll instead.
   const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
     params: {
       path: {org_login: orgLogin, contest_login: contestLogin},
-      query: {unfrozen: showRealMonitor},
+      query: showVirtual ? {unfrozen: showRealMonitor, virtual: true} : {unfrozen: showRealMonitor},
     },
-  }, {placeholderData: keepPreviousData, meta: {unfrozen: showRealMonitor}});
+  }, {placeholderData: keepPreviousData, meta: {unfrozen: showRealMonitor, polled: replaying || showVirtual},
+    refetchInterval: replaying || showVirtual ? 30_000 : false});
   useEffect(() => {
     if (scoreboard.error) {
       notifications.show({title: "Ошибка", message: "Не удалось загрузить таблицу", color: "red"});
@@ -97,6 +104,11 @@ export const ContestMonitorTable = ({
               Монитор заморожен
             </Badge>
           )}
+          {replaying && (
+            <Badge color="violet" variant="light" size="lg">
+              На тот же момент от начала
+            </Badge>
+          )}
         </Group>
         <Group align="center" gap="md">
           {isManager && (isFrozen || showRealMonitor || scoreboard.isPlaceholderData) && (
@@ -106,6 +118,14 @@ export const ContestMonitorTable = ({
               checked={showRealMonitor}
               onChange={event => setShowRealMonitor(event.currentTarget.checked)}
               disabled={scoreboard.isFetching}
+            />
+          )}
+          {allowVirtual && (
+            <Switch
+              size="sm"
+              label="Виртуальные участники"
+              checked={showVirtual}
+              onChange={event => setShowVirtual(event.currentTarget.checked)}
             />
           )}
           <TextInput
@@ -155,12 +175,15 @@ export const ContestMonitorTable = ({
               }
 
               return (
-                <Table.Tr key={item.user_id}>
+                <Table.Tr key={`${item.user_id}:${item.virtual ? "virtual" : "official"}`}>
                   <Table.Td>{index + 1}</Table.Td>
                   <Table.Td>
-                    <Text fw={500} size="sm">
-                      {item.username}
-                    </Text>
+                    <Group gap={6} wrap="nowrap">
+                      <Text fw={500} size="sm">
+                        {item.username}
+                      </Text>
+                      {item.virtual && <Badge size="xs" variant="light" color="violet" tt="none">виртуально</Badge>}
+                    </Group>
                   </Table.Td>
                   <Table.Td className={classes.tdCenter}>
                     <Text fw={700} size="sm">

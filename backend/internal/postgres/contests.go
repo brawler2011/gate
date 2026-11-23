@@ -114,6 +114,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		AllowClarifications:    s.AllowClarifications,
 		EnableDrafts:           s.EnableDrafts,
 		EnableUpsolving:        s.EnableUpsolving,
+		AllowVirtual:           s.AllowVirtual,
 		Languages:              s.Languages,
 		StartTime:              c.StartTime,
 		StartTimeSet:           c.StartTimeSet,
@@ -480,6 +481,7 @@ func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 			AllowClarifications:    c.AllowClarifications,
 			EnableDrafts:           c.EnableDrafts,
 			EnableUpsolving:        c.EnableUpsolving,
+			AllowVirtual:           c.AllowVirtual,
 			Languages:              c.Languages,
 		},
 		StartTime: c.StartTime,
@@ -933,4 +935,40 @@ func (r *ContestsRepo) GetContestTeam(ctx context.Context, contestID, teamID uui
 		return contestsmodel.ContestTeam{}, dbError("get contest team", err)
 	}
 	return contestsmodel.ContestTeam{ContestID: row.ContestID, TeamID: row.TeamID, Role: row.Role, CreatedAt: row.CreatedAt}, nil
+}
+
+func (r *ContestsRepo) CreateVirtualRun(ctx context.Context, contestID uuid.UUID, run contestsmodel.VirtualRun) error {
+	err := r.queries.CreateVirtualRun(ctx, sqlc.CreateVirtualRunParams{ContestID: contestID, UserID: run.UserID, StartedAt: run.StartedAt, EndsAt: run.EndsAt})
+	return dbError("create virtual run", err)
+}
+
+// FinishVirtualRun ends an active run at the given time; a run already over is left as is.
+func (r *ContestsRepo) FinishVirtualRun(ctx context.Context, contestID, userID uuid.UUID, at time.Time) error {
+	err := r.queries.FinishVirtualRun(ctx, sqlc.FinishVirtualRunParams{ContestID: contestID, UserID: userID, EndsAt: at})
+	return dbError("finish virtual run", err)
+}
+
+func (r *ContestsRepo) ListVirtualRuns(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.VirtualRun, error) {
+	rows, err := r.queries.ListVirtualRuns(ctx, contestID)
+	if err != nil {
+		return nil, dbError("list virtual runs", err)
+	}
+	runs := make([]contestsmodel.VirtualRun, len(rows))
+	for i, row := range rows {
+		runs[i] = contestsmodel.VirtualRun{UserID: row.UserID, Username: row.Username, StartedAt: row.StartedAt, EndsAt: row.EndsAt}
+	}
+	return runs, nil
+}
+
+func (r *ContestsRepo) GetVirtualScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	rows, err := r.queries.GetVirtualScoreboardSubmissions(ctx, contestID)
+	if err != nil {
+		return nil, dbError("get virtual scoreboard submissions", err)
+	}
+	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
+	for i, row := range rows {
+		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+	}
+	return subs, nil
 }

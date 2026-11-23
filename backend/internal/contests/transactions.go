@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"time"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -60,6 +61,8 @@ type CommandTxStore interface {
 	CreateContestTeam(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
 	UpdateContestTeamRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
 	DeleteContestTeam(context.Context, uuid.UUID, uuid.UUID) error
+	CreateVirtualRun(context.Context, uuid.UUID, contestsmodel.VirtualRun) error
+	FinishVirtualRun(context.Context, uuid.UUID, uuid.UUID, time.Time) error
 
 	access.Loader
 	ScoreboardStore

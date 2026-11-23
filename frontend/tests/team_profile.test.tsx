@@ -18,7 +18,7 @@ const team: TeamModel = {
 const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel => ({
   permissions: {
     view_problems: false, submit: false, list_own_submissions: false, list_submissions: false,
-    view_submission_details: false, view_scoreboard: false, manage: false, delete: false,
+    view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false,
   },
   id, login: id, organization_id: "org", organization_login: "school", title: id,
   description: "", visibility: "public", monitor_scope: "public", submissions_list_scope: "public",
@@ -27,6 +27,7 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   enable_drafts: true,
   allow_clarifications: true,
   enable_upsolving: true,
+  allow_virtual: false,
   participation_mode: "open",
   languages: [],
   created_at: "2026-10-01", updated_at: "2026-10-01", ...schedule,
