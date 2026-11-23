@@ -173,7 +173,7 @@ type SubmissionGrant struct {
 }
 
 // SubmissionAllows grants authors their feedback level and others never more than the author sees.
-// A virtual submission keeps the "during" level until facts show its author's run is over.
+// A virtual submission gets its author's level when the facts hold the author's run, else the stricter phase.
 func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, virtual bool) SubmissionGrant {
 	s := newContestState(actor, f)
 	settings := f.Contest.Settings
@@ -181,11 +181,14 @@ func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, virtual bo
 		return SubmissionGrant{Open: true, Source: true, Results: contestsmodel.FeedbackFull}
 	}
 	own := !actor.IsGuest() && author == actor.Id && s.competitor
-	after := s.after
+	level := settings.Feedback.At(s.after)
 	if virtual {
-		after = own && f.Run != nil && !f.Now.Before(f.Run.Over())
+		if own && f.Run != nil {
+			level = settings.Feedback.At(!f.Now.Before(f.Run.Over()))
+		} else {
+			level = settings.Feedback.During.Meet(settings.Feedback.After)
+		}
 	}
-	level := settings.Feedback.At(after)
 	if own {
 		return SubmissionGrant{Open: true, Source: level != contestsmodel.FeedbackHidden, Results: level}
 	}

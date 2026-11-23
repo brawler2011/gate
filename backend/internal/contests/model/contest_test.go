@@ -69,3 +69,15 @@ func TestContestFreezeLastsUntilUnfreezeTime(t *testing.T) {
 	require.True(t, c.IsFrozenAt(thaw.Add(-time.Nanosecond)))
 	require.False(t, c.IsFrozenAt(thaw))
 }
+
+func TestFeedbackMeet(t *testing.T) {
+	for _, tc := range []struct{ a, b, want contestsmodel.FeedbackLevel }{
+		{contestsmodel.FeedbackFull, contestsmodel.FeedbackHidden, contestsmodel.FeedbackHidden},
+		{contestsmodel.FeedbackTests, contestsmodel.FeedbackFull, contestsmodel.FeedbackTests},
+		{contestsmodel.FeedbackSamples, contestsmodel.FeedbackTests, contestsmodel.FeedbackVerdict},
+		{contestsmodel.FeedbackSamples, contestsmodel.FeedbackSamples, contestsmodel.FeedbackSamples},
+	} {
+		require.Equal(t, tc.want, tc.a.Meet(tc.b), "%s and %s", tc.a, tc.b)
+		require.Equal(t, tc.want, tc.b.Meet(tc.a), "%s and %s", tc.b, tc.a)
+	}
+}

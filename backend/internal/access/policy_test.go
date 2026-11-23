@@ -303,6 +303,9 @@ func TestSubmissionPolicy(t *testing.T) {
 		{"code the author cannot see", source, uuid.New(), running, both(func(c *cm.Contest) { public(c); c.Settings.Sources = cm.Same(cm.ScopePublic) }, feedback(cm.FeedbackHidden)), "000111", false},
 		{"reports alone open", open, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Reports = cm.Same(cm.ScopePublic) }, "111111", false},
 		{"a virtual run keeps its level after the end", tests, uuid.New(), finished, both(others(cm.ScopePublic), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "000111", true},
+		{"a virtual run never shows more than the stricter phase", tests, uuid.New(), finished, both(others(cm.ScopePublic), func(c *cm.Contest) {
+			c.Settings.Feedback = cm.Phased[cm.FeedbackLevel]{During: cm.FeedbackFull, After: cm.FeedbackHidden}
+		}), "000111", true},
 		{"own virtual submissions without a finished run", tests, author, finished, func(c *cm.Contest) { upsolving(c); c.Settings.Feedback.After = cm.FeedbackFull }, "000111", true},
 	} {
 		c, now := contest(tc.phase, tc.change)

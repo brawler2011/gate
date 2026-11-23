@@ -56,6 +56,20 @@ func (l FeedbackLevel) Tests() bool {
 	return l == FeedbackSamples || l == FeedbackTests || l == FeedbackFull
 }
 
+// Meet is the most either level allows; samples and tests share only the verdict.
+func (l FeedbackLevel) Meet(o FeedbackLevel) FeedbackLevel {
+	rank := map[FeedbackLevel]int{FeedbackHidden: 0, FeedbackVerdict: 1, FeedbackSamples: 2, FeedbackTests: 2, FeedbackFull: 3}
+	switch {
+	case l == o:
+		return l
+	case rank[l] == rank[o]:
+		return FeedbackVerdict
+	case rank[l] < rank[o]:
+		return l
+	}
+	return o
+}
+
 // Phased holds a setting while the contest runs and after it ends.
 type Phased[T any] struct{ During, After T }
 
