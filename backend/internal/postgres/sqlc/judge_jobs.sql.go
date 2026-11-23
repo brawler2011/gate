@@ -11,32 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
-const claimJudgeJob = `-- name: ClaimJudgeJob :one
+const claimNextJudgeJob = `-- name: ClaimNextJudgeJob :one
 UPDATE judge_jobs j
 SET state='processing',attempt=j.attempt+1,lease_token=$1::uuid,
     deadline_at=now()+interval '30 seconds'
-FROM submissions s
-WHERE j.id=$2::uuid AND j.generation=$3::bigint
-  AND s.id=$4::uuid AND j.submission_id=s.id
-  AND j.generation=s.generation AND s.state<>300
-  AND (j.state='pending' OR (j.state='processing' AND j.deadline_at<now()))
-RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.completed_at
+WHERE j.id=(
+    SELECT c.id FROM judge_jobs c JOIN submissions s ON s.id=c.submission_id
+    WHERE c.state='pending' AND c.available_at<=now() AND c.generation=s.generation AND s.state<>300
+    ORDER BY c.created_at
+    LIMIT 1
+    FOR UPDATE OF c SKIP LOCKED
+)
+RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.available_at
 `
 
-type ClaimJudgeJobParams struct {
-	LeaseToken   uuid.UUID `json:"lease_token"`
-	ID           uuid.UUID `json:"id"`
-	Generation   int64     `json:"generation"`
-	SubmissionID uuid.UUID `json:"submission_id"`
-}
-
-func (q *Queries) ClaimJudgeJob(ctx context.Context, arg ClaimJudgeJobParams) (JudgeJob, error) {
-	row := q.db.QueryRow(ctx, claimJudgeJob,
-		arg.LeaseToken,
-		arg.ID,
-		arg.Generation,
-		arg.SubmissionID,
-	)
+func (q *Queries) ClaimNextJudgeJob(ctx context.Context, leaseToken uuid.UUID) (JudgeJob, error) {
+	row := q.db.QueryRow(ctx, claimNextJudgeJob, leaseToken)
 	var i JudgeJob
 	err := row.Scan(
 		&i.ID,
@@ -49,14 +39,14 @@ func (q *Queries) ClaimJudgeJob(ctx context.Context, arg ClaimJudgeJobParams) (J
 		&i.LeaseToken,
 		&i.DeadlineAt,
 		&i.CreatedAt,
-		&i.CompletedAt,
+		&i.AvailableAt,
 	)
 	return i, err
 }
 
 const completeJudgeJob = `-- name: CompleteJudgeJob :execrows
-UPDATE judge_jobs j SET state='completed',completed_at=now(),lease_token=NULL,deadline_at=NULL
-FROM submissions s
+DELETE FROM judge_jobs j
+USING submissions s
 WHERE j.id=$1::uuid AND j.lease_token=$2::uuid
   AND j.submission_id=$3::uuid AND j.generation=$4::bigint
   AND j.state='processing' AND j.deadline_at>clock_timestamp()
@@ -83,46 +73,39 @@ func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobPara
 	return result.RowsAffected(), nil
 }
 
-const completeStalledJudgeJob = `-- name: CompleteStalledJudgeJob :execrows
-UPDATE judge_jobs
-SET state = 'completed', completed_at = clock_timestamp(), lease_token = NULL, deadline_at = NULL
-WHERE id = $1::uuid AND generation = $2::bigint
-  AND state = 'processing' AND deadline_at < clock_timestamp()
+const deleteObsoleteJudgeJobs = `-- name: DeleteObsoleteJudgeJobs :execrows
+DELETE FROM judge_jobs j
+WHERE j.state = 'pending' AND NOT EXISTS (
+    SELECT 1 FROM submissions s
+    WHERE s.id = j.submission_id AND s.generation = j.generation AND s.state <> 300
+)
 `
 
-type CompleteStalledJudgeJobParams struct {
-	ID         uuid.UUID `json:"id"`
-	Generation int64     `json:"generation"`
-}
-
-func (q *Queries) CompleteStalledJudgeJob(ctx context.Context, arg CompleteStalledJudgeJobParams) (int64, error) {
-	result, err := q.db.Exec(ctx, completeStalledJudgeJob, arg.ID, arg.Generation)
+func (q *Queries) DeleteObsoleteJudgeJobs(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteObsoleteJudgeJobs)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const judgeJobActive = `-- name: JudgeJobActive :one
-SELECT EXISTS (
-    SELECT 1 FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id
-    WHERE j.id=$1::uuid AND j.generation=$2::bigint
-      AND s.id=$3::uuid AND j.generation=s.generation AND s.state<>300
-      AND j.state='processing' AND j.deadline_at>now()
-) AS active
+const deleteStalledJudgeJob = `-- name: DeleteStalledJudgeJob :execrows
+DELETE FROM judge_jobs
+WHERE id = $1::uuid AND generation = $2::bigint
+  AND state = 'processing' AND deadline_at < clock_timestamp()
 `
 
-type JudgeJobActiveParams struct {
-	ID           uuid.UUID `json:"id"`
-	Generation   int64     `json:"generation"`
-	SubmissionID uuid.UUID `json:"submission_id"`
+type DeleteStalledJudgeJobParams struct {
+	ID         uuid.UUID `json:"id"`
+	Generation int64     `json:"generation"`
 }
 
-func (q *Queries) JudgeJobActive(ctx context.Context, arg JudgeJobActiveParams) (bool, error) {
-	row := q.db.QueryRow(ctx, judgeJobActive, arg.ID, arg.Generation, arg.SubmissionID)
-	var active bool
-	err := row.Scan(&active)
-	return active, err
+func (q *Queries) DeleteStalledJudgeJob(ctx context.Context, arg DeleteStalledJudgeJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteStalledJudgeJob, arg.ID, arg.Generation)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const pickStalledJudgeJobs = `-- name: PickStalledJudgeJobs :many
@@ -166,7 +149,7 @@ func (q *Queries) PickStalledJudgeJobs(ctx context.Context, limitCount int32) ([
 }
 
 const releaseJudgeJob = `-- name: ReleaseJudgeJob :execrows
-UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL
+UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL,available_at=now()+interval '5 seconds'
 WHERE id=$1::uuid AND lease_token=$2::uuid AND state='processing' AND deadline_at>now()
 `
 
@@ -175,6 +158,7 @@ type ReleaseJudgeJobParams struct {
 	LeaseToken uuid.UUID `json:"lease_token"`
 }
 
+// A released job waits so one that keeps failing cannot hold the head of the queue.
 func (q *Queries) ReleaseJudgeJob(ctx context.Context, arg ReleaseJudgeJobParams) (int64, error) {
 	result, err := q.db.Exec(ctx, releaseJudgeJob, arg.ID, arg.LeaseToken)
 	if err != nil {
@@ -229,7 +213,7 @@ INSERT INTO judge_jobs(id,submission_id,generation,package_id,package_hash)
 SELECT $1::uuid,s.id,s.generation,p.id,p.package_hash
 FROM submissions s JOIN problem_packages p ON p.id=s.package_id
 WHERE s.id=$2::uuid
-RETURNING id, submission_id, generation, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at, completed_at
+RETURNING id, submission_id, generation, package_id, package_hash, state, attempt, lease_token, deadline_at, created_at, available_at
 `
 
 type ScheduleJudgeJobParams struct {
@@ -251,7 +235,7 @@ func (q *Queries) ScheduleJudgeJob(ctx context.Context, arg ScheduleJudgeJobPara
 		&i.LeaseToken,
 		&i.DeadlineAt,
 		&i.CreatedAt,
-		&i.CompletedAt,
+		&i.AvailableAt,
 	)
 	return i, err
 }

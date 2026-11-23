@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/cpus"
@@ -22,7 +21,6 @@ type Config struct {
 	GoJudge  GoJudge       `yaml:"go_judge"`
 	Storage  Storage       `yaml:"storage"`
 	Email    Email         `yaml:"email"`
-	Inbox    Inbox         `yaml:"inbox"`
 	Judge    Judge         `yaml:"judge"`
 	Problems ProblemPolicy `yaml:"problems"`
 
@@ -98,10 +96,6 @@ type Email struct {
 	AppBaseURL string `yaml:"app_base_url"`
 }
 
-type Inbox struct {
-	Retention time.Duration `yaml:"retention"`
-}
-
 type JudgeMode string
 
 const (
@@ -120,6 +114,8 @@ type Judge struct {
 	Workers   int                  `yaml:"workers"`
 	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
+	// API instances compile booklets on a worker reached here.
+	WorkerURL string `yaml:"worker_url"`
 }
 
 func (j Judge) Cores() ([]int, error) {
@@ -154,7 +150,6 @@ func (m Mode) Worker() bool { return m != ModeAPI }
 // Secrets come only from the environment.
 type Secrets struct {
 	PostgresDSN  string `env:"POSTGRES_DSN"`
-	NatsURL      string `env:"NATS_URL"`
 	S3AccessKey  string `env:"S3_ACCESS_KEY"`
 	S3SecretKey  string `env:"S3_SECRET_KEY"`
 	ResendAPIKey string `env:"RESEND_API_KEY"`
@@ -222,6 +217,7 @@ func (c Config) Validate(mode Mode) error {
 	}
 	if mode == ModeAPI {
 		v.required("judge.manifest_dir", c.Judge.ManifestDir)
+		v.url("judge.worker_url", c.Judge.WorkerURL)
 	}
 	v.url("storage.s3_endpoint", c.Storage.S3Endpoint)
 	switch c.Email.Provider {
@@ -233,11 +229,9 @@ func (c Config) Validate(mode Mode) error {
 		v.fail("email.provider", "must be %q or %q", EmailProviderResend, EmailProviderLog)
 	}
 	v.url("email.app_base_url", c.Email.AppBaseURL)
-	v.check(c.Inbox.Retention > 0, "inbox.retention", "must be positive")
 	c.Problems.validate(&v)
 
 	v.required("POSTGRES_DSN", c.Secrets.PostgresDSN)
-	v.required("NATS_URL", c.Secrets.NatsURL)
 	v.required("S3_ACCESS_KEY", c.Secrets.S3AccessKey)
 	v.required("S3_SECRET_KEY", c.Secrets.S3SecretKey)
 	return errors.Join(v.errs...)

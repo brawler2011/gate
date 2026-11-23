@@ -132,7 +132,6 @@ linters:
     paths:
       - .*\.pb\.go$
       - contracts
-      - tests/mocks
     rules:
       - linters:
           - forbidigo

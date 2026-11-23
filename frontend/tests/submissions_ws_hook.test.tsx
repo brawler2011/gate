@@ -25,7 +25,7 @@ const submission = (id = 'initial'): SubmissionsListItemModel => ({
 });
 const data = (...rows: SubmissionsListItemModel[]): ListSubmissionsResponseModel => ({
   submissions: rows,
-  pagination: {page_size: 2, total_items: rows.length, page: 1, total_pages: Math.ceil(rows.length / 2)}, since: 7,
+  pagination: {page_size: 2, total_items: rows.length, page: 1, total_pages: Math.ceil(rows.length / 2)},
   total_count: rows.length,
 });
 const submissionsQueryOptions = (selection: SubmissionsSelection) => api.queryOptions('get', SUBMISSIONS_PATH, submissionsParams(selection));
@@ -35,10 +35,9 @@ const selection = (): SubmissionsSelection => ({
 const advance = async (ms: number) => act(async () => {
   jest.advanceTimersByTime(ms); await flushMicrotasks();
 });
-let sequence = 7;
 const message = (socket: TestWebSocket, type: string, payload: object = submission()) =>
-  socket.message({event_type: `submissions.${type}`, sequence: ++sequence,
-    payload: {...(type === 'created' ? {is_new: true} : {previous_state: 1}), ...payload, revision: ('revision' in payload && payload.revision) || 1}});
+  socket.message({event_type: `submissions.${type}`,
+    payload: {...payload, revision: ('revision' in payload && payload.revision) || 1}});
 
 describe('Query-owned submission lists', () => {
   const originalSocket = globalThis.WebSocket;
@@ -50,7 +49,6 @@ describe('Query-owned submission lists', () => {
   let url: ReturnType<typeof spyOn<typeof env, 'getWebSocketUrl'>>;
   beforeEach(() => {
     jest.useFakeTimers();
-    sequence = 7;
     client = new QueryClient({defaultOptions: {queries: {retry: false, gcTime: 0}}});
     TestWebSocket.instances = [];
     TestWebSocket.failConnections = false;
@@ -321,7 +319,7 @@ describe('Query-owned submission lists', () => {
       return Response.json(filtered ? data() : {...data(submission('shifted')), total_count: 6,
         pagination: {page_size: 2, total_items: 6, page: 2, total_pages: 3}});
     }, {preconnect: () => {}}));
-    await act(async () => message(socket, 'created', {...submission(), revision: 2, state: 1, is_new: false, previous_state: 200}));
+    await act(async () => message(socket, 'created', {...submission(), revision: 2, state: 1}));
     await advance(100);
     expect(fetch).toHaveBeenCalledTimes(calls + 2);
     expect(result.current.filtered.submissions).toHaveLength(0);
@@ -367,7 +365,7 @@ describe('Query-owned submission lists', () => {
     await act(async () => message(socket, 'test_started', {...submission(), revision: 1, number: 4}));
     expect(result.current.submissions[0].progress?.testNumber).toBe(4);
     await act(async () => {
-      finish(Response.json({...data({...submission(), revision}), since: 50})); await flushMicrotasks();
+      finish(Response.json({...data({...submission(), revision})})); await flushMicrotasks();
     });
     expect(result.current.submissions[0].progress).toEqual(revision === 1 ? {phase: 'testing', testNumber: 4} : undefined);
   });

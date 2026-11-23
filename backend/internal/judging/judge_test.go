@@ -18,9 +18,6 @@ type terminalJobs struct {
 	released bool
 }
 
-func (j *terminalJobs) Claim(context.Context, judgingmodel.JobRef) (judgingmodel.Job, error) {
-	return j.job, nil
-}
 func (j *terminalJobs) Release(context.Context, judgingmodel.Job) error {
 	j.released = true
 	return nil
@@ -31,7 +28,7 @@ type terminalStore struct {
 	submission submissionsmodel.Submission
 	current    bool
 	update     *submissionsmodel.SubmissionUpdate
-	events     []events.Event
+	notices    []events.Notice
 }
 
 func (s *terminalStore) CompleteJob(context.Context, judgingmodel.Job) (bool, error) {
@@ -52,19 +49,17 @@ func (s *terminalStore) UpdateSubmission(_ context.Context, _ uuid.UUID, update 
 	s.submission.Revision++
 	return submissionsmodel.SubmissionChange{PreviousState: submissionsmodel.Saved, Revision: s.submission.Revision}, nil
 }
-func (s *terminalStore) Record(_ context.Context, event events.Event) error {
-	s.events = append(s.events, event)
+func (s *terminalStore) Notify(_ context.Context, n events.Notice) error {
+	s.notices = append(s.notices, n)
 	return nil
 }
 func (s *terminalStore) Within(ctx context.Context, fn func(JudgeTxStore) error) error {
 	return fn(s)
 }
 
-type terminalProgress struct{ Progress }
+type terminalProgress struct{}
 
-func (terminalProgress) PublishQueued(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error {
-	return nil
-}
+func (terminalProgress) Notify(context.Context, events.Notice) error { return nil }
 
 func TestJudgeMissingProblemPersistsTerminalFailure(t *testing.T) {
 	for _, current := range []bool{true, false} {
@@ -77,21 +72,16 @@ func TestJudgeMissingProblemPersistsTerminalFailure(t *testing.T) {
 			jobs := &terminalJobs{job: job}
 			store := &terminalStore{current: current, submission: submissionsmodel.Submission{ID: job.SubmissionID, State: submissionsmodel.Saved, Revision: 1}}
 			judge := NewJudgeUseCase(jobs, store, store, nil, nil, terminalProgress{})
-			require.NoError(t, judge.JudgeSubmission(context.Background(), job.Ref()))
+			require.NoError(t, judge.JudgeSubmission(context.Background(), job))
 			require.True(t, jobs.released)
 			if !current {
 				require.Nil(t, store.update)
-				require.Empty(t, store.events)
+				require.Empty(t, store.notices)
 				return
 			}
 			require.NotNil(t, store.update)
 			require.Equal(t, submissionsmodel.GotIE, store.update.State)
-			require.Len(t, store.events, 1)
-			require.Equal(t, events.OutboxEventSubmissionCompleted, store.events[0].Type)
-			completed, ok := store.events[0].Payload.(submissionsmodel.SubmissionCompletedEvent)
-			require.True(t, ok)
-			require.Equal(t, submissionsmodel.GotIE, completed.State)
-			require.EqualValues(t, 2, completed.Revision)
+			require.Equal(t, []events.Notice{{Type: submissionsmodel.SubmissionEventCompleted, ID: job.SubmissionID}}, store.notices)
 		})
 	}
 }

@@ -85,6 +85,29 @@ type ContestClarificationAnsweredEvent struct {
 	AnsweredAt         time.Time  `json:"answered_at"`
 }
 
+func (c ContestClarification) CreatedEvent() ContestClarificationCreatedEvent {
+	return ContestClarificationCreatedEvent{ID: c.ID, ContestID: c.ContestID, ProblemID: c.ProblemID, ProblemTitle: c.ProblemTitle, ProblemLetter: c.ProblemLetter,
+		UserID: c.UserID, Username: c.Username, Question: c.Question, CreatedAt: c.CreatedAt}
+}
+
+func (c ContestClarification) AnsweredEvent() ContestClarificationAnsweredEvent {
+	e := ContestClarificationAnsweredEvent{ID: c.ID, ContestID: c.ContestID, ProblemID: c.ProblemID, ProblemTitle: c.ProblemTitle, ProblemLetter: c.ProblemLetter,
+		UserID: c.UserID, Username: c.Username, Question: c.Question, AnsweredAt: c.CreatedAt}
+	if c.Answer != nil {
+		e.Answer = *c.Answer
+	}
+	if c.AnsweredBy != nil {
+		e.AnsweredBy = *c.AnsweredBy
+	}
+	if c.AnsweredByUsername != nil {
+		e.AnsweredByUsername = *c.AnsweredByUsername
+	}
+	if c.AnsweredAt != nil {
+		e.AnsweredAt = *c.AnsweredAt
+	}
+	return e
+}
+
 type ContestClarificationsList struct {
 	Clarifications []ContestClarification
 	Pagination     paging.Pagination

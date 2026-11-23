@@ -4940,7 +4940,6 @@ func (s *ListProblemsResponseModel) SetPagination(val PaginationModel) {
 // Ref: #/components/schemas/ListSubmissionsResponseModel
 type ListSubmissionsResponseModel struct {
 	TotalCount  int32                      `json:"total_count"`
-	Since       OptInt64                   `json:"since"`
 	Submissions []SubmissionsListItemModel `json:"submissions"`
 	Pagination  PaginationModel            `json:"pagination"`
 }
@@ -4948,11 +4947,6 @@ type ListSubmissionsResponseModel struct {
 // GetTotalCount returns the value of TotalCount.
 func (s *ListSubmissionsResponseModel) GetTotalCount() int32 {
 	return s.TotalCount
-}
-
-// GetSince returns the value of Since.
-func (s *ListSubmissionsResponseModel) GetSince() OptInt64 {
-	return s.Since
 }
 
 // GetSubmissions returns the value of Submissions.
@@ -4968,11 +4962,6 @@ func (s *ListSubmissionsResponseModel) GetPagination() PaginationModel {
 // SetTotalCount sets the value of TotalCount.
 func (s *ListSubmissionsResponseModel) SetTotalCount(val int32) {
 	s.TotalCount = val
-}
-
-// SetSince sets the value of Since.
-func (s *ListSubmissionsResponseModel) SetSince(val OptInt64) {
-	s.Since = val
 }
 
 // SetSubmissions sets the value of Submissions.
@@ -6730,52 +6719,6 @@ func (o OptInt32) Get() (v int32, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt32) Or(d int32) int32 {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptInt64 returns new OptInt64 with value set to v.
-func NewOptInt64(v int64) OptInt64 {
-	return OptInt64{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptInt64 is optional int64.
-type OptInt64 struct {
-	Value int64
-	Set   bool
-}
-
-// IsSet returns true if OptInt64 was set.
-func (o OptInt64) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptInt64) Reset() {
-	var v int64
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptInt64) SetTo(v int64) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptInt64) Get() (v int64, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptInt64) Or(d int64) int64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -11837,7 +11780,6 @@ func (s *ScoreboardProblemResultModel) SetPenalty(val OptInt32) {
 // Result of scoreboard.
 // Ref: #/components/schemas/ScoreboardResponseModel
 type ScoreboardResponseModel struct {
-	Since             OptInt64  `json:"since"`
 	ContestID         uuid.UUID `json:"contest_id"`
 	ContestLogin      string    `json:"contest_login"`
 	OrganizationLogin string    `json:"organization_login"`
@@ -11848,11 +11790,6 @@ type ScoreboardResponseModel struct {
 	FreezeTime OptNilDateTime                 `json:"freeze_time"`
 	Problems   []ScoreboardProblemHeaderModel `json:"problems"`
 	Items      []ScoreboardItemModel          `json:"items"`
-}
-
-// GetSince returns the value of Since.
-func (s *ScoreboardResponseModel) GetSince() OptInt64 {
-	return s.Since
 }
 
 // GetContestID returns the value of ContestID.
@@ -11893,11 +11830,6 @@ func (s *ScoreboardResponseModel) GetProblems() []ScoreboardProblemHeaderModel {
 // GetItems returns the value of Items.
 func (s *ScoreboardResponseModel) GetItems() []ScoreboardItemModel {
 	return s.Items
-}
-
-// SetSince sets the value of Since.
-func (s *ScoreboardResponseModel) SetSince(val OptInt64) {
-	s.Since = val
 }
 
 // SetContestID sets the value of ContestID.

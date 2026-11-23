@@ -103,11 +103,11 @@ func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransac
 	return authorizing(pool, func(q *sqlc.Queries) submissions.SubmissionTxStore {
 		return struct {
 			*SubmissionsRepo
-			*OutboxRepo
+			*Notifier
 			*JudgeJobs
 			*ContestsRepo
 			Access
-		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, commandAccess(q)}
+		}{&SubmissionsRepo{queries: q}, &Notifier{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -116,9 +116,9 @@ func NewContestEventsTransactions(pool *pgxpool.Pool) contests.ContestEventsTran
 		return struct {
 			*AnnouncementsRepo
 			*ClarificationsRepo
-			*OutboxRepo
+			*Notifier
 			Access
-		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, commandAccess(q)}
+		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &Notifier{queries: q}, commandAccess(q)}
 	})
 }
 
@@ -128,8 +128,8 @@ func NewJudgeTransactions(pool *pgxpool.Pool) judging.JudgeTransactions {
 			*JudgeJobs
 			*SubmissionsRepo
 			*ContestsRepo
-			*OutboxRepo
-		}{&JudgeJobs{q}, &SubmissionsRepo{queries: q}, &ContestsRepo{queries: q}, &OutboxRepo{queries: q}}
+			*Notifier
+		}{&JudgeJobs{q}, &SubmissionsRepo{queries: q}, &ContestsRepo{queries: q}, &Notifier{queries: q}}
 	}}
 }
 
@@ -139,11 +139,11 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*ContestsRepo
 			*SubmissionsRepo
 			*JudgeJobs
-			*OutboxRepo
+			*Notifier
 			*OrganizationsRepo
 			*NotificationsRepo
 			Access
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &Notifier{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
 	})
 }
 

@@ -419,11 +419,7 @@ func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, u
 			return err
 		}
 		for _, change := range changed {
-			sub, err := tx.GetSubmission(ctx, change.ID)
-			if err != nil {
-				return err
-			}
-			if err := tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: sub.CompletedEvent(change.PreviousState)}); err != nil {
+			if err := tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: change.ID}); err != nil {
 				return err
 			}
 		}
@@ -445,15 +441,10 @@ func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID,
 				return err
 			}
 			for _, change := range changed {
-				sub, err := tx.GetSubmission(ctx, change.ID)
-				if err != nil {
+				if _, err := tx.ScheduleJob(ctx, change.ID); err != nil {
 					return err
 				}
-				job, err := tx.ScheduleJob(ctx, sub.ID)
-				if err != nil {
-					return err
-				}
-				if err := tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCreated, Payload: sub.CreatedEvent(job.ID, job.Generation, &change.PreviousState)}); err != nil {
+				if err := tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCreated, ID: change.ID}); err != nil {
 					return err
 				}
 			}

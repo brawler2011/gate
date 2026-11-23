@@ -5076,9 +5076,6 @@ components:
           type: integer
           format: int32
           minimum: 0
-        since:
-          type: integer
-          format: int64
         submissions:
           type: array
           items:
@@ -5960,10 +5957,6 @@ components:
         - problems
         - items
       properties:
-        since:
-          type: integer
-          format: int64
-          minimum: 0
         contest_id:
           type: string
           format: uuid

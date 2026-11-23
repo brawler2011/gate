@@ -14,7 +14,6 @@ import (
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )
@@ -89,72 +88,6 @@ func benchmarkWork(b *testing.B, workers int, operation func(int) error) {
 	}
 	b.StopTimer()
 	checkDatabaseBenchmarkBudget(b, memory)
-}
-
-func BenchmarkOutbox(b *testing.B) {
-	for _, size := range []struct {
-		name string
-		rows int
-	}{{"small", 1000}, {"large", 100000}} {
-		b.Run(size.name, func(b *testing.B) {
-			for _, scenario := range []string{"PickEvents", "MarkAsCompleted", "Process/workers4", "Process/workers16"} {
-				b.Run(scenario, func(b *testing.B) {
-					pool := benchmarkPool(b)
-					seedOutbox(b, pool, size.rows)
-					repo := NewOutboxRepo(pool)
-					ctx := context.Background()
-					warm, err := repo.PickEvents(ctx, 1, 300)
-					require.NoError(b, err)
-					require.Len(b, warm, 1)
-					require.NoError(b, repo.MarkAsCompleted(ctx, warm[0].Id, warm[0].LeaseToken))
-					fixtureExec(b, pool, `UPDATE outbox_events SET status='pending',lease_token=NULL,deadline_at=NULL,locked_at=NULL,processed_at=NULL WHERE id=$1`, warm[0].Id)
-					token := uuid.New()
-					var ids []uuid.UUID
-					if scenario == "MarkAsCompleted" {
-						fixtureExec(b, pool, `UPDATE outbox_events SET status='processing',lease_token=$1,deadline_at=now()+interval '1 hour' WHERE aggregate_version=2`, token)
-						rows, err := pool.Query(ctx, "SELECT id FROM outbox_events WHERE aggregate_version=2 ORDER BY created_at LIMIT 100")
-						require.NoError(b, err)
-						ids, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-						require.NoError(b, err)
-						require.Len(b, ids, 100)
-					}
-					workers := 1
-					if scenario == "Process/workers4" {
-						workers = 4
-					}
-					if scenario == "Process/workers16" {
-						workers = 16
-					}
-					benchmarkWork(b, workers, func(i int) error {
-						if scenario == "MarkAsCompleted" {
-							return repo.MarkAsCompleted(ctx, ids[i], token)
-						}
-						events, err := repo.PickEvents(ctx, 1, 300)
-						if err != nil {
-							return err
-						}
-						if len(events) != 1 {
-							return fmt.Errorf("pick returned %d events, want 1", len(events))
-						}
-						if scenario != "PickEvents" {
-							return repo.MarkAsCompleted(ctx, events[0].Id, events[0].LeaseToken)
-						}
-						return nil
-					})
-					var count int
-					switch scenario {
-					case "PickEvents":
-						require.NoError(b, pool.QueryRow(ctx, "SELECT count(*) FROM outbox_events WHERE status='processing'").Scan(&count))
-					case "MarkAsCompleted":
-						require.NoError(b, pool.QueryRow(ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_version=2 AND status='completed'").Scan(&count))
-					default:
-						require.NoError(b, pool.QueryRow(ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_version>1 AND status='completed'").Scan(&count))
-					}
-					require.Equal(b, b.N, count)
-				})
-			}
-		})
-	}
 }
 
 func BenchmarkSubmissions(b *testing.B) {
@@ -302,14 +235,6 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 }
 
 var databaseBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
-	"BenchmarkOutbox/large/MarkAsCompleted":              {11719176, 85.35, 1664, 54},
-	"BenchmarkOutbox/large/PickEvents":                   {1927474, 519.00, 4160, 87},
-	"BenchmarkOutbox/large/Process/workers16":            {525668, 1902.50, 6976, 153},
-	"BenchmarkOutbox/large/Process/workers4":             {753032, 1328.00, 6016, 142},
-	"BenchmarkOutbox/small/MarkAsCompleted":              {552146, 1811.00, 1664, 54},
-	"BenchmarkOutbox/small/PickEvents":                   {2094484, 477.45, 4160, 87},
-	"BenchmarkOutbox/small/Process/workers16":            {831882, 1202.00, 6976, 153},
-	"BenchmarkOutbox/small/Process/workers4":             {726704, 1376.00, 6080, 142},
 	"BenchmarkScoreboardQueries/large/Standings":         {25889000, 38.62, 10681088, 158437},
 	"BenchmarkScoreboardQueries/large/SubmissionHistory": {285000, 3509.5, 5248, 115},
 	"BenchmarkScoreboardQueries/small/Standings":         {2575000, 388.45, 854144, 15905},

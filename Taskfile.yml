@@ -6,7 +6,6 @@ vars:
     backend/contracts
     frontend/contracts
     backend/internal/postgres/sqlc
-    backend/tests/mocks
   # deploy/k3s/install.sh names the local k3s context; naming it avoids touching another cluster.
   KUBECTL: kubectl --context gate
   HELM: helm --kube-context gate
@@ -147,11 +146,10 @@ tasks:
       - bun run knip
 
   gen:
-    desc: Generate all code (contracts, SQLC, Mocks)
+    desc: Generate all code (contracts, SQLC)
     cmds:
       - task: contracts:gen
       - task: sqlc:gen
-      - task: mocks:gen
 
   contracts:gen:
     desc: Generate OpenAPI and AsyncAPI Go and TS contracts
@@ -181,10 +179,6 @@ tasks:
         sqlc
         generate -f sqlc.yaml
 
-  mocks:gen:
-    desc: Generate Go mocks
-    cmds:
-      - go generate ./...
 
   gen:check:
     desc: Regenerate files and fail if generated files changed
@@ -256,7 +250,7 @@ tasks:
         sh deploy/secrets.sh {{.KUBECTL}} -n {{.NAMESPACE}}
 
   infra:up:
-    desc: Deploy PostgreSQL, NATS, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
+    desc: Deploy PostgreSQL, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
     deps: [k3s:up, judge:image]
     vars:
       JUDGE_IMAGE:

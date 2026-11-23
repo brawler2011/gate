@@ -12,9 +12,6 @@ import (
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/queuecontext"
-	"github.com/brawler2011/gate/backend/pkg/requestid"
-	"github.com/google/uuid"
 )
 
 type JudgeUseCase struct {
@@ -23,26 +20,17 @@ type JudgeUseCase struct {
 	submissionsRepo SubmissionsRepo
 	packageLoader   *PackageLoader
 	executor        *PackageJudge
-	eventPublisher  Progress
+	progress        Progress
 	logger          *slog.Logger
 }
 
-func NewJudgeUseCase(jobs Jobs, transactions JudgeTransactions, submissionsRepo SubmissionsRepo, loader *PackageLoader, executor *PackageJudge, eventPublisher Progress) *JudgeUseCase {
-	return &JudgeUseCase{jobs: jobs, transactions: transactions, submissionsRepo: submissionsRepo, packageLoader: loader, executor: executor, eventPublisher: eventPublisher, logger: slog.Default().With("component", "judge_usecase")}
+func NewJudgeUseCase(jobs Jobs, transactions JudgeTransactions, submissionsRepo SubmissionsRepo, loader *PackageLoader, executor *PackageJudge, progress Progress) *JudgeUseCase {
+	return &JudgeUseCase{jobs: jobs, transactions: transactions, submissionsRepo: submissionsRepo, packageLoader: loader, executor: executor, progress: progress, logger: slog.Default().With("component", "judge_usecase")}
 }
 
-func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) (err error) {
-	if reference.ID == uuid.Nil || reference.SubmissionID == uuid.Nil || reference.Generation < 1 {
-		return pkg.ErrInvalid
-	}
-	submissionID := reference.SubmissionID
-	job, err := uc.jobs.Claim(ctx, reference)
-	if err != nil {
-		return err
-	}
-	if job.ID == uuid.Nil {
-		return nil
-	}
+// JudgeSubmission judges a claimed job and releases it unless the verdict is stored.
+func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, job judgingmodel.Job) (err error) {
+	submissionID := job.SubmissionID
 	leaseCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	defer func() { err = pkg.WithCause(leaseCtx, err) }()
@@ -76,30 +64,13 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 		}
 	}()
 	ctx = leaseCtx
-	logger := uc.logger.With("submission_id", submissionID, "request_id", requestid.Get(ctx))
-	if meta := queuecontext.Get(ctx); meta.EventID != uuid.Nil {
-		logger = logger.With("event_id", meta.EventID)
-	}
+	logger := uc.logger.With("submission_id", submissionID, "job_id", job.ID)
 	submission, err := uc.submissionsRepo.GetSubmission(ctx, submissionID)
 	if err != nil {
 		return fmt.Errorf("failed to get submission: %w", err)
 	}
 
-	meta := submissionsmodel.SubmissionEventMeta{
-		Revision:     submission.Revision,
-		UserId:       submission.CreatedBy,
-		Username:     submission.Username,
-		ContestId:    submission.ContestID,
-		ContestTitle: submission.ContestTitle,
-		ProblemId:    submission.ProblemID,
-		ProblemTitle: submission.ProblemTitle,
-		Position:     submission.Position,
-		Language:     submission.Language,
-		CreatedAt:    submission.CreatedAt,
-		UpdatedAt:    submission.UpdatedAt,
-	}
-
-	if err := uc.eventPublisher.PublishQueued(ctx, submissionID, meta); err != nil {
+	if err := uc.progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventQueued, ID: submissionID}); err != nil {
 		logger.Error("failed to publish queued event", "operation", "judge_submission", "error", err)
 	}
 
@@ -119,11 +90,11 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 	}
 	defer pkg.Release()
 
-	if err := uc.eventPublisher.PublishCompilingStarted(ctx, submissionID, meta); err != nil {
+	if err := uc.progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompilingStarted, ID: submissionID}); err != nil {
 		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error", err)
 	}
 
-	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, uc.eventPublisher, meta)
+	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, uc.progress)
 	if err != nil {
 		if IsTemporary(err) {
 			return err
@@ -166,8 +137,7 @@ func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judgingmodel.J
 		if !current {
 			return nil
 		}
-		change, err := tx.UpdateSubmission(ctx, job.SubmissionID, update)
-		if err != nil {
+		if _, err := tx.UpdateSubmission(ctx, job.SubmissionID, update); err != nil {
 			return err
 		}
 		sub, err := tx.GetSubmission(ctx, job.SubmissionID)
@@ -177,7 +147,6 @@ func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judgingmodel.J
 		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 			return err
 		}
-		event := sub.CompletedEvent(change.PreviousState)
-		return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: event})
+		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})
 	})
 }

@@ -11,7 +11,6 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	events "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
@@ -315,50 +314,6 @@ func (ns NullOrganizationRole) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.OrganizationRole), nil
-}
-
-type OutboxEventStatus string
-
-const (
-	OutboxEventStatusPending    OutboxEventStatus = "pending"
-	OutboxEventStatusProcessing OutboxEventStatus = "processing"
-	OutboxEventStatusCompleted  OutboxEventStatus = "completed"
-	OutboxEventStatusFailed     OutboxEventStatus = "failed"
-)
-
-func (e *OutboxEventStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OutboxEventStatus(s)
-	case string:
-		*e = OutboxEventStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OutboxEventStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOutboxEventStatus struct {
-	OutboxEventStatus OutboxEventStatus `json:"outbox_event_status"`
-	Valid             bool              `json:"valid"` // Valid is true if OutboxEventStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOutboxEventStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OutboxEventStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OutboxEventStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOutboxEventStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OutboxEventStatus), nil
 }
 
 type PackageStatus string
@@ -801,17 +756,6 @@ type ContestVirtualRun struct {
 	FinishedAt *time.Time `json:"finished_at"`
 }
 
-type EventAggregate struct {
-	AggregateID uuid.UUID `json:"aggregate_id"`
-	Version     int64     `json:"version"`
-}
-
-type InboxReceipt struct {
-	ConsumerName string    `json:"consumer_name"`
-	EventID      uuid.UUID `json:"event_id"`
-	ProcessedAt  time.Time `json:"processed_at"`
-}
-
 type JudgeJob struct {
 	ID           uuid.UUID  `json:"id"`
 	SubmissionID uuid.UUID  `json:"submission_id"`
@@ -823,7 +767,7 @@ type JudgeJob struct {
 	LeaseToken   *uuid.UUID `json:"lease_token"`
 	DeadlineAt   *time.Time `json:"deadline_at"`
 	CreatedAt    time.Time  `json:"created_at"`
-	CompletedAt  *time.Time `json:"completed_at"`
+	AvailableAt  time.Time  `json:"available_at"`
 }
 
 type Notification struct {
@@ -876,24 +820,6 @@ type OrganizationMember struct {
 	UserID         uuid.UUID                    `json:"user_id"`
 	Role           accessmodel.OrganizationRole `json:"role"`
 	CreatedAt      time.Time                    `json:"created_at"`
-}
-
-type OutboxEvent struct {
-	ID               uuid.UUID                `json:"id"`
-	AggregateID      uuid.UUID                `json:"aggregate_id"`
-	EventType        events.OutboxEventType   `json:"event_type"`
-	Payload          []byte                   `json:"payload"`
-	Status           events.OutboxEventStatus `json:"status"`
-	RetryCount       int32                    `json:"retry_count"`
-	ErrorMessage     *string                  `json:"error_message"`
-	CreatedAt        time.Time                `json:"created_at"`
-	ProcessedAt      *time.Time               `json:"processed_at"`
-	LockedAt         *time.Time               `json:"locked_at"`
-	DeadlineAt       *time.Time               `json:"deadline_at"`
-	Headers          []byte                   `json:"headers"`
-	AggregateVersion int64                    `json:"aggregate_version"`
-	LeaseToken       *uuid.UUID               `json:"lease_token"`
-	NextAttemptAt    time.Time                `json:"next_attempt_at"`
 }
 
 type Post struct {

@@ -13,8 +13,6 @@ email:
   provider: log
   from: Gate <no-reply@gate.local>
   app_base_url: http://localhost:3000
-inbox:
-  retention: 168h
 judge:
   mode: dirty
   workers: 4

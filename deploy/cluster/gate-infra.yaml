@@ -1,6 +1,4 @@
 postgres:
   storage: 1Gi
-nats:
-  storage: 1Gi
 seaweedfs:
   storage: 5Gi

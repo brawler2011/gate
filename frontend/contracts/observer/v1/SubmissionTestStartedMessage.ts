@@ -2,7 +2,6 @@
 import SubmissionTestStartedMessageEventType from './SubmissionTestStartedMessageEventType';
 import MessageSubmissionTestStarted from './MessageSubmissionTestStarted';
 interface SubmissionTestStartedMessage {
-  'sequence': number;
   'event_type': SubmissionTestStartedMessageEventType.SUBMISSIONS_DOT_TEST_STARTED;
   'payload': MessageSubmissionTestStarted;
 }

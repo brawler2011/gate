@@ -1,32 +1,4 @@
 {
-  "Outbox/large/MarkAsCompleted": {
-    "statements": 1,
-    "transactions": 0,
-    "pages": 21,
-    "sorts": 0,
-    "seq_scans": 0
-  },
-  "Outbox/large/PickEvents": {
-    "statements": 1,
-    "transactions": 0,
-    "pages": 293,
-    "sorts": 1,
-    "seq_scans": 0
-  },
-  "Outbox/small/MarkAsCompleted": {
-    "statements": 1,
-    "transactions": 0,
-    "pages": 16,
-    "sorts": 0,
-    "seq_scans": 0
-  },
-  "Outbox/small/PickEvents": {
-    "statements": 1,
-    "transactions": 0,
-    "pages": 223,
-    "sorts": 1,
-    "seq_scans": 0
-  },
   "ScoreboardQueries/large/Standings": {
     "statements": 1,
     "transactions": 0,

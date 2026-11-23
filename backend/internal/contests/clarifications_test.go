@@ -2,7 +2,6 @@ package contests
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -74,7 +73,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	ctx := context.Background()
 	clarRepo := newMockClarificationsRepo()
 	annRepo := newMockAnnouncementsRepo()
-	outboxRepo := &mockOutboxRepo{}
+	notices := &noticeLog{}
 
 	contestID := uuid.New()
 	participantID := uuid.New()
@@ -83,7 +82,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	loader := &accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contest, Now: time.Now()}}}
 	loader.Grant(contestID, participantID, string(accessmodel.ContestParticipant))
 	loader.Grant(contestID, juryID, string(accessmodel.ContestModerator))
-	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo}}, nil, nil)
+	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{Loader: loader, AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, Writer: notices}}, nil, nil)
 
 	probID := uuid.New()
 
@@ -96,8 +95,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, contestsmodel.ClarificationStatusPending, clar.Status)
 	assert.Equal(t, participantID, clar.UserID, "the asker comes from the caller context")
 	assert.Equal(t, "Are arrays 1-indexed in problem B?", clar.Question)
-	assert.Len(t, outboxRepo.events, 1)
-	assert.Equal(t, eventdata.OutboxEventContestClarificationCreated, outboxRepo.events[0].EventType)
+	assert.Equal(t, []eventdata.Notice{{Type: contestsmodel.ContestEventClarificationCreated, ID: clar.ID}}, notices.notices)
 
 	answered, err := uc.AnswerClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: juryID, Role: accessmodel.UserRoleUser}), &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       clar.ID,
@@ -113,13 +111,9 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	require.NotNil(t, answered.AnsweredBy)
 	assert.Equal(t, juryID, *answered.AnsweredBy, "the answerer comes from the caller context")
 
-	assert.Len(t, outboxRepo.events, 3)
-	assert.Equal(t, eventdata.OutboxEventContestClarificationAnswered, outboxRepo.events[1].EventType)
-	assert.Equal(t, eventdata.OutboxEventContestAnnouncementCreated, outboxRepo.events[2].EventType)
-	var answeredEvent contestsmodel.ContestClarificationAnsweredEvent
-	require.NoError(t, json.Unmarshal(outboxRepo.events[1].Payload, &answeredEvent))
-	assert.Equal(t, juryID, answeredEvent.AnsweredBy)
-	assert.Equal(t, participantID, answeredEvent.UserID)
+	require.Len(t, notices.notices, 3)
+	assert.Equal(t, eventdata.Notice{Type: contestsmodel.ContestEventClarificationAnswered, ID: clar.ID}, notices.notices[1])
+	assert.Equal(t, contestsmodel.ContestEventAnnouncementCreated, notices.notices[2].Type)
 
 	require.Len(t, annRepo.announcements, 1)
 	for _, announcement := range annRepo.announcements {

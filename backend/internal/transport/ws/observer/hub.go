@@ -11,7 +11,6 @@ import (
 	m "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
@@ -20,7 +19,6 @@ type WrappedEvent struct {
 	projectionContest       *contestsmodel.Contest
 	topics                  map[string]topicProjection
 	configuration           string
-	Seq                     uint64
 	EventType               string
 	RawEvent                any
 	DTOPayload              []byte
@@ -42,42 +40,26 @@ type Hub struct {
 	scoreboardReferences     map[uuid.UUID]int
 	finalSnapshots           map[uuid.UUID]finalSnapshot
 	subscribers              map[uuid.UUID]*Subscriber
-	ring                     *RingBuffer[*WrappedEvent]
 	mu                       sync.RWMutex
 }
 
-func safeUint64(v int) uint64 {
-	if v < 0 {
-		return 0
-	}
-	return uint64(v)
-}
-
-func NewHub(ringSize int, contests ContestReader, scoreboard Scoreboard) *Hub {
-	h := &Hub{
+func NewHub(contests ContestReader, scoreboard Scoreboard) *Hub {
+	return &Hub{
 		contests: contests, scoreboard: scoreboard, finalSnapshots: make(map[uuid.UUID]finalSnapshot), scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
 		subscribers: make(map[uuid.UUID]*Subscriber),
-		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
 	}
-	return h
 }
 
 func parseEvent[T any](payload []byte) (*T, error) {
 	var e T
 	if err := json.Unmarshal(payload, &e); err != nil {
-		return nil, &eventdata.PermanentError{Cause: fmt.Errorf("failed to unmarshal event payload: %w", err)}
+		return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
 	}
 	return &e, nil
 }
 
 func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) error {
 	ctx = m.WithReadTime(ctx, time.Now().UTC())
-	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
-	if !ok {
-		slog.ErrorContext(ctx, "missing message_stream_sequence")
-		return nil
-	}
-
 	var event any
 	var err error
 
@@ -115,7 +97,6 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	}
 
 	wrapped := &WrappedEvent{
-		Seq:        seq,
 		EventType:  eventType,
 		RawEvent:   event,
 		DTOPayload: clientPayload,
@@ -131,22 +112,30 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	return nil
 }
 
-func (h *Hub) subscribe(conn websocketConnection, filter *SubmissionsFilter, replay bool) (*Subscriber, []*WrappedEvent, error) {
+func (h *Hub) subscribe(filter *SubmissionsFilter) *Subscriber {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
-	history, err := snapshotHistory(h.ring, filter.Since, replay)
-	if err != nil {
-		return nil, nil, err
-	}
-	sub := &Subscriber{subscription: newSubscription(conn), filter: filter}
+	sub := &Subscriber{subscription: newSubscription(), filter: filter}
 	h.subscribers[sub.id] = sub
 	sub.detach = func() {
 		h.mu.Lock()
 		delete(h.subscribers, sub.id)
 		h.mu.Unlock()
 	}
-	return sub, scopeHistory(history, filter.Topics), nil
+	return sub
+}
+
+// closeAll makes every client reconnect and refetch its snapshot.
+func (h *Hub) closeAll(reason string) {
+	h.mu.Lock()
+	subs := make([]*subscription, 0, len(h.subscribers))
+	for _, sub := range h.subscribers {
+		subs = append(subs, sub.subscription)
+	}
+	h.mu.Unlock()
+	for _, sub := range subs {
+		sub.close(reason, nil)
+	}
 }
 
 func (h *Hub) broadcast(event *WrappedEvent) {
@@ -160,13 +149,9 @@ func (h *Hub) broadcast(event *WrappedEvent) {
 			}
 		}
 	}
-	err := h.ring.Push(event, event.Seq)
 	h.mu.Unlock()
 
 	for _, sub := range overflow {
 		sub.close("event queue overflow", nil)
-	}
-	if err != nil {
-		slog.Error("failed to push event to ring buffer", "error", err)
 	}
 }

@@ -198,11 +198,7 @@ type SubmissionReset struct {
 }
 
 type SubmissionCreatedEvent struct {
-	JobID      uuid.UUID `json:"job_id"`
-	Generation int64     `json:"generation"`
 	SubmissionEventMeta
-	IsNew         bool   `json:"is_new"`
-	PreviousState *State `json:"previous_state,omitempty"`
 
 	Id     uuid.UUID `json:"id"`
 	State  State     `json:"state"`
@@ -240,7 +236,6 @@ type SubmissionChange struct {
 }
 
 type SubmissionCompletedEvent struct {
-	PreviousState State `json:"previous_state"`
 	SubmissionEventMeta
 
 	Id         uuid.UUID    `json:"id"`
@@ -256,10 +251,10 @@ func (s Submission) EventMeta() SubmissionEventMeta {
 	return SubmissionEventMeta{Revision: s.Revision, UpdatedAt: s.UpdatedAt, UserId: s.CreatedBy, Username: s.Username, ContestId: s.ContestID, ContestTitle: s.ContestTitle, ProblemId: s.ProblemID, ProblemTitle: s.ProblemTitle, Position: s.Position, Language: s.Language, CreatedAt: s.CreatedAt}
 }
 
-func (s Submission) CompletedEvent(previous State) SubmissionCompletedEvent {
-	return SubmissionCompletedEvent{Id: s.ID, PreviousState: previous, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
+func (s Submission) CompletedEvent() SubmissionCompletedEvent {
+	return SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
 }
 
-func (s Submission) CreatedEvent(jobID uuid.UUID, generation int64, previous *State) SubmissionCreatedEvent {
-	return SubmissionCreatedEvent{JobID: jobID, Generation: generation, IsNew: previous == nil, PreviousState: previous, SubmissionEventMeta: s.EventMeta(), Id: s.ID, State: s.State, Source: s.Submission}
+func (s Submission) CreatedEvent() SubmissionCreatedEvent {
+	return SubmissionCreatedEvent{SubmissionEventMeta: s.EventMeta(), Id: s.ID, State: s.State, Source: s.Submission}
 }

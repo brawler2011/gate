@@ -41,7 +41,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
     let refreshing = false;
     let dirty = false;
     let reconnect = false;
-    const applyProgress = (query: Query, replay = false) => {
+    const applyProgress = (query: Query) => {
       if (disposed) {
         return;
       }
@@ -51,7 +51,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       }
       client.setQueryData<LiveSubmissions>(query.queryKey, data => {
         for (const message of progress.values()) {
-          data = applySubmissionEvent(data, message, selection, revisions, replay);
+          data = applySubmissionEvent(data, message, selection, revisions);
         }
         return data;
       });
@@ -60,7 +60,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
     const unsubscribe = client.getQueryCache().subscribe(event => {
       if (event.type === 'updated' && event.action.type === 'success' && !event.action.manual
         && client.getQueryCache().findAll(submissions).includes(event.query)) {
-        applyProgress(event.query, true);
+        applyProgress(event.query);
       }
     });
     const refresh = async () => {
@@ -131,7 +131,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         } catch {
           return;
         }
-        if (!message?.payload || typeof message.sequence !== 'number') {
+        if (!message?.payload) {
           return;
         }
         if (message.event_type === 'scoreboard.updated') {
@@ -150,7 +150,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
                 return;
               }
               client.setQueryData<LiveScoreboard>(query.queryKey,
-                data => applyScoreboardEvent(data, message.payload, message.sequence));
+                data => applyScoreboardEvent(data, message.payload));
             };
             apply();
             if (query.promise) {
@@ -167,7 +167,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
               if (buffered && (buffered.payload.revision < revision || message.event_type === 'submissions.completed')) {
                 progress.delete(id);
               }
-            } else if (message.sequence > (progress.get(id)?.sequence ?? 0)) {
+            } else {
               progress.set(id, message);
               for (const query of client.getQueryCache().findAll(submissions)) {
                 applyProgress(query);

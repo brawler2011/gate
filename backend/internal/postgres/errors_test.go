@@ -20,7 +20,7 @@ func TestDBErrorCodes(t *testing.T) {
 	}{
 		{"missing row", pgx.ErrNoRows, pkg.CodeNotFound},
 		{"known constraint", &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "organizations_login_lower_idx"}, pkg.ErrOrganizationLoginTaken.Code},
-		{"unknown unique violation is a bug", &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "outbox_aggregate_version"}, pkg.CodeInternal},
+		{"unknown unique violation is a bug", &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "judge_jobs_submission_id_generation_key"}, pkg.CodeInternal},
 		{"insert with a missing parent is a bug", &pgconn.PgError{Code: pgerrcode.ForeignKeyViolation, Message: "insert or update on table \"x\" violates foreign key constraint"}, pkg.CodeInternal},
 		{"blocked delete", &pgconn.PgError{Code: pgerrcode.ForeignKeyViolation, Message: "update or delete on table \"x\" violates foreign key constraint"}, pkg.ErrInUse.Code},
 		{"restrict", &pgconn.PgError{Code: pgerrcode.RestrictViolation}, pkg.ErrInUse.Code},

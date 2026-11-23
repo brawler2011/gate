@@ -1,14 +1,11 @@
 package observer
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
-	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
 	"github.com/brawler2011/gate/backend/internal/access"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -55,7 +52,6 @@ type SubmissionsFilter struct {
 	audience      string
 	viewer        uuid.UUID
 	configuration string
-	Since         uint64
 	ContestId     *uuid.UUID
 	UserId        *uuid.UUID
 	ProblemId     *uuid.UUID
@@ -113,16 +109,6 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 			*target = &id
 		}
 	}
-	if values, ok := q["since"]; ok {
-		if len(values) != 1 {
-			return nil, fmt.Errorf("invalid since")
-		}
-		value, err := strconv.ParseUint(values[0], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid since: %w", err)
-		}
-		filter.Since = value
-	}
 	if values, ok := q["language"]; ok {
 		if len(values) != 1 {
 			return nil, fmt.Errorf("invalid language")
@@ -153,39 +139,19 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.hub.releaseScoreboard(filter.ContestId)
+	sub := s.hub.subscribe(filter)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
+		sub.close("upgrade failed", err)
 		slog.WarnContext(ctx, "upgrade websocket", "error", err)
 		return
 	}
-
-	sub, history, err := s.hub.subscribe(conn, filter, r.URL.Query().Has("since"))
-	if err != nil {
-		rejectHistory(conn, err)
-		return
-	}
+	sub.attach(conn)
 	sub.verify = lease
 	sub.onInvalidate = func(err error) { s.sendFinalSnapshot(ctx, filter, sub.conn, err) }
-	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
+	sub.run(func(event *WrappedEvent) error {
 		return s.sendSubmission(ctx, filter, event, sub.conn)
 	})
-}
-
-func getClosingFrameData(err error) (int, []byte) {
-	switch {
-	case errors.Is(err, ErrBufferEmpty):
-		return observerv1.SubmissionsWsCloseCodeNumber_4408.Value().(int),
-			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty.Value().(string))
-	case errors.Is(err, ErrInvalidRange):
-		return observerv1.SubmissionsWsCloseCodeNumber_4410.Value().(int),
-			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange.Value().(string))
-	case errors.Is(err, ErrHistoryLost):
-		return observerv1.SubmissionsWsCloseCodeNumber_4409.Value().(int),
-			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost.Value().(string))
-	default:
-		return websocket.CloseInternalServerErr,
-			[]byte(http.StatusText(http.StatusInternalServerError))
-	}
 }
 
 func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
@@ -201,21 +167,18 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		subscriptionError(w, r, err)
 		return
 	}
-	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId, Topics: parsed.Topics}
+	filter := &ContestsFilter{ContestId: *parsed.ContestId, Topics: parsed.Topics}
 
+	sub := s.contestsHub.subscribe(filter)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
+		sub.close("upgrade failed", err)
 		slog.WarnContext(ctx, "upgrade contest websocket", "error", err)
 		return
 	}
-
-	sub, history, err := s.contestsHub.subscribe(conn, filter, r.URL.Query().Has("since"))
-	if err != nil {
-		rejectHistory(conn, err)
-		return
-	}
+	sub.attach(conn)
 	sub.verify = lease
-	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
+	sub.run(func(event *WrappedEvent) error {
 		return s.sendContest(parsed, event, sub.conn)
 	})
 }

@@ -104,7 +104,6 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 
 func SubmissionCreatedDTO(e submissionsmodel.SubmissionCreatedEvent) observerv1.MessageSubmissionCreated {
 	return observerv1.MessageSubmissionCreated{
-		IsNew: e.IsNew, PreviousState: e.PreviousState,
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
@@ -193,27 +192,25 @@ func SubmissionTestStartedDTO(e submissionsmodel.SubmissionTestStartedEvent) obs
 
 func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
 	score := e.Score.Float64()
-	previous := e.PreviousState
 	return observerv1.MessageSubmissionCompleted{
-		PreviousState: &previous,
-		Revision:      e.Revision,
-		UpdatedAt:     &e.UpdatedAt,
-		ContestId:     e.ContestId,
-		ContestTitle:  strPtrIfNotEmpty(e.ContestTitle),
-		CreatedAt:     &e.CreatedAt,
-		Id:            e.Id,
-		Language:      strPtrIfNotEmpty(e.Language),
-		MemoryStat:    &e.MemoryStat,
-		FailedTest:    e.FailedTest,
-		Penalty:       &e.Penalty,
-		Position:      int32Ptr(e.Position),
-		ProblemId:     e.ProblemId,
-		ProblemTitle:  strPtrIfNotEmpty(e.ProblemTitle),
-		Score:         &score,
-		State:         &e.State,
-		TimeStat:      &e.TimeStat,
-		UserId:        e.UserId,
-		Username:      strPtrIfNotEmpty(e.Username),
+		Revision:     e.Revision,
+		UpdatedAt:    &e.UpdatedAt,
+		ContestId:    e.ContestId,
+		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
+		CreatedAt:    &e.CreatedAt,
+		Id:           e.Id,
+		Language:     strPtrIfNotEmpty(e.Language),
+		MemoryStat:   &e.MemoryStat,
+		FailedTest:   e.FailedTest,
+		Penalty:      &e.Penalty,
+		Position:     int32Ptr(e.Position),
+		ProblemId:    e.ProblemId,
+		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
+		Score:        &score,
+		State:        &e.State,
+		TimeStat:     &e.TimeStat,
+		UserId:       e.UserId,
+		Username:     strPtrIfNotEmpty(e.Username),
 	}
 }
 

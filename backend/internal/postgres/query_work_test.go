@@ -34,8 +34,8 @@ var updateQueryWork = flag.Bool("update", false, "raise "+queryWorkBudgets+" bud
 
 // Sequential-scan metrics count only tables populated by the benchmark seeds.
 var queryWorkLargeTables = map[string]bool{
-	"outbox_events": true, "event_aggregates": true, "submissions": true,
-	"users": true, "contest_members": true, "contest_problem_results": true,
+	"submissions": true,
+	"users":       true, "contest_members": true, "contest_problem_results": true,
 }
 
 type statementRecorder struct {
@@ -104,7 +104,6 @@ func TestQueryWork(t *testing.T) {
 			pool, err := pgxpool.NewWithConfig(ctx, config)
 			require.NoError(t, err)
 			t.Cleanup(pool.Close)
-			seedOutbox(t, pool, size.rows)
 			f := seedSubmissions(t, pool, size.rows)
 			fixtureExec(t, pool, "VACUUM ANALYZE")
 			for _, scenario := range workScenarios(pool, f) {
@@ -143,30 +142,12 @@ func TestQueryWork(t *testing.T) {
 
 // Scenario order affects page counts because write warm-ups roll back and are followed by VACUUM.
 func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario {
-	outbox := NewOutboxRepo(pool)
 	submissions := NewSubmissionsRepo(pool)
 	contests := NewContestsRepo(pool)
 	creation := submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
 	order := int32(-1)
 	filter := submissionsmodel.SubmissionsFilter{ContestId: &f.contest, Page: 1, PageSize: 50, Order: &order}
-	var leased, token uuid.UUID
 	return []workScenario{
-		{name: "Outbox/PickEvents", write: true, run: func(ctx context.Context, tx pgx.Tx) error {
-			events, err := outbox.WithTx(tx).PickEvents(ctx, 1, 300)
-			if err == nil && len(events) != 1 {
-				err = fmt.Errorf("pick returned %d events, want 1", len(events))
-			}
-			return err
-		}},
-		{name: "Outbox/MarkAsCompleted", write: true,
-			setup: func(ctx context.Context, tx pgx.Tx) error {
-				token = uuid.New()
-				return tx.QueryRow(ctx, `UPDATE outbox_events SET status='processing',lease_token=$1,deadline_at=now()+interval '1 hour'
- WHERE id=md5('event2')::uuid RETURNING id`, token).Scan(&leased)
-			},
-			run: func(ctx context.Context, tx pgx.Tx) error {
-				return outbox.WithTx(tx).MarkAsCompleted(ctx, leased, token)
-			}},
 		{name: "Submissions/Create", write: true, run: func(ctx context.Context, tx pgx.Tx) error {
 			id, err := submissions.WithTx(tx).CreateSubmission(ctx, &creation)
 			if err == nil && id == uuid.Nil {

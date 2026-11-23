@@ -23,25 +23,32 @@ func (r *JudgeJobs) ScheduleJob(ctx context.Context, id uuid.UUID) (judgingmodel
 	if err != nil {
 		return judgingmodel.Job{}, dbError("schedule job", err)
 	}
-	return mapJudgeJob(row), nil
+	return mapJudgeJob(row), r.wakeWorkers(ctx)
 }
 
-func (r *JudgeJobs) Claim(ctx context.Context, reference judgingmodel.JobRef) (judgingmodel.Job, error) {
-	row, err := r.queries.ClaimJudgeJob(ctx, sqlc.ClaimJudgeJobParams{ID: reference.ID, Generation: reference.Generation, SubmissionID: reference.SubmissionID, LeaseToken: uuid.New()})
+func (r *JudgeJobs) ClaimNext(ctx context.Context) (judgingmodel.Job, bool, error) {
+	row, err := r.queries.ClaimNextJudgeJob(ctx, uuid.New())
 	if errors.Is(err, pgx.ErrNoRows) {
-		active, err := r.queries.JudgeJobActive(ctx, sqlc.JudgeJobActiveParams{ID: reference.ID, Generation: reference.Generation, SubmissionID: reference.SubmissionID})
-		if err != nil {
-			return judgingmodel.Job{}, dbError("claim", err)
-		}
-		if active {
-			return judgingmodel.Job{}, judging.ErrBusy
-		}
-		return judgingmodel.Job{}, nil
+		return judgingmodel.Job{}, false, nil
 	}
 	if err != nil {
-		return judgingmodel.Job{}, dbError("claim", err)
+		return judgingmodel.Job{}, false, dbError("claim", err)
 	}
-	return mapJudgeJob(row), nil
+	return mapJudgeJob(row), true, nil
+}
+
+func (r *JudgeJobs) wakeWorkers(ctx context.Context) error {
+	if err := r.queries.WakeJudgeWorkers(ctx); err != nil {
+		return dbError("wake judge workers", err)
+	}
+	return nil
+}
+
+func (r *JudgeJobs) DeleteObsolete(ctx context.Context) error {
+	if _, err := r.queries.DeleteObsoleteJudgeJobs(ctx); err != nil {
+		return dbError("delete obsolete judge jobs", err)
+	}
+	return nil
 }
 
 func (r *JudgeJobs) Renew(ctx context.Context, job judgingmodel.Job) error {
@@ -56,11 +63,14 @@ func (r *JudgeJobs) Renew(ctx context.Context, job judgingmodel.Job) error {
 }
 
 func (r *JudgeJobs) Release(ctx context.Context, job judgingmodel.Job) error {
-	_, err := r.queries.ReleaseJudgeJob(ctx, sqlc.ReleaseJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
+	count, err := r.queries.ReleaseJudgeJob(ctx, sqlc.ReleaseJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
 	if err != nil {
 		return dbError("release", err)
 	}
-	return nil
+	if count == 0 {
+		return nil
+	}
+	return r.wakeWorkers(ctx)
 }
 
 func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool, error) {
@@ -136,7 +146,7 @@ func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.J
 	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
 		return false, r.completeStalled(ctx, reference)
 	}
-	count, err := r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+	count, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
 	if err != nil {
 		return false, dbError("fail stalled job", err)
 	}
@@ -158,12 +168,15 @@ func (r *JudgeJobs) RequeueStalledJob(ctx context.Context, reference judgingmode
 	if err != nil {
 		return false, dbError("requeue stalled job", err)
 	}
-	return count > 0, nil
+	if count == 0 {
+		return false, nil
+	}
+	return true, r.wakeWorkers(ctx)
 }
 
 func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
 	job := judgingmodel.Job{ID: row.ID, SubmissionID: row.SubmissionID, Generation: row.Generation,
-		PackageID: row.PackageID, PackageHash: row.PackageHash, Attempt: row.Attempt}
+		PackageID: row.PackageID, PackageHash: row.PackageHash, Attempt: row.Attempt, CreatedAt: row.CreatedAt}
 	if row.LeaseToken != nil {
 		job.LeaseToken = *row.LeaseToken
 	}
@@ -175,7 +188,7 @@ func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
 
 // completeStalled retires a job whose submission is gone or superseded.
 func (r *JudgeJobs) completeStalled(ctx context.Context, reference judgingmodel.JobRef) error {
-	if _, err := r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation}); err != nil {
+	if _, err := r.queries.DeleteStalledJudgeJob(ctx, sqlc.DeleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation}); err != nil {
 		return dbError("complete stalled judge job", err)
 	}
 	return nil

@@ -7,7 +7,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
-	"github.com/nats-io/nats.go/jetstream"
 )
 
 var _ corev1.Handler = (*CoreServer)(nil)
@@ -40,7 +39,6 @@ type Services struct {
 	Blogs     BlogsUC
 	BlogReads BlogsReader
 
-	NATS        jetstream.JetStream
 	Permissions PermissionLoader
 }
 

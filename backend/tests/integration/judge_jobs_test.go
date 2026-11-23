@@ -5,6 +5,8 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,34 +19,34 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
-	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
-	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
-	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type silentJudgeProgress struct{}
 
-func (silentJudgeProgress) PublishQueued(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error {
-	return nil
+func (silentJudgeProgress) Notify(context.Context, eventdata.Notice) error { return nil }
+
+func (s *IntegrationTestSuite) claimNext(jobs *pgstore.JudgeJobs) judgingmodel.Job {
+	job, ok, err := jobs.ClaimNext(s.ctx)
+	s.Require().NoError(err)
+	s.Require().True(ok, "a pending job")
+	return job
 }
 
-func (silentJudgeProgress) PublishCompilingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error {
-	return nil
+func (s *IntegrationTestSuite) expireJob(id uuid.UUID) {
+	_, err := s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", id)
+	s.Require().NoError(err)
 }
 
-func (silentJudgeProgress) PublishTestingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error {
-	return nil
-}
-
-func (silentJudgeProgress) PublishTestStarted(context.Context, uuid.UUID, int32, submissionsmodel.SubmissionEventMeta) error {
-	return nil
+func (s *IntegrationTestSuite) judgeJobCount(sub uuid.UUID) int {
+	var count int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM judge_jobs WHERE submission_id=$1", sub).Scan(&count))
+	return count
 }
 
 func (s *IntegrationTestSuite) newJobSubmission() (uuid.UUID, uuid.UUID, uuid.UUID, uuid.UUID) {
@@ -72,33 +74,26 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	s.Require().Error(err, "one job per generation")
 	var wg sync.WaitGroup
 	claims := make(chan judgingmodel.Job, 2)
-	failures := make(chan error, 2)
 	for range 2 {
-		wg.Go(func() { job, err := jobs.Claim(s.ctx, first.Ref()); claims <- job; failures <- err })
+		wg.Go(func() {
+			job, ok, err := jobs.ClaimNext(s.ctx)
+			s.NoError(err)
+			if ok {
+				claims <- job
+			}
+		})
 	}
 	wg.Wait()
 	close(claims)
-	close(failures)
-	var active judgingmodel.Job
-	for job := range claims {
-		if job.ID != uuid.Nil {
-			active = job
-		}
-	}
+	s.Require().Len(claims, 1, "concurrent workers claim a job once")
+	active := <-claims
 	s.Equal(first.ID, active.ID)
-	busy := 0
-	for err := range failures {
-		if err != nil {
-			s.ErrorIs(err, judging.ErrBusy)
-			busy++
-		}
-	}
-	s.Equal(1, busy)
 	s.Require().NoError(jobs.Renew(s.ctx, active))
-	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", active.ID)
+	s.expireJob(active.ID)
+	recovery := judging.NewJudgeRecovery(jobs, pgstore.NewJudgeTransactions(s.dbPool), 3, 10, time.Second)
+	_, err = recovery.RecoverStalledJobs(s.ctx)
 	s.Require().NoError(err)
-	replacement, err := jobs.Claim(s.ctx, first.Ref())
-	s.Require().NoError(err)
+	replacement := s.claimNext(jobs)
 	s.EqualValues(2, replacement.Attempt)
 	s.NotEqual(active.LeaseToken, replacement.LeaseToken)
 	s.ErrorIs(jobs.Renew(s.ctx, active), judging.ErrLeaseLost)
@@ -122,19 +117,9 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 		s.False(current, "rejudge must reject the old generation")
 		return err
 	}))
-	stale, err := jobs.Claim(s.ctx, first.Ref())
-	s.Require().NoError(err)
-	s.Equal(uuid.Nil, stale.ID, "an old message must not start the current generation")
-	forged := next.Ref()
-	forged.Generation++
-	ignored, err := jobs.Claim(s.ctx, forged)
-	s.Require().NoError(err)
-	s.Equal(uuid.Nil, ignored.ID, "job ID and generation must both match")
-
-	current, err := jobs.Claim(s.ctx, next.Ref())
-	s.Require().NoError(err)
+	current := s.claimNext(jobs)
 	s.Equal(next.ID, current.ID)
-	s.EqualValues(1, current.Attempt, "stale messages must not consume attempts of the current job")
+	s.EqualValues(1, current.Attempt)
 	s.Require().NoError(repo.BlockSubmission(s.ctx, sub, nil))
 	s.ErrorIs(jobs.Renew(s.ctx, current), judging.ErrLeaseLost)
 	s.Require().NoError(txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
@@ -144,22 +129,22 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	}))
 }
 
-func (s *IntegrationTestSuite) TestJudgeTerminalResultOutboxAndStandingsAreAtomic() {
+func (s *IntegrationTestSuite) TestJudgeTerminalResultAndStandingsAreAtomic() {
 	sub, contest, problem, user := s.newJobSubmission()
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
-	scheduled, err := jobs.ScheduleJob(s.ctx, sub)
+	_, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.UpsertContestProblemResult(s.ctx, &contestsmodel.UpsertContestProblemResultParams{ContestID: contest, UserID: user, ProblemID: problem, Solved: true}))
 	judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, silentJudgeProgress{})
-	_, err = s.dbPool.Exec(s.ctx, `CREATE FUNCTION reject_terminal_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='submissions.completed' THEN RAISE EXCEPTION 'injected completion failure'; END IF; RETURN NEW; END $$;
- CREATE TRIGGER reject_terminal_event BEFORE INSERT ON outbox_events FOR EACH ROW EXECUTE FUNCTION reject_terminal_event()`)
+	_, err = s.dbPool.Exec(s.ctx, fmt.Sprintf(`CREATE FUNCTION reject_verdict() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.state=%d THEN RAISE EXCEPTION 'injected completion failure'; END IF; RETURN NEW; END $$;
+ CREATE TRIGGER reject_verdict BEFORE UPDATE ON submissions FOR EACH ROW EXECUTE FUNCTION reject_verdict()`, submissionsmodel.GotIE))
 	s.Require().NoError(err)
 	drop := func() {
-		_, err := s.dbPool.Exec(s.ctx, `DROP TRIGGER IF EXISTS reject_terminal_event ON outbox_events; DROP FUNCTION IF EXISTS reject_terminal_event()`)
+		_, err := s.dbPool.Exec(s.ctx, `DROP TRIGGER IF EXISTS reject_verdict ON submissions; DROP FUNCTION IF EXISTS reject_verdict()`)
 		s.Require().NoError(err)
 	}
 	defer drop()
-	s.Error(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
+	s.Error(judge.JudgeSubmission(s.ctx, s.claimNext(jobs)))
 	saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.Saved, saved.State)
@@ -170,8 +155,13 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultOutboxAndStandingsAreAtomi
 	var jobState string
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE submission_id=$1", sub).Scan(&jobState))
 	s.Equal("pending", jobState)
+	_, ok, err := jobs.ClaimNext(s.ctx)
+	s.Require().NoError(err)
+	s.False(ok, "a released job waits before it can be claimed again")
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET available_at=now() WHERE submission_id=$1", sub)
+	s.Require().NoError(err)
 	drop()
-	s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
+	s.Require().NoError(judge.JudgeSubmission(s.ctx, s.claimNext(jobs)))
 	saved, err = pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.GotIE, saved.State)
@@ -179,31 +169,7 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultOutboxAndStandingsAreAtomi
 	standings, err = s.contestsRepo.GetContestProblemResult(s.ctx, contest, user, problem)
 	s.Require().NoError(err)
 	s.False(standings.Solved)
-	s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()), "duplicate completion has no effect")
-	var count int
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", sub).Scan(&count))
-	s.Equal(1, count)
-}
-
-func (s *IntegrationTestSuite) TestJudgeJobAndOutboxRollbackTogether() {
-	sub, _, _, _ := s.newJobSubmission()
-	failure := &eventdata.PermanentError{Cause: judging.ErrBusy}
-	txs := pgstore.NewSubmissionTransactions(s.dbPool)
-	err := txs.Within(s.ctx, func(tx submissions.SubmissionTxStore) error {
-		if _, err := tx.ScheduleJob(s.ctx, sub); err != nil {
-			return err
-		}
-		if err := tx.Record(s.ctx, eventdata.Event{AggregateID: sub, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: sub}}); err != nil {
-			return err
-		}
-		return failure
-	})
-	s.Same(failure, err)
-	var count int
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM judge_jobs WHERE submission_id=$1", sub).Scan(&count))
-	s.Zero(count)
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1", sub).Scan(&count))
-	s.Zero(count)
+	s.Zero(s.judgeJobCount(sub), "a finished job is deleted")
 }
 
 func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
@@ -225,8 +191,7 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
 	s.Require().NoError(err)
 	s.NotEqual(firstHash, s.packageHash(packages, second))
 	s.Require().NoError(s.contestsRepo.UpdateContestProblemPackage(s.ctx, contest, problem, second))
-	claim, err := jobs.Claim(s.ctx, initial.Ref())
-	s.Require().NoError(err)
+	claim := s.claimNext(jobs)
 	s.Equal(firstHash, claim.PackageHash)
 	_, err = pgstore.NewSubmissionsRepo(s.dbPool).ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest, SubmissionID: &sub})
 	s.Require().NoError(err)
@@ -241,50 +206,53 @@ type switchGate struct{ open atomic.Bool }
 func (g *switchGate) Ready() bool                { return g.open.Load() }
 func (g *switchGate) Admit(context.Context) bool { return g.open.Load() }
 
-func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
+func (s *IntegrationTestSuite) TestJudgeWorkerTakesQueuedJobAndNotifies() {
 	sub, _, _, _ := s.newJobSubmission()
-	js, _ := newNATSJetStream(s.T())
-	s.Require().NoError(pkg.EnsureSubmissionsStream(s.ctx, js))
-	tap, err := js.CreateOrUpdateConsumer(s.ctx, pkg.SubmissionsStreamName, jetstream.ConsumerConfig{Durable: "completion_tap", FilterSubject: "submissions.completed", AckPolicy: jetstream.AckExplicitPolicy})
-	s.Require().NoError(err)
-	txs := pgstore.NewSubmissionTransactions(s.dbPool)
-	s.Require().NoError(txs.Within(s.ctx, func(tx submissions.SubmissionTxStore) error {
-		job, err := tx.ScheduleJob(s.ctx, sub)
-		if err != nil {
-			return err
-		}
-		return tx.Record(s.ctx, eventdata.Event{AggregateID: sub, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: sub, JobID: job.ID, Generation: job.Generation}})
-	}))
-	app := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(s.dbPool), pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, judgeworker.NewEventPublisher(js))
-	gate := &switchGate{}
-	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1, gate)
-	s.Require().NoError(err)
-	dispatcher := outbox.NewEventDispatcher()
-	publisher := pubsub.NewSubmissionCreatedPublisher(js)
-	dispatcher.Register(eventdata.OutboxEventSubmissionCreated, publisher)
-	dispatcher.Register(eventdata.OutboxEventSubmissionCompleted, publisher)
-	relay := outbox.NewOutboxWorker(dispatcher, pgstore.NewOutboxRepo(s.dbPool))
 	ctx, cancel := context.WithCancel(s.ctx)
 	var running sync.WaitGroup
-	running.Go(func() { _ = worker.Start(ctx) })
-	running.Go(func() { relay.Start(ctx) })
 	defer func() { cancel(); running.Wait() }()
-	_, err = tap.Next(jetstream.FetchMaxWait(3 * time.Second))
-	s.Require().ErrorIs(err, nats.ErrTimeout, "a worker that is not ready must leave the job queued")
+	notices := make(chan eventdata.Notice, 10)
+	listening := make(chan struct{}, 1)
+	running.Go(func() {
+		_ = pgstore.Listen(ctx, s.dbPool, pgstore.EventsChannel, func() { listening <- struct{}{} }, func(n *pgconn.Notification) {
+			var notice eventdata.Notice
+			s.NoError(json.Unmarshal([]byte(n.Payload), &notice))
+			notices <- notice
+		})
+	})
+	<-listening
+	s.Require().NoError(pgstore.NewSubmissionTransactions(s.dbPool).Within(s.ctx, func(tx submissions.SubmissionTxStore) error {
+		_, err := tx.ScheduleJob(s.ctx, sub)
+		return err
+	}))
+	jobs := pgstore.NewJudgeJobs(s.dbPool)
+	judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, pgstore.NewNotifier(s.dbPool))
+	gate := &switchGate{}
+	wake := make(chan struct{}, 1)
+	worker := &judging.Worker{Jobs: jobs, Judge: judge, Workers: 1, Gate: gate, Wake: wake, Logger: slog.Default()}
+	running.Go(func() { _ = worker.Run(ctx) })
+	time.Sleep(2 * time.Second)
+	s.Equal(1, s.judgeJobCount(sub), "a worker that is not ready must leave the job queued")
 	gate.open.Store(true)
-	message, err := tap.Next(jetstream.FetchMaxWait(15 * time.Second))
-	s.Require().NoError(err)
-	var completed submissionsmodel.SubmissionCompletedEvent
-	s.Require().NoError(json.Unmarshal(message.Data(), &completed))
-	s.Equal(sub, completed.Id)
-	s.Equal(submissionsmodel.GotIE, completed.State)
-	s.EqualValues(2, completed.Revision)
-	s.NotEmpty(message.Headers().Get("Nats-Msg-Id"))
-	s.Require().NoError(message.Ack())
-	saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
-	s.Require().NoError(err)
-	s.Equal(completed.Revision, saved.Revision)
-	s.Equal(completed.State, saved.State)
+	wake <- struct{}{}
+	deadline := time.After(15 * time.Second)
+	for {
+		select {
+		case notice := <-notices:
+			if notice.Type != submissionsmodel.SubmissionEventCompleted {
+				continue
+			}
+			s.Equal(sub, notice.ID)
+			saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
+			s.Require().NoError(err)
+			s.Equal(submissionsmodel.GotIE, saved.State)
+			s.EqualValues(2, saved.Revision)
+			s.Zero(s.judgeJobCount(sub))
+			return
+		case <-deadline:
+			s.FailNow("no completion notice")
+		}
+	}
 }
 
 func (s *IntegrationTestSuite) TestJudgeRecoversAfterRelatedEntityDeletion() {
@@ -302,30 +270,24 @@ func (s *IntegrationTestSuite) TestJudgeRecoversAfterRelatedEntityDeletion() {
 			jobs := pgstore.NewJudgeJobs(s.dbPool)
 			scheduled, err := jobs.ScheduleJob(s.ctx, sub)
 			s.Require().NoError(err)
-			abandoned, err := jobs.Claim(s.ctx, scheduled.Ref())
-			s.Require().NoError(err)
-			s.Require().NotEqual(uuid.Nil, abandoned.ID)
+			abandoned := s.claimNext(jobs)
+			s.Require().Equal(scheduled.ID, abandoned.ID)
 			if deleted == "contest" {
 				_, err = s.dbPool.Exec(s.ctx, "DELETE FROM contests WHERE id=$1", contest)
 				s.Require().NoError(err)
 			}
-			_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", abandoned.ID)
+			s.expireJob(abandoned.ID)
+			_, err = judging.NewJudgeRecovery(jobs, pgstore.NewJudgeTransactions(s.dbPool), 3, 10, time.Second).RecoverStalledJobs(s.ctx)
 			s.Require().NoError(err)
+			retry := s.claimNext(jobs)
+			s.EqualValues(2, retry.Attempt)
 			judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, silentJudgeProgress{})
-			s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
+			s.Require().NoError(judge.JudgeSubmission(s.ctx, retry))
 			saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.GotIE, saved.State)
 			s.EqualValues(2, saved.Revision)
-			var state string
-			var attempt int
-			s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state,attempt FROM judge_jobs WHERE id=$1", scheduled.ID).Scan(&state, &attempt))
-			s.Equal("completed", state)
-			s.Equal(2, attempt)
-			s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
-			var completedCount int
-			s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", sub).Scan(&completedCount))
-			s.Equal(1, completedCount)
+			s.Zero(s.judgeJobCount(sub))
 		})
 	}
 }
@@ -335,12 +297,9 @@ func (s *IntegrationTestSuite) TestJudgeLeaseExpirationDuringApplyResultDoesNotA
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	scheduled, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	claim, err := jobs.Claim(s.ctx, scheduled.Ref())
-	s.Require().NoError(err)
-	s.Require().NotEqual(uuid.Nil, claim.ID)
-
-	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", scheduled.ID)
-	s.Require().NoError(err)
+	claim := s.claimNext(jobs)
+	s.Require().Equal(scheduled.ID, claim.ID)
+	s.expireJob(scheduled.ID)
 
 	txs := pgstore.NewJudgeTransactions(s.dbPool)
 	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
@@ -361,8 +320,8 @@ func (s *IntegrationTestSuite) TestJudgeStaleGenerationAndBlockedSubmissionAckSa
 	first, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
 
-	claim, err := jobs.Claim(s.ctx, first.Ref())
-	s.Require().NoError(err)
+	claim := s.claimNext(jobs)
+	s.Require().Equal(first.ID, claim.ID)
 
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest, SubmissionID: &sub})
@@ -381,8 +340,8 @@ func (s *IntegrationTestSuite) TestJudgeStaleGenerationAndBlockedSubmissionAckSa
 
 	second, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	claim2, err := jobs.Claim(s.ctx, second.Ref())
-	s.Require().NoError(err)
+	claim2 := s.claimNext(jobs)
+	s.Require().Equal(second.ID, claim2.ID)
 
 	s.Require().NoError(repo.BlockSubmission(s.ctx, sub, nil))
 	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
@@ -404,12 +363,9 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	sub1, _, _, _ := s.newJobSubmission()
 	job1, err := jobs.ScheduleJob(s.ctx, sub1)
 	s.Require().NoError(err)
-	claimed1, err := jobs.Claim(s.ctx, job1.Ref())
-	s.Require().NoError(err)
+	claimed1 := s.claimNext(jobs)
 	s.EqualValues(1, claimed1.Attempt)
-
-	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '5 seconds' WHERE id=$1", job1.ID)
-	s.Require().NoError(err)
+	s.expireJob(job1.ID)
 
 	recoveredCount, err := recovery.RecoverStalledJobs(s.ctx)
 	s.Require().NoError(err)
@@ -420,18 +376,14 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state, attempt FROM judge_jobs WHERE id=$1", job1.ID).Scan(&state1, &attempt1))
 	s.Equal("pending", state1)
 	s.Equal(1, attempt1, "attempt preserved for next claim")
-
-	var createdCount int
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type=$2", sub1, eventdata.OutboxEventSubmissionCreated).Scan(&createdCount))
-	s.Equal(1, createdCount)
+	s.EqualValues(2, s.claimNext(jobs).Attempt)
 
 	// A stalled job at the attempt limit ends with an internal error.
 	sub2, _, _, _ := s.newJobSubmission()
 	job2, err := jobs.ScheduleJob(s.ctx, sub2)
 	s.Require().NoError(err)
-	claimed2, err := jobs.Claim(s.ctx, job2.Ref())
-	s.Require().NoError(err)
-	s.EqualValues(1, claimed2.Attempt)
+	claimed2 := s.claimNext(jobs)
+	s.Equal(job2.ID, claimed2.ID)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET attempt=3, deadline_at=now()-interval '5 seconds' WHERE id=$1", job2.ID)
 	s.Require().NoError(err)
 
@@ -439,24 +391,17 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	s.Require().NoError(err)
 	s.Equal(1, recoveredCount)
 
-	var state2 string
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE id=$1", job2.ID).Scan(&state2))
-	s.Equal("completed", state2)
+	s.Zero(s.judgeJobCount(sub2))
 
 	saved2, err := repo.GetSubmission(s.ctx, sub2)
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.GotIE, saved2.State, "exhausted attempts must transition to GotIE")
 
-	var completedCount int
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", sub2).Scan(&completedCount))
-	s.Equal(1, completedCount)
-
 	// Recovering an obsolete generation must preserve the rejudged submission.
 	sub3, contest3, _, _ := s.newJobSubmission()
 	job3, err := jobs.ScheduleJob(s.ctx, sub3)
 	s.Require().NoError(err)
-	_, err = jobs.Claim(s.ctx, job3.Ref())
-	s.Require().NoError(err)
+	s.Equal(job3.ID, s.claimNext(jobs).ID)
 	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest3, SubmissionID: &sub3})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '5 seconds' WHERE id=$1", job3.ID)
@@ -466,13 +411,28 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	s.Require().NoError(err)
 	s.Equal(1, recoveredCount)
 
-	// Completing an obsolete job must not overwrite the submission.
-	var state3 string
-	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE id=$1", job3.ID).Scan(&state3))
-	s.Equal("completed", state3)
+	// Retiring an obsolete job must not overwrite the submission.
+	s.Zero(s.judgeJobCount(sub3))
 	saved3, err := repo.GetSubmission(s.ctx, sub3)
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.Saved, saved3.State, "rejudged submission must remain Saved for new generation")
+
+	// A pending job of a superseded generation can never be claimed, so recovery deletes it.
+	sub4, contest4, _, _ := s.newJobSubmission()
+	_, err = jobs.ScheduleJob(s.ctx, sub4)
+	s.Require().NoError(err)
+	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest4, SubmissionID: &sub4})
+	s.Require().NoError(err)
+	current4, err := jobs.ScheduleJob(s.ctx, sub4)
+	s.Require().NoError(err)
+	_, err = recovery.RecoverStalledJobs(s.ctx)
+	s.Require().NoError(err)
+	var remaining []uuid.UUID
+	rows, err := s.dbPool.Query(s.ctx, "SELECT id FROM judge_jobs WHERE submission_id=$1", sub4)
+	s.Require().NoError(err)
+	remaining, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	s.Require().NoError(err)
+	s.Equal([]uuid.UUID{current4.ID}, remaining)
 }
 
 func (s *IntegrationTestSuite) packageHash(packages *pgstore.PackagesRepo, id uuid.UUID) string {

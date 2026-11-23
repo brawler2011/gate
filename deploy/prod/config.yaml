@@ -14,12 +14,11 @@ email:
   provider: resend
   from: Gate <no-reply@steins.ru>
   app_base_url: https://steins.ru
-inbox:
-  retention: 168h
 judge:
   # The VPS is a shared vCPU (deploy/strict-judging.md).
   mode: dirty
   manifest_dir: /etc/judge
+  worker_url: http://worker:8080
   # Avoid CPU contention that would skew judging time limits.
   workers: 1
 problems:

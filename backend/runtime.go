@@ -19,15 +19,8 @@ import (
 	access "github.com/brawler2011/gate/backend/internal/access"
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
-	"github.com/brawler2011/gate/backend/internal/messaging/booklet"
-	inbox "github.com/brawler2011/gate/backend/internal/messaging/inbox"
-	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
-	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
-	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
 	notifications "github.com/brawler2011/gate/backend/internal/notifications"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
@@ -36,7 +29,7 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
-	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	bookletrpc "github.com/brawler2011/gate/backend/internal/transport/booklet"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
@@ -48,13 +41,11 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/hostcheck"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
-	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/sync/errgroup"
 )
-
-const submissionsRingBufferSize = 10000
 
 const serviceShutdownTimeout = 5 * time.Second
 
@@ -153,23 +144,11 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		return fmt.Errorf("create problem work directory: %w", err)
 	}
 
-	natsJS, err := pkg.NewNatsJetStream(cfg.Secrets.NatsURL)
-	if err != nil {
-		return fmt.Errorf("create nats jetstream connection: %w", err)
-	}
-	defer natsJS.Conn().Close()
-	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
-		return fmt.Errorf("ensure submissions stream: %w", err)
-	}
-	if err := pkg.EnsureContestsStream(context.Background(), natsJS); err != nil {
-		return fmt.Errorf("ensure contests stream: %w", err)
-	}
-	logger.Info("SUBMISSIONS and CONTESTS streams ready")
-
-	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, natsJS: natsJS, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft, cfg.Problems.OperationLease)}
+	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft, cfg.Problems.OperationLease)}
 
 	var services []appService
 	var languages *sandbox.Config
+	var compiler contests.BookletCompiler = bookletrpc.NewClient(cfg.Judge.WorkerURL, cfg.Problems.Limits.Booklet)
 	if mode.Worker() {
 		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.HTTPURL, &http.Client{})
 		if err != nil {
@@ -189,8 +168,10 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 			return err
 		}
 		services = append(services, workers...)
+		local := bookletrpc.Local{Compiler: sandbox.NewSandbox(sandboxClient, judgeImage.Config), Limits: cfg.Problems.Limits.Booklet}
+		compiler = local
 		if !mode.API() {
-			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(ready), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
+			services = append(services, newHTTPService("worker server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHandler(ready, local), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
 		}
 	}
 	if mode.API() {
@@ -200,7 +181,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 				return err
 			}
 		}
-		api, err := apiServices(shared, languages)
+		api, err := apiServices(shared, languages, compiler)
 		if err != nil {
 			return err
 		}
@@ -217,7 +198,6 @@ type sharedDeps struct {
 	logger        *slog.Logger
 	pool          *pgxpool.Pool
 	store         *storage.S3Storage
-	natsJS        jetstream.JetStream
 	problemDrafts *pgstore.ProblemDraftsRepo
 }
 
@@ -273,10 +253,16 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, RerunTLE: d.cfg.Judge.Mode == config.JudgeDirty, Calibration: calib, Logger: d.logger}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, Cache: cache, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
-		packageJudge, judgeworker.NewEventPublisher(d.natsJS))
-	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers, gate)
-	if err != nil {
-		return nil, nil, fmt.Errorf("create judge worker: %w", err)
+		packageJudge, pgstore.NewNotifier(d.pool))
+	wake := make(chan struct{}, d.cfg.Judge.Workers)
+	judgeWorker := &judging.Worker{Jobs: judgeJobs, Judge: judgeUC, Workers: d.cfg.Judge.Workers, Gate: gate, Wake: wake, Logger: d.logger.With("component", "judge_worker")}
+	wakeWorkers := func(n int) {
+		for range n {
+			select {
+			case wake <- struct{}{}:
+			default:
+			}
+		}
 	}
 	judgeRecovery := judging.NewJudgeRecovery(
 		judgeJobs,
@@ -285,21 +271,16 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		judging.DefaultRecoveryBatchSize,
 		judging.DefaultRecoveryInterval,
 	)
-	inboxPruner := inbox.NewPruner(pgstore.NewInbox(d.pool), d.cfg.Inbox.Retention, inbox.DefaultPruneInterval)
-	bookletResponder := booklet.NewResponder(d.natsJS.Conn(), sandbox.NewSandbox(sandboxClient, judgeImage.Config), problemPolicy.Limits.Booklet)
 
 	noStop := func(context.Context) error { return nil }
 	services := []appService{
 		newService("problem build worker", buildWorker.Run, noStop),
 		newService("problem object GC", problemGC.Run, noStop),
-		newService(
-			"judge worker",
-			judgeWorker.Start,
-			func(context.Context) error {
-				judgeWorker.Stop()
-				return nil
-			},
-		),
+		newService("judge worker", judgeWorker.Run, noStop),
+		newService("judge job listener", func(ctx context.Context) error {
+			return pgstore.Listen(ctx, d.pool, pgstore.JudgeJobsChannel,
+				func() { wakeWorkers(d.cfg.Judge.Workers) }, func(*pgconn.Notification) { wakeWorkers(1) })
+		}, noStop),
 		newService(
 			"judge recovery worker",
 			func(ctx context.Context) error {
@@ -308,15 +289,6 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 			},
 			noStop,
 		),
-		newService(
-			"inbox receipts pruner",
-			func(ctx context.Context) error {
-				inboxPruner.Start(ctx)
-				return nil
-			},
-			noStop,
-		),
-		newService("booklet responder", bookletResponder.Run, noStop),
 	}
 	if hostMonitor != nil {
 		services = append(services, newService("judging host monitor", hostMonitor.Run, noStop))
@@ -324,8 +296,9 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	return services, status, nil
 }
 
-func workerHealthHandler(ready func() (bool, []string)) http.Handler {
+func workerHandler(ready func() (bool, []string), booklets bookletrpc.Local) http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("POST "+bookletrpc.Path, bookletrpc.Handler(booklets.Compiler, booklets.Limits))
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","message":"Worker is running"}`))
@@ -341,11 +314,10 @@ func workerHealthHandler(ready func() (bool, []string)) http.Handler {
 	return mux
 }
 
-func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) {
-	cfg, logger, pool, store, natsJS := d.cfg, d.logger, d.pool, d.store, d.natsJS
+func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.BookletCompiler) ([]appService, error) {
+	cfg, logger, pool, store := d.cfg, d.logger, d.pool, d.store
 
 	usersRepo := pgstore.NewUsersRepo(pool)
-	outboxRepo := pgstore.NewOutboxRepo(pool)
 	orgsRepo := pgstore.NewOrganizationsRepo(pool)
 	teamsRepo := pgstore.NewTeamsRepo(pool)
 	problemsRepo := pgstore.NewProblemsRepo(pool)
@@ -398,53 +370,15 @@ func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) 
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, accessLoader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: accessLoader}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, booklet.NewClient(natsJS.Conn(), cfg.Problems.Limits.Booklet))
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, compiler)
 
-	outboxDispatcher := outbox.NewEventDispatcher()
-	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
-	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCompleted, pubsub.NewSubmissionCreatedPublisher(natsJS))
-	contestEventsPublisher := pubsub.NewContestEventsPublisher(natsJS)
-	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
-	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
-	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationCreated, contestEventsPublisher)
-	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
-	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
-	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC)
-
-	for _, event := range []submissionsmodel.SubmissionEventType{
-		submissionsmodel.SubmissionEventCreated,
-		submissionsmodel.SubmissionEventQueued,
-		submissionsmodel.SubmissionEventCompilingStarted,
-		submissionsmodel.SubmissionEventTestingStarted,
-		submissionsmodel.SubmissionEventTestStarted,
-		submissionsmodel.SubmissionEventCompleted,
-	} {
-		submissionDispatcher.Register(event, observerHub)
-	}
-
-	submissionsSub, err := pubsub.NewSubmissionsSub(context.Background(), natsJS, submissionDispatcher)
-	if err != nil {
-		return nil, fmt.Errorf("create submissions subscriber: %w", err)
-	}
-
-	contestsDispatcher := outbox.NewEventDispatcher()
-	contestsObserverHub := wsobserver.NewContestsHub(submissionsRingBufferSize)
-
-	for _, event := range []string{
-		contestsmodel.ContestEventAnnouncementCreated,
-		contestsmodel.ContestEventAnnouncementDeleted,
-		contestsmodel.ContestEventClarificationCreated,
-		contestsmodel.ContestEventClarificationAnswered,
-	} {
-		contestsDispatcher.Register(event, contestsObserverHub)
-	}
-
-	contestsSub, err := pubsub.NewContestsSub(context.Background(), natsJS, contestsDispatcher)
-	if err != nil {
-		return nil, fmt.Errorf("create contests subscriber: %w", err)
-	}
-
+	observerHub := wsobserver.NewHub(contestsRepo, contestsUC)
+	contestsObserverHub := wsobserver.NewContestsHub()
+	feed := &wsobserver.Feed{Hub: observerHub, Contests: contestsObserverHub, Records: struct {
+		*pgstore.SubmissionsRepo
+		*pgstore.AnnouncementsRepo
+		*pgstore.ClarificationsRepo
+	}{submissionsRepo, announcementsRepo, clarificationsRepo}}
 	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC, logger), authUC, accessLoader, contestsRepo)
 
 	publicMux := http.NewServeMux()
@@ -471,7 +405,6 @@ func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) 
 		NotificationReads: notificationsRepo,
 		Blogs:             blogsUC,
 		BlogReads:         blogsRepo,
-		NATS:              natsJS,
 		Permissions:       access.NewPermissions(accessLoader),
 	}, cfg.HTTP.SecureCookies).WithLanguages(languages)
 
@@ -527,32 +460,10 @@ func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) 
 	}
 
 	services := []appService{
-		newService(
-			"outbox worker",
-			func(ctx context.Context) error {
-				outboxWorker.Start(ctx)
-				return nil
-			},
-			func(context.Context) error {
-				return nil
-			},
-		),
-		newService(
-			"submissions subscriber",
-			submissionsSub.Start,
-			func(context.Context) error {
-				submissionsSub.Stop()
-				return nil
-			},
-		),
-		newService(
-			"contests subscriber",
-			contestsSub.Start,
-			func(context.Context) error {
-				contestsSub.Stop()
-				return nil
-			},
-		),
+		newService("event listener", func(ctx context.Context) error {
+			return pgstore.Listen(ctx, pool, pgstore.EventsChannel, feed.Resync,
+				func(n *pgconn.Notification) { feed.Handle(ctx, n.Payload) })
+		}, func(context.Context) error { return nil }),
 		newService(
 			"session cleanup worker",
 			func(ctx context.Context) error {

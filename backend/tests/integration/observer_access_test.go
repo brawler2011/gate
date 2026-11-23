@@ -3,12 +3,10 @@
 package integration
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +14,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
@@ -42,14 +39,13 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx, nil, nil)
 	loader := pgstore.NewAccess(s.dbPool)
 	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), loader)
-	hub := observer.NewHub(100, s.contestsRepo, contests)
-	contestHub := observer.NewContestsHub(100)
+	hub := observer.NewHub(s.contestsRepo, contests)
+	contestHub := observer.NewContestsHub()
 	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth, middleware.ResponseErrorHandler(slog.Default())), auth, loader, s.contestsRepo).Handler())
 	defer server.Close()
 	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix, Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, contestID, team.ID, accessmodel.ContestModerator))
-	var seq uint64
 	for _, source := range []string{"global admin", "contest owner", "organization admin", "organization owner", "direct moderator", "team moderator", "participant", "stranger"} {
 		s.Run(source, func() {
 			user := owner
@@ -76,7 +72,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			sessionID := uuid.New()
 			s.Require().NoError(authRepo.CreateSession(s.ctx, sessionID, user.Id, time.Now().Add(40*time.Minute)))
 			headers := http.Header{"Cookie": []string{"session_id=" + sessionID.String()}}
-			conn, resp, dialErr := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq, 10), headers)
+			conn, resp, dialErr := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String(), headers)
 			if resp != nil {
 				s.Require().NoError(resp.Body.Close())
 			}
@@ -87,11 +83,10 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			}
 			s.Require().NoError(dialErr)
 			defer conn.Close()
-			seq++
 			event := submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{ContestId: &contestID, UserId: &owner.Id, CreatedAt: time.Now()}, Id: uuid.New(), State: 200, Score: 100}
 			payload, marshalErr := json.Marshal(event)
 			s.Require().NoError(marshalErr)
-			s.Require().NoError(hub.Handle(context.WithValue(s.ctx, eventdata.MessageStreamSequenceKey, seq), submissionsmodel.SubmissionEventCompleted, payload))
+			s.Require().NoError(hub.Handle(s.ctx, submissionsmodel.SubmissionEventCompleted, payload))
 			s.Require().NoError(conn.SetReadDeadline(time.Now().Add(3 * time.Second)))
 			var msg struct {
 				Payload map[string]any `json:"payload"`
@@ -115,40 +110,26 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 					s.Require().Equal(true, msg.Payload["unfrozen"])
 				}
 			}
-			// Replay is read from the same precomputed audience, including freeze masking.
-			replay, response, replayErr := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
-			s.Require().NoError(replayErr)
-			s.Require().NoError(response.Body.Close())
-			s.Require().NoError(replay.SetReadDeadline(time.Now().Add(3 * time.Second)))
-			var replayMsg struct {
-				Payload map[string]any `json:"payload"`
-			}
-			s.Require().NoError(replay.ReadJSON(&replayMsg))
-			if source == "participant" {
-				s.Contains(replayMsg.Payload, "scoreboard")
-				s.NotContains(replayMsg.Payload, "id")
-				s.NotContains(replayMsg.Payload, "state")
-			} else {
-				s.InDelta(200, replayMsg.Payload["state"], 0)
-			}
-			s.Require().NoError(replay.Close())
 			if source == "direct moderator" {
 				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, accessmodel.ContestParticipant))
 				_, _, closed := conn.ReadMessage()
 				s.Require().True(websocket.IsCloseError(closed, websocket.CloseTryAgainLater), "%v", closed)
 				var response *http.Response
-				conn, response, dialErr = websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
+				conn, response, dialErr = websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String(), headers)
 				s.Require().NoError(dialErr)
 				s.Require().NoError(response.Body.Close())
 				defer conn.Close()
+				s.Require().NoError(hub.Handle(s.ctx, submissionsmodel.SubmissionEventCompleted, payload))
 				s.Require().NoError(conn.SetReadDeadline(time.Now().Add(3 * time.Second)))
-				// Decoding into a fresh map prevents absent fields from surviving a previous frame.
-				replayMsg.Payload = nil
-				s.Require().NoError(conn.ReadJSON(&replayMsg))
-				s.Contains(replayMsg.Payload, "scoreboard")
-				s.NotContains(replayMsg.Payload, "id")
-				s.NotContains(replayMsg.Payload, "state")
-				s.Equal(false, replayMsg.Payload["unfrozen"])
+				// Decoding into a fresh struct prevents absent fields from surviving a previous frame.
+				var downgraded struct {
+					Payload map[string]any `json:"payload"`
+				}
+				s.Require().NoError(conn.ReadJSON(&downgraded))
+				s.Contains(downgraded.Payload, "scoreboard")
+				s.NotContains(downgraded.Payload, "id")
+				s.NotContains(downgraded.Payload, "state")
+				s.Equal(false, downgraded.Payload["unfrozen"])
 				// Lease checks must not keep an idle browser session alive.
 				before, err := authRepo.GetSession(s.ctx, sessionID)
 				s.Require().NoError(err)
@@ -158,8 +139,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 				s.Equal(before.ExpiresAt, after.ExpiresAt)
 			}
 			s.Require().NoError(authRepo.DeleteSession(s.ctx, sessionID))
-			seq++
-			s.Require().NoError(hub.Handle(context.WithValue(s.ctx, eventdata.MessageStreamSequenceKey, seq), submissionsmodel.SubmissionEventCompleted, payload))
+			s.Require().NoError(hub.Handle(s.ctx, submissionsmodel.SubmissionEventCompleted, payload))
 			_, _, readErr := conn.ReadMessage()
 			s.Require().True(websocket.IsCloseError(readErr, 1008), "%v", readErr)
 		})

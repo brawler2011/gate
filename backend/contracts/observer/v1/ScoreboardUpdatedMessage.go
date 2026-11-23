@@ -3,7 +3,6 @@
 package observerv1
 
 type ScoreboardUpdatedMessage struct {
-	Sequence  int64                              `json:"sequence" binding:"required"`
 	EventType *ScoreboardUpdatedMessageEventType `json:"event_type" binding:"required"`
 	Payload   *MessageScoreboardUpdated          `json:"payload" binding:"required"`
 }

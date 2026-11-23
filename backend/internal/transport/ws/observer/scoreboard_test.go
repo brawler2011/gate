@@ -3,12 +3,10 @@ package observer
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -51,7 +49,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 				contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusFrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
 			}
 			source := &scoreboardStub{accessStub: &accessStub{contest: contest}}
-			h := NewHub(10, source, source)
+			h := NewHub(source, source)
 			require.NoError(t, h.trackScoreboard(context.Background(), &contestID))
 			defer h.releaseScoreboard(&contestID)
 			for i := 0; i < 5000; i++ {
@@ -61,7 +59,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 			event := submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{ContestId: &contestID, UserId: &userID}}
 			payload, err := json.Marshal(event)
 			require.NoError(t, err)
-			require.NoError(t, h.Handle(context.WithValue(context.Background(), eventdata.MessageStreamSequenceKey, uint64(1)), submissionsmodel.SubmissionEventCompleted, payload))
+			require.NoError(t, h.Handle(context.Background(), submissionsmodel.SubmissionEventCompleted, payload))
 			expected := 1
 			if frozen {
 				expected = 2
@@ -79,7 +77,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 			require.NotEmpty(t, first.scoreboardPublic)
 			require.NotEmpty(t, first.scoreboardUnfrozen)
 			source.contest.Settings = contestsmodel.ContestSettings{ParticipationMode: contestsmodel.ParticipationModeOpen, MonitorScope: contestsmodel.ScopePublic, SubmissionsListScope: contestsmodel.ScopePublic, FreezeStatus: contestsmodel.FreezeStatusUnfrozen, SubmissionsReviewScope: contestsmodel.ScopeModerator, SubmissionDetailsScope: contestsmodel.ScopeModerator}
-			require.NoError(t, h.Handle(context.WithValue(context.Background(), eventdata.MessageStreamSequenceKey, uint64(2)), submissionsmodel.SubmissionEventCompleted, payload))
+			require.NoError(t, h.Handle(context.Background(), submissionsmodel.SubmissionEventCompleted, payload))
 			require.Equal(t, 1, source.snapshots)
 			for _, sub := range h.subscribers {
 				received := <-sub.outbox
@@ -127,35 +125,6 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 			requireClose(t, conn, websocket.ClosePolicyViolation)
 		})
 	}
-}
-
-func TestLiveSubscriptionSkipsOldHistoryWithoutCursor(t *testing.T) {
-	f := newWSFixture(t)
-	f.hub.ring = NewRingBuffer[*WrappedEvent](1)
-	oldID, newID := uuid.New(), uuid.New()
-	f.publish(t, submissionsmodel.SubmissionEventCreated, &submissionsmodel.SubmissionCreatedEvent{Id: oldID, SubmissionEventMeta: f.meta(f.stub.user.Id)})
-	f.publish(t, submissionsmodel.SubmissionEventCreated, &submissionsmodel.SubmissionCreatedEvent{Id: oldID, SubmissionEventMeta: f.meta(f.stub.user.Id)})
-	conn := f.connect(t, strings.TrimSuffix(f.path("submissions"), "&since=0"))
-	require.Eventually(t, func() bool { f.hub.mu.RLock(); defer f.hub.mu.RUnlock(); return len(f.hub.subscribers) == 1 }, time.Second, time.Millisecond)
-	f.publish(t, submissionsmodel.SubmissionEventCreated, &submissionsmodel.SubmissionCreatedEvent{Id: newID, SubmissionEventMeta: f.meta(f.stub.user.Id)})
-	require.Equal(t, newID.String(), readPayload(t, conn)["id"])
-}
-
-func TestContestLiveSubscriptionSkipsLostHistoryWithoutCursor(t *testing.T) {
-	f := newWSFixture(t)
-	f.contests.ring = NewRingBuffer[*WrappedEvent](1)
-	oldID, newID := uuid.New(), uuid.New()
-	for i := 0; i < 2; i++ {
-		f.publish(t, contestsmodel.ContestEventAnnouncementCreated, &contestsmodel.ContestAnnouncementCreatedEvent{ID: oldID, ContestID: f.stub.contest.ID})
-	}
-	conn := f.connect(t, strings.TrimSuffix(f.path("contests"), "&since=0"))
-	require.Eventually(t, func() bool {
-		f.contests.mu.RLock()
-		defer f.contests.mu.RUnlock()
-		return len(f.contests.subscribers) == 1
-	}, time.Second, time.Millisecond)
-	f.publish(t, contestsmodel.ContestEventAnnouncementCreated, &contestsmodel.ContestAnnouncementCreatedEvent{ID: newID, ContestID: f.stub.contest.ID})
-	require.Equal(t, newID.String(), readPayload(t, conn)["id"])
 }
 
 func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {

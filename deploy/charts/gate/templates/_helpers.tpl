@@ -8,8 +8,6 @@
 - name: {{ $key }}
   valueFrom: {secretKeyRef: {name: {{ $secret }}, key: {{ $key }}}}
 {{- end }}
-- name: NATS_URL
-  value: nats://nats:4222
 {{- end -}}
 
 {{- define "gate.podSecurity" -}}

@@ -147,7 +147,7 @@ it("updates a cached monitor while its table is unmounted without HTTP", async (
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     fireEvent.click(view.getByRole('button', {name: 'Toggle monitor'}));
     username = "New participant";
-    await act(async () => TestWebSocket.instances[0].message({event_type: "scoreboard.updated", sequence: 8,
+    await act(async () => TestWebSocket.instances[0].message({event_type: "scoreboard.updated",
       payload: {user_id: "user", unfrozen: false, replace: false, scoreboard: {contest_id: "contest",
         is_frozen: false, problems: [], items: [{user_id: "user", username, problems_solved: 0,
           total_penalty: 0, problem_results: []}]}}}));

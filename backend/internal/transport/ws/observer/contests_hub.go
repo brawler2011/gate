@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
 )
 
@@ -17,7 +16,6 @@ type ContestSubscriber struct {
 
 type ContestsFilter struct {
 	Topics    []string
-	Since     uint64
 	ContestId uuid.UUID
 }
 
@@ -39,24 +37,14 @@ func (f *ContestsFilter) Matches(event *WrappedEvent) bool {
 
 type ContestsHub struct {
 	subscribers map[uuid.UUID]*ContestSubscriber
-	ring        *RingBuffer[*WrappedEvent]
 	mu          sync.RWMutex
 }
 
-func NewContestsHub(ringSize int) *ContestsHub {
-	return &ContestsHub{
-		subscribers: make(map[uuid.UUID]*ContestSubscriber),
-		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
-	}
+func NewContestsHub() *ContestsHub {
+	return &ContestsHub{subscribers: make(map[uuid.UUID]*ContestSubscriber)}
 }
 
 func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []byte) error {
-	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
-	if !ok {
-		slog.ErrorContext(ctx, "missing message_stream_sequence in contest hub")
-		return nil
-	}
-
 	var event any
 	var err error
 
@@ -90,7 +78,6 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 	}
 
 	wrapped := &WrappedEvent{
-		Seq:        seq,
 		EventType:  eventType,
 		RawEvent:   event,
 		DTOPayload: clientPayload,
@@ -101,22 +88,29 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 	return nil
 }
 
-func (h *ContestsHub) subscribe(conn websocketConnection, filter *ContestsFilter, replay bool) (*ContestSubscriber, []*WrappedEvent, error) {
+func (h *ContestsHub) subscribe(filter *ContestsFilter) *ContestSubscriber {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
-	history, err := snapshotHistory(h.ring, filter.Since, replay)
-	if err != nil {
-		return nil, nil, err
-	}
-	sub := &ContestSubscriber{subscription: newSubscription(conn), filter: filter}
+	sub := &ContestSubscriber{subscription: newSubscription(), filter: filter}
 	h.subscribers[sub.id] = sub
 	sub.detach = func() {
 		h.mu.Lock()
 		delete(h.subscribers, sub.id)
 		h.mu.Unlock()
 	}
-	return sub, scopeHistory(history, filter.Topics), nil
+	return sub
+}
+
+func (h *ContestsHub) closeAll(reason string) {
+	h.mu.Lock()
+	subs := make([]*subscription, 0, len(h.subscribers))
+	for _, sub := range h.subscribers {
+		subs = append(subs, sub.subscription)
+	}
+	h.mu.Unlock()
+	for _, sub := range subs {
+		sub.close(reason, nil)
+	}
 }
 
 func (h *ContestsHub) broadcast(event *WrappedEvent) {
@@ -130,13 +124,9 @@ func (h *ContestsHub) broadcast(event *WrappedEvent) {
 			}
 		}
 	}
-	err := h.ring.Push(event, event.Seq)
 	h.mu.Unlock()
 
 	for _, sub := range overflow {
 		sub.close("event queue overflow", nil)
-	}
-	if err != nil {
-		slog.Error("failed to push contest event to ring buffer", "error", err)
 	}
 }

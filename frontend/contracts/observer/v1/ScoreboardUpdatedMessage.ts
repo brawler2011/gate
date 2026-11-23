@@ -2,7 +2,6 @@
 import ScoreboardUpdatedMessageEventType from './ScoreboardUpdatedMessageEventType';
 import MessageScoreboardUpdated from './MessageScoreboardUpdated';
 interface ScoreboardUpdatedMessage {
-  'sequence': number;
   'event_type': ScoreboardUpdatedMessageEventType.SCOREBOARD_DOT_UPDATED;
   'payload': MessageScoreboardUpdated;
 }

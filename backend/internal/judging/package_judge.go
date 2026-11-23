@@ -12,6 +12,8 @@ import (
 	"sort"
 	"time"
 
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
@@ -34,7 +36,7 @@ type PackageJudge struct {
 	RerunTLE bool
 	// Scales time limits to this host and reported times back to the reference machine.
 	Calibration func() calibration.Calibration
-	Logger   *slog.Logger
+	Logger      *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -108,7 +110,7 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 	}
 }
 
-func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
+func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress) (*FinalVerdict, error) {
 	p := pkg.Format.Problem
 	calib := j.Calibration()
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
@@ -144,14 +146,14 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	} else if checker == nil {
 		return nil, errors.New("package has no checker")
 	}
-	if err := progress.PublishTestingStarted(ctx, submissionID, meta); err != nil {
+	if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestingStarted, ID: submissionID}); err != nil {
 		return nil, err
 	}
 	tests := collectFlatTests(pkg.Format.Problem)
 	results := make([]TestResult, 0, len(tests))
 	hasFailureDetails := false
 	for _, test := range tests {
-		if err := progress.PublishTestStarted(ctx, submissionID, safeInt32(test.TestIndex), meta); err != nil {
+		if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestStarted, ID: submissionID, Number: safeInt32(test.TestIndex)}); err != nil {
 			return nil, err
 		}
 		result, err := j.test(ctx, sb, pkg, sol, lang, checker, interactor, test, calib, !hasFailureDetails)

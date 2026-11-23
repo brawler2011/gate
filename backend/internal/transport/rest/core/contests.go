@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"regexp"
 	"slices"
 	"strings"
@@ -640,16 +639,6 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		problemID = &params.ProblemId.Value
 	}
 
-	var since int64
-	if h.NATS != nil {
-		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.NATS)
-		if seqErr != nil {
-			slog.WarnContext(ctx, "failed to get submissions last sequence", "error", seqErr)
-		} else {
-			since = safeInt64(lastSeq)
-		}
-	}
-
 	submissionsList, err := h.Submissions.ListSubmissions(ctx, submissionsmodel.SubmissionsFilter{
 		ContestId: &contest.ID,
 		Page:      page,
@@ -664,12 +653,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		return nil, err
 	}
 
-	resp := SubmissionsListToDTO(submissionsList)
-	if since != 0 {
-		resp.Since = corev1.NewOptInt64(since)
-	}
-
-	return resp, nil
+	return SubmissionsListToDTO(submissionsList), nil
 }
 
 func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.GetContestScoreboardParams) (*corev1.ScoreboardResponseModel, error) {
@@ -680,23 +664,12 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 
 	unfrozen := params.Unfrozen.Or(false)
 
-	var since int64
-	if h.NATS != nil {
-		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.NATS)
-		if seqErr != nil {
-			return nil, seqErr
-		}
-		since = safeInt64(lastSeq)
-	}
-
 	sb, err := h.Contests.GetContestScoreboard(ctx, contest.ID, unfrozen, params.Virtual.Or(false))
 	if err != nil {
 		return nil, err
 	}
 
-	response := GetScoreboardResponseDTO(sb)
-	response.Since = corev1.NewOptInt64(since)
-	return response, nil
+	return GetScoreboardResponseDTO(sb), nil
 }
 
 func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListContestTeamsParams) (*corev1.ListContestTeamsResponseModel, error) {

@@ -109,17 +109,6 @@ func fixtureExec(tb testing.TB, pool *pgxpool.Pool, query string, args ...any) {
 	require.NoError(tb, err)
 }
 
-func seedOutbox(tb testing.TB, pool *pgxpool.Pool, size int) {
-	tb.Helper()
-	fixtureExec(tb, pool, `INSERT INTO outbox_events(id,aggregate_id,aggregate_version,event_type,payload,headers,status,created_at)
- SELECT md5('event'||i)::uuid, md5('aggregate'||((i-1)/3))::uuid, (i-1)%3+1,
- 'submission.updated', '{"submission_id":"00000000-0000-0000-0000-000000000001","revision":1}', '{}',
- CASE WHEN (i-1)%3=0 THEN 'completed'::outbox_event_status ELSE 'pending'::outbox_event_status END,
- '2026-01-01'::timestamptz + i*interval '1 millisecond' FROM generate_series(1,$1::int) i`, size)
-	fixtureExec(tb, pool, `INSERT INTO event_aggregates(aggregate_id,version) SELECT aggregate_id,max(aggregate_version) FROM outbox_events GROUP BY aggregate_id`)
-	fixtureExec(tb, pool, "VACUUM ANALYZE outbox_events")
-}
-
 type submissionBenchFixture struct {
 	contest, user, problem, submission uuid.UUID
 	participants, rows                 int

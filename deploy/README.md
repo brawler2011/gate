@@ -4,7 +4,7 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 
 | Release | Chart | Contents | Upgrades |
 |---|---|---|---|
-| `gate-infra` | `charts/gate-infra` | PostgreSQL, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
+| `gate-infra` | `charts/gate-infra` | PostgreSQL, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
 | `gate` | `charts/gate` | API and worker Deployments, migration Job, Traefik routes | every release |
 
 API and worker deployments scale independently through `api.replicas` and

@@ -9,8 +9,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
-	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
-
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -123,17 +121,13 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 			if err := contests.ApplySubmissionResult(ctx, tx, &submission); err != nil {
 				return err
 			}
-			if err := tx.Record(ctx, newOutboxEventParams(submission, judgingmodel.Job{}, nil)); err != nil {
-				return err
-			}
-			return tx.Record(ctx, eventdata.Event{AggregateID: submission.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: submission.CompletedEvent(submissionsmodel.Saved)})
+			return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: id})
 		}
 
-		job, err := tx.ScheduleJob(ctx, id)
-		if err != nil {
+		if _, err := tx.ScheduleJob(ctx, id); err != nil {
 			return err
 		}
-		return tx.Record(ctx, newOutboxEventParams(submission, job, nil))
+		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCreated, ID: id})
 	})
 	if err != nil {
 		return uuid.Nil, err
@@ -161,7 +155,6 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 		if err != nil {
 			return err
 		}
-		previous := sub.State
 		if err := tx.BlockSubmission(ctx, submissionID, reason); err != nil {
 			return err
 		}
@@ -172,8 +165,7 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 			return err
 		}
-		event := sub.CompletedEvent(previous)
-		return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: event})
+		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: sub.ID})
 	})
 }
 
@@ -184,12 +176,6 @@ func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, 
 	}
 	_, err := uc.RejudgeSubmissions(ctx, filter)
 	return err
-}
-
-func newOutboxEventParams(submission submissionsmodel.Submission, job judgingmodel.Job, previousState *submissionsmodel.State) eventdata.Event {
-	submissionCreatedEvent := submission.CreatedEvent(job.ID, job.Generation, previousState)
-
-	return eventdata.Event{AggregateID: submission.ID, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionCreatedEvent}
 }
 
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error) {
@@ -256,17 +242,14 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 			}
 		}
 
-		txSubRepo := tx
-		txOutboxRepo := tx
-
-		resetIDs, err := txSubRepo.ResetSubmissionsState(ctx, filter)
+		resetIDs, err := tx.ResetSubmissionsState(ctx, filter)
 		if err != nil {
 			return fmt.Errorf("failed to reset submissions state: %w", err)
 		}
 
 		for _, reset := range resetIDs {
 			id := reset.ID
-			submission, err := txSubRepo.GetSubmission(ctx, id)
+			submission, err := tx.GetSubmission(ctx, id)
 			if err != nil {
 				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
 			}
@@ -274,14 +257,11 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 			if err := contests.ApplySubmissionResult(ctx, tx, &submission); err != nil {
 				return err
 			}
-			job, err := tx.ScheduleJob(ctx, id)
-			if err != nil {
+			if _, err := tx.ScheduleJob(ctx, id); err != nil {
 				return err
 			}
-			eventParams := newOutboxEventParams(submission, job, &reset.PreviousState)
-
-			if err := txOutboxRepo.Record(ctx, eventParams); err != nil {
-				return fmt.Errorf("failed to create outbox event for submission %s: %w", id, err)
+			if err := tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCreated, ID: id}); err != nil {
+				return fmt.Errorf("notify rejudge of submission %s: %w", id, err)
 			}
 		}
 

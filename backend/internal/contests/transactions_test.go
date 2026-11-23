@@ -13,7 +13,7 @@ type contestEventsTestStore struct {
 	*accesstest.Loader
 	AnnouncementsRepo
 	ClarificationsRepo
-	OutboxRepo
+	eventdata.Writer
 }
 
 type AnnouncementsRepo interface {
@@ -24,8 +24,4 @@ type AnnouncementsRepo interface {
 type ClarificationsRepo interface {
 	CreateClarification(context.Context, uuid.UUID, *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
 	AnswerClarification(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, string) (*contestsmodel.ContestClarification, error)
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
 }

@@ -2,9 +2,7 @@ package contests_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -108,13 +106,10 @@ func (r *blockingSubmissionsRepo) ResetSubmissionsState(_ context.Context, filte
 	return ids, nil
 }
 
-type blockingOutbox struct {
-	OutboxRepo
-	events []eventdata.CreateOutboxEventParams
-}
+type noticeLog struct{ notices []eventdata.Notice }
 
-func (r *blockingOutbox) CreateEvent(_ context.Context, p *eventdata.CreateOutboxEventParams) error {
-	r.events = append(r.events, *p)
+func (l *noticeLog) Notify(_ context.Context, n eventdata.Notice) error {
+	l.notices = append(l.notices, n)
 	return nil
 }
 
@@ -136,13 +131,13 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	f := newScoreboardFixture("alice")
 	id := f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 20*time.Minute)
-	repo, outbox, loader := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}, moderatorAccess(f)
+	repo, notices, loader := &blockingSubmissionsRepo{repo: f.repo}, &noticeLog{}, moderatorAccess(f)
 	uc := submissions.NewSubmissionsUseCase(repo, blockingTransactor{struct {
 		*blockingSubmissionsRepo
-		OutboxRepo
+		eventdata.Writer
 		*scoreboardRepo
 		*accesstest.Loader
-	}{repo, outbox, f.repo, loader}}, loader)
+	}{repo, notices, f.repo, loader}}, loader)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Cheating"
 	require.NoError(t, uc.BlockSubmission(ctx, f.repo.contest.ID, id, &reason))
@@ -158,11 +153,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, sub.State)
 	require.Nil(t, sub.BanReason)
-	require.Len(t, outbox.events, 2)
-	var event submissionsmodel.SubmissionCreatedEvent
-	require.NoError(t, json.Unmarshal(outbox.events[1].Payload, &event))
-	require.Equal(t, id, event.Id)
-	require.Equal(t, submissionsmodel.Saved, event.State)
+	require.Equal(t, []eventdata.Notice{{Type: submissionsmodel.SubmissionEventCompleted, ID: id}, {Type: submissionsmodel.SubmissionEventCreated, ID: id}}, notices.notices)
 	untouched, err := uc.GetSubmission(ctx, other)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Accepted, untouched.State)
@@ -173,19 +164,19 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	alice := f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
 	bob := f.submit(t, "bob", 0, submissionsmodel.Accepted, 20*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 30*time.Minute)
-	repo, outbox, loader := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}, moderatorAccess(f)
+	repo, notices, loader := &blockingSubmissionsRepo{repo: f.repo}, &noticeLog{}, moderatorAccess(f)
 	f.uc = contests.NewContestsUseCase(f.repo, nil, contestCommandTransactions{struct {
 		*scoreboardRepo
 		*blockingSubmissionsRepo
-		OutboxRepo
+		eventdata.Writer
 		*accesstest.Loader
-	}{f.repo, repo, outbox, loader}}, loader)
+	}{f.repo, repo, notices, loader}}, loader)
 	uc := submissions.NewSubmissionsUseCase(repo, blockingTransactor{struct {
 		*blockingSubmissionsRepo
-		OutboxRepo
+		eventdata.Writer
 		*scoreboardRepo
 		*accesstest.Loader
-	}{repo, outbox, f.repo, loader}}, loader)
+	}{repo, notices, f.repo, loader}}, loader)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID
@@ -207,12 +198,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Disqualified, blocked.State)
 	require.Equal(t, &reason, blocked.BanReason)
-	require.Len(t, outbox.events, 3)
-	require.Equal(t, eventdata.OutboxEventSubmissionCompleted, outbox.events[0].EventType)
-	require.Equal(t, eventdata.OutboxEventSubmissionCreated, outbox.events[1].EventType)
-	require.Equal(t, blockedID, outbox.events[1].AggregateID)
-	require.Equal(t, eventdata.OutboxEventSubmissionCompleted, outbox.events[2].EventType)
-	require.Equal(t, blockedID, outbox.events[2].AggregateID)
+	require.Equal(t, []eventdata.Notice{{Type: submissionsmodel.SubmissionEventCompleted, ID: alice}, {Type: submissionsmodel.SubmissionEventCompleted, ID: blockedID}}, notices.notices)
 	require.NoError(t, f.uc.UnblockProblemForUser(ctx, contest, user, problem, false))
 	block, err := f.uc.GetProblemBlockStatusForUser(ctx, contest, user, problem)
 	require.NoError(t, err)
@@ -223,16 +209,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	allowed, err := uc.GetSubmission(ctx, allowedID)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, allowed.State)
-	require.Len(t, outbox.events, 4)
-	require.Equal(t, allowedID, outbox.events[3].AggregateID)
-}
-
-func (r *blockingOutbox) Record(ctx context.Context, event eventdata.Event) error {
-	data, err := json.Marshal(event.Payload)
-	if err != nil {
-		return fmt.Errorf("encode test event: %w", err)
-	}
-	return r.CreateEvent(ctx, &eventdata.CreateOutboxEventParams{Id: uuid.New(), AggregateID: event.AggregateID, EventType: event.Type, Payload: data})
+	require.Equal(t, eventdata.Notice{Type: submissionsmodel.SubmissionEventCreated, ID: allowedID}, notices.notices[2])
 }
 
 func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {

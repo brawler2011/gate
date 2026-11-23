@@ -18,7 +18,7 @@ import (
 type submissionTestStore struct {
 	accesstest.Loader
 	submissionCommandStore
-	OutboxRepo
+	eventdata.Writer
 	contests.ScoreboardStore
 }
 
@@ -35,10 +35,6 @@ func (submissionTestStore) GetContestProblem(context.Context, contestsmodel.Cont
 }
 func (submissionTestStore) GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error) {
 	return nil, nil
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
 }
 
 type submissionCommandStore interface {
