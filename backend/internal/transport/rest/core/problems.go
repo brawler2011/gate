@@ -90,7 +90,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 		return nil, err
 	}
 	response := &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem)}
-	content, ok, err := h.Packages.Statement(ctx, params.ID)
+	ready, content, ok, err := h.Packages.Statement(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +98,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 		s := content.Statement
 		response.Statement.SetTo(corev1.ProblemStatementModel{
 			Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Scoring: s.Scoring,
+			TimeLimit: ready.TimeLimitMs, MemoryLimit: ready.MemoryLimitMb, InputFile: ready.InputFile, OutputFile: ready.OutputFile,
 			Samples: SamplesDTO(content.Samples), Assets: content.Assets,
 		})
 	}

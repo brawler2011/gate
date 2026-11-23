@@ -14,7 +14,7 @@ import (
 type PackagesReader interface {
 	ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemPackage], error)
 	DownloadPackage(ctx context.Context, problemID, packageID uuid.UUID) (io.ReadCloser, error)
-	Statement(ctx context.Context, problemID uuid.UUID) (problemsmodel.StatementContent, bool, error)
+	Statement(ctx context.Context, problemID uuid.UUID) (problemsmodel.ProblemPackage, problemsmodel.StatementContent, bool, error)
 	OpenStatementImage(ctx context.Context, problemID uuid.UUID, sha256 string) (io.ReadCloser, string, error)
 }
 

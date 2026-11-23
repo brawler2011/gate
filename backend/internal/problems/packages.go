@@ -35,19 +35,19 @@ func (uc *PackageUseCase) ListPackages(ctx context.Context, id uuid.UUID, reques
 }
 
 // Statement reads the latest package's statement, which public visibility exposes; ok is false until a package is built.
-func (uc *PackageUseCase) Statement(ctx context.Context, id uuid.UUID) (content model.StatementContent, ok bool, err error) {
+func (uc *PackageUseCase) Statement(ctx context.Context, id uuid.UUID) (ready model.ProblemPackage, content model.StatementContent, ok bool, err error) {
 	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemView); err != nil {
-		return content, false, err
+		return ready, content, false, err
 	}
-	ready, err := uc.Repo.GetReadyPackage(ctx, id)
+	ready, err = uc.Repo.GetReadyPackage(ctx, id)
 	if errors.Is(err, pkg.ErrNotFound) {
-		return content, false, nil
+		return ready, content, false, nil
 	}
 	if err != nil {
-		return content, false, err
+		return ready, content, false, err
 	}
 	content = uc.Content.ReadStatement(ctx, id, ready.ID, "")
-	return content, content.Statement != nil, nil
+	return ready, content, content.Statement != nil, nil
 }
 
 func (uc *PackageUseCase) OpenStatementImage(ctx context.Context, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {

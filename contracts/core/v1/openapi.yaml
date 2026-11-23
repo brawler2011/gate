@@ -4496,6 +4496,10 @@ components:
           updated_at: '2026-01-01T12:00:00Z'
         statement:
           title: Test problem
+          time_limit: 1000
+          memory_limit: 256
+          input_file: ''
+          output_file: ''
           legend: example
           input_format: example
           output_format: example
@@ -4519,6 +4523,10 @@ components:
       type: object
       required:
         - title
+        - time_limit
+        - memory_limit
+        - input_file
+        - output_file
         - legend
         - input_format
         - output_format
@@ -4529,6 +4537,18 @@ components:
       properties:
         title:
           type: string
+        time_limit:
+          type: integer
+          format: int32
+        memory_limit:
+          type: integer
+          format: int32
+        input_file:
+          type: string
+          description: File the solution reads instead of standard input; empty for standard input.
+        output_file:
+          type: string
+          description: File the solution writes instead of standard output; empty for standard output.
         legend:
           type: string
         input_format:

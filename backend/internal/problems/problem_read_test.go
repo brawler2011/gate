@@ -41,7 +41,7 @@ func TestPublicProblemShowsOnlyItsStatement(t *testing.T) {
 	packages := &PackageUseCase{Repo: latestPackage{id: uuid.New()}, Content: &PackageContent{Repo: statement}, Access: publicProblems{}}
 	drafts := &DraftUseCase{Access: publicProblems{}}
 
-	content, ok, err := packages.Statement(ctx, id)
+	_, content, ok, err := packages.Statement(ctx, id)
 	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, "Add", content.Statement.Legend)

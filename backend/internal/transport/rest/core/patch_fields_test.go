@@ -110,8 +110,8 @@ func (m *patchProblemsModule) GetProblemDetails(context.Context, uuid.UUID) (*pr
 
 type unbuiltPackages struct{ PackagesReader }
 
-func (unbuiltPackages) Statement(context.Context, uuid.UUID) (problemsmodel.StatementContent, bool, error) {
-	return problemsmodel.StatementContent{}, false, nil
+func (unbuiltPackages) Statement(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, problemsmodel.StatementContent, bool, error) {
+	return problemsmodel.ProblemPackage{}, problemsmodel.StatementContent{}, false, nil
 }
 
 func TestPatchProblemMetadata(t *testing.T) {

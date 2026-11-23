@@ -2410,6 +2410,10 @@ export interface components {
          *       },
          *       "statement": {
          *         "title": "Test problem",
+         *         "time_limit": 1000,
+         *         "memory_limit": 256,
+         *         "input_file": "",
+         *         "output_file": "",
          *         "legend": "example",
          *         "input_format": "example",
          *         "output_format": "example",
@@ -2434,6 +2438,14 @@ export interface components {
         /** @description Statement of the problem's latest package; absent until a package is built. */
         ProblemStatementModel: {
             title: string;
+            /** Format: int32 */
+            time_limit: number;
+            /** Format: int32 */
+            memory_limit: number;
+            /** @description File the solution reads instead of standard input; empty for standard input. */
+            input_file: string;
+            /** @description File the solution writes instead of standard output; empty for standard output. */
+            output_file: string;
             legend: string;
             input_format: string;
             output_format: string;

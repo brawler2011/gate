@@ -11189,7 +11189,13 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 // Statement of the problem's latest package; absent until a package is built.
 // Ref: #/components/schemas/ProblemStatementModel
 type ProblemStatementModel struct {
-	Title        string               `json:"title"`
+	Title       string `json:"title"`
+	TimeLimit   int32  `json:"time_limit"`
+	MemoryLimit int32  `json:"memory_limit"`
+	// File the solution reads instead of standard input; empty for standard input.
+	InputFile string `json:"input_file"`
+	// File the solution writes instead of standard output; empty for standard output.
+	OutputFile   string               `json:"output_file"`
 	Legend       string               `json:"legend"`
 	InputFormat  string               `json:"input_format"`
 	OutputFormat string               `json:"output_format"`
@@ -11203,6 +11209,26 @@ type ProblemStatementModel struct {
 // GetTitle returns the value of Title.
 func (s *ProblemStatementModel) GetTitle() string {
 	return s.Title
+}
+
+// GetTimeLimit returns the value of TimeLimit.
+func (s *ProblemStatementModel) GetTimeLimit() int32 {
+	return s.TimeLimit
+}
+
+// GetMemoryLimit returns the value of MemoryLimit.
+func (s *ProblemStatementModel) GetMemoryLimit() int32 {
+	return s.MemoryLimit
+}
+
+// GetInputFile returns the value of InputFile.
+func (s *ProblemStatementModel) GetInputFile() string {
+	return s.InputFile
+}
+
+// GetOutputFile returns the value of OutputFile.
+func (s *ProblemStatementModel) GetOutputFile() string {
+	return s.OutputFile
 }
 
 // GetLegend returns the value of Legend.
@@ -11243,6 +11269,26 @@ func (s *ProblemStatementModel) GetAssets() ProblemStatementModelAssets {
 // SetTitle sets the value of Title.
 func (s *ProblemStatementModel) SetTitle(val string) {
 	s.Title = val
+}
+
+// SetTimeLimit sets the value of TimeLimit.
+func (s *ProblemStatementModel) SetTimeLimit(val int32) {
+	s.TimeLimit = val
+}
+
+// SetMemoryLimit sets the value of MemoryLimit.
+func (s *ProblemStatementModel) SetMemoryLimit(val int32) {
+	s.MemoryLimit = val
+}
+
+// SetInputFile sets the value of InputFile.
+func (s *ProblemStatementModel) SetInputFile(val string) {
+	s.InputFile = val
+}
+
+// SetOutputFile sets the value of OutputFile.
+func (s *ProblemStatementModel) SetOutputFile(val string) {
+	s.OutputFile = val
 }
 
 // SetLegend sets the value of Legend.
