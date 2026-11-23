@@ -173,22 +173,31 @@ type SubmissionGrant struct {
 }
 
 // SubmissionAllows grants authors their feedback level and others never more than the author sees.
-func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID) SubmissionGrant {
+// A virtual submission keeps the "during" level until facts show its author's run is over.
+func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, virtual bool) SubmissionGrant {
 	s := newContestState(actor, f)
 	settings := f.Contest.Settings
 	if s.manager {
 		return SubmissionGrant{Open: true, Source: true, Results: contestsmodel.FeedbackFull}
 	}
-	level := s.feedback()
-	if !actor.IsGuest() && author == actor.Id && s.competitor {
+	own := !actor.IsGuest() && author == actor.Id && s.competitor
+	after := s.after
+	if virtual {
+		after = own && f.Run != nil && !f.Now.Before(f.Run.Over())
+	}
+	level := settings.Feedback.At(after)
+	if own {
 		return SubmissionGrant{Open: true, Source: level != contestsmodel.FeedbackHidden, Results: level}
 	}
-	if !s.audience(settings.Reports) && level != contestsmodel.FeedbackHidden {
-		level = contestsmodel.FeedbackVerdict
-	}
-	source := s.audience(settings.Sources)
-	if !source && !s.audience(settings.Submissions) {
+	reports, source := s.audience(settings.Reports), s.audience(settings.Sources)
+	if !source && !reports && !s.audience(settings.Submissions) {
 		return SubmissionGrant{Results: contestsmodel.FeedbackHidden}
+	}
+	if level == contestsmodel.FeedbackHidden {
+		return SubmissionGrant{Open: true, Results: level}
+	}
+	if !reports {
+		level = contestsmodel.FeedbackVerdict
 	}
 	return SubmissionGrant{Open: true, Source: source, Results: level}
 }

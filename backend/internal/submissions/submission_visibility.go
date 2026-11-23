@@ -16,12 +16,12 @@ type SubmissionVisibility struct {
 }
 
 // SubmissionView hides what the viewer may not see; results after the freeze stay hidden from other non-managers.
-func SubmissionView(a access.ContestAccess, author *uuid.UUID, createdAt time.Time) SubmissionVisibility {
+func SubmissionView(a access.ContestAccess, author *uuid.UUID, createdAt time.Time, kind submissionsmodel.Kind) SubmissionVisibility {
 	var owner uuid.UUID
 	if author != nil {
 		owner = *author
 	}
-	grant := a.Submission(owner)
+	grant := a.Submission(owner, kind == submissionsmodel.KindVirtual)
 	view := SubmissionVisibility{Source: grant.Source, Results: grant.Results}
 	own := author != nil && owner == a.Actor.Id
 	contest := a.Facts.Contest
@@ -39,6 +39,11 @@ func (v *SubmissionVisibility) Hide() {
 }
 
 func (v SubmissionVisibility) Hidden() bool { return v.Results == contestsmodel.FeedbackHidden }
+
+// Progress reports whether live test numbers may be shown; they do not say which tests are samples.
+func (v SubmissionVisibility) Progress() bool {
+	return v.Results == contestsmodel.FeedbackTests || v.Results == contestsmodel.FeedbackFull
+}
 
 func (v SubmissionVisibility) Apply(sub submissionsmodel.Submission) submissionsmodel.Submission {
 	sub.ResultHidden = v.Hidden()

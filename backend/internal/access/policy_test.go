@@ -277,32 +277,37 @@ func TestSubmissionPolicy(t *testing.T) {
 		}
 	}
 	for _, tc := range []struct {
-		name   string
-		see    func(access.SubmissionGrant) bool
-		author uuid.UUID
-		phase  phase
-		change func(*cm.Contest)
-		want   string
+		name    string
+		see     func(access.SubmissionGrant) bool
+		author  uuid.UUID
+		phase   phase
+		change  func(*cm.Contest)
+		want    string
+		virtual bool
 	}{
-		{"own opens", open, author, running, nil, "001111"},
-		{"another's stays closed", open, uuid.New(), running, nil, "000111"},
-		{"own verdict", verdict, author, running, nil, "001111"},
-		{"own tests at verdict level", tests, author, running, nil, "000111"},
-		{"own tests", tests, author, running, feedback(cm.FeedbackTests), "001111"},
-		{"own results hidden", verdict, author, running, feedback(cm.FeedbackHidden), "000111"},
-		{"own code hidden", source, author, running, feedback(cm.FeedbackHidden), "000111"},
-		{"own results after the end", tests, author, finished, both(feedback(cm.FeedbackHidden), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "001111"},
-		{"public list", open, uuid.New(), running, others(cm.ScopePublic), "111111"},
-		{"public reports", tests, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackFull)), "111111"},
-		{"reports for moderators", tests, uuid.New(), running, both(others(cm.ScopeModerator), feedback(cm.FeedbackFull)), "000111"},
-		{"never more than the author", tests, uuid.New(), running, others(cm.ScopePublic), "000111"},
-		{"author's hidden results", verdict, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackHidden)), "000111"},
-		{"code after the end", source, uuid.New(), finished, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "111111"},
-		{"code while running", source, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "000111"},
+		{"own opens", open, author, running, nil, "001111", false},
+		{"another's stays closed", open, uuid.New(), running, nil, "000111", false},
+		{"own verdict", verdict, author, running, nil, "001111", false},
+		{"own tests at verdict level", tests, author, running, nil, "000111", false},
+		{"own tests", tests, author, running, feedback(cm.FeedbackTests), "001111", false},
+		{"own results hidden", verdict, author, running, feedback(cm.FeedbackHidden), "000111", false},
+		{"own code hidden", source, author, running, feedback(cm.FeedbackHidden), "000111", false},
+		{"own results after the end", tests, author, finished, both(feedback(cm.FeedbackHidden), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "001111", false},
+		{"public list", open, uuid.New(), running, others(cm.ScopePublic), "111111", false},
+		{"public reports", tests, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackFull)), "111111", false},
+		{"reports for moderators", tests, uuid.New(), running, both(others(cm.ScopeModerator), feedback(cm.FeedbackFull)), "000111", false},
+		{"never more than the author", tests, uuid.New(), running, others(cm.ScopePublic), "000111", false},
+		{"author's hidden results", verdict, uuid.New(), running, both(others(cm.ScopePublic), feedback(cm.FeedbackHidden)), "000111", false},
+		{"code after the end", source, uuid.New(), finished, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "111111", false},
+		{"code while running", source, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Sources.After = cm.ScopePublic }, "000111", false},
+		{"code the author cannot see", source, uuid.New(), running, both(func(c *cm.Contest) { public(c); c.Settings.Sources = cm.Same(cm.ScopePublic) }, feedback(cm.FeedbackHidden)), "000111", false},
+		{"reports alone open", open, uuid.New(), running, func(c *cm.Contest) { public(c); c.Settings.Reports = cm.Same(cm.ScopePublic) }, "111111", false},
+		{"a virtual run keeps its level after the end", tests, uuid.New(), finished, both(others(cm.ScopePublic), func(c *cm.Contest) { c.Settings.Feedback.After = cm.FeedbackFull }), "000111", true},
+		{"own virtual submissions without a finished run", tests, author, finished, func(c *cm.Contest) { upsolving(c); c.Settings.Feedback.After = cm.FeedbackFull }, "000111", true},
 	} {
 		c, now := contest(tc.phase, tc.change)
 		check(t, tc.name, cols, tc.want, func(a actor) bool {
-			return tc.see(access.SubmissionAllows(a.user, access.ContestFacts{Contest: c, Role: m.ContestRole(a.role), Now: now}, tc.author))
+			return tc.see(access.SubmissionAllows(a.user, access.ContestFacts{Contest: c, Role: m.ContestRole(a.role), Now: now}, tc.author, tc.virtual))
 		})
 	}
 }

@@ -59,6 +59,8 @@ func (s *IntegrationTestSuite) TestHiddenOwnResultsUntilTheEnd() {
 	_, err = s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{OrgLogin: org.Login, ContestLogin: "hidden",
 		UserId: corev1.NewOptUUID(participant.Id), State: corev1.NewOptInt32(200)})
 	s.Equal(http.StatusForbidden, status(err), "a state filter would reveal the verdict")
+	_, err = s.client.ListSubmissions(as, corev1.ListSubmissionsParams{UserId: corev1.NewOptUUID(participant.Id), State: corev1.NewOptInt32(200)})
+	s.Equal(http.StatusForbidden, status(err), "nor may it span contests")
 	_, err = s.client.GetContestScoreboard(as, corev1.GetContestScoreboardParams{OrgLogin: org.Login, ContestLogin: "hidden"})
 	s.Equal(http.StatusForbidden, status(err), "the scoreboard would reveal the verdict")
 

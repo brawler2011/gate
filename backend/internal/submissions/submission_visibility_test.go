@@ -48,7 +48,7 @@ func TestSubmissionViewFreeze(t *testing.T) {
 			if test.moderator {
 				role = accessmodel.ContestModerator
 			}
-			view := SubmissionView(viewerAccess(viewer, contest, role, now), test.author, test.created)
+			view := SubmissionView(viewerAccess(viewer, contest, role, now), test.author, test.created, submissionsmodel.KindContest)
 			require.Equal(t, test.frozen, view.Hidden())
 			require.Equal(t, !test.frozen, view.Source)
 			require.Equal(t, !test.frozen, view.Results.Tests())
@@ -57,7 +57,7 @@ func TestSubmissionViewFreeze(t *testing.T) {
 	futureEnd := now.Add(2 * time.Hour)
 	contest := contestsmodel.Contest{EndTime: &futureEnd, Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{FreezeStatus: contestsmodel.FreezeStatusAuto, FreezeDurationMinutes: new(int32(60)),
 		Submissions: contestsmodel.Same(contestsmodel.ScopePublic), Feedback: contestsmodel.Same(contestsmodel.FeedbackVerdict)}}
-	require.False(t, SubmissionView(viewerAccess(viewer, contest, "", now), &other, futureEnd).Hidden())
+	require.False(t, SubmissionView(viewerAccess(viewer, contest, "", now), &other, futureEnd, submissionsmodel.KindContest).Hidden())
 }
 
 func TestSubmissionReportLevels(t *testing.T) {

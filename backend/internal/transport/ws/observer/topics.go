@@ -62,11 +62,11 @@ func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 		allowed := a.Can
 		projection := topicProjection{}
 		if audience == "own" || allowed(m.ContestListSubmissions) {
-			view := submissions.SubmissionView(a, meta.UserId, meta.CreatedAt)
+			view := submissions.SubmissionView(a, meta.UserId, meta.CreatedAt, meta.Kind)
 			if audience != "own" && audience != "managers" && c.IsFrozenAt(now) {
 				view.Hide()
 			}
-			if (!view.Hidden() || e.EventType == sm.SubmissionEventCreated || e.EventType == sm.SubmissionEventCompleted) && (e.EventType != sm.SubmissionEventTestStarted || view.Results.Tests()) {
+			if (!view.Hidden() || e.EventType == sm.SubmissionEventCreated || e.EventType == sm.SubmissionEventCompleted) && (e.EventType != sm.SubmissionEventTestStarted || view.Progress()) {
 				payload, err := projectSubmission(e, view)
 				if err != nil {
 					return err

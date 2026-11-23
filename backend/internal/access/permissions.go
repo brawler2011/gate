@@ -142,7 +142,7 @@ func (s *PermissionSet) Contest(id uuid.UUID) (ContestPermissions, error) {
 	if err != nil {
 		return ContestPermissions{}, err
 	}
-	details := func(author uuid.UUID) bool { return a.Submission(author).Results.Tests() }
+	details := func(author uuid.UUID) bool { return a.Submission(author, false).Results.Tests() }
 	return ContestPermissions{
 		ViewProblems:          a.Can(m.ContestViewProblems),
 		Submit:                a.Can(m.ContestSubmit),

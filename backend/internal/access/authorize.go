@@ -86,8 +86,8 @@ func (a ContestAccess) Submit() (submissionsmodel.Kind, error) {
 	return "", decide(a.Actor, false, s.view)
 }
 
-func (a ContestAccess) Submission(author uuid.UUID) SubmissionGrant {
-	return SubmissionAllows(a.Actor, a.Facts, author)
+func (a ContestAccess) Submission(author uuid.UUID, virtual bool) SubmissionGrant {
+	return SubmissionAllows(a.Actor, a.Facts, author, virtual)
 }
 
 // Organization authorizes action and returns the access for further checks on the same read.

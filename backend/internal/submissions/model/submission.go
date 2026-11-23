@@ -176,6 +176,7 @@ const (
 
 type SubmissionEventMeta struct {
 	Revision  int64      `json:"revision"`
+	Kind      Kind       `json:"kind,omitempty"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	UserId    *uuid.UUID `json:"user_id,omitempty"`
 	Username  string     `json:"username"`
@@ -248,7 +249,7 @@ type SubmissionCompletedEvent struct {
 }
 
 func (s Submission) EventMeta() SubmissionEventMeta {
-	return SubmissionEventMeta{Revision: s.Revision, UpdatedAt: s.UpdatedAt, UserId: s.CreatedBy, Username: s.Username, ContestId: s.ContestID, ContestTitle: s.ContestTitle, ProblemId: s.ProblemID, ProblemTitle: s.ProblemTitle, Position: s.Position, Language: s.Language, CreatedAt: s.CreatedAt}
+	return SubmissionEventMeta{Revision: s.Revision, Kind: s.Kind, UpdatedAt: s.UpdatedAt, UserId: s.CreatedBy, Username: s.Username, ContestId: s.ContestID, ContestTitle: s.ContestTitle, ProblemId: s.ProblemID, ProblemTitle: s.ProblemTitle, Position: s.Position, Language: s.Language, CreatedAt: s.CreatedAt}
 }
 
 func (s Submission) CompletedEvent() SubmissionCompletedEvent {

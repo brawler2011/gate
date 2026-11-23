@@ -72,10 +72,10 @@ func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submissio
 	if sub.CreatedBy != nil {
 		author = *sub.CreatedBy
 	}
-	if requireRead && !a.Submission(author).Open {
+	if requireRead && !a.Submission(author, sub.Kind == submissionsmodel.KindVirtual).Open {
 		return submissionsmodel.Submission{}, pkg.ErrForbidden
 	}
-	return SubmissionView(a, sub.CreatedBy, sub.CreatedAt).Apply(sub), nil
+	return SubmissionView(a, sub.CreatedBy, sub.CreatedAt, sub.Kind).Apply(sub), nil
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
@@ -185,12 +185,13 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 			if ownOnly {
 				author = a.Actor.Id
 			}
-			if a.Submission(author).Results == contestsmodel.FeedbackHidden {
+			if a.Submission(author, false).Results == contestsmodel.FeedbackHidden || a.Submission(author, true).Results == contestsmodel.FeedbackHidden {
 				return nil, pkg.Wrap(pkg.ErrForbidden, nil, "state filter is unavailable while results are hidden")
 			}
 		}
 		views.access = map[uuid.UUID]access.ContestAccess{*filter.ContestId: a}
-	} else if !ownOnly && !user.IsAdmin() {
+	} else if !user.IsAdmin() && (!ownOnly || filter.State != nil) {
+		// A state filter across contests would reveal results that a contest hides.
 		return nil, pkg.ErrForbidden
 	}
 
