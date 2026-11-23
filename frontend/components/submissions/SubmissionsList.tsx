@@ -7,6 +7,7 @@ import {languageName, useLanguages} from "@/lib/languages";
 import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
+import {SubmissionKindBadge} from "./SubmissionKindBadge";
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
@@ -122,6 +123,7 @@ const SubmissionRow = ({
         >
           <TableTd ta="center">
             <Text>{TimeBeautify(submission.created_at)}</Text>
+            <SubmissionKindBadge kind={submission.kind} />
           </TableTd>
           <TableTd ta="center">
             {submission.username && (

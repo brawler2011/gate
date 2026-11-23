@@ -425,6 +425,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	subID, err := repo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
+		Kind:      submissionsmodel.KindContest,
 		ContestId: contestID,
 		ProblemId: problemID,
 		UserId:    userID,
@@ -478,6 +479,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 
 	// Missing submission contests map to ErrBadInput.
 	_, err = repo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
+		Kind:      submissionsmodel.KindContest,
 		ContestId: uuid.New(),
 		ProblemId: problemID,
 		UserId:    userID,

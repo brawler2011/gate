@@ -497,7 +497,7 @@ SELECT s.owner_id, s.problem_id,
  (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < $1::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
  s.created_at
 FROM submissions s
-WHERE s.contest_id = $2::uuid AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+WHERE s.contest_id = $2::uuid AND s.kind = 'contest' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
 ORDER BY s.owner_id, s.problem_id, s.created_at ASC
 `
 
@@ -578,7 +578,7 @@ func (q *Queries) GetMaxContestProblemOrdinal(ctx context.Context, contestID uui
 const getSubmissionsForScoreboard = `-- name: GetSubmissionsForScoreboard :many
 SELECT state, created_at
 FROM submissions
-WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3 AND kind = 'contest'
 ORDER BY created_at ASC
 `
 
@@ -619,7 +619,7 @@ SELECT s.owner_id, s.problem_id,
  (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < $1::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
  s.created_at
 FROM submissions s
-WHERE s.contest_id = $2::uuid AND s.owner_id = $3::uuid AND s.problem_id IS NOT NULL
+WHERE s.contest_id = $2::uuid AND s.owner_id = $3::uuid AND s.kind = 'contest' AND s.problem_id IS NOT NULL
 ORDER BY s.problem_id, s.created_at ASC
 `
 

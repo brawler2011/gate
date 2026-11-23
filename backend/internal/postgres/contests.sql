@@ -194,7 +194,7 @@ WHERE cm.contest_id = $1 AND cm.role = 'participant';
 -- name: GetSubmissionsForScoreboard :many
 SELECT state, created_at
 FROM submissions
-WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3 AND kind = 'contest'
 ORDER BY created_at ASC;
 
 -- name: GetContestScoreboardSubmissions :many
@@ -203,7 +203,7 @@ SELECT s.owner_id, s.problem_id,
  (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < sqlc.narg('freeze_time')::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
  s.created_at
 FROM submissions s
-WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.kind = 'contest' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
 ORDER BY s.owner_id, s.problem_id, s.created_at ASC;
 
 -- name: GetUserScoreboardSubmissions :many
@@ -212,7 +212,7 @@ SELECT s.owner_id, s.problem_id,
  (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < sqlc.narg('freeze_time')::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
  s.created_at
 FROM submissions s
-WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id = sqlc.arg('owner_id')::uuid AND s.problem_id IS NOT NULL
+WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id = sqlc.arg('owner_id')::uuid AND s.kind = 'contest' AND s.problem_id IS NOT NULL
 ORDER BY s.problem_id, s.created_at ASC;
 
 -- name: CreateContestUserProblemBlock :exec

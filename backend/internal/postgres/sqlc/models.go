@@ -534,6 +534,48 @@ func (ns NullProblemVisibility) Value() (driver.Value, error) {
 	return string(ns.ProblemVisibility), nil
 }
 
+type SubmissionKind string
+
+const (
+	SubmissionKindContest   SubmissionKind = "contest"
+	SubmissionKindUpsolving SubmissionKind = "upsolving"
+)
+
+func (e *SubmissionKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SubmissionKind(s)
+	case string:
+		*e = SubmissionKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SubmissionKind: %T", src)
+	}
+	return nil
+}
+
+type NullSubmissionKind struct {
+	SubmissionKind SubmissionKind `json:"submission_kind"`
+	Valid          bool           `json:"valid"` // Valid is true if SubmissionKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSubmissionKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.SubmissionKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SubmissionKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSubmissionKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SubmissionKind), nil
+}
+
 type TeamRole string
 
 const (
@@ -1005,6 +1047,7 @@ type Submission struct {
 	ContestID      *uuid.UUID             `json:"contest_id"`
 	ProblemID      *uuid.UUID             `json:"problem_id"`
 	OwnerID        *uuid.UUID             `json:"owner_id"`
+	Kind           submissionsmodel.Kind  `json:"kind"`
 	Source         string                 `json:"source"`
 	Language       string                 `json:"language"`
 	State          submissionsmodel.State `json:"state"`

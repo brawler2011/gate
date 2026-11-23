@@ -156,7 +156,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	judge := func(t *testing.T, problem uuid.UUID, language string, source string) submissionsmodel.Submission {
 		t.Helper()
-		id, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{Solution: source, ProblemId: problem, ContestId: contestID, UserId: userID, Language: language})
+		id, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, Solution: source, ProblemId: problem, ContestId: contestID, UserId: userID, Language: language})
 		require.NoError(t, err)
 		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, id)
 		require.NoError(t, err)
@@ -331,7 +331,7 @@ func (h *judgeHarness) publish(t *testing.T, shortName string, edit func(*proble
 
 func (h *judgeHarness) submit(t *testing.T, problem uuid.UUID, language string, source string) submissionsmodel.Submission {
 	t.Helper()
-	id, err := h.submissions.CreateSubmission(h.ctx, &submissionsmodel.SubmissionCreation{Solution: source, ProblemId: problem, ContestId: h.contestID, UserId: h.userID, Language: language})
+	id, err := h.submissions.CreateSubmission(h.ctx, &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, Solution: source, ProblemId: problem, ContestId: h.contestID, UserId: h.userID, Language: language})
 	require.NoError(t, err)
 	job, err := pgstore.NewJudgeJobs(h.pool).ScheduleJob(h.ctx, id)
 	require.NoError(t, err)

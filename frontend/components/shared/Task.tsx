@@ -1,4 +1,4 @@
-import {Box, Container, NavLink, Paper, Stack, Title} from "@mantine/core";
+import {Box, Container, NavLink, Paper, Stack, Text, Title} from "@mantine/core";
 import React, {type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
@@ -32,6 +32,7 @@ const Task = ({
   isManager,
 }: PageProps): ReactNode => {
   const languages = useContestLanguages(contest.languages);
+  const ended = contest.end_time !== undefined && contest.end_time !== null && new Date(contest.end_time) <= new Date();
   const onSubmit = async (
     submission: FormData,
     language: string,
@@ -169,6 +170,9 @@ const Task = ({
                 style={{width: "100%"}}
               >
                 <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.permissions.submit} />
+                {!task.permissions.submit && !contest.enable_upsolving && ended && (
+                  <Text size="sm" c="dimmed" mt="xs">Контест завершён, дорешивание отключено</Text>
+                )}
               </Paper>
 
               <RecentSubmissionsTable

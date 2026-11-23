@@ -168,3 +168,66 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
 	s.Equal(1, jobs)
 	s.Equal(1, events)
 }
+
+// Upsolving submissions are judged and listed but never reach the standings, even when the end later moves past them.
+func (s *IntegrationTestSuite) TestUpsolving() {
+	admin := s.createUser("admin_upsolving", accessmodel.UserRoleAdmin)
+	participant := s.createUser("participant_upsolving", accessmodel.UserRoleUser)
+	outsider := s.createUser("outsider_upsolving", accessmodel.UserRoleUser)
+	org := s.createOrganization("upsolving-org", "Upsolving Organization", admin.Id)
+	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
+		Title: "Upsolving Problem", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
+	s.Require().NoError(err)
+	contestID := uuid.New()
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, Title: "Upsolving",
+		Login: "upsolving", Visibility: contestsmodel.ContestVisibilityPublic}, admin.Id))
+	setEnd := func(end time.Time) {
+		start := time.Now().Add(-2 * time.Hour)
+		s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID,
+			StartTime: &start, StartTimeSet: true, EndTime: &end, EndTimeSet: true}))
+	}
+	setEnd(time.Now().Add(-time.Hour))
+	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
+		ContestId: contestID, ProblemId: problem.ID, PackageId: s.createDummyProblemPackage(problem.ID, org.ID)}))
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
+		ContestId: contestID, UserId: participant.Id, Role: accessmodel.ContestParticipant}))
+	submit := func(user uuid.UUID) (uuid.UUID, error) {
+		resp, err := s.client.CreateSubmission(withTestUser(s.ctx, user), &corev1.CreateSubmissionRequestModel{Submission: "print(1)"},
+			corev1.CreateSubmissionParams{ProblemID: problem.ID, OrganizationLogin: org.Login, ContestLogin: "upsolving", Language: "python3"})
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return resp.ID, nil
+	}
+
+	upsolved, err := submit(participant.Id)
+	s.Require().NoError(err)
+	_, err = submit(outsider.Id)
+	s.Require().NoError(err, "anyone who can view a finished contest may upsolve")
+	list, err := s.client.ListContestSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListContestSubmissionsParams{OrgLogin: org.Login, ContestLogin: "upsolving"})
+	s.Require().NoError(err)
+	s.Require().Len(list.Submissions, 2)
+	for _, sub := range list.Submissions {
+		s.Equal(corev1.SubmissionKindUpsolving, sub.Kind)
+	}
+
+	setEnd(time.Now().Add(time.Hour))
+	s.Require().NoError(s.client.BlockSubmission(withTestUser(s.ctx, admin.Id), corev1.NewOptBlockSubmissionRequestModel(corev1.BlockSubmissionRequestModel{}),
+		corev1.BlockSubmissionParams{OrgLogin: org.Login, ContestLogin: "upsolving", SubmissionID: upsolved}))
+	board, err := s.client.GetContestScoreboard(withTestUser(s.ctx, admin.Id), corev1.GetContestScoreboardParams{OrgLogin: org.Login, ContestLogin: "upsolving"})
+	s.Require().NoError(err)
+	s.Require().Len(board.Items, 1)
+	for _, result := range board.Items[0].ProblemResults {
+		s.False(result.Solved)
+		s.Zero(result.FailedAttempts)
+	}
+
+	setEnd(time.Now().Add(-time.Hour))
+	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{EnableUpsolving: corev1.NewOptBool(false)},
+		corev1.UpdateContestParams{OrgLogin: org.Login, ContestLogin: "upsolving"}))
+	_, err = submit(participant.Id)
+	var problemErr *corev1.ProblemStatusCodeWithHeaders
+	s.Require().ErrorAs(err, &problemErr)
+	s.Equal(http.StatusConflict, problemErr.StatusCode)
+	s.Equal(corev1.ErrorCodeContestEnded, problemErr.Response.Code)
+}

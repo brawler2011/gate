@@ -83,7 +83,11 @@ func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submissio
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
 	var id uuid.UUID
-	err := access.WithinContest(ctx, uc.transactor, creation.ContestId, accessmodel.ContestSubmit, func(tx SubmissionTxStore, a access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactor, creation.ContestId, accessmodel.ContestView, func(tx SubmissionTxStore, a access.ContestAccess) error {
+		kind, err := a.Submit()
+		if err != nil {
+			return err
+		}
 		if creation.UserId != a.Actor.Id {
 			return pkg.ErrForbidden
 		}
@@ -95,6 +99,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 			return pkg.OnNotFound(err, pkg.ErrNotFound, "problem does not belong to contest")
 		}
 		input := *creation
+		input.Kind = kind
 		block, err := tx.GetContestUserProblemBlock(ctx, input.ContestId, input.UserId, input.ProblemId)
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
 			return err

@@ -297,6 +297,7 @@ func SubmissionListItemDTO(s submissionsmodel.Submission) corev1.SubmissionsList
 	dto := corev1.SubmissionsListItemModel{
 		Revision: s.Revision,
 		ID:       s.ID,
+		Kind:     corev1.SubmissionKind(s.Kind),
 		UserID:   uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
@@ -383,6 +384,7 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 
 	dto := corev1.SubmissionModel{
 		ID:     s.ID,
+		Kind:   corev1.SubmissionKind(s.Kind),
 		UserID: uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,

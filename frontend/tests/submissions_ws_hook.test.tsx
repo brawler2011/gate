@@ -19,7 +19,7 @@ import type {SubmissionsSelection} from '@/lib/submissions';
 import type {ReactNode} from 'react';
 
 const submission = (id = 'initial'): SubmissionsListItemModel => ({
-  id, revision: 1, user_id: 'user', username: 'Alice', contest_id: 'contest', contest_login: 'round', contest_title: 'Round',
+  id, revision: 1, kind: 'contest', user_id: 'user', username: 'Alice', contest_id: 'contest', contest_login: 'round', contest_title: 'Round',
   problem_id: 'problem', problem_title: 'A+B', position: 1, language: 'cpp17', state: 200,
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
 });

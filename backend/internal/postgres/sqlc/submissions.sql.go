@@ -127,6 +127,7 @@ INSERT INTO submissions (
     package_id,
     problem_id,
     owner_id,
+    kind,
     source,
     language,
     penalty,
@@ -139,25 +140,27 @@ VALUES (
     (SELECT cp.package_id FROM contest_problems cp WHERE cp.contest_id = $1::uuid AND cp.problem_id = $2::uuid),
     $2::uuid,
     $3::uuid,
-    $4,
+    $4::submission_kind,
     $5,
     $6,
-    COALESCE($7::integer, 1),
-    $8,
+    $7,
+    COALESCE($8::integer, 1),
+    $9,
     1
   )
 RETURNING id
 `
 
 type CreateSubmissionParams struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-	OwnerID   uuid.UUID `json:"owner_id"`
-	Source    string    `json:"source"`
-	Language  string    `json:"language"`
-	Penalty   int32     `json:"penalty"`
-	State     *int32    `json:"state"`
-	BanReason *string   `json:"ban_reason"`
+	ContestID uuid.UUID             `json:"contest_id"`
+	ProblemID uuid.UUID             `json:"problem_id"`
+	OwnerID   uuid.UUID             `json:"owner_id"`
+	Kind      submissionsmodel.Kind `json:"kind"`
+	Source    string                `json:"source"`
+	Language  string                `json:"language"`
+	Penalty   int32                 `json:"penalty"`
+	State     *int32                `json:"state"`
+	BanReason *string               `json:"ban_reason"`
 }
 
 func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error) {
@@ -165,6 +168,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 		arg.ContestID,
 		arg.ProblemID,
 		arg.OwnerID,
+		arg.Kind,
 		arg.Source,
 		arg.Language,
 		arg.Penalty,
@@ -179,6 +183,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 const getSubmission = `-- name: GetSubmission :one
 SELECT s.id,
   s.owner_id,
+  s.kind,
   u.username,
   s.source,
   s.state,
@@ -218,6 +223,7 @@ WHERE s.id = $1::uuid
 type GetSubmissionRow struct {
 	ID                uuid.UUID                        `json:"id"`
 	OwnerID           *uuid.UUID                       `json:"owner_id"`
+	Kind              submissionsmodel.Kind            `json:"kind"`
 	Username          *string                          `json:"username"`
 	Source            string                           `json:"source"`
 	State             submissionsmodel.State           `json:"state"`
@@ -250,6 +256,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 	err := row.Scan(
 		&i.ID,
 		&i.OwnerID,
+		&i.Kind,
 		&i.Username,
 		&i.Source,
 		&i.State,
@@ -298,6 +305,7 @@ func (q *Queries) GetSubmissionIdentifiers(ctx context.Context, id uuid.UUID) (G
 const listSubmissions = `-- name: ListSubmissions :many
 SELECT s.id,
   s.owner_id,
+  s.kind,
   u.username,
   s.state,
   s.score,
@@ -373,6 +381,7 @@ type ListSubmissionsParams struct {
 type ListSubmissionsRow struct {
 	ID                uuid.UUID              `json:"id"`
 	OwnerID           *uuid.UUID             `json:"owner_id"`
+	Kind              submissionsmodel.Kind  `json:"kind"`
 	Username          *string                `json:"username"`
 	State             submissionsmodel.State `json:"state"`
 	Score             points.Value           `json:"score"`
@@ -417,6 +426,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.OwnerID,
+			&i.Kind,
 			&i.Username,
 			&i.State,
 			&i.Score,
