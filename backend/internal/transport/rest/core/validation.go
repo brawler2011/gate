@@ -137,6 +137,7 @@ var (
 		"register":    {},
 		"dashboard":   {},
 		"workshop":    {},
+		"join":        {},
 		"static":      {},
 		"_next":       {},
 		"favicon.ico": {},

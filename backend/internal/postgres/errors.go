@@ -27,7 +27,7 @@ var constraintErrors = map[string]struct {
 	"contest_members_pkey":                          {pkg.ErrAlreadyMember, "user is already a member"},
 	"problem_members_pkey":                          {pkg.ErrAlreadyMember, "user is already a member"},
 	"contest_teams_pkey":                            {pkg.ErrAlreadyMember, "team is already a member"},
-	"org_invitations_pending_unique_idx":            {pkg.ErrRequestPending, "an invitation is already pending"},
+	"invitations_target_user_idx":                   {pkg.ErrInvitationPending, "an invitation is already pending"},
 	"org_join_requests_pending_unique_idx":          {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_join_requests_pending_unique_idx":      {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_problems_pkey":                         {pkg.ErrProblemInContest, "problem is already in the contest"},

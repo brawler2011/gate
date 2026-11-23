@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/invitations"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -175,6 +176,7 @@ func (s *IntegrationTestSuite) initApp() {
 
 	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, loader, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, loader, pgstore.NewTeamTransactions(s.dbPool))
+	invitationsUC := invitations.NewUseCase(pgstore.NewInvitationsRepo(s.dbPool), loader, pgstore.NewInvitationTransactions(s.dbPool), notificationsUC)
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
 
 	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), testStorage, "avatars")
@@ -194,6 +196,7 @@ func (s *IntegrationTestSuite) initApp() {
 		Avatars:           avatarsUC,
 		Organizations:     organizationsUC,
 		Teams:             teamsUC,
+		Invitations:       invitationsUC,
 		Contests:          contestsUC,
 		Access:            loader,
 		ContestDetails:    contestDetails,

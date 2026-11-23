@@ -189,24 +189,6 @@ CREATE TABLE organization_members (
 );
 CREATE INDEX organization_members_user_id_idx ON organization_members USING btree (user_id);
 
-CREATE TABLE organization_invitations (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    inviter_id uuid NOT NULL,
-    role varchar(32) DEFAULT 'member'::varchar NOT NULL,
-    status varchar(32) DEFAULT 'pending'::varchar NOT NULL,
-    created_at timestamptz DEFAULT now() NOT NULL,
-    updated_at timestamptz DEFAULT now() NOT NULL,
-    CONSTRAINT organization_invitations_pkey PRIMARY KEY (id),
-    CONSTRAINT organization_invitations_inviter_id_fkey FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT organization_invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    CONSTRAINT organization_invitations_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE INDEX org_invitations_org_idx ON organization_invitations USING btree (organization_id, status);
-CREATE UNIQUE INDEX org_invitations_pending_unique_idx ON organization_invitations USING btree (organization_id, user_id) WHERE ((status)::text = 'pending'::text);
-CREATE INDEX org_invitations_user_idx ON organization_invitations USING btree (user_id, status);
-
 CREATE TABLE organization_join_requests (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
@@ -555,6 +537,33 @@ CREATE TABLE contest_join_requests (
 CREATE INDEX contest_join_requests_contest_idx ON contest_join_requests USING btree (contest_id, status);
 CREATE UNIQUE INDEX contest_join_requests_pending_unique_idx ON contest_join_requests USING btree (contest_id, user_id) WHERE ((status)::text = 'pending'::text);
 CREATE INDEX contest_join_requests_user_idx ON contest_join_requests USING btree (user_id, status);
+
+-- A named invitation (user_id) is accepted or declined once; a join link (token) has no user and is reusable.
+CREATE TABLE invitations (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    organization_id uuid,
+    team_id uuid,
+    contest_id uuid,
+    role text NOT NULL,
+    user_id uuid,
+    token text,
+    inviter_id uuid NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT invitations_target_check CHECK ((num_nonnulls(organization_id, team_id, contest_id) = 1)),
+    CONSTRAINT invitations_kind_check CHECK ((num_nonnulls(user_id, token) = 1)),
+    CONSTRAINT invitations_pkey PRIMARY KEY (id),
+    CONSTRAINT invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT invitations_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    CONSTRAINT invitations_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,
+    CONSTRAINT invitations_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT invitations_inviter_id_fkey FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- One pending invitation per user and one link per target.
+CREATE UNIQUE INDEX invitations_target_user_idx ON invitations USING btree (organization_id, team_id, contest_id, user_id) NULLS NOT DISTINCT;
+CREATE UNIQUE INDEX invitations_token_idx ON invitations USING btree (token);
+CREATE INDEX invitations_user_id_idx ON invitations USING btree (user_id);
+CREATE INDEX invitations_team_id_idx ON invitations USING btree (team_id);
+CREATE INDEX invitations_contest_id_idx ON invitations USING btree (contest_id);
 
 CREATE TABLE contest_announcements (
     id uuid DEFAULT gen_random_uuid() NOT NULL,

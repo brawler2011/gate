@@ -118,7 +118,9 @@ export const NotificationsClient = (): ReactNode => {
 
     mantineNotifications.show({
       color: "green",
-      message: `Вы вступили в организацию ${data?.organization_name || ""}`,
+      message: notif.type === "contest_invitation"
+        ? `Вы участник контеста ${data?.contest_title || ""}`
+        : `Вы вступили в организацию ${data?.organization_name || ""}`,
     });
     await handleMarkAsRead(notif.id);
     fetchNotifications();
@@ -369,7 +371,7 @@ export const NotificationsClient = (): ReactNode => {
             {items.map((notif) => {
               const data = notif.data as Record<string, unknown> | undefined;
               const hasOrgInviteAction =
-                notif.type === "org_invitation" && Boolean(data?.invitation_id);
+                (notif.type === "org_invitation" || notif.type === "contest_invitation") && Boolean(data?.invitation_id);
               const hasOrgRequestAction =
                 notif.type === "org_join_request" && Boolean(data?.request_id) && Boolean(data?.organization_login);
               const hasContestRequestAction =

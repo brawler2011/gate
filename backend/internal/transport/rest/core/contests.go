@@ -504,23 +504,6 @@ func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.Reo
 	return nil
 }
 
-func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.CreateContestMemberParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
-	err = h.Contests.CreateParticipant(ctx, contestsmodel.ParticipantCreation{
-		ContestId: contest.ID,
-		UserId:    params.UserID,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (h *CoreServer) DeleteContestMember(ctx context.Context, params corev1.DeleteContestMemberParams) error {
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {

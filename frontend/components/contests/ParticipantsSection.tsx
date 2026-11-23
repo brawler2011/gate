@@ -3,11 +3,13 @@
 import {ActionIcon, Autocomplete, Badge, Button, Card, Center, Group, Loader, Pagination, Stack, Table, Tabs, Text} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconCheck, IconEdit, IconPlus, IconTrash, IconUser, IconUserCheck, IconUsersGroup, IconX} from "@tabler/icons-react";
+import {IconCheck, IconEdit, IconMail, IconSend, IconTrash, IconUser, IconUserCheck, IconUsersGroup, IconX} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useCallback, useEffect, useState} from "react";
 
+import {JoinLinkCard} from "@/components/shared/JoinLinkCard";
 import {StatusMessage} from '@/components/shared/StatusMessage';
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
 import {ChangeRoleModal} from "./ChangeRoleModal";
@@ -55,7 +57,8 @@ export const ParticipantsSection = ({
   const [searchResults, setSearchResults] = useState<corev1.UserModel[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [editingParticipant, setEditingParticipant] = useState<{
@@ -92,6 +95,13 @@ export const ParticipantsSection = ({
     setParticipants(response.members);
     setTotalPages(response.pagination.total_pages);
   }, [orgLogin, contestLogin, page]);
+
+  const contestPath = {org_login: orgLogin, contest_login: contestLogin};
+  const invitations = useQuery({
+    queryKey: ["contest-invitations", orgLogin, contestLogin],
+    queryFn: () => unwrap(api.GET("/organizations/{org_login}/contests/{contest_login}/invitations", {params: {path: contestPath}})),
+  });
+  const pendingInvitations = invitations.data?.invitations ?? [];
 
   const loadRequests = useCallback(async () => {
     setLoadingRequests(true);
@@ -138,45 +148,50 @@ export const ParticipantsSection = ({
     searchUsersAsync();
   }, [debouncedQuery]);
 
-  const handleAddParticipant = async () => {
+  const handleInvite = async () => {
     if (!selectedUserId) {
       return;
     }
 
-    setAdding(true);
-    const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/members",
-      {
-        params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {user_id: selectedUserId},
-        },
-      },
-    );
-    setAdding(false);
+    setInviting(true);
+    const {error} = await api.POST("/organizations/{org_login}/contests/{contest_login}/invitations", {
+      params: {path: contestPath},
+      body: {user_id: selectedUserId},
+    });
+    setInviting(false);
 
     if (error) {
-      console.error("Failed to add participant:", error);
       notifications.show({
         title: "Ошибка",
-        message: problemMessage(error, "Не удалось добавить участника"),
+        message: problemMessage(error, "Не удалось отправить приглашение"),
         color: "red",
-      });
-      setStatusMessage({
-        type: "error",
-        message: "Не удалось добавить участника",
       });
       return;
     }
 
     setStatusMessage({
       type: "success",
-      message: "Участник добавлен",
+      message: "Приглашение отправлено: пользователь станет участником, когда примет его",
     });
 
     setSearchQuery("");
     setSelectedUserId(null);
-    await loadParticipants();
+    await invitations.refetch();
+  };
+
+  const handleCancelInvitation = async (id: string) => {
+    setCancelingId(id);
+    const {error} = await api.DELETE("/invitations/{id}", {params: {path: {id}}});
+    setCancelingId(null);
+    if (error) {
+      notifications.show({
+        title: "Ошибка",
+        message: problemMessage(error, "Не удалось отменить приглашение"),
+        color: "red",
+      });
+      return;
+    }
+    await invitations.refetch();
   };
 
   const handleDeleteParticipant = async (userId: string) => {
@@ -332,6 +347,20 @@ export const ParticipantsSection = ({
 
   return (
     <>
+      <Stack mb="md">
+        <JoinLinkCard
+          queryKey={["contest-join-link", orgLogin, contestLogin]}
+          load={() => unwrap(api.GET("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}}))}
+          reset={() => unwrap(api.PUT("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}}))}
+          disable={async () => {
+            const {error} = await api.DELETE("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}});
+            if (error) {
+              throw new Error(problemMessage(error, "Не удалось выключить ссылку"));
+            }
+          }}
+          description="Кто откроет ссылку, станет участником контеста, даже если не состоит в организации."
+        />
+      </Stack>
       <Tabs value={activeTab} onChange={setActiveTab} mb="md">
         <Tabs.List>
           <Tabs.Tab
@@ -346,6 +375,19 @@ export const ParticipantsSection = ({
             }
           >
             Пользователи
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="invitations"
+            leftSection={<IconMail size={16} />}
+            rightSection={
+              pendingInvitations.length > 0 ? (
+                <Badge size="xs" variant="light">
+                  {pendingInvitations.length}
+                </Badge>
+              ) : null
+            }
+          >
+            Приглашения
           </Tabs.Tab>
           <Tabs.Tab value="teams" leftSection={<IconUsersGroup size={16} />}>
             Команды
@@ -383,12 +425,12 @@ export const ParticipantsSection = ({
                 leftSection={searching ? <Loader size="xs" /> : undefined}
               />
               <Button
-                onClick={handleAddParticipant}
-                loading={adding}
+                onClick={handleInvite}
+                loading={inviting}
                 disabled={!selectedUserId}
-                leftSection={<IconPlus size={16} />}
+                leftSection={<IconSend size={16} />}
               >
-                Добавить
+                Пригласить
               </Button>
             </Group>
 
@@ -471,6 +513,59 @@ export const ParticipantsSection = ({
               </Stack>
             )}
           </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="invitations" pt="md">
+          {invitations.isPending && (
+            <Center py="xl">
+              <Loader />
+            </Center>
+          )}
+          {!invitations.isPending && pendingInvitations.length === 0 && (
+            <Card withBorder p="xl">
+              <Text c="dimmed" ta="center">
+                Нет приглашений, ожидающих ответа
+              </Text>
+            </Card>
+          )}
+          {pendingInvitations.length > 0 && (
+            <Table highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Пользователь</Table.Th>
+                  <Table.Th>Пригласил</Table.Th>
+                  <Table.Th>Дата</Table.Th>
+                  <Table.Th style={{width: 120}} />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {pendingInvitations.map((inv) => (
+                  <Table.Tr key={inv.id}>
+                    <Table.Td>
+                      <Text size="sm" fw={500}>@{inv.username}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">@{inv.inviter_username}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">{new Date(inv.created_at).toLocaleDateString("ru-RU")}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Button
+                        size="xs"
+                        color="red"
+                        variant="subtle"
+                        onClick={() => handleCancelInvitation(inv.id)}
+                        loading={cancelingId === inv.id}
+                      >
+                        Отменить
+                      </Button>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="teams" pt="md">

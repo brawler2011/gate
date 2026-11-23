@@ -19,10 +19,6 @@ func (m *MockContestsUC) CreateContestProblem(ctx context.Context, input contest
 	return m.Called(ctx, input).Error(0) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) CreateParticipant(ctx context.Context, input contestsmodel.ParticipantCreation) error {
-	return m.Called(ctx, input).Error(0) //nolint:wrapcheck
-}
-
 type contestLinksSecurity struct{}
 
 func (contestLinksSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationName, _ corev1.CookieAuth) (context.Context, error) {
@@ -32,7 +28,7 @@ func (contestLinksSecurity) HandleCookieAuth(ctx context.Context, _ corev1.Opera
 func TestCreateContestLinksHTTP(t *testing.T) {
 	t.Parallel()
 
-	contestID, problemID, userID, packageID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	contestID, problemID, packageID := uuid.New(), uuid.New(), uuid.New()
 	for _, operation := range []struct {
 		name   string
 		path   string
@@ -50,12 +46,6 @@ func TestCreateContestLinksHTTP(t *testing.T) {
 			path:   "/problems?problem_id=" + problemID.String() + "&package_id=" + packageID.String(),
 			method: "CreateContestProblem",
 			input:  contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID},
-		},
-		{
-			name:   "member",
-			path:   "/members?user_id=" + userID.String(),
-			method: "CreateParticipant",
-			input:  contestsmodel.ParticipantCreation{ContestId: contestID, UserId: userID},
 		},
 	} {
 		for _, result := range []struct {

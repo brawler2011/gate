@@ -215,63 +215,6 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 	}, nil
 }
 
-func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params corev1.ListOrganizationInvitationsParams) (*corev1.ListOrganizationInvitationsResponseModel, error) {
-	invs, err := h.Organizations.ListInvitations(ctx, params.Login)
-	if err != nil {
-		return nil, err
-	}
-
-	return ListOrganizationInvitationsResponseDTO(invs), nil
-}
-
-func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.InviteOrganizationMemberRequestModel, params corev1.InviteOrganizationMemberParams) (*corev1.OrganizationInvitationModel, error) {
-	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
-	}
-
-	role := accessmodel.OrganizationRole(req.Role)
-	if !validateOrganizationRole(string(role)) {
-		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
-	}
-
-	inv, err := h.Organizations.InviteMember(ctx, params.Login, req.UserID, role)
-	if err != nil {
-		return nil, err
-	}
-
-	res := OrganizationInvitationDTO(*inv)
-	return &res, nil
-}
-
-func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params corev1.CancelOrganizationInvitationParams) error {
-	err := h.Organizations.CancelInvitation(ctx, params.Login, params.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params corev1.AcceptOrganizationInvitationParams) error {
-
-	err := h.Organizations.AcceptInvitation(ctx, params.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params corev1.DeclineOrganizationInvitationParams) error {
-
-	err := h.Organizations.DeclineInvitation(ctx, params.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params corev1.ListOrganizationJoinRequestsParams) (*corev1.ListOrganizationJoinRequestsResponseModel, error) {
 	reqs, err := h.Organizations.ListJoinRequests(ctx, params.Login)
 	if err != nil {

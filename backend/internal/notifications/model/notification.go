@@ -16,6 +16,7 @@ const (
 	NotificationTypeOrgJoinRequest      NotificationType = "org_join_request"
 	NotificationTypeOrgJoinApproved     NotificationType = "org_join_approved"
 	NotificationTypeOrgJoinRejected     NotificationType = "org_join_rejected"
+	NotificationTypeContestInvitation   NotificationType = "contest_invitation"
 	NotificationTypeContestJoinRequest  NotificationType = "contest_join_request"
 	NotificationTypeContestJoinApproved NotificationType = "contest_join_approved"
 	NotificationTypeContestJoinRejected NotificationType = "contest_join_rejected"

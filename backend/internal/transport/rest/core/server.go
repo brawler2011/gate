@@ -19,6 +19,7 @@ type Services struct {
 
 	Organizations OrganizationsUC
 	Teams         TeamsUC
+	Invitations   InvitationsUC
 
 	Contests       ContestsUC
 	Access         access.Loader

@@ -28,12 +28,12 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 
 func recordError(string, error) {}
 
-// handleAcceptOrganizationInvitationRequest handles AcceptOrganizationInvitation operation.
+// handleAcceptInvitationRequest handles AcceptInvitation operation.
 //
-// Accept organization invitation.
+// Accept an invitation addressed to the caller.
 //
 // POST /invitations/{id}/accept
-func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleAcceptInvitationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -41,11 +41,11 @@ func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsE
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: AcceptOrganizationInvitationOperation,
-			ID:   "AcceptOrganizationInvitation",
+			Name: AcceptInvitationOperation,
+			ID:   "AcceptInvitation",
 		}
 	)
-	params, err := decodeAcceptOrganizationInvitationParams(args, argsEscaped, r)
+	params, err := decodeAcceptInvitationParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -58,13 +58,13 @@ func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsE
 
 	var rawBody []byte
 
-	var response *AcceptOrganizationInvitationOK
+	var response *AcceptInvitationOK
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    AcceptOrganizationInvitationOperation,
-			OperationSummary: "Accept organization invitation",
-			OperationID:      "AcceptOrganizationInvitation",
+			OperationName:    AcceptInvitationOperation,
+			OperationSummary: "Accept an invitation addressed to the caller",
+			OperationID:      "AcceptInvitation",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -78,8 +78,8 @@ func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsE
 
 		type (
 			Request  = struct{}
-			Params   = AcceptOrganizationInvitationParams
-			Response = *AcceptOrganizationInvitationOK
+			Params   = AcceptInvitationParams
+			Response = *AcceptInvitationOK
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -88,14 +88,14 @@ func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsE
 		](
 			m,
 			mreq,
-			unpackAcceptOrganizationInvitationParams,
+			unpackAcceptInvitationParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				err = s.h.AcceptOrganizationInvitation(ctx, params)
+				err = s.h.AcceptInvitation(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		err = s.h.AcceptOrganizationInvitation(ctx, params)
+		err = s.h.AcceptInvitation(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
@@ -114,7 +114,7 @@ func (s *Server) handleAcceptOrganizationInvitationRequest(args [1]string, argsE
 		return
 	}
 
-	if err := encodeAcceptOrganizationInvitationResponse(response, w); err != nil {
+	if err := encodeAcceptInvitationResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -1633,12 +1633,12 @@ func (s *Server) handleCancelContestJoinRequestRequest(args [2]string, argsEscap
 	}
 }
 
-// handleCancelOrganizationInvitationRequest handles CancelOrganizationInvitation operation.
+// handleCancelInvitationRequest handles CancelInvitation operation.
 //
-// Cancel organization invitation.
+// Withdraw a pending invitation.
 //
-// DELETE /organizations/{login}/invitations/{id}
-func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// DELETE /invitations/{id}
+func (s *Server) handleCancelInvitationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -1646,11 +1646,11 @@ func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsE
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: CancelOrganizationInvitationOperation,
-			ID:   "CancelOrganizationInvitation",
+			Name: CancelInvitationOperation,
+			ID:   "CancelInvitation",
 		}
 	)
-	params, err := decodeCancelOrganizationInvitationParams(args, argsEscaped, r)
+	params, err := decodeCancelInvitationParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -1663,20 +1663,16 @@ func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsE
 
 	var rawBody []byte
 
-	var response *CancelOrganizationInvitationOK
+	var response *CancelInvitationOK
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    CancelOrganizationInvitationOperation,
-			OperationSummary: "Cancel organization invitation",
-			OperationID:      "CancelOrganizationInvitation",
+			OperationName:    CancelInvitationOperation,
+			OperationSummary: "Withdraw a pending invitation",
+			OperationID:      "CancelInvitation",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "login",
-					In:   "path",
-				}: params.Login,
 				{
 					Name: "id",
 					In:   "path",
@@ -1687,8 +1683,8 @@ func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsE
 
 		type (
 			Request  = struct{}
-			Params   = CancelOrganizationInvitationParams
-			Response = *CancelOrganizationInvitationOK
+			Params   = CancelInvitationParams
+			Response = *CancelInvitationOK
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -1697,14 +1693,14 @@ func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsE
 		](
 			m,
 			mreq,
-			unpackCancelOrganizationInvitationParams,
+			unpackCancelInvitationParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				err = s.h.CancelOrganizationInvitation(ctx, params)
+				err = s.h.CancelInvitation(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		err = s.h.CancelOrganizationInvitation(ctx, params)
+		err = s.h.CancelInvitation(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
@@ -1723,7 +1719,7 @@ func (s *Server) handleCancelOrganizationInvitationRequest(args [2]string, argsE
 		return
 	}
 
-	if err := encodeCancelOrganizationInvitationResponse(response, w); err != nil {
+	if err := encodeCancelInvitationResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -2770,109 +2766,6 @@ func (s *Server) handleCreateContestJoinRequestRequest(args [2]string, argsEscap
 	}
 }
 
-// handleCreateContestMemberRequest handles CreateContestMember operation.
-//
-// Create contest member.
-//
-// POST /organizations/{org_login}/contests/{contest_login}/members
-func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateContestMemberOperation,
-			ID:   "CreateContestMember",
-		}
-	)
-	params, err := decodeCreateContestMemberParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *CreateContestMemberNoContent
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateContestMemberOperation,
-			OperationSummary: "Create contest member",
-			OperationID:      "CreateContestMember",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "org_login",
-					In:   "path",
-				}: params.OrgLogin,
-				{
-					Name: "contest_login",
-					In:   "path",
-				}: params.ContestLogin,
-				{
-					Name: "user_id",
-					In:   "query",
-				}: params.UserID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = CreateContestMemberParams
-			Response = *CreateContestMemberNoContent
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateContestMemberParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				err = s.h.CreateContestMember(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		err = s.h.CreateContestMember(ctx, params)
-	}
-	if err != nil {
-		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
-			if err := encodeErrorResponse(errRes, w); err != nil {
-				defer recordError("Internal", err)
-			}
-			return
-		}
-		if errors.Is(err, ht.ErrNotImplemented) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
-			defer recordError("Internal", err)
-		}
-		return
-	}
-
-	if err := encodeCreateContestMemberResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleCreateContestProblemRequest handles CreateContestProblem operation.
 //
 // Create contest problem.
@@ -3864,12 +3757,12 @@ func (s *Server) handleCreateTeamRequest(args [0]string, argsEscaped bool, w htt
 	}
 }
 
-// handleDeclineOrganizationInvitationRequest handles DeclineOrganizationInvitation operation.
+// handleDeclineInvitationRequest handles DeclineInvitation operation.
 //
-// Decline organization invitation.
+// Decline an invitation addressed to the caller.
 //
 // POST /invitations/{id}/decline
-func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleDeclineInvitationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -3877,11 +3770,11 @@ func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, args
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: DeclineOrganizationInvitationOperation,
-			ID:   "DeclineOrganizationInvitation",
+			Name: DeclineInvitationOperation,
+			ID:   "DeclineInvitation",
 		}
 	)
-	params, err := decodeDeclineOrganizationInvitationParams(args, argsEscaped, r)
+	params, err := decodeDeclineInvitationParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -3894,13 +3787,13 @@ func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, args
 
 	var rawBody []byte
 
-	var response *DeclineOrganizationInvitationOK
+	var response *DeclineInvitationOK
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    DeclineOrganizationInvitationOperation,
-			OperationSummary: "Decline organization invitation",
-			OperationID:      "DeclineOrganizationInvitation",
+			OperationName:    DeclineInvitationOperation,
+			OperationSummary: "Decline an invitation addressed to the caller",
+			OperationID:      "DeclineInvitation",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -3914,8 +3807,8 @@ func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, args
 
 		type (
 			Request  = struct{}
-			Params   = DeclineOrganizationInvitationParams
-			Response = *DeclineOrganizationInvitationOK
+			Params   = DeclineInvitationParams
+			Response = *DeclineInvitationOK
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -3924,14 +3817,14 @@ func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, args
 		](
 			m,
 			mreq,
-			unpackDeclineOrganizationInvitationParams,
+			unpackDeclineInvitationParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				err = s.h.DeclineOrganizationInvitation(ctx, params)
+				err = s.h.DeclineInvitation(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		err = s.h.DeclineOrganizationInvitation(ctx, params)
+		err = s.h.DeclineInvitation(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
@@ -3950,7 +3843,7 @@ func (s *Server) handleDeclineOrganizationInvitationRequest(args [1]string, args
 		return
 	}
 
-	if err := encodeDeclineOrganizationInvitationResponse(response, w); err != nil {
+	if err := encodeDeclineInvitationResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -5193,6 +5086,200 @@ func (s *Server) handleDeleteTeamRequest(args [1]string, argsEscaped bool, w htt
 	}
 }
 
+// handleDisableContestJoinLinkRequest handles DisableContestJoinLink operation.
+//
+// Turn off the contest join link.
+//
+// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+func (s *Server) handleDisableContestJoinLinkRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DisableContestJoinLinkOperation,
+			ID:   "DisableContestJoinLink",
+		}
+	)
+	params, err := decodeDisableContestJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *DisableContestJoinLinkNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DisableContestJoinLinkOperation,
+			OperationSummary: "Turn off the contest join link",
+			OperationID:      "DisableContestJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DisableContestJoinLinkParams
+			Response = *DisableContestJoinLinkNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDisableContestJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.DisableContestJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.DisableContestJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeDisableContestJoinLinkResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleDisableTeamJoinLinkRequest handles DisableTeamJoinLink operation.
+//
+// Turn off the team join link.
+//
+// DELETE /teams/{id}/join-link
+func (s *Server) handleDisableTeamJoinLinkRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DisableTeamJoinLinkOperation,
+			ID:   "DisableTeamJoinLink",
+		}
+	)
+	params, err := decodeDisableTeamJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *DisableTeamJoinLinkNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DisableTeamJoinLinkOperation,
+			OperationSummary: "Turn off the team join link",
+			OperationID:      "DisableTeamJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DisableTeamJoinLinkParams
+			Response = *DisableTeamJoinLinkNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDisableTeamJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.DisableTeamJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.DisableTeamJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeDisableTeamJoinLinkResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleDownloadContestStatementsPdfRequest handles DownloadContestStatementsPdf operation.
 //
 // Download PDF booklet with contest statements.
@@ -5590,6 +5677,102 @@ func (s *Server) handleFinishVirtualRunRequest(args [2]string, argsEscaped bool,
 	}
 }
 
+// handleFollowJoinLinkRequest handles FollowJoinLink operation.
+//
+// A team link also makes the caller an organization member, whatever its join policy. Following a link
+// again changes nothing.
+//
+// POST /join-links/{token}
+func (s *Server) handleFollowJoinLinkRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: FollowJoinLinkOperation,
+			ID:   "FollowJoinLink",
+		}
+	)
+	params, err := decodeFollowJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkTargetModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    FollowJoinLinkOperation,
+			OperationSummary: "Join the team or contest a link leads to",
+			OperationID:      "FollowJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "token",
+					In:   "path",
+				}: params.Token,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = FollowJoinLinkParams
+			Response = *JoinLinkTargetModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackFollowJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.FollowJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.FollowJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeFollowJoinLinkResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleForgotPasswordRequest handles ForgotPassword operation.
 //
 // Forgot password.
@@ -5776,6 +5959,105 @@ func (s *Server) handleGetContestRequest(args [2]string, argsEscaped bool, w htt
 	}
 
 	if err := encodeGetContestResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetContestJoinLinkRequest handles GetContestJoinLink operation.
+//
+// Get the contest join link.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/join-link
+func (s *Server) handleGetContestJoinLinkRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetContestJoinLinkOperation,
+			ID:   "GetContestJoinLink",
+		}
+	)
+	params, err := decodeGetContestJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetContestJoinLinkOperation,
+			OperationSummary: "Get the contest join link",
+			OperationID:      "GetContestJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetContestJoinLinkParams
+			Response = *JoinLinkModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetContestJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetContestJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetContestJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetContestJoinLinkResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -6170,6 +6452,101 @@ func (s *Server) handleGetHealthRequest(args [0]string, argsEscaped bool, w http
 	}
 
 	if err := encodeGetHealthResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetJoinLinkTargetRequest handles GetJoinLinkTarget operation.
+//
+// Show where a join link leads.
+//
+// GET /join-links/{token}
+func (s *Server) handleGetJoinLinkTargetRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetJoinLinkTargetOperation,
+			ID:   "GetJoinLinkTarget",
+		}
+	)
+	params, err := decodeGetJoinLinkTargetParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkTargetModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetJoinLinkTargetOperation,
+			OperationSummary: "Show where a join link leads",
+			OperationID:      "GetJoinLinkTarget",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "token",
+					In:   "path",
+				}: params.Token,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetJoinLinkTargetParams
+			Response = *JoinLinkTargetModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetJoinLinkTargetParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetJoinLinkTarget(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetJoinLinkTarget(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetJoinLinkTargetResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -7848,6 +8225,101 @@ func (s *Server) handleGetTeamRequest(args [1]string, argsEscaped bool, w http.R
 	}
 }
 
+// handleGetTeamJoinLinkRequest handles GetTeamJoinLink operation.
+//
+// Get the team join link.
+//
+// GET /teams/{id}/join-link
+func (s *Server) handleGetTeamJoinLinkRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetTeamJoinLinkOperation,
+			ID:   "GetTeamJoinLink",
+		}
+	)
+	params, err := decodeGetTeamJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetTeamJoinLinkOperation,
+			OperationSummary: "Get the team join link",
+			OperationID:      "GetTeamJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetTeamJoinLinkParams
+			Response = *JoinLinkModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetTeamJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetTeamJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetTeamJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetTeamJoinLinkResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetUnreadNotificationsCountRequest handles GetUnreadNotificationsCount operation.
 //
 // Get count of unread notifications.
@@ -8331,6 +8803,120 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 	}
 }
 
+// handleInviteContestParticipantRequest handles InviteContestParticipant operation.
+//
+// Invite a user to take part in the contest.
+//
+// POST /organizations/{org_login}/contests/{contest_login}/invitations
+func (s *Server) handleInviteContestParticipantRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: InviteContestParticipantOperation,
+			ID:   "InviteContestParticipant",
+		}
+	)
+	params, err := decodeInviteContestParticipantParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeInviteContestParticipantRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *InvitationModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    InviteContestParticipantOperation,
+			OperationSummary: "Invite a user to take part in the contest",
+			OperationID:      "InviteContestParticipant",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *InviteContestParticipantRequestModel
+			Params   = InviteContestParticipantParams
+			Response = *InvitationModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackInviteContestParticipantParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.InviteContestParticipant(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.InviteContestParticipant(ctx, request, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeInviteContestParticipantResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleInviteOrganizationMemberRequest handles InviteOrganizationMember operation.
 //
 // Invite user to organization.
@@ -8376,7 +8962,7 @@ func (s *Server) handleInviteOrganizationMemberRequest(args [1]string, argsEscap
 		}
 	}()
 
-	var response *OrganizationInvitationModel
+	var response *InvitationModel
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -8397,7 +8983,7 @@ func (s *Server) handleInviteOrganizationMemberRequest(args [1]string, argsEscap
 		type (
 			Request  = *InviteOrganizationMemberRequestModel
 			Params   = InviteOrganizationMemberParams
-			Response = *OrganizationInvitationModel
+			Response = *InvitationModel
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -8877,6 +9463,105 @@ func (s *Server) handleListContestDraftsRequest(args [2]string, argsEscaped bool
 	}
 
 	if err := encodeListContestDraftsResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListContestInvitationsRequest handles ListContestInvitations operation.
+//
+// List pending contest invitations.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/invitations
+func (s *Server) handleListContestInvitationsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListContestInvitationsOperation,
+			ID:   "ListContestInvitations",
+		}
+	)
+	params, err := decodeListContestInvitationsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *ListInvitationsResponseModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListContestInvitationsOperation,
+			OperationSummary: "List pending contest invitations",
+			OperationID:      "ListContestInvitations",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListContestInvitationsParams
+			Response = *ListInvitationsResponseModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListContestInvitationsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListContestInvitations(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListContestInvitations(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeListContestInvitationsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -9633,7 +10318,7 @@ func (s *Server) handleListOrganizationInvitationsRequest(args [1]string, argsEs
 
 	var rawBody []byte
 
-	var response *ListOrganizationInvitationsResponseModel
+	var response *ListInvitationsResponseModel
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -9654,7 +10339,7 @@ func (s *Server) handleListOrganizationInvitationsRequest(args [1]string, argsEs
 		type (
 			Request  = struct{}
 			Params   = ListOrganizationInvitationsParams
-			Response = *ListOrganizationInvitationsResponseModel
+			Response = *ListInvitationsResponseModel
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -13222,6 +13907,105 @@ func (s *Server) handleResendVerificationRequest(args [0]string, argsEscaped boo
 	}
 }
 
+// handleResetContestJoinLinkRequest handles ResetContestJoinLink operation.
+//
+// Turn on the contest join link with a new token.
+//
+// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+func (s *Server) handleResetContestJoinLinkRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ResetContestJoinLinkOperation,
+			ID:   "ResetContestJoinLink",
+		}
+	)
+	params, err := decodeResetContestJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ResetContestJoinLinkOperation,
+			OperationSummary: "Turn on the contest join link with a new token",
+			OperationID:      "ResetContestJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ResetContestJoinLinkParams
+			Response = *JoinLinkModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackResetContestJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ResetContestJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ResetContestJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeResetContestJoinLinkResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleResetPasswordRequest handles ResetPassword operation.
 //
 // Reset password.
@@ -13309,6 +14093,101 @@ func (s *Server) handleResetPasswordRequest(args [0]string, argsEscaped bool, w 
 	}
 
 	if err := encodeResetPasswordResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleResetTeamJoinLinkRequest handles ResetTeamJoinLink operation.
+//
+// Turn on the team join link with a new token.
+//
+// PUT /teams/{id}/join-link
+func (s *Server) handleResetTeamJoinLinkRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ResetTeamJoinLinkOperation,
+			ID:   "ResetTeamJoinLink",
+		}
+	)
+	params, err := decodeResetTeamJoinLinkParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *JoinLinkModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ResetTeamJoinLinkOperation,
+			OperationSummary: "Turn on the team join link with a new token",
+			OperationID:      "ResetTeamJoinLink",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ResetTeamJoinLinkParams
+			Response = *JoinLinkModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackResetTeamJoinLinkParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ResetTeamJoinLink(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ResetTeamJoinLink(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeResetTeamJoinLinkResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

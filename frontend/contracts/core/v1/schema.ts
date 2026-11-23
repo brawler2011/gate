@@ -507,14 +507,50 @@ export interface paths {
         /** List contest members */
         get: operations["ListContestMembers"];
         put?: never;
-        /** Create contest member */
-        post: operations["CreateContestMember"];
+        post?: never;
         /** Delete contest member */
         delete: operations["DeleteContestMember"];
         options?: never;
         head?: never;
         /** Update contest member */
         patch: operations["UpdateContestMember"];
+        trace?: never;
+    };
+    "/organizations/{org_login}/contests/{contest_login}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending contest invitations */
+        get: operations["ListContestInvitations"];
+        put?: never;
+        /** Invite a user to take part in the contest */
+        post: operations["InviteContestParticipant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{org_login}/contests/{contest_login}/join-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the contest join link */
+        get: operations["GetContestJoinLink"];
+        /** Turn on the contest join link with a new token */
+        put: operations["ResetContestJoinLink"];
+        post?: never;
+        /** Turn off the contest join link */
+        delete: operations["DisableContestJoinLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/organizations/{org_login}/contests/{contest_login}/teams": {
@@ -1312,7 +1348,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{login}/invitations/{id}": {
+    "/invitations/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1322,8 +1358,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Cancel organization invitation */
-        delete: operations["CancelOrganizationInvitation"];
+        /** Withdraw a pending invitation */
+        delete: operations["CancelInvitation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1338,8 +1374,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accept organization invitation */
-        post: operations["AcceptOrganizationInvitation"];
+        /** Accept an invitation addressed to the caller */
+        post: operations["AcceptInvitation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1355,8 +1391,29 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Decline organization invitation */
-        post: operations["DeclineOrganizationInvitation"];
+        /** Decline an invitation addressed to the caller */
+        post: operations["DeclineInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/join-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Show where a join link leads */
+        get: operations["GetJoinLinkTarget"];
+        put?: never;
+        /**
+         * Join the team or contest a link leads to
+         * @description A team link also makes the caller an organization member, whatever its join policy. Following a link again changes nothing.
+         */
+        post: operations["FollowJoinLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1556,6 +1613,25 @@ export interface paths {
         head?: never;
         /** Update member role in team */
         patch: operations["UpdateTeamMemberRole"];
+        trace?: never;
+    };
+    "/teams/{id}/join-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the team join link */
+        get: operations["GetTeamJoinLink"];
+        /** Turn on the team join link with a new token */
+        put: operations["ResetTeamJoinLink"];
+        post?: never;
+        /** Turn off the team join link */
+        delete: operations["DisableTeamJoinLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/teams/{id}/contests": {
@@ -4882,43 +4958,78 @@ export interface components {
             count: number;
         };
         /**
-         * @description Organization invitation data.
+         * @description A pending named invitation.
          * @example {
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "organization_name": "example",
+         *       "kind": "organization",
          *       "organization_login": "example",
+         *       "organization_name": "Example",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
-         *       "inviter_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "inviter_username": "example",
-         *       "role": "user",
-         *       "status": "example",
-         *       "created_at": "2026-01-01T12:00:00Z",
-         *       "updated_at": "2026-01-01T12:00:00Z"
+         *       "inviter_username": "bob",
+         *       "role": "member",
+         *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
-        OrganizationInvitationModel: {
+        InvitationModel: {
             /** Format: uuid */
             id: string;
-            /** Format: uuid */
-            organization_id: string;
-            organization_name: string;
+            kind: components["schemas"]["InvitationKind"];
             organization_login: string;
-            organization_avatar_url?: string;
+            organization_name: string;
+            contest_login?: string;
+            contest_title?: string;
             /** Format: uuid */
             user_id: string;
             username: string;
-            email?: string;
-            /** Format: uuid */
-            inviter_id: string;
             inviter_username: string;
             role: string;
-            status: string;
             /** Format: date-time */
             created_at: string;
-            /** Format: date-time */
-            updated_at: string;
+        };
+        /**
+         * @description What an invitation or join link leads to.
+         * @enum {string}
+         */
+        InvitationKind: "organization" | "team" | "contest";
+        /**
+         * @description The user to invite to the contest.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000"
+         *     }
+         */
+        InviteContestParticipantRequestModel: {
+            /** Format: uuid */
+            user_id: string;
+        };
+        /**
+         * @description A join link's token; absent while the link is off.
+         * @example {
+         *       "token": "q1w2e3r4t5y6u7i8o9p0aa"
+         *     }
+         */
+        JoinLinkModel: {
+            token?: string;
+        };
+        /**
+         * @description The team or contest a join link leads to.
+         * @example {
+         *       "kind": "team",
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_login": "example",
+         *       "organization_name": "Example",
+         *       "team_name": "10A"
+         *     }
+         */
+        JoinLinkTargetModel: {
+            kind: components["schemas"]["InvitationKind"];
+            /** Format: uuid */
+            id: string;
+            organization_login: string;
+            organization_name: string;
+            team_name?: string;
+            contest_login?: string;
+            contest_title?: string;
         };
         /**
          * @description Fields for the invite organization member request.
@@ -4937,28 +5048,27 @@ export interface components {
             role: "owner" | "admin" | "maintainer" | "member";
         };
         /**
-         * @description Paginated collection of organization invitations.
+         * @description Pending named invitations, newest first.
          * @example {
          *       "invitations": [
          *         {
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "organization_name": "example",
+         *           "kind": "contest",
          *           "organization_login": "example",
+         *           "organization_name": "Example",
+         *           "contest_login": "final",
+         *           "contest_title": "Final",
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
-         *           "inviter_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "inviter_username": "example",
-         *           "role": "user",
-         *           "status": "example",
-         *           "created_at": "2026-01-01T12:00:00Z",
-         *           "updated_at": "2026-01-01T12:00:00Z"
+         *           "inviter_username": "bob",
+         *           "role": "participant",
+         *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ]
          *     }
          */
-        ListOrganizationInvitationsResponseModel: {
-            invitations: components["schemas"]["OrganizationInvitationModel"][];
+        ListInvitationsResponseModel: {
+            invitations: components["schemas"]["InvitationModel"][];
         };
         /**
          * @description Fields for the organization join request.
@@ -5443,6 +5553,8 @@ export interface components {
         OrganizationLoginPath: string;
         /** @description UUID of the invitation. */
         InvitationIDPath: string;
+        /** @description Secret token of the join link. */
+        JoinLinkTokenPath: string;
         /** @description UUID of the team. */
         TeamIDPath: string;
         /** @description UUID of the post. */
@@ -5596,9 +5708,13 @@ export type ListClaimedAccountsResponseModel = components['schemas']['ListClaime
 export type NotificationModel = components['schemas']['NotificationModel'];
 export type NotificationsListResponseModel = components['schemas']['NotificationsListResponseModel'];
 export type UnreadNotificationsCountResponseModel = components['schemas']['UnreadNotificationsCountResponseModel'];
-export type OrganizationInvitationModel = components['schemas']['OrganizationInvitationModel'];
+export type InvitationModel = components['schemas']['InvitationModel'];
+export type InvitationKind = components['schemas']['InvitationKind'];
+export type InviteContestParticipantRequestModel = components['schemas']['InviteContestParticipantRequestModel'];
+export type JoinLinkModel = components['schemas']['JoinLinkModel'];
+export type JoinLinkTargetModel = components['schemas']['JoinLinkTargetModel'];
 export type InviteOrganizationMemberRequestModel = components['schemas']['InviteOrganizationMemberRequestModel'];
-export type ListOrganizationInvitationsResponseModel = components['schemas']['ListOrganizationInvitationsResponseModel'];
+export type ListInvitationsResponseModel = components['schemas']['ListInvitationsResponseModel'];
 export type OrganizationJoinRequestModel = components['schemas']['OrganizationJoinRequestModel'];
 export type CreateOrganizationJoinRequestModel = components['schemas']['CreateOrganizationJoinRequestModel'];
 export type ApproveOrganizationJoinRequestModel = components['schemas']['ApproveOrganizationJoinRequestModel'];
@@ -5657,6 +5773,7 @@ export type ParameterNamePath = components['parameters']['NamePath'];
 export type ParameterSearchQuery = components['parameters']['SearchQuery'];
 export type ParameterOrganizationLoginPath = components['parameters']['OrganizationLoginPath'];
 export type ParameterInvitationIdPath = components['parameters']['InvitationIDPath'];
+export type ParameterJoinLinkTokenPath = components['parameters']['JoinLinkTokenPath'];
 export type ParameterTeamIdPath = components['parameters']['TeamIDPath'];
 export type ParameterPostIdPath = components['parameters']['PostIDPath'];
 export type $defs = Record<string, never>;
@@ -6770,33 +6887,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    CreateContestMember: {
-        parameters: {
-            query: {
-                /** @description UUID of the user. */
-                user_id: components["parameters"]["UserIDQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     DeleteContestMember: {
         parameters: {
             query: {
@@ -6845,6 +6935,139 @@ export interface operations {
         responses: {
             /** @description OK */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListContestInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListInvitationsResponseModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    InviteContestParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        /** @description The user to invite. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteContestParticipantRequestModel"];
+            };
+        };
+        responses: {
+            /** @description Invitation sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetContestJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ResetContestJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DisableContestJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8808,7 +9031,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListOrganizationInvitationsResponseModel"];
+                    "application/json": components["schemas"]["ListInvitationsResponseModel"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -8837,19 +9060,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrganizationInvitationModel"];
+                    "application/json": components["schemas"]["InvitationModel"];
                 };
             };
             default: components["responses"]["Problem"];
         };
     };
-    CancelOrganizationInvitation: {
+    CancelInvitation: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                login: components["parameters"]["OrganizationLoginPath"];
                 /** @description UUID of the invitation. */
                 id: components["parameters"]["InvitationIDPath"];
             };
@@ -8867,7 +9088,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    AcceptOrganizationInvitation: {
+    AcceptInvitation: {
         parameters: {
             query?: never;
             header?: never;
@@ -8889,7 +9110,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    DeclineOrganizationInvitation: {
+    DeclineInvitation: {
         parameters: {
             query?: never;
             header?: never;
@@ -8907,6 +9128,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetJoinLinkTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Secret token of the join link. */
+                token: components["parameters"]["JoinLinkTokenPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkTargetModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    FollowJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Secret token of the join link. */
+                token: components["parameters"]["JoinLinkTokenPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkTargetModel"];
+                };
             };
             default: components["responses"]["Problem"];
         };
@@ -9386,6 +9655,76 @@ export interface operations {
         responses: {
             /** @description Member role updated successfully */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetTeamJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ResetTeamJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinLinkModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DisableTeamJoinLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

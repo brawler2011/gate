@@ -41,7 +41,7 @@ func TestResourceAuthorizationIsDelegatedToHandlers(t *testing.T) {
 	for _, operation := range []string{
 		"CreateContest", "GetOrganization", "UpdateOrganization", "DeleteOrganization",
 		"AddOrganizationMember", "ListOrganizationInvitations", "ApproveOrganizationJoinRequest",
-		"CreateContestMember", "UpdateContestMember", "DeleteContestMember",
+		"InviteContestParticipant", "UpdateContestMember", "DeleteContestMember",
 		"CreateContestTeam", "UpdateContestTeam", "DeleteContestTeam", "ListContestJoinRequests",
 		"UpdateProblem", "DeleteProblem", "ImportProblem", "BuildProblemPackage", "SaveProblemDraft",
 		"DownloadProblemPackage", "CreateProblemMember",

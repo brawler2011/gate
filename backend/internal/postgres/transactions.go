@@ -9,6 +9,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
+	"github.com/brawler2011/gate/backend/internal/invitations"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -96,6 +97,17 @@ func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationT
 			*NotificationsRepo
 			Access
 		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
+	})
+}
+
+func NewInvitationTransactions(pool *pgxpool.Pool) invitations.Transactions {
+	return authorizing(pool, func(q *sqlc.Queries) invitations.TxStore {
+		return struct {
+			*InvitationsRepo
+			*UsersRepo
+			*NotificationsRepo
+			Access
+		}{&InvitationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
 	})
 }
 
