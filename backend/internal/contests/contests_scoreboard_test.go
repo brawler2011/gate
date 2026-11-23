@@ -273,7 +273,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	for i, state := range []submissionsmodel.State{submissionsmodel.GotWA, submissionsmodel.GotTL, submissionsmodel.GotML, submissionsmodel.GotRE, submissionsmodel.GotPE} {
 		f.submit(t, "alice", 1, state, time.Duration(i+1)*5*time.Minute)
 	}
-	// At the cutoff, CE is hidden, Saved is ignored, and the contest end is exclusive.
+	// Before the freeze CE and Saved do not count; after it every attempt is pending; the contest end is exclusive.
 	for _, sub := range []struct {
 		state submissionsmodel.State
 		at    time.Duration
@@ -296,7 +296,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	require.EqualValues(t, 59, *a.TimeMinutes)
 	require.False(t, b.Solved)
 	require.EqualValues(t, 5, b.FailedAttempts)
-	require.EqualValues(t, 1, b.PendingAttempts)
+	require.EqualValues(t, 2, b.PendingAttempts)
 	require.Zero(t, b.Penalty)
 	live := f.scoreboard(t, true).Items[0]
 	require.EqualValues(t, 1, live.ProblemsSolved)
@@ -318,7 +318,7 @@ func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	require.Zero(t, sb.Items[0].ProblemsSolved)
 	require.Zero(t, sb.Items[0].TotalPenalty)
 	require.Len(t, sb.Items[0].ProblemResults, 1)
-	require.EqualValues(t, 3, sb.Items[0].ProblemResults[0].PendingAttempts)
+	require.EqualValues(t, 4, sb.Items[0].ProblemResults[0].PendingAttempts)
 	require.Zero(t, sb.Items[0].ProblemResults[0].FailedAttempts)
 }
 

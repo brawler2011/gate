@@ -894,16 +894,6 @@ CREATE INDEX submissions_scoreboard_idx ON submissions USING btree (contest_id, 
 CREATE INDEX submissions_scoreboard_state_idx ON submissions USING btree (contest_id, owner_id, state, created_at) WHERE ((contest_id IS NOT NULL) AND (owner_id IS NOT NULL));
 CREATE INDEX submissions_state_idx ON submissions USING btree (state);
 
-CREATE TABLE submission_state_history (
-    id bigint GENERATED ALWAYS AS IDENTITY,
-    submission_id uuid NOT NULL,
-    observed_at timestamptz NOT NULL,
-    state integer NOT NULL,
-    CONSTRAINT submission_state_history_pkey PRIMARY KEY (id),
-    CONSTRAINT submission_state_history_submission_id_fkey FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
-);
-CREATE INDEX submission_state_history_lookup ON submission_state_history USING btree (submission_id, observed_at DESC, id DESC);
-
 CREATE TABLE judge_jobs (
     id uuid NOT NULL,
     submission_id uuid NOT NULL,
@@ -926,19 +916,7 @@ CREATE TABLE judge_jobs (
 );
 CREATE INDEX judge_jobs_recovery ON judge_jobs USING btree (deadline_at) WHERE (state = 'processing'::text);
 
--- +goose StatementBegin
-CREATE FUNCTION capture_submission_state() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  INSERT INTO submission_state_history(submission_id,observed_at,state) VALUES(NEW.id,clock_timestamp(),NEW.state);
-  RETURN NEW;
-END;
-$$;
--- +goose StatementEnd
-
 CREATE TRIGGER on_submissions_update BEFORE UPDATE ON submissions FOR EACH ROW EXECUTE FUNCTION updated_at_update();
-CREATE TRIGGER submission_state_changed AFTER INSERT OR UPDATE OF state ON submissions FOR EACH ROW EXECUTE FUNCTION capture_submission_state();
 
 
 CREATE TABLE outbox_events (

@@ -82,7 +82,6 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			add(contest, users[0], problems[size], submissionsmodel.Accepted, 5)
 			add(contest, users[size+1], problems[0], submissionsmodel.Accepted, 5)
 
-			exec(`UPDATE submission_state_history h SET observed_at=s.created_at FROM submissions s WHERE s.id=h.submission_id AND s.contest_id=$1`, contest)
 			ctx = accessmodel.WithReadTime(ctx, end.Add(-time.Nanosecond))
 			for _, user := range users[:size] {
 				for _, problem := range problems[:size] {
@@ -135,7 +134,8 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 	}
 }
 
-func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
+// ICPC freeze: only submissions made after the freeze stay hidden; earlier ones show whenever they are judged or rejudged.
+func TestScoreboardFreezeHidesOnlyLaterSubmissions(t *testing.T) {
 	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
@@ -151,20 +151,15 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, f.repo.CreateContestMember(f.ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: accessmodel.ContestParticipant}))
 	}
-	add := func(user uuid.UUID, created, observed time.Time, before, after submissionsmodel.State) {
+	add := func(user uuid.UUID, created time.Time, state submissionsmodel.State) {
 		t.Helper()
-		id := uuid.New()
-		_, err = f.pool.Exec(f.ctx, `INSERT INTO submissions(id,contest_id,problem_id,owner_id,kind,source,language,state,created_at) VALUES($1,$2,$3,$4,'contest','code',30,$5,$6)`, id, f.contest, f.problem, user, before, created)
-		require.NoError(t, err)
-		_, err = f.pool.Exec(f.ctx, `UPDATE submission_state_history SET observed_at=$2 WHERE submission_id=$1`, id, observed)
-		require.NoError(t, err)
-		_, err = f.pool.Exec(f.ctx, `UPDATE submissions SET state=$2 WHERE id=$1`, id, after)
+		_, err = f.pool.Exec(f.ctx, `INSERT INTO submissions(id,contest_id,problem_id,owner_id,kind,source,language,state,created_at) VALUES($1,$2,$3,$4,'contest','code',30,$5,$6)`, uuid.New(), f.contest, f.problem, user, state, created)
 		require.NoError(t, err)
 	}
-	// Freeze masking preserves verdicts visible before post-freeze judging and rejudging.
-	add(users[0], freeze.Add(-time.Minute), freeze.Add(-time.Minute), submissionsmodel.Saved, submissionsmodel.Accepted)
-	add(users[0], freeze, freeze, submissionsmodel.Saved, submissionsmodel.Accepted)
-	add(users[1], freeze.Add(-2*time.Minute), freeze.Add(-time.Minute), submissionsmodel.Accepted, submissionsmodel.GotWA)
+	add(users[0], freeze.Add(-time.Minute), submissionsmodel.GotWA)
+	add(users[0], freeze, submissionsmodel.Accepted)
+	add(users[0], freeze.Add(time.Minute), submissionsmodel.Saved)
+	add(users[1], freeze.Add(-2*time.Minute), submissionsmodel.Accepted)
 	for _, user := range users {
 		require.NoError(t, contests.ApplySubmissionResult(f.ctx, f.repo, &submissionsmodel.Submission{ContestID: &f.contest, ProblemID: &f.problem, CreatedBy: &user}))
 	}
@@ -184,8 +179,18 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 		results[item.UserID] = item
 	}
 	require.Zero(t, results[users[0]].ProblemsSolved)
+	require.EqualValues(t, 1, results[users[0]].ProblemResults[0].FailedAttempts)
 	require.EqualValues(t, 2, results[users[0]].ProblemResults[0].PendingAttempts)
 	require.EqualValues(t, 1, results[users[1]].ProblemsSolved)
+	// A rejudge of a pre-freeze submission during the freeze is visible at once.
+	_, err = f.pool.Exec(f.ctx, `UPDATE submissions SET state=$3 WHERE owner_id=$1 AND contest_id=$2`, users[1], f.contest, submissionsmodel.GotWA)
+	require.NoError(t, err)
+	require.NoError(t, contests.ApplySubmissionResult(f.ctx, f.repo, &submissionsmodel.Submission{ContestID: &f.contest, ProblemID: &f.problem, CreatedBy: &users[1]}))
+	for _, item := range read(participant, now, false).Items {
+		if item.UserID == users[1] {
+			require.Zero(t, item.ProblemsSolved)
+		}
+	}
 	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, true)
 	require.ErrorIs(t, err, pkg.ErrForbidden)
 	live := read(accessmodel.UserFromContext(f.ctx), now, true)

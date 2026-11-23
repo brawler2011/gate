@@ -633,7 +633,7 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 }
 
 func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
-	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, sqlc.GetContestScoreboardSubmissionsParams{ContestID: contestID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
+	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, contestID)
 	if err != nil {
 		return nil, dbError("get contest scoreboard submissions", err)
 	}
@@ -646,7 +646,7 @@ func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, cont
 }
 
 func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contestID, userID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
-	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: contestID, OwnerID: userID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
+	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: contestID, OwnerID: userID})
 	if err != nil {
 		return nil, dbError("get user scoreboard submissions", err)
 	}
