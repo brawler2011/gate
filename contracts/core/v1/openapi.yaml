@@ -636,19 +636,36 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
+  /contests/{contest_id}/booklets:
+    get:
+      tags: [contests]
+      operationId: ListContestBooklets
+      summary: List contest booklets, one per statement language
+      parameters:
+        - $ref: "#/components/parameters/ContestIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestBooklets"
   /contests/{contest_id}/statements.pdf:
     get:
       tags: [contests]
       operationId: DownloadContestStatementsPdf
-      summary: Download PDF booklet with contest statements
+      summary: Download the PDF booklet built for the contest's current problems and settings
+      description: Answers booklet_not_ready until that booklet is built.
       parameters:
         - $ref: "#/components/parameters/ContestIDPath"
         - name: lang
-          description: "Language code of the problem statement."
+          description: "Statement language of the booklet."
           in: query
+          required: true
           schema:
             type: string
-            default: ru
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -3980,6 +3997,7 @@ components:
         - package_not_ready
         - stale_revision
         - build_finished
+        - booklet_not_ready
         - required
         - length
         - format
@@ -4592,6 +4610,33 @@ components:
       properties:
         problem:
           $ref: "#/components/schemas/ContestProblemModel"
+    ContestBooklets:
+      type: object
+      required:
+        - booklets
+      properties:
+        booklets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestBooklet"
+    ContestBooklet:
+      type: object
+      required:
+        - language
+        - state
+      properties:
+        language:
+          type: string
+        state:
+          description: building until the booklet for the contest's current problems and settings is built.
+          type: string
+          enum:
+            - building
+            - ready
+            - failed
+        diagnostic:
+          description: Why the build failed; shown to contest managers only.
+          type: string
     ContestScope:
       description: >-
         Lowest audience that may see other people's results while the contest runs (*_during) or after it ends (*_after);
@@ -4652,6 +4697,7 @@ components:
         - organization_id
         - organization_login
         - title
+        - place
         - description
         - visibility
         - scoreboard_during
@@ -4693,6 +4739,9 @@ components:
         title:
           type: string
           example: Test contest
+        place:
+          description: Printed in booklet headers; empty prints the organization name.
+          type: string
         description:
           type: string
         visibility:
@@ -4996,6 +5045,9 @@ components:
         title:
           type: string
           example: Test contest
+        place:
+          description: Printed in booklet headers; empty prints the organization name.
+          type: string
         description:
           type: string
         visibility:
@@ -6248,6 +6300,7 @@ components:
         - login
         - name
         - join_policy
+        - time_zone
         - created_at
         - updated_at
       properties:
@@ -6266,6 +6319,9 @@ components:
           type: string
           enum: [open, by_request, invite_only]
           default: by_request
+        time_zone:
+          description: IANA time zone; booklets print contest dates in it.
+          type: string
         created_at:
           type: string
           format: date-time
@@ -6336,6 +6392,9 @@ components:
         join_policy:
           type: string
           enum: [open, by_request, invite_only]
+        time_zone:
+          description: IANA time zone name.
+          type: string
     OrganizationMemberModel:
       description: "Organization member data."
       example:

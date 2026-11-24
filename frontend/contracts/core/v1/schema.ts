@@ -383,6 +383,23 @@ export interface paths {
         patch: operations["UpdateContest"];
         trace?: never;
     };
+    "/contests/{contest_id}/booklets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List contest booklets, one per statement language */
+        get: operations["ListContestBooklets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contests/{contest_id}/statements.pdf": {
         parameters: {
             query?: never;
@@ -390,7 +407,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download PDF booklet with contest statements */
+        /**
+         * Download the PDF booklet built for the contest's current problems and settings
+         * @description Answers booklet_not_ready until that booklet is built.
+         */
         get: operations["DownloadContestStatementsPdf"];
         put?: never;
         post?: never;
@@ -1943,7 +1963,7 @@ export interface components {
             detail?: string;
         };
         /** @enum {string} */
-        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_required" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "drafts_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "build_finished" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified" | "wrong_password" | "invitation_pending" | "request_resolved" | "invite_only" | "not_org_member" | "link_invalid" | "account_expired" | "temporary_account_unavailable" | "own_account" | "no_email" | "unsupported_image" | "owner_required" | "statements_hidden" | "contest_not_started" | "contest_ended" | "clarifications_disabled" | "drafts_disabled" | "scoreboard_frozen" | "limit_reached" | "unknown_language" | "language_not_allowed" | "package_not_ready" | "stale_revision" | "build_finished" | "booklet_not_ready" | "required" | "length" | "format" | "reserved" | "range" | "end_before_start" | "duplicate" | "too_large" | "unknown" | "not_utf8" | "cycle" | "inconsistent" | "too_many" | "unsupported" | "zip_invalid" | "package_layout" | "package_syntax";
         /**
          * @description Result of creation.
          * @example {
@@ -2387,6 +2407,19 @@ export interface components {
         GetContestProblemResponseModel: {
             problem: components["schemas"]["ContestProblemModel"];
         };
+        ContestBooklets: {
+            booklets: components["schemas"]["ContestBooklet"][];
+        };
+        ContestBooklet: {
+            language: string;
+            /**
+             * @description building until the booklet for the contest's current problems and settings is built.
+             * @enum {string}
+             */
+            state: "building" | "ready" | "failed";
+            /** @description Why the build failed; shown to contest managers only. */
+            diagnostic?: string;
+        };
         /**
          * @description Lowest audience that may see other people's results while the contest runs (*_during) or after it ends (*_after); moderators always may. scoreboard_* covers the scoreboard, submissions_* listing submissions, sources_* their code and reports_* their test reports.
          * @enum {string}
@@ -2450,6 +2483,8 @@ export interface components {
             organization_login: string;
             /** @example Test contest */
             title: string;
+            /** @description Printed in booklet headers; empty prints the organization name. */
+            place: string;
             description: string;
             visibility: string;
             scoreboard_during: components["schemas"]["ContestScope"];
@@ -2723,6 +2758,8 @@ export interface components {
             login?: string;
             /** @example Test contest */
             title?: string;
+            /** @description Printed in booklet headers; empty prints the organization name. */
+            place?: string;
             description?: string;
             /** @example private */
             visibility?: string;
@@ -3761,6 +3798,8 @@ export interface components {
              * @enum {string}
              */
             join_policy: "open" | "by_request" | "invite_only";
+            /** @description IANA time zone; booklets print contest dates in it. */
+            time_zone: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -3841,6 +3880,8 @@ export interface components {
             description?: string;
             /** @enum {string} */
             join_policy?: "open" | "by_request" | "invite_only";
+            /** @description IANA time zone name. */
+            time_zone?: string;
         };
         /**
          * @description Organization member data.
@@ -5307,6 +5348,8 @@ export type GetProblemResponseModel = components['schemas']['GetProblemResponseM
 export type ProblemStatementModel = components['schemas']['ProblemStatementModel'];
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];
+export type ContestBooklets = components['schemas']['ContestBooklets'];
+export type ContestBooklet = components['schemas']['ContestBooklet'];
 export type ContestScope = components['schemas']['ContestScope'];
 export type FeedbackLevel = components['schemas']['FeedbackLevel'];
 export type ContestModel = components['schemas']['ContestModel'];
@@ -6270,11 +6313,35 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    ListContestBooklets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContestBooklets"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     DownloadContestStatementsPdf: {
         parameters: {
-            query?: {
-                /** @description Language code of the problem statement. */
-                lang?: string;
+            query: {
+                /** @description Statement language of the booklet. */
+                lang: string;
             };
             header?: never;
             path: {

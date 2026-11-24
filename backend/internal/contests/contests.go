@@ -77,7 +77,10 @@ func (uc *ContestsUseCase) CreateContest(
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
 	return access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
-		return tx.UpdateContest(ctx, c)
+		if err := tx.UpdateContest(ctx, c); err != nil {
+			return err
+		}
+		return tx.QueueBooklets(ctx, c.ID)
 	})
 }
 
@@ -96,7 +99,10 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
 			return err
 		}
-		return tx.CreateContestProblem(ctx, c)
+		if err := tx.CreateContestProblem(ctx, c); err != nil {
+			return err
+		}
+		return tx.QueueBooklets(ctx, c.ContestId)
 	})
 }
 
@@ -107,7 +113,10 @@ func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, cont
 		if packageId, err = usableProblemPackage(ctx, tx, problemId, packageId, false); err != nil {
 			return err
 		}
-		return tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
+		if err := tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId); err != nil {
+			return err
+		}
+		return tx.QueueBooklets(ctx, contestId)
 	})
 }
 
@@ -116,7 +125,10 @@ func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsm
 		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
 			return err
 		}
-		return tx.DeleteContestProblem(ctx, c)
+		if err := tx.DeleteContestProblem(ctx, c); err != nil {
+			return err
+		}
+		return tx.QueueBooklets(ctx, c.ContestId)
 	})
 }
 
@@ -125,7 +137,10 @@ func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId
 		if err := tx.LockContestProblemOrder(ctx, contestId); err != nil {
 			return err
 		}
-		return tx.ReorderContestProblems(ctx, contestId, problems)
+		if err := tx.ReorderContestProblems(ctx, contestId, problems); err != nil {
+			return err
+		}
+		return tx.QueueBooklets(ctx, contestId)
 	})
 }
 

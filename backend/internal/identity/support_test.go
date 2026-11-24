@@ -30,6 +30,8 @@ type organizationTestStore struct {
 	identityUsersStore
 }
 
+func (organizationTestStore) QueueOrganizationBooklets(context.Context, uuid.UUID) error { return nil }
+
 func setupPermissionsFixture() *permissionsFixture {
 	usersUC := newMockUsersUC()
 	contestsRepo := newMockContestsRepo()

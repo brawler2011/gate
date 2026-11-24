@@ -250,6 +250,17 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Gate: gate}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
+	bookletWake := make(chan struct{}, 1)
+	bookletWorker := &contests.BookletWorker{Queue: pgstore.NewBookletsRepo(d.pool), Statements: &problems.PackageContent{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket},
+		Typeset: d.typeset, Store: d.store, Bucket: defaultS3ObjectBucket, Lease: problemPolicy.Limits.Typeset.Wall + time.Minute, MaxAttempts: problemPolicy.Attempts,
+		Poll: problemPolicy.Poll, Wake: bookletWake, Logger: d.logger.With("component", "booklet_worker")}
+	wakeBooklets := func() {
+		select {
+		case bookletWake <- struct{}{}:
+		default:
+		}
+	}
+
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
 	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Limits: problemPolicy.Limits, WorkDir: sandbox.SharedDir{Local: problemPolicy.WorkDir, Sandbox: d.cfg.GoJudge.WorkDir}, RerunTLE: d.cfg.Judge.Mode == config.JudgeDirty, Calibration: calib, Logger: d.logger}
@@ -278,6 +289,10 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	services := []appService{
 		newService("problem build worker", buildWorker.Run, noStop),
 		newService("problem object GC", problemGC.Run, noStop),
+		newService("booklet worker", bookletWorker.Run, noStop),
+		newService("booklet listener", func(ctx context.Context) error {
+			return pgstore.Listen(ctx, d.pool, pgstore.BookletsChannel, wakeBooklets, func(*pgconn.Notification) { wakeBooklets() })
+		}, noStop),
 		newService("judge worker", judgeWorker.Run, noStop),
 		newService("judge job listener", func(ctx context.Context) error {
 			return pgstore.Listen(ctx, d.pool, pgstore.JudgeJobsChannel,
@@ -372,7 +387,8 @@ func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) 
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, accessLoader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: accessLoader}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, d.typeset)
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader)
+	booklets := &contests.Booklets{Store: pgstore.NewBookletsRepo(pool), Files: objectStore, Bucket: defaultS3ObjectBucket, Access: accessLoader}
 
 	observerHub := wsobserver.NewHub(contestsRepo, contestsUC)
 	contestsObserverHub := wsobserver.NewContestsHub()
@@ -397,6 +413,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) 
 		Contests:          contestsUC,
 		Access:            accessLoader,
 		ContestDetails:    contestDetails,
+		Booklets:          booklets,
 		Drafts:            draftsUC,
 		Announcements:     announcementsUC,
 		Clarifications:    clarificationsUC,

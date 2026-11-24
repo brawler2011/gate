@@ -95,8 +95,9 @@ func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationT
 			*OrganizationsRepo
 			*UsersRepo
 			*NotificationsRepo
+			*BookletsRepo
 			Access
-		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
+		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, &BookletsRepo{q: q}, commandAccess(q)}
 	})
 }
 
@@ -154,8 +155,9 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*Notifier
 			*OrganizationsRepo
 			*NotificationsRepo
+			*BookletsRepo
 			Access
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &Notifier{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, commandAccess(q)}
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &Notifier{queries: q}, &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}, &BookletsRepo{q: q}, commandAccess(q)}
 	})
 }
 

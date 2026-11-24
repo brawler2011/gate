@@ -115,6 +115,9 @@ describe("List pagination through production components", () => {
         submitted = url.searchParams.get("package_id");
         return new Response(null, {status: 204});
       }
+      if (url.pathname.endsWith("/booklets")) {
+        return Response.json({booklets: []});
+      }
       return Response.json({});
     });
     const problem = {permissions: {submit: false, manage: true, edit_problem: false}, problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;

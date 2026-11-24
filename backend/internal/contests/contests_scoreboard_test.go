@@ -19,6 +19,8 @@ import (
 
 type scoreboardKey struct{ contest, user, problem uuid.UUID }
 
+func (*scoreboardRepo) QueueBooklets(context.Context, uuid.UUID) error { return nil }
+
 type scoreboardRepo struct {
 	historyErr error
 	ContestsRepo

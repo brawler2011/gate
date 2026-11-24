@@ -24,6 +24,7 @@ type Services struct {
 	Contests       ContestsUC
 	Access         access.Loader
 	ContestDetails ContestDetails
+	Booklets       BookletsReader
 	Drafts         DraftsUC
 	Announcements  AnnouncementsUC
 	Clarifications ClarificationsUC

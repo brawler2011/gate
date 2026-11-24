@@ -25,8 +25,19 @@ type Organization struct {
 	Description string
 	AvatarURL   *string
 	JoinPolicy  accessmodel.JoinPolicy
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// IANA time zone name, see ValidTimeZone.
+	TimeZone  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// ValidTimeZone rejects names time.LoadLocation reads specially, so the stored zone means the same everywhere.
+func ValidTimeZone(name string) bool {
+	if name == "" || name == "Local" {
+		return false
+	}
+	_, err := time.LoadLocation(name)
+	return err == nil
 }
 
 type OrganizationMember struct {
@@ -68,6 +79,7 @@ type UpdateOrganizationInput struct {
 	Description *string
 	AvatarURL   *string
 	JoinPolicy  *accessmodel.JoinPolicy
+	TimeZone    *string
 }
 
 type OrganizationFilter struct {

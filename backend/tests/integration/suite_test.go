@@ -84,6 +84,7 @@ type IntegrationTestSuite struct {
 	objectStore       *storage.S3Storage
 	bucket            string
 	problemDrafts     *pgstore.ProblemDraftsRepo
+	booklets          *pgstore.BookletsRepo
 	rateClock         *rateClock
 	limiter           *ratelimit.Limiter
 }
@@ -188,7 +189,8 @@ func (s *IntegrationTestSuite) initApp() {
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), announcementsRepo, loader)
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, loader)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, loader, dbfixtures.Typesetter(s.T()))
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, loader)
+	s.booklets = pgstore.NewBookletsRepo(s.dbPool)
 
 	coreServer := handlers.NewCoreServer(handlers.Services{
 		Auth:              authUC,
@@ -201,6 +203,7 @@ func (s *IntegrationTestSuite) initApp() {
 		Contests:          contestsUC,
 		Access:            loader,
 		ContestDetails:    contestDetails,
+		Booklets:          &contests.Booklets{Store: s.booklets, Files: objectStore, Bucket: bucket, Access: loader},
 		Drafts:            draftsUC,
 		Announcements:     announcementsUC,
 		Clarifications:    clarificationsUC,

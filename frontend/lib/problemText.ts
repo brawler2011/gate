@@ -124,6 +124,7 @@ const texts: Record<ErrorCode, string | ((params: Params) => string)> = {
   package_not_ready: "У задачи нет собранного пакета",
   stale_revision: "Черновик изменился в другом окне. Обновите страницу",
   build_finished: "Сборка уже завершена",
+  booklet_not_ready: "Буклет ещё собирается. Попробуйте через минуту",
   required: "Обязательное поле",
   length: lengthText,
   format: "Недопустимый формат",

@@ -5,6 +5,8 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	// The runtime image is scratch, without a zoneinfo database for organization time zones.
+	_ "time/tzdata"
 
 	"github.com/brawler2011/gate/backend/config"
 	"github.com/brawler2011/gate/backend/pkg/logging"

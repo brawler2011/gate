@@ -11,6 +11,8 @@ import {problemMessage} from "@/lib/problemText";
 
 type Props = { org: OrganizationModel };
 
+const TIME_ZONES = ["UTC", ...Intl.supportedValuesOf("timeZone").filter((zone) => zone !== "UTC")];
+
 const JOIN_POLICY_OPTIONS = [
   {label: "По заявкам (требуется одобрение)", value: "by_request"},
   {label: "Открытая (любой может вступить напрямую)", value: "open"},
@@ -29,6 +31,7 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
       login: org.login,
       description: org.description ?? '',
       join_policy: org.join_policy ?? 'by_request',
+      time_zone: org.time_zone,
     },
     validate: {
       name: (v) => v.trim().length === 0 ? 'Название обязательно' : null,
@@ -64,6 +67,7 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
         login: trimmedLogin,
         description: values.description,
         join_policy: values.join_policy as UpdateOrganizationRequestModel["join_policy"],
+        time_zone: values.time_zone,
       },
     });
     setSaving(false);
@@ -95,6 +99,14 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
           description="Определяет, как новые участники могут присоединяться к организации"
           data={JOIN_POLICY_OPTIONS}
           {...form.getInputProps('join_policy')}
+        />
+        <Select
+          label="Часовой пояс"
+          description="В нём печатается дата контеста в буклетах"
+          data={TIME_ZONES}
+          searchable
+          allowDeselect={false}
+          {...form.getInputProps('time_zone')}
         />
         <Textarea label="Описание" autosize minRows={2} {...form.getInputProps('description')} />
         <Button type="submit" loading={saving} disabled={!form.isDirty()} w="fit-content">

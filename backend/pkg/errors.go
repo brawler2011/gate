@@ -97,6 +97,7 @@ var (
 	ErrPackageNotReady    = NewCode("package_not_ready", CodeInvalid)
 	ErrStaleRevision      = NewCode("stale_revision", CodeConflict)
 	ErrBuildFinished      = NewCode("build_finished", CodeConflict)
+	ErrBookletNotReady    = NewCode("booklet_not_ready", CodeConflict)
 
 	// Field validation; params carry the violated bounds (min, max).
 	ErrRequired       = NewCode("required", CodeInvalid)

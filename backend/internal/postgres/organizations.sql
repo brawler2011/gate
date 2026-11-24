@@ -26,7 +26,8 @@ SET login = COALESCE(sqlc.narg('login'), login),
     name = COALESCE(sqlc.narg('name'), name),
     description = COALESCE(sqlc.narg('description'), description),
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
-    join_policy = COALESCE(sqlc.narg('join_policy'), join_policy)
+    join_policy = COALESCE(sqlc.narg('join_policy'), join_policy),
+    time_zone = COALESCE(sqlc.narg('time_zone'), time_zone)
 WHERE id = $1;
 
 -- name: DeleteOrganization :exec

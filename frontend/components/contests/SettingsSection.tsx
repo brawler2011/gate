@@ -5,7 +5,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
 import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
+import {BookletDiagnostics, DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {useLanguages} from "@/lib/languages";
@@ -142,6 +142,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
   const form = useForm<{
     login: string;
     title: string;
+    place: string;
     description: string;
     visibility: string;
     scoreboard_during: corev1.ContestScope;
@@ -171,6 +172,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     initialValues: {
       login: contest.login || "",
       title: contest.title,
+      place: contest.place,
       description: contest.description,
       visibility: contest.visibility,
       join_policy: contest.join_policy,
@@ -270,6 +272,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       type: "success",
       message: "Настройки контеста обновлены",
     });
+    void queryClient.invalidateQueries({queryKey: api.queryOptions("get", "/contests/{contest_id}/booklets", {params: {path: {contest_id: contest.id}}}).queryKey});
 
     if (newLogin && newLogin !== contest.login) {
       navigate(`/${contest.organization_login}/${newLogin}/settings`);
@@ -315,6 +318,13 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             label="Описание"
             placeholder="Введите описание контеста"
             {...form.getInputProps("description")}
+          />
+
+          <TextInput
+            label="Место проведения"
+            description="Печатается в шапке буклета под названием контеста"
+            placeholder="Название организации"
+            {...form.getInputProps("place")}
           />
 
           <TextInput
@@ -437,7 +447,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             <Stack gap={2}>
               <Text size="sm" fw={500}>Печатный буклет задач</Text>
               <Text size="xs" c="dimmed">
-                Сгенерировать официальный PDF буклет со всеми условиями и примерами контеста (LaTeX / olymp.sty)
+                PDF со всеми условиями и примерами (LaTeX / olymp.sty)
+                собирается заранее после каждого изменения контеста
               </Text>
             </Stack>
             <DownloadStatementsButton
@@ -445,6 +456,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
               contestLogin={contest.login}
             />
           </Group>
+          <BookletDiagnostics contestId={contest.id} />
 
           <Divider my="sm" />
 

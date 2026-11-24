@@ -9,6 +9,15 @@ import (
 	"context"
 )
 
+const listenBooklets = `-- name: ListenBooklets :exec
+LISTEN contest_booklets
+`
+
+func (q *Queries) ListenBooklets(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, listenBooklets)
+	return err
+}
+
 const listenEvents = `-- name: ListenEvents :exec
 LISTEN gate_events
 `
@@ -33,6 +42,15 @@ SELECT pg_notify('gate_events', $1::text)
 
 func (q *Queries) NotifyEvents(ctx context.Context, payload string) error {
 	_, err := q.db.Exec(ctx, notifyEvents, payload)
+	return err
+}
+
+const wakeBookletWorkers = `-- name: WakeBookletWorkers :exec
+SELECT pg_notify('contest_booklets', '')
+`
+
+func (q *Queries) WakeBookletWorkers(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, wakeBookletWorkers)
 	return err
 }
 

@@ -111,8 +111,14 @@ func (uc *OrganizationsUseCase) UpdateOrganizationByLogin(ctx context.Context, l
 	if err != nil {
 		return err
 	}
+	if input.TimeZone != nil && !organizationsmodel.ValidTimeZone(*input.TimeZone) {
+		return pkg.AtField("/time_zone", pkg.Wrap(pkg.ErrFormat, nil, "unknown time zone"))
+	}
 	return access.WithinOrganization(ctx, uc.transactor, org.ID, accessmodel.OrganizationManage, func(tx OrganizationTxStore, _ access.OrganizationAccess) error {
-		return tx.UpdateOrganization(ctx, org.ID, input)
+		if err := tx.UpdateOrganization(ctx, org.ID, input); err != nil {
+			return err
+		}
+		return tx.QueueOrganizationBooklets(ctx, org.ID)
 	})
 }
 
