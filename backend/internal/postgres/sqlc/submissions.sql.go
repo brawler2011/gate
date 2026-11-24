@@ -180,32 +180,6 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 	return id, err
 }
 
-const finishedPretestCandidates = `-- name: FinishedPretestCandidates :many
-SELECT s.id FROM submissions s JOIN contests c ON c.id = s.contest_id
-WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
-ORDER BY s.id
-`
-
-func (q *Queries) FinishedPretestCandidates(ctx context.Context) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, finishedPretestCandidates)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []uuid.UUID{}
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSubmission = `-- name: GetSubmission :one
 SELECT s.id,
   s.owner_id,
@@ -492,6 +466,46 @@ func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (LockSubmiss
 	var i LockSubmissionRow
 	err := row.Scan(&i.ID, &i.Revision, &i.State)
 	return i, err
+}
+
+const resetFinishedPretests = `-- name: ResetFinishedPretests :many
+WITH candidates AS (
+  SELECT s.id, s.state FROM submissions s JOIN contests c ON c.id = s.contest_id
+  WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
+  ORDER BY s.id FOR UPDATE OF s
+)
+UPDATE submissions s
+SET state = 1, score = 0, test_details = NULL,
+    ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
+FROM candidates WHERE s.id = candidates.id
+RETURNING s.id, candidates.state AS previous_state, s.revision
+`
+
+type ResetFinishedPretestsRow struct {
+	ID            uuid.UUID `json:"id"`
+	PreviousState int32     `json:"previous_state"`
+	Revision      int64     `json:"revision"`
+}
+
+// FOR UPDATE rechecks the conditions after a concurrent block or tick commits.
+func (q *Queries) ResetFinishedPretests(ctx context.Context) ([]ResetFinishedPretestsRow, error) {
+	rows, err := q.db.Query(ctx, resetFinishedPretests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ResetFinishedPretestsRow{}
+	for rows.Next() {
+		var i ResetFinishedPretestsRow
+		if err := rows.Scan(&i.ID, &i.PreviousState, &i.Revision); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const resetSubmissionsState = `-- name: ResetSubmissionsState :many

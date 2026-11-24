@@ -197,10 +197,18 @@ WHERE contest_id = @contest_id::uuid
   AND (sqlc.narg('owner_id')::uuid IS NULL OR owner_id = sqlc.narg('owner_id')::uuid)
 ORDER BY id;
 
--- name: FinishedPretestCandidates :many
-SELECT s.id FROM submissions s JOIN contests c ON c.id = s.contest_id
-WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
-ORDER BY s.id;
+-- name: ResetFinishedPretests :many
+-- FOR UPDATE rechecks the conditions after a concurrent block or tick commits.
+WITH candidates AS (
+  SELECT s.id, s.state FROM submissions s JOIN contests c ON c.id = s.contest_id
+  WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
+  ORDER BY s.id FOR UPDATE OF s
+)
+UPDATE submissions s
+SET state = 1, score = 0, test_details = NULL,
+    ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
+FROM candidates WHERE s.id = candidates.id
+RETURNING s.id, candidates.state AS previous_state, s.revision;
 
 -- name: LockSubmission :one
 SELECT id, revision, state FROM submissions WHERE id = @id::uuid FOR UPDATE;

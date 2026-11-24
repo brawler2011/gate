@@ -402,8 +402,9 @@ func markPretests(fsys fs.FS, main Testset, testsets []Testset, groups []spec.Gr
 				other, err := spec.ParseCommand(t.Cmd)
 				return t.Method == "generated" && err == nil && slices.Equal(argv, other)
 			})
-		} else {
-			input, err := spec.ReadFile(fsys, fmt.Sprintf(pretests.InputPathPattern, number))
+		}
+		if name := fmt.Sprintf(pretests.InputPathPattern, number); match < 0 && (pre.Method != "generated" || exists(fsys, name)) {
+			input, err := spec.ReadFile(fsys, name)
 			if err != nil {
 				return err
 			}

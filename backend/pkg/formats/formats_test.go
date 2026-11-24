@@ -120,6 +120,21 @@ func TestPolygonPretests(t *testing.T) {
 	require.Equal(t, []bool{true, false}, marks, "the pretest repeats test 1's input")
 }
 
+func TestPolygonPretestMatching(t *testing.T) {
+	dir := unpack(t, "polygon-pretests")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	var marks []bool
+	for _, test := range p.Groups[0].Tests {
+		marks = append(marks, test.Pretest)
+	}
+	require.Equal(t, []bool{true, false, true, true}, marks)
+
+	write(t, dir, "pretests/03", "5\n")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "pretest 3 is not one of the tests")
+}
+
 func TestPolygonResources(t *testing.T) {
 	p, err := Read(unpack(t, "polygon-resources"))
 	require.NoError(t, err)

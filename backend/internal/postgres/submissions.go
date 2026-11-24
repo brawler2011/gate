@@ -335,11 +335,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submiss
 
 // ResetFinishedPretests resets contest submissions judged on pretests once their contest has ended.
 func (r *SubmissionsRepo) ResetFinishedPretests(ctx context.Context) ([]submissionsmodel.SubmissionReset, error) {
-	ids, err := r.queries.FinishedPretestCandidates(ctx)
-	if err != nil {
-		return nil, dbError("finished pretest candidates", err)
-	}
-	rows, err := r.queries.ResetSubmissionsState(ctx, ids)
+	rows, err := r.queries.ResetFinishedPretests(ctx)
 	if err != nil {
 		return nil, dbError("reset finished pretests", err)
 	}

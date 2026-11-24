@@ -1,0 +1,40 @@
+A pretests testset marks the main tests it repeats: a manual pretest by its
+input bytes, a generated one by its command or, failing that, its input bytes.
+
+-- problem.xml --
+<problem short-name="pretests">
+  <judging>
+    <testset name="tests">
+      <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+      <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+      <tests>
+        <test method="manual" sample="true"/>
+        <test method="generated" cmd="gen 2"/>
+        <test method="generated" cmd="gen 3"/>
+        <test method="generated" cmd="gen 4"/>
+      </tests>
+    </testset>
+    <testset name="pretests">
+      <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+      <input-path-pattern>pretests/%02d</input-path-pattern><answer-path-pattern>pretests/%02d.a</answer-path-pattern>
+      <tests>
+        <test method="manual"/>
+        <test method="generated" cmd="gen 3"/>
+        <test method="generated" cmd="gen  4  # same input"/>
+      </tests>
+    </testset>
+  </judging>
+  <files><executables>
+    <executable><source path="gen.cpp" type="cpp.g++17"/></executable>
+  </executables></files>
+</problem>
+-- tests/01 --
+1
+-- tests/04 --
+4
+-- pretests/01 --
+1
+-- pretests/03 --
+4
+-- gen.cpp --
+int main() {}
