@@ -6,7 +6,7 @@ import {useInfiniteQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useRevalidator} from "react-router-dom";
 
-import {DownloadStatementsButton, bookletsQueryKey} from "@/components/contests/DownloadStatementsButton";
+import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api, unwrap} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
@@ -50,6 +50,7 @@ export const ProblemsSection = ({
 }: ProblemsSectionProps): ReactNode => {
   const revalidator = useRevalidator();
   const queryClient = useQueryClient();
+  const bookletsKey = api.queryOptions("get", "/contests/{contest_id}/booklets", {params: {path: {contest_id: contestId}}}).queryKey;
   const contestQueryKey = api.queryOptions("get", "/organizations/{org_login}/contests/{contest_login}", {
     params: {path: {org_login: orgLogin, contest_login: contestLogin}},
   }).queryKey;
@@ -154,7 +155,7 @@ export const ProblemsSection = ({
     setSearchQuery("");
     setSelectedProblemId(null);
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
-    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
+    void queryClient.invalidateQueries({queryKey: bookletsKey});
     void revalidator.revalidate();
   };
 
@@ -188,7 +189,7 @@ export const ProblemsSection = ({
     });
 
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
-    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
+    void queryClient.invalidateQueries({queryKey: bookletsKey});
     void revalidator.revalidate();
   };
 
@@ -291,7 +292,7 @@ export const ProblemsSection = ({
       color: "green",
     });
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
-    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
+    void queryClient.invalidateQueries({queryKey: bookletsKey});
     void revalidator.revalidate();
   };
 
@@ -358,7 +359,7 @@ export const ProblemsSection = ({
 
     setReplaceTarget(null);
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
-    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
+    void queryClient.invalidateQueries({queryKey: bookletsKey});
     void revalidator.revalidate();
   };
 
