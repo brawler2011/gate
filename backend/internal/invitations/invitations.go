@@ -56,7 +56,6 @@ type NewInvitation struct {
 
 type Repo interface {
 	OrganizationID(ctx context.Context, login string) (uuid.UUID, error)
-	ContestID(ctx context.Context, orgLogin, contestLogin string) (uuid.UUID, error)
 	GetInvitation(ctx context.Context, id uuid.UUID) (Invitation, error)
 	ListInvitations(ctx context.Context, target Target) ([]Invitation, error)
 	JoinLink(ctx context.Context, target Target) (*string, error)
@@ -129,14 +128,10 @@ func (uc *UseCase) InviteToOrganization(ctx context.Context, orgLogin string, us
 	return &invitation, nil
 }
 
-func (uc *UseCase) InviteToContest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*Invitation, error) {
-	contestID, err := uc.repo.ContestID(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return nil, err
-	}
+func (uc *UseCase) InviteToContest(ctx context.Context, contestID, userID uuid.UUID) (*Invitation, error) {
 	var invitation Invitation
 	var notification *notificationsmodel.Notification
-	err = access.WithinContest(ctx, uc.tx, contestID, accessmodel.ContestManage, func(tx TxStore, a access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.tx, contestID, accessmodel.ContestManage, func(tx TxStore, a access.ContestAccess) error {
 		current, err := tx.ContestRole(ctx, contestID, userID)
 		if err != nil {
 			return err
@@ -207,11 +202,7 @@ func (uc *UseCase) ListOrganizationInvitations(ctx context.Context, orgLogin str
 	return uc.repo.ListInvitations(ctx, Target{Kind: KindOrganization, ID: orgID})
 }
 
-func (uc *UseCase) ListContestInvitations(ctx context.Context, orgLogin, contestLogin string) ([]Invitation, error) {
-	contestID, err := uc.repo.ContestID(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return nil, err
-	}
+func (uc *UseCase) ListContestInvitations(ctx context.Context, contestID uuid.UUID) ([]Invitation, error) {
 	if _, err := access.Contest(ctx, uc.access, contestID, accessmodel.ContestManage); err != nil {
 		return nil, err
 	}
@@ -302,12 +293,6 @@ func (uc *UseCase) manageLink(ctx context.Context, target Target, fn func(TxStor
 		return access.WithinContest(ctx, uc.tx, target.ID, accessmodel.ContestManage, func(tx TxStore, a access.ContestAccess) error { return fn(tx, a.Actor.Id) })
 	}
 	return pkg.ErrNotFound
-}
-
-// ContestTarget resolves a contest by its logins for the link endpoints.
-func (uc *UseCase) ContestTarget(ctx context.Context, orgLogin, contestLogin string) (Target, error) {
-	id, err := uc.repo.ContestID(ctx, orgLogin, contestLogin)
-	return Target{Kind: KindContest, ID: id}, err
 }
 
 // LinkTarget shows a logged-in user where a link leads before they follow it.

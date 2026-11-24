@@ -13,7 +13,7 @@ type VirtualRunState = {run: VirtualRunModel | null; replaying: boolean; pending
 export const useVirtualRun = (orgLogin: string, contestLogin: string): VirtualRunState => {
   const {user} = useSession();
   const client = useQueryClient();
-  const query = api.useQuery("get", "/organizations/{org_login}/contests/{contest_login}/virtual", {
+  const query = api.useQuery("get", "/organizations/{org_login}/contests/{contest_login}", {
     params: {path: {org_login: orgLogin, contest_login: contestLogin}},
   }, {enabled: Boolean(user)});
   const run = query.data?.virtual_run ?? null;

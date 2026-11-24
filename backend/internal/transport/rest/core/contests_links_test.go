@@ -50,29 +50,23 @@ func TestCreateContestLinksHTTP(t *testing.T) {
 	} {
 		for _, result := range []struct {
 			name       string
-			lookupErr  error
 			createErr  error
 			statusCode int
 		}{
 			{name: "success", statusCode: http.StatusNoContent},
-			{name: "contest missing", lookupErr: pkg.ErrNotFound, statusCode: http.StatusNotFound},
 			{name: "creation conflict", createErr: pkg.ErrConflict, statusCode: http.StatusConflict},
 		} {
 			t.Run(operation.name+"/"+result.name, func(t *testing.T) {
 				t.Parallel()
 				uc := new(MockContestsUC)
-				uc.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "org", "round").
-					Return(contestsmodel.Contest{ID: contestID}, result.lookupErr).Once()
-				if result.lookupErr == nil {
-					uc.On(operation.method, mock.Anything, operation.input).Return(result.createErr).Once()
-				}
+				uc.On(operation.method, mock.Anything, operation.input).Return(result.createErr).Once()
 				handler := core.NewCoreServer(core.Services{Contests: uc}, false)
 				server, err := corev1.NewServer(handler, contestLinksSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 					w.WriteHeader(pkg.HTTPStatus(pkg.CodeOf(err)))
 				}))
 				require.NoError(t, err)
 
-				req := httptest.NewRequest(http.MethodPost, "/organizations/org/contests/round"+operation.path, nil)
+				req := httptest.NewRequest(http.MethodPost, "/contests/"+contestID.String()+operation.path, nil)
 				req.AddCookie(&http.Cookie{Name: "session_id", Value: "test"})
 				response := httptest.NewRecorder()
 				server.ServeHTTP(response, req)

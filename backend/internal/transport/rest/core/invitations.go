@@ -68,7 +68,7 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 }
 
 func (h *CoreServer) ListContestInvitations(ctx context.Context, params corev1.ListContestInvitationsParams) (*corev1.ListInvitationsResponseModel, error) {
-	items, err := h.Invitations.ListContestInvitations(ctx, params.OrgLogin, params.ContestLogin)
+	items, err := h.Invitations.ListContestInvitations(ctx, params.ContestID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (h *CoreServer) ListContestInvitations(ctx context.Context, params corev1.L
 }
 
 func (h *CoreServer) InviteContestParticipant(ctx context.Context, req *corev1.InviteContestParticipantRequestModel, params corev1.InviteContestParticipantParams) (*corev1.InvitationModel, error) {
-	inv, err := h.Invitations.InviteToContest(ctx, params.OrgLogin, params.ContestLogin, req.UserID)
+	inv, err := h.Invitations.InviteToContest(ctx, params.ContestID, req.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +88,10 @@ func (h *CoreServer) CancelInvitation(ctx context.Context, params corev1.CancelI
 	return h.Invitations.CancelInvitation(ctx, params.ID)
 }
 
-func (h *CoreServer) AcceptInvitation(ctx context.Context, params corev1.AcceptInvitationParams) error {
-	return h.Invitations.AcceptInvitation(ctx, params.ID)
-}
-
-func (h *CoreServer) DeclineInvitation(ctx context.Context, params corev1.DeclineInvitationParams) error {
+func (h *CoreServer) RespondInvitation(ctx context.Context, req *corev1.RespondInvitationRequestModel, params corev1.RespondInvitationParams) error {
+	if req.Status == corev1.RespondInvitationRequestModelStatusAccepted {
+		return h.Invitations.AcceptInvitation(ctx, params.ID)
+	}
 	return h.Invitations.DeclineInvitation(ctx, params.ID)
 }
 
@@ -128,10 +127,7 @@ func (h *CoreServer) DisableTeamJoinLink(ctx context.Context, params corev1.Disa
 }
 
 func (h *CoreServer) GetContestJoinLink(ctx context.Context, params corev1.GetContestJoinLinkParams) (*corev1.JoinLinkModel, error) {
-	target, err := h.Invitations.ContestTarget(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
+	target := invitations.Target{Kind: invitations.KindContest, ID: params.ContestID}
 	token, err := h.Invitations.JoinLink(ctx, target)
 	if err != nil {
 		return nil, err
@@ -140,10 +136,7 @@ func (h *CoreServer) GetContestJoinLink(ctx context.Context, params corev1.GetCo
 }
 
 func (h *CoreServer) ResetContestJoinLink(ctx context.Context, params corev1.ResetContestJoinLinkParams) (*corev1.JoinLinkModel, error) {
-	target, err := h.Invitations.ContestTarget(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
+	target := invitations.Target{Kind: invitations.KindContest, ID: params.ContestID}
 	token, err := h.Invitations.ResetJoinLink(ctx, target)
 	if err != nil {
 		return nil, err
@@ -152,11 +145,7 @@ func (h *CoreServer) ResetContestJoinLink(ctx context.Context, params corev1.Res
 }
 
 func (h *CoreServer) DisableContestJoinLink(ctx context.Context, params corev1.DisableContestJoinLinkParams) error {
-	target, err := h.Invitations.ContestTarget(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-	return h.Invitations.DisableJoinLink(ctx, target)
+	return h.Invitations.DisableJoinLink(ctx, invitations.Target{Kind: invitations.KindContest, ID: params.ContestID})
 }
 
 func (h *CoreServer) GetJoinLinkTarget(ctx context.Context, params corev1.GetJoinLinkTargetParams) (*corev1.JoinLinkTargetModel, error) {

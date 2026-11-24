@@ -40,7 +40,7 @@ func TestStrictAuthzPoliciesContainOnlyStrictOperations(t *testing.T) {
 func TestResourceAuthorizationIsDelegatedToHandlers(t *testing.T) {
 	for _, operation := range []string{
 		"CreateContest", "GetOrganization", "UpdateOrganization", "DeleteOrganization",
-		"AddOrganizationMember", "ListOrganizationInvitations", "ApproveOrganizationJoinRequest",
+		"AddOrganizationMember", "ListOrganizationInvitations", "ResolveOrganizationJoinRequest",
 		"InviteContestParticipant", "UpdateContestMember", "DeleteContestMember",
 		"CreateContestTeam", "UpdateContestTeam", "DeleteContestTeam", "ListContestJoinRequests",
 		"UpdateProblem", "DeleteProblem", "ImportProblem", "BuildProblemPackage", "SaveProblemDraft",

@@ -29,17 +29,16 @@ const Page = (): ReactNode => {
   );
   const problemQuery = api.useQuery(
     "get",
-    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}",
+    "/contests/{contest_id}/problems/{problem_id}",
     {
       params: {
         path: {
-          org_login: slug,
-          contest_login: contestLogin,
+          contest_id: contest.data?.response.contest.id ?? "",
           problem_id: targetProblem?.problem_id ?? "",
         },
       },
     },
-    {enabled: Boolean(targetProblem)},
+    {enabled: Boolean(targetProblem && contest.data)},
   );
   const submissionsSelection = {orgLogin: slug, contestLogin, contestId: contest.data?.response.contest.id ?? '',
     userId: user?.id, problemId: targetProblem?.problem_id, page: 1, pageSize: 5, sortOrder: 'desc' as const};

@@ -67,7 +67,3 @@ ON CONFLICT DO NOTHING;
 -- name: JoinContest :exec
 INSERT INTO contest_members (contest_id, user_id, role) VALUES ($1, $2, 'participant')
 ON CONFLICT DO NOTHING;
-
--- name: GetContestIDByLogins :one
-SELECT c.id FROM contests c JOIN organizations o ON o.id = c.organization_id
-WHERE lower(o.login) = lower(sqlc.arg('org_login')) AND lower(c.login) = lower(sqlc.arg('contest_login'));

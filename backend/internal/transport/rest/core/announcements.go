@@ -9,12 +9,7 @@ import (
 )
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
-	list, err := h.Announcements.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	list, err := h.Announcements.ListAnnouncements(ctx, params.ContestID, params.Page.Value, params.PageSize.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -23,18 +18,13 @@ func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1
 }
 
 func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value
 	}
 
 	announcement, err := h.Announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
-		ContestID: contest.ID,
+		ContestID: params.ContestID,
 		ProblemID: problemID,
 		Title:     req.Title,
 		Body:      req.Body,
@@ -47,12 +37,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 }
 
 func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev1.DeleteContestAnnouncementParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
-	if err := h.Announcements.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
+	if err := h.Announcements.DeleteAnnouncement(ctx, params.AnnouncementID, params.ContestID); err != nil {
 		return err
 	}
 

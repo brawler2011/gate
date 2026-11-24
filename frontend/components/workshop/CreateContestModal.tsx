@@ -75,18 +75,13 @@ export const CreateContestModal = ({
       if (!selectedOrg) {
         return;
       }
-      const {data: response, error} = await api.POST(
-        "/organizations/{org_login}/contests",
-        {
-          params: {
-            path: {org_login: selectedOrg.login},
-            query: {
-              title: title.trim() || "New Contest",
-              login: trimmedLogin || undefined,
-            },
-          },
+      const {data: response, error} = await api.POST("/contests", {
+        body: {
+          organization_id: selectedOrg.id,
+          title: title.trim() || "New Contest",
+          login: trimmedLogin || undefined,
         },
-      );
+      });
       if (error || !response) {
         throw new Error(problemMessage(error, "Не удалось создать контест"));
       }

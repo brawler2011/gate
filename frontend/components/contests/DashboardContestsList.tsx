@@ -2,11 +2,11 @@ import {Group, Stack, Text, Title, Badge, Card, ThemeIcon} from "@mantine/core";
 import {IconTrophy, IconChevronRight} from "@tabler/icons-react";
 import {useNavigate} from "react-router-dom";
 
-import type {DashboardContestModel} from "@/contracts/core/v1/schema";
+import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type DashboardContestsListProps = {
-  contests: DashboardContestModel[];
+  contests: ContestModel[];
 };
 
 export const DashboardContestsList = ({contests}: DashboardContestsListProps): ReactNode => {
@@ -16,7 +16,7 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
     return (
       <Card withBorder radius="md" p="xl" style={{textAlign: "center"}}>
         <Text c="dimmed" size="sm">
-          Вы пока не принимали участия в контестах
+          Пока нет доступных контестов
         </Text>
       </Card>
     );
@@ -39,22 +39,10 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
     return {label: "Идет", color: "green"};
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "owner":
-        return {label: "Создатель", color: "violet"};
-      case "moderator":
-        return {label: "Модератор", color: "teal"};
-      default:
-        return {label: "Участник", color: "blue"};
-    }
-  };
-
   return (
     <Stack gap="sm">
       {contests.map((contest) => {
         const status = getContestStatus(contest.start_time, contest.end_time);
-        const role = getRoleBadge(contest.user_role);
 
         return (
           <Card
@@ -93,7 +81,7 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
 
                 <Stack gap={2} style={{flex: 1, minWidth: 0}}>
                   <Text size="xs" c="dimmed" fw={500} lineClamp={1}>
-                    {contest.organization_name}
+                    {contest.organization_login}
                   </Text>
                   <Title order={4} size="md" fw={600} lineClamp={1}>
                     {contest.title}
@@ -102,9 +90,11 @@ export const DashboardContestsList = ({contests}: DashboardContestsListProps): R
               </Group>
 
               <Group gap="xs" style={{flexShrink: 0}}>
-                <Badge size="sm" variant="light" color={role.color}>
-                  {role.label}
-                </Badge>
+                {contest.permissions.manage && (
+                  <Badge size="sm" variant="light" color="teal">
+                    Модератор
+                  </Badge>
+                )}
                 <Badge size="sm" variant="filled" color={status.color}>
                   {status.label}
                 </Badge>

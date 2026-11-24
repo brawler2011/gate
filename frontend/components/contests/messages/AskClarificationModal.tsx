@@ -12,8 +12,7 @@ import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 interface AskClarificationModalProps {
   opened: boolean;
   onClose: () => void;
-  orgLogin: string;
-  contestLogin: string;
+  contestId: string;
   problems?: ContestProblemListItemModel[];
   onSuccess?: () => void;
 }
@@ -21,8 +20,7 @@ interface AskClarificationModalProps {
 export const AskClarificationModal = ({
   opened,
   onClose,
-  orgLogin,
-  contestLogin,
+  contestId,
   problems = [],
   onSuccess,
 }: AskClarificationModalProps): ReactNode => {
@@ -53,9 +51,9 @@ export const AskClarificationModal = ({
 
     setLoading(true);
     const {error: err} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/clarifications",
+      "/contests/{contest_id}/clarifications",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
         body: {
           question: question.trim(),
           problem_id: problemId ? problemId : undefined,

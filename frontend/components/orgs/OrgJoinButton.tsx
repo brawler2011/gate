@@ -2,8 +2,8 @@ import {Badge, Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core"
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconUserPlus, IconX} from "@tabler/icons-react";
-import {useQueryClient} from "@tanstack/react-query";
-import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {useState, type ReactNode} from "react";
 import {useRevalidator} from "react-router-dom";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
@@ -25,31 +25,13 @@ export const OrgJoinButton = ({
 }: Props): ReactNode => {
   const revalidator = useRevalidator();
   const queryClient = useQueryClient();
-  const [pendingRequest, setPendingRequest] = useState<OrganizationJoinRequestModel | null>(null);
-  const [loading, setLoading] = useState(false);
+  const orgQuery = api.queryOptions("get", "/organizations/{login}", {params: {path: {login: org.login}}});
+  const {data: details, isLoading: loading} = useQuery({...orgQuery, enabled: isAuthenticated && !isMember});
+  const pendingRequest = details?.my_join_request ?? null;
+  const refresh = () => queryClient.invalidateQueries({queryKey: orgQuery.queryKey});
   const [actionLoading, setActionLoading] = useState(false);
   const [modalOpened, {open: openModal, close: closeModal}] = useDisclosure(false);
   const [message, setMessage] = useState("");
-
-  const checkPendingRequest = useCallback(async () => {
-    if (!isAuthenticated || isMember) {
-      return;
-    }
-    setLoading(true);
-    const {data} = await api.GET("/organizations/{login}/requests/mine", {
-      params: {path: {login: org.login}},
-    });
-    setLoading(false);
-    if (data?.request) {
-      setPendingRequest(data.request);
-    } else {
-      setPendingRequest(null);
-    }
-  }, [isAuthenticated, isMember, org.login]);
-
-  useEffect(() => {
-    checkPendingRequest();
-  }, [checkPendingRequest]);
 
   if (!isAuthenticated) {
     return null;
@@ -118,15 +100,15 @@ export const OrgJoinButton = ({
         message: "Заявка отправлена администраторам организации",
         color: "blue",
       });
-      setPendingRequest(data.request);
+      void refresh();
       dispatchNotificationsUpdated();
     }
   };
 
-  const handleCancelRequest = async () => {
+  const handleCancelRequest = async (request: OrganizationJoinRequestModel) => {
     setActionLoading(true);
-    const {error} = await api.DELETE("/organizations/{login}/requests/mine", {
-      params: {path: {login: org.login}},
+    const {error} = await api.DELETE("/organizations/{login}/requests/{id}", {
+      params: {path: {login: org.login, id: request.id}},
     });
     setActionLoading(false);
     if (error) {
@@ -141,7 +123,7 @@ export const OrgJoinButton = ({
       message: "Заявка отменена",
       color: "blue",
     });
-    setPendingRequest(null);
+    void refresh();
     dispatchNotificationsUpdated();
   };
 
@@ -156,7 +138,7 @@ export const OrgJoinButton = ({
           variant="subtle"
           color="red"
           leftSection={<IconX size={16} />}
-          onClick={handleCancelRequest}
+          onClick={() => handleCancelRequest(pendingRequest)}
           loading={actionLoading}
         >
           Отменить заявку

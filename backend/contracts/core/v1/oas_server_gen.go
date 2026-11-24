@@ -8,12 +8,6 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
-	// AcceptInvitation implements AcceptInvitation operation.
-	//
-	// Accept an invitation addressed to the caller.
-	//
-	// POST /invitations/{id}/accept
-	AcceptInvitation(ctx context.Context, params AcceptInvitationParams) error
 	// AddOrganizationMember implements AddOrganizationMember operation.
 	//
 	// Add member to organization without an invitation (site administrators only).
@@ -54,20 +48,8 @@ type Handler interface {
 	//
 	// Answer a clarification question (jury only).
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer
+	// POST /contests/{contest_id}/clarifications/{clarification_id}/answer
 	AnswerContestClarification(ctx context.Context, req *AnswerContestClarificationRequestModel, params AnswerContestClarificationParams) (*ContestClarificationModel, error)
-	// ApproveContestJoinRequest implements ApproveContestJoinRequest operation.
-	//
-	// Approve contest join request.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve
-	ApproveContestJoinRequest(ctx context.Context, params ApproveContestJoinRequestParams) error
-	// ApproveOrganizationJoinRequest implements ApproveOrganizationJoinRequest operation.
-	//
-	// Approve organization join request.
-	//
-	// POST /organizations/{login}/requests/{id}/approve
-	ApproveOrganizationJoinRequest(ctx context.Context, req OptApproveOrganizationJoinRequestModel, params ApproveOrganizationJoinRequestParams) error
 	// BatchCreateOrganizationUsers implements BatchCreateOrganizationUsers operation.
 	//
 	// Batch create users in organization.
@@ -78,14 +60,8 @@ type Handler interface {
 	//
 	// Block problem for user.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
+	// POST /contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block
 	BlockProblemForUser(ctx context.Context, req OptBlockProblemRequestModel, params BlockProblemForUserParams) error
-	// BlockSubmission implements BlockSubmission operation.
-	//
-	// Block submission.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
-	BlockSubmission(ctx context.Context, req OptBlockSubmissionRequestModel, params BlockSubmissionParams) error
 	// BuildProblemPackage implements BuildProblemPackage operation.
 	//
 	// Queue an immutable draft snapshot.
@@ -96,7 +72,7 @@ type Handler interface {
 	//
 	// Cancel my contest join request.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
+	// DELETE /contests/{contest_id}/requests/{id}
 	CancelContestJoinRequest(ctx context.Context, params CancelContestJoinRequestParams) error
 	// CancelInvitation implements CancelInvitation operation.
 	//
@@ -106,16 +82,16 @@ type Handler interface {
 	CancelInvitation(ctx context.Context, params CancelInvitationParams) error
 	// CancelOrganizationJoinRequest implements CancelOrganizationJoinRequest operation.
 	//
-	// Cancel my join request to organization.
+	// Cancel my organization join request.
 	//
-	// DELETE /organizations/{login}/requests/mine
+	// DELETE /organizations/{login}/requests/{id}
 	CancelOrganizationJoinRequest(ctx context.Context, params CancelOrganizationJoinRequestParams) error
 	// CancelProblemBuild implements CancelProblemBuild operation.
 	//
 	// Cancel a queued or running build.
 	//
-	// POST /problems/{id}/builds/{buildId}/cancel
-	CancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (*ProblemBuildCancelled, error)
+	// PATCH /problems/{id}/builds/{buildId}
+	CancelProblemBuild(ctx context.Context, req *CancelProblemBuildRequestModel, params CancelProblemBuildParams) (*ProblemBuildCancelled, error)
 	// ChangePassword implements ChangePassword operation.
 	//
 	// Change password for current user.
@@ -138,43 +114,43 @@ type Handler interface {
 	//
 	// Create contest.
 	//
-	// POST /organizations/{org_login}/contests
-	CreateContest(ctx context.Context, params CreateContestParams) (*CreationResponseModel, error)
+	// POST /contests
+	CreateContest(ctx context.Context, req *CreateContestRequestModel) (*CreationResponseModel, error)
 	// CreateContestAnnouncement implements CreateContestAnnouncement operation.
 	//
 	// Create a contest announcement (jury only).
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/announcements
+	// POST /contests/{contest_id}/announcements
 	CreateContestAnnouncement(ctx context.Context, req *CreateContestAnnouncementRequestModel, params CreateContestAnnouncementParams) (*ContestAnnouncementModel, error)
 	// CreateContestClarification implements CreateContestClarification operation.
 	//
 	// Submit a clarification question to the jury.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/clarifications
+	// POST /contests/{contest_id}/clarifications
 	CreateContestClarification(ctx context.Context, req *CreateContestClarificationRequestModel, params CreateContestClarificationParams) (*ContestClarificationModel, error)
 	// CreateContestDraft implements CreateContestDraft operation.
 	//
 	// Create contest draft.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/drafts
+	// POST /contests/{contest_id}/drafts
 	CreateContestDraft(ctx context.Context, req *CreateContestDraftRequestModel, params CreateContestDraftParams) (*CreationResponseModel, error)
 	// CreateContestJoinRequest implements CreateContestJoinRequest operation.
 	//
 	// Request to participate in contest.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/requests
+	// POST /contests/{contest_id}/requests
 	CreateContestJoinRequest(ctx context.Context, req OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (*ContestJoinRequestResponseModel, error)
 	// CreateContestProblem implements CreateContestProblem operation.
 	//
 	// Create contest problem.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/problems
+	// POST /contests/{contest_id}/problems
 	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) error
 	// CreateContestTeam implements CreateContestTeam operation.
 	//
 	// Create contest team.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/teams
+	// POST /contests/{contest_id}/teams
 	CreateContestTeam(ctx context.Context, params CreateContestTeamParams) error
 	// CreateOrganization implements CreateOrganization operation.
 	//
@@ -218,12 +194,6 @@ type Handler interface {
 	//
 	// POST /teams
 	CreateTeam(ctx context.Context, req *CreateTeamReq) (*CreationResponseModel, error)
-	// DeclineInvitation implements DeclineInvitation operation.
-	//
-	// Decline an invitation addressed to the caller.
-	//
-	// POST /invitations/{id}/decline
-	DeclineInvitation(ctx context.Context, params DeclineInvitationParams) error
 	// DeleteAvatar implements DeleteAvatar operation.
 	//
 	// Delete user avatar.
@@ -234,37 +204,37 @@ type Handler interface {
 	//
 	// Delete contest.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}
+	// DELETE /contests/{contest_id}
 	DeleteContest(ctx context.Context, params DeleteContestParams) error
 	// DeleteContestAnnouncement implements DeleteContestAnnouncement operation.
 	//
 	// Delete a contest announcement (jury only).
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}
+	// DELETE /contests/{contest_id}/announcements/{announcement_id}
 	DeleteContestAnnouncement(ctx context.Context, params DeleteContestAnnouncementParams) error
 	// DeleteContestDraft implements DeleteContestDraft operation.
 	//
 	// Delete contest draft.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
+	// DELETE /contests/{contest_id}/drafts/{draft_id}
 	DeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) error
 	// DeleteContestMember implements DeleteContestMember operation.
 	//
 	// Delete contest member.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/members
+	// DELETE /contests/{contest_id}/members
 	DeleteContestMember(ctx context.Context, params DeleteContestMemberParams) error
 	// DeleteContestProblem implements DeleteContestProblem operation.
 	//
 	// Delete contest problem.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
+	// DELETE /contests/{contest_id}/problems/{problem_id}
 	DeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) error
 	// DeleteContestTeam implements DeleteContestTeam operation.
 	//
 	// Delete contest team.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/teams
+	// DELETE /contests/{contest_id}/teams
 	DeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) error
 	// DeleteOrganization implements DeleteOrganization operation.
 	//
@@ -300,7 +270,7 @@ type Handler interface {
 	//
 	// Turn off the contest join link.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/join-link
+	// DELETE /contests/{contest_id}/join-link
 	DisableContestJoinLink(ctx context.Context, params DisableContestJoinLinkParams) error
 	// DisableTeamJoinLink implements DisableTeamJoinLink operation.
 	//
@@ -312,7 +282,7 @@ type Handler interface {
 	//
 	// Download PDF booklet with contest statements.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/statements.pdf
+	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
 	// DownloadProblemPackage implements DownloadProblemPackage operation.
 	//
@@ -331,8 +301,8 @@ type Handler interface {
 	//
 	// Finish the caller's virtual run early.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/virtual/finish
-	FinishVirtualRun(ctx context.Context, params FinishVirtualRunParams) error
+	// PATCH /contests/{contest_id}/virtual
+	FinishVirtualRun(ctx context.Context, req *FinishVirtualRunRequestModel, params FinishVirtualRunParams) error
 	// FollowJoinLink implements FollowJoinLink operation.
 	//
 	// A team link also makes the caller an organization member, whatever its join policy. Following a link
@@ -356,26 +326,26 @@ type Handler interface {
 	//
 	// Get the contest join link.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/join-link
+	// GET /contests/{contest_id}/join-link
 	GetContestJoinLink(ctx context.Context, params GetContestJoinLinkParams) (*JoinLinkModel, error)
 	// GetContestProblem implements GetContestProblem operation.
 	//
 	// Get contest problem.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
+	// GET /contests/{contest_id}/problems/{problem_id}
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
 	// GetContestProblemAsset implements GetContestProblemAsset operation.
 	//
 	// Serves a statement image of the problem package the contest currently uses, addressed by content
 	// hash, so the response never changes.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}
+	// GET /contests/{contest_id}/problems/{problem_id}/assets/{sha256}
 	GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error)
 	// GetContestScoreboard implements GetContestScoreboard operation.
 	//
 	// Get contest scoreboard.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/scoreboard
+	// GET /contests/{contest_id}/scoreboard
 	GetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (*ScoreboardResponseModel, error)
 	// GetHealth implements GetHealth operation.
 	//
@@ -401,30 +371,6 @@ type Handler interface {
 	//
 	// GET /users/me
 	GetMe(ctx context.Context) (*GetUserResponseModel, error)
-	// GetMyContestJoinRequest implements GetMyContestJoinRequest operation.
-	//
-	// Get my pending contest join request.
-	//
-	// GET /organizations/{org_login}/contests/{contest_login}/requests/mine
-	GetMyContestJoinRequest(ctx context.Context, params GetMyContestJoinRequestParams) (*ContestJoinRequestNullableResponseModel, error)
-	// GetMyContestRole implements GetMyContestRole operation.
-	//
-	// Get my contest role.
-	//
-	// GET /organizations/{org_login}/contests/{contest_login}/my-role
-	GetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (*GetMyContestRoleResponseModel, error)
-	// GetMyDashboard implements GetMyDashboard operation.
-	//
-	// Get my dashboard.
-	//
-	// GET /users/me/dashboard
-	GetMyDashboard(ctx context.Context) (*GetUserDashboardResponseModel, error)
-	// GetMyOrganizationJoinRequest implements GetMyOrganizationJoinRequest operation.
-	//
-	// Get my pending join request to organization.
-	//
-	// GET /organizations/{login}/requests/mine
-	GetMyOrganizationJoinRequest(ctx context.Context, params GetMyOrganizationJoinRequestParams) (*OrganizationJoinRequestNullableResponseModel, error)
 	// GetOrganization implements GetOrganization operation.
 	//
 	// Get organization by login.
@@ -459,7 +405,7 @@ type Handler interface {
 	//
 	// Get problem block status for user.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
+	// GET /contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block
 	GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error)
 	// GetProblemBuild implements GetProblemBuild operation.
 	//
@@ -521,12 +467,6 @@ type Handler interface {
 	//
 	// GET /users/{username}/avatar
 	GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (GetUserAvatarRes, error)
-	// GetVirtualRun implements GetVirtualRun operation.
-	//
-	// Get the caller's virtual run.
-	//
-	// GET /organizations/{org_login}/contests/{contest_login}/virtual
-	GetVirtualRun(ctx context.Context, params GetVirtualRunParams) (*VirtualRunResponseModel, error)
 	// ImportProblem implements ImportProblem operation.
 	//
 	// Replace the draft with the contents of a problem archive.
@@ -537,7 +477,7 @@ type Handler interface {
 	//
 	// Invite a user to take part in the contest.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/invitations
+	// POST /contests/{contest_id}/invitations
 	InviteContestParticipant(ctx context.Context, req *InviteContestParticipantRequestModel, params InviteContestParticipantParams) (*InvitationModel, error)
 	// InviteOrganizationMember implements InviteOrganizationMember operation.
 	//
@@ -545,60 +485,60 @@ type Handler interface {
 	//
 	// POST /organizations/{login}/invitations
 	InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*InvitationModel, error)
-	// ListAdminContests implements ListAdminContests operation.
-	//
-	// List admin contests.
-	//
-	// GET /admin/contests
-	ListAdminContests(ctx context.Context, params ListAdminContestsParams) (*ListContestsResponseModel, error)
 	// ListContestAnnouncements implements ListContestAnnouncements operation.
 	//
 	// List contest announcements.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/announcements
+	// GET /contests/{contest_id}/announcements
 	ListContestAnnouncements(ctx context.Context, params ListContestAnnouncementsParams) (*ListContestAnnouncementsResponseModel, error)
 	// ListContestClarifications implements ListContestClarifications operation.
 	//
 	// List contest clarifications (for participant: own questions; for jury: all questions).
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/clarifications
+	// GET /contests/{contest_id}/clarifications
 	ListContestClarifications(ctx context.Context, params ListContestClarificationsParams) (*ListContestClarificationsResponseModel, error)
 	// ListContestDrafts implements ListContestDrafts operation.
 	//
 	// List contest drafts.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/drafts
+	// GET /contests/{contest_id}/drafts
 	ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error)
 	// ListContestInvitations implements ListContestInvitations operation.
 	//
 	// List pending contest invitations.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/invitations
+	// GET /contests/{contest_id}/invitations
 	ListContestInvitations(ctx context.Context, params ListContestInvitationsParams) (*ListInvitationsResponseModel, error)
 	// ListContestJoinRequests implements ListContestJoinRequests operation.
 	//
 	// List pending contest join requests.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/requests
+	// GET /contests/{contest_id}/requests
 	ListContestJoinRequests(ctx context.Context, params ListContestJoinRequestsParams) (*ListContestJoinRequestsResponseModel, error)
 	// ListContestMembers implements ListContestMembers operation.
 	//
 	// List contest members.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/members
+	// GET /contests/{contest_id}/members
 	ListContestMembers(ctx context.Context, params ListContestMembersParams) (*ListContestMembersResponseModel, error)
 	// ListContestSubmissions implements ListContestSubmissions operation.
 	//
 	// List contest submissions.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/submissions
+	// GET /contests/{contest_id}/submissions
 	ListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (*ListSubmissionsResponseModel, error)
 	// ListContestTeams implements ListContestTeams operation.
 	//
 	// List contest teams.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/teams
+	// GET /contests/{contest_id}/teams
 	ListContestTeams(ctx context.Context, params ListContestTeamsParams) (*ListContestTeamsResponseModel, error)
+	// ListContests implements ListContests operation.
+	//
+	// Contests visible to the caller; administrators see all.
+	//
+	// GET /contests
+	ListContests(ctx context.Context, params ListContestsParams) (*ListContestsResponseModel, error)
 	// ListMyClaimedAccounts implements ListMyClaimedAccounts operation.
 	//
 	// List claimed temporary accounts.
@@ -611,12 +551,6 @@ type Handler interface {
 	//
 	// GET /notifications
 	ListNotifications(ctx context.Context, params ListNotificationsParams) (*NotificationsListResponseModel, error)
-	// ListOrganizationContests implements ListOrganizationContests operation.
-	//
-	// List organization contests.
-	//
-	// GET /organizations/{org_login}/contests
-	ListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (*ListContestsResponseModel, error)
 	// ListOrganizationInvitations implements ListOrganizationInvitations operation.
 	//
 	// List pending organization invitations.
@@ -677,24 +611,12 @@ type Handler interface {
 	//
 	// GET /problems
 	ListProblems(ctx context.Context, params ListProblemsParams) (*ListProblemsResponseModel, error)
-	// ListPublicContests implements ListPublicContests operation.
-	//
-	// List public contests.
-	//
-	// GET /public/contests
-	ListPublicContests(ctx context.Context, params ListPublicContestsParams) (*ListContestsResponseModel, error)
 	// ListSubmissions implements ListSubmissions operation.
 	//
 	// List submissions.
 	//
 	// GET /submissions
 	ListSubmissions(ctx context.Context, params ListSubmissionsParams) (*ListSubmissionsResponseModel, error)
-	// ListTeamContests implements ListTeamContests operation.
-	//
-	// List contests accessible by team.
-	//
-	// GET /teams/{id}/contests
-	ListTeamContests(ctx context.Context, params ListTeamContestsParams) (*ListContestsResponseModel, error)
 	// ListTeamMembers implements ListTeamMembers operation.
 	//
 	// List team members.
@@ -707,12 +629,6 @@ type Handler interface {
 	//
 	// GET /teams
 	ListTeams(ctx context.Context, params ListTeamsParams) (*ListTeamsResponseModel, error)
-	// ListUserContests implements ListUserContests operation.
-	//
-	// List user contests.
-	//
-	// GET /users/{username}/contests
-	ListUserContests(ctx context.Context, params ListUserContestsParams) (*ListUserContestsResponseModel, error)
 	// ListUserSubmissions implements ListUserSubmissions operation.
 	//
 	// List user submissions.
@@ -725,12 +641,6 @@ type Handler interface {
 	//
 	// GET /users
 	ListUsers(ctx context.Context, params ListUsersParams) (*ListUsersResponseModel, error)
-	// ListWorkshopContests implements ListWorkshopContests operation.
-	//
-	// List workshop contests.
-	//
-	// GET /workshop/contests
-	ListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (*ListContestsResponseModel, error)
 	// Login implements Login operation.
 	//
 	// Login.
@@ -767,36 +677,12 @@ type Handler interface {
 	//
 	// POST /auth/register
 	Register(ctx context.Context, req *RegisterRequestModel) (*AuthResponseModel, error)
-	// RejectContestJoinRequest implements RejectContestJoinRequest operation.
-	//
-	// Reject contest join request.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject
-	RejectContestJoinRequest(ctx context.Context, params RejectContestJoinRequestParams) error
-	// RejectOrganizationJoinRequest implements RejectOrganizationJoinRequest operation.
-	//
-	// Reject organization join request.
-	//
-	// POST /organizations/{login}/requests/{id}/reject
-	RejectOrganizationJoinRequest(ctx context.Context, params RejectOrganizationJoinRequestParams) error
 	// RejudgeContest implements RejudgeContest operation.
 	//
-	// Rejudge contest.
+	// Rejudge contest submissions.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/rejudge
-	RejudgeContest(ctx context.Context, params RejudgeContestParams) error
-	// RejudgeContestProblem implements RejudgeContestProblem operation.
-	//
-	// Rejudge contest problem.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
-	RejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) error
-	// RejudgeSubmission implements RejudgeSubmission operation.
-	//
-	// Rejudge submission.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
-	RejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) error
+	// POST /contests/{contest_id}/rejudge
+	RejudgeContest(ctx context.Context, req OptRejudgeContestRequestModel, params RejudgeContestParams) error
 	// RemoveOrganizationMember implements RemoveOrganizationMember operation.
 	//
 	// Remove member from organization.
@@ -813,7 +699,7 @@ type Handler interface {
 	//
 	// Reorder contest problems.
 	//
-	// PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
+	// PUT /contests/{contest_id}/problems/reorder
 	ReorderContestProblems(ctx context.Context, req *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) error
 	// RequestEmailChange implements RequestEmailChange operation.
 	//
@@ -831,7 +717,7 @@ type Handler interface {
 	//
 	// Turn on the contest join link with a new token.
 	//
-	// PUT /organizations/{org_login}/contests/{contest_login}/join-link
+	// PUT /contests/{contest_id}/join-link
 	ResetContestJoinLink(ctx context.Context, params ResetContestJoinLinkParams) (*JoinLinkModel, error)
 	// ResetPassword implements ResetPassword operation.
 	//
@@ -845,6 +731,24 @@ type Handler interface {
 	//
 	// PUT /teams/{id}/join-link
 	ResetTeamJoinLink(ctx context.Context, params ResetTeamJoinLinkParams) (*JoinLinkModel, error)
+	// ResolveContestJoinRequest implements ResolveContestJoinRequest operation.
+	//
+	// Approve or reject a contest join request.
+	//
+	// PATCH /contests/{contest_id}/requests/{id}
+	ResolveContestJoinRequest(ctx context.Context, req *ResolveJoinRequestModel, params ResolveContestJoinRequestParams) error
+	// ResolveOrganizationJoinRequest implements ResolveOrganizationJoinRequest operation.
+	//
+	// Approve or reject an organization join request.
+	//
+	// PATCH /organizations/{login}/requests/{id}
+	ResolveOrganizationJoinRequest(ctx context.Context, req *ResolveOrganizationJoinRequestModel, params ResolveOrganizationJoinRequestParams) error
+	// RespondInvitation implements RespondInvitation operation.
+	//
+	// Accept or decline an invitation addressed to the caller.
+	//
+	// PATCH /invitations/{id}
+	RespondInvitation(ctx context.Context, req *RespondInvitationRequestModel, params RespondInvitationParams) error
 	// SaveProblemDraft implements SaveProblemDraft operation.
 	//
 	// Replace the draft in one revision change.
@@ -855,37 +759,31 @@ type Handler interface {
 	//
 	// Start a virtual run of a finished contest.
 	//
-	// POST /organizations/{org_login}/contests/{contest_login}/virtual
+	// POST /contests/{contest_id}/virtual
 	StartVirtualRun(ctx context.Context, params StartVirtualRunParams) (*VirtualRunModel, error)
 	// UnblockProblemForUser implements UnblockProblemForUser operation.
 	//
 	// Unblock problem for user.
 	//
-	// DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
+	// DELETE /contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block
 	UnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) error
-	// UnblockSubmission implements UnblockSubmission operation.
-	//
-	// Unblock submission.
-	//
-	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
-	UnblockSubmission(ctx context.Context, params UnblockSubmissionParams) error
 	// UpdateContest implements UpdateContest operation.
 	//
 	// Update contest.
 	//
-	// PATCH /organizations/{org_login}/contests/{contest_login}
+	// PATCH /contests/{contest_id}
 	UpdateContest(ctx context.Context, req *UpdateContestRequestModel, params UpdateContestParams) error
 	// UpdateContestMember implements UpdateContestMember operation.
 	//
 	// Update contest member.
 	//
-	// PATCH /organizations/{org_login}/contests/{contest_login}/members
+	// PATCH /contests/{contest_id}/members
 	UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error
 	// UpdateContestTeam implements UpdateContestTeam operation.
 	//
 	// Update contest team.
 	//
-	// PATCH /organizations/{org_login}/contests/{contest_login}/teams
+	// PATCH /contests/{contest_id}/teams
 	UpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) error
 	// UpdateOrganization implements UpdateOrganization operation.
 	//
@@ -905,6 +803,12 @@ type Handler interface {
 	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
+	// UpdateSubmission implements UpdateSubmission operation.
+	//
+	// Block or unblock a contest submission.
+	//
+	// PATCH /submissions/{submission_id}
+	UpdateSubmission(ctx context.Context, req *UpdateSubmissionRequestModel, params UpdateSubmissionParams) error
 	// UpdateTeam implements UpdateTeam operation.
 	//
 	// Update team.

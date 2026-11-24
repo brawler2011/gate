@@ -11,53 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
-func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
-	return uc.contestRepo.ListPublicContests(ctx, filter)
-}
-
-func (uc *ContestsUseCase) ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error) {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, filter.UserId); err != nil {
-		return nil, err
+// Lists contests visible to the caller; a team filter also requires seeing the team.
+func (uc *ContestsUseCase) ListContests(ctx context.Context, filter contestsmodel.ListContestsFilter) (*contestsmodel.ContestsList, error) {
+	if filter.TeamID != nil {
+		if _, err := access.Team(ctx, uc.access, *filter.TeamID, accessmodel.TeamView); err != nil {
+			return nil, err
+		}
 	}
-	var err error
-	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
-	if err != nil {
-		return nil, err
-	}
-	return uc.contestRepo.ListWorkshopContests(ctx, filter)
-}
-
-func (uc *ContestsUseCase) ListUserContests(ctx context.Context, filter contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error) {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, filter.UserId); err != nil {
-		return nil, err
-	}
-	var err error
-	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
-	if err != nil {
-		return nil, err
-	}
-	return uc.contestRepo.ListUserContests(ctx, filter)
-}
-
-func (uc *ContestsUseCase) ListAdminContests(ctx context.Context, filter contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error) {
-	if err := accessmodel.RequireAdmin(ctx); err != nil {
-		return nil, err
-	}
-	var err error
-	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
-	if err != nil {
-		return nil, err
-	}
-	return uc.contestRepo.ListAdminContests(ctx, filter)
-}
-
-func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, login, search string, page, size int32) (*contestsmodel.ContestsList, error) {
-	var err error
-	page, size, err = paging.Normalize(page, size, 50)
-	if err != nil {
-		return nil, err
-	}
-	return uc.contestRepo.ListOrganizationContests(ctx, login, search, page, size)
+	return uc.contestRepo.ListContests(ctx, filter)
 }
 
 // Competitors and scoreboard viewers see the roster.
@@ -89,14 +50,4 @@ func (uc *ContestsUseCase) ListContestMembers(ctx context.Context, filter contes
 		return nil, err
 	}
 	return uc.contestRepo.ListContestMembers(ctx, filter)
-}
-
-func (uc *ContestsUseCase) ListDashboardContests(ctx context.Context, user uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error) {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, user); err != nil {
-		return nil, err
-	}
-	if limit < 1 || limit > 100 {
-		return nil, pkg.ErrInvalid
-	}
-	return uc.contestRepo.ListDashboardContests(ctx, user, limit)
 }

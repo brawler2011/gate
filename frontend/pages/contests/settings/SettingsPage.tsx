@@ -72,10 +72,11 @@ const ContestManagePage = (): ReactNode => {
           <Box className={classes.contentPanel}>
             {activeSection === SECTIONS.SETTINGS && <SettingsSection contest={contest} />}
             {activeSection === SECTIONS.PROBLEMS && (
-              <ProblemsSection orgLogin={slug} contestLogin={contestLogin} initialProblems={problems} />
+              <ProblemsSection orgLogin={slug} contestLogin={contestLogin} contestId={contest.id}
+                initialProblems={problems} />
             )}
             {activeSection === SECTIONS.PARTICIPANTS && (
-              <ParticipantsSection orgLogin={slug} contestLogin={contestLogin} />
+              <ParticipantsSection orgLogin={slug} contestLogin={contestLogin} contestId={contest.id} />
             )}
           </Box>
         </Box>

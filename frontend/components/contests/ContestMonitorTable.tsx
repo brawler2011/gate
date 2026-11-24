@@ -17,6 +17,7 @@ import type {ScoreboardProblemResultModel} from "@/contracts/core/v1/schema";
 interface ContestMonitorTableProps {
   orgLogin: string;
   contestLogin: string;
+  contestId: string;
   isManager?: boolean;
   allowVirtual?: boolean;
 }
@@ -33,6 +34,7 @@ const formatTimeMinutes = (timeMinutes?: number | null): string => {
 export const ContestMonitorTable = ({
   orgLogin,
   contestLogin,
+  contestId,
   isManager = false,
   allowVirtual = false,
 }: ContestMonitorTableProps): React.ReactNode => {
@@ -42,9 +44,9 @@ export const ContestMonitorTable = ({
   const {replaying, pending, known} = useVirtualRun(orgLogin, contestLogin);
   const polled = !known || replaying || showVirtual;
   // Live updates carry official rows at the present moment, so replayed and virtual views poll instead.
-  const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
+  const scoreboard = api.useQuery('get', '/contests/{contest_id}/scoreboard', {
     params: {
-      path: {org_login: orgLogin, contest_login: contestLogin},
+      path: {contest_id: contestId},
       query: showVirtual ? {unfrozen: showRealMonitor, virtual: true} : {unfrozen: showRealMonitor},
     },
   }, {

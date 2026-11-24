@@ -1,6 +1,7 @@
 import {useQueryClient, type Query} from '@tanstack/react-query';
 import {createContext, useEffect, useState} from 'react';
 
+import {contestQueryKey} from '@/hooks/useContestData';
 import {useWebSocketNotifications} from '@/hooks/useWebSocketNotifications';
 import {api} from '@/lib/api';
 import {env} from '@/lib/env';
@@ -28,11 +29,11 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       setStatus({phase: 'idle'});
       return;
     }
-    const path = {org_login: orgLogin, contest_login: contestLogin};
+    const path = {contest_id: contestId};
     const submissions = {queryKey: api.queryOptions('get',
-      '/organizations/{org_login}/contests/{contest_login}/submissions', {params: {path}}).queryKey};
+      '/contests/{contest_id}/submissions', {params: {path}}).queryKey};
     const scoreboard = {queryKey: api.queryOptions('get',
-      '/organizations/{org_login}/contests/{contest_login}/scoreboard', {params: {path}}).queryKey};
+      '/contests/{contest_id}/scoreboard', {params: {path}}).queryKey};
     let disposed = false;
     const revisions = new Map<string, number>();
     const progress = new Map<string, SubmissionEvent>();
@@ -114,10 +115,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       onStatusChange: next => {
         setStatus(next);
         if (next.phase === 'connected' || next.phase === 'reconnecting') {
-          void client.invalidateQueries({queryKey: api.queryOptions('get',
-            '/organizations/{org_login}/contests/{contest_login}', {params: {path}}).queryKey});
-          void client.invalidateQueries({queryKey: api.queryOptions('get',
-            '/organizations/{org_login}/contests/{contest_login}/my-role', {params: {path}}).queryKey});
+          void client.invalidateQueries({queryKey: contestQueryKey(orgLogin, contestLogin)});
         }
         if (next.phase === 'connected') {
           reconnect = true;

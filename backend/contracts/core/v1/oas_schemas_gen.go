@@ -17,9 +17,6 @@ func (s *ProblemStatusCodeWithHeaders) Error() string {
 	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
 }
 
-// AcceptInvitationOK is response for AcceptInvitation operation.
-type AcceptInvitationOK struct{}
-
 // AddOrganizationMemberOK is response for AddOrganizationMember operation.
 type AddOrganizationMemberOK struct{}
 
@@ -159,83 +156,6 @@ func (s *AnswerContestClarificationRequestModel) SetPublishAsAnnouncement(val Op
 func (s *AnswerContestClarificationRequestModel) SetAnnouncementTitle(val OptString) {
 	s.AnnouncementTitle = val
 }
-
-// ApproveContestJoinRequestOK is response for ApproveContestJoinRequest operation.
-type ApproveContestJoinRequestOK struct{}
-
-// Fields for the approve organization join request.
-// Ref: #/components/schemas/ApproveOrganizationJoinRequestModel
-type ApproveOrganizationJoinRequestModel struct {
-	Role OptApproveOrganizationJoinRequestModelRole `json:"role"`
-}
-
-// GetRole returns the value of Role.
-func (s *ApproveOrganizationJoinRequestModel) GetRole() OptApproveOrganizationJoinRequestModelRole {
-	return s.Role
-}
-
-// SetRole sets the value of Role.
-func (s *ApproveOrganizationJoinRequestModel) SetRole(val OptApproveOrganizationJoinRequestModelRole) {
-	s.Role = val
-}
-
-type ApproveOrganizationJoinRequestModelRole string
-
-const (
-	ApproveOrganizationJoinRequestModelRoleOwner      ApproveOrganizationJoinRequestModelRole = "owner"
-	ApproveOrganizationJoinRequestModelRoleAdmin      ApproveOrganizationJoinRequestModelRole = "admin"
-	ApproveOrganizationJoinRequestModelRoleMaintainer ApproveOrganizationJoinRequestModelRole = "maintainer"
-	ApproveOrganizationJoinRequestModelRoleMember     ApproveOrganizationJoinRequestModelRole = "member"
-)
-
-// AllValues returns all ApproveOrganizationJoinRequestModelRole values.
-func (ApproveOrganizationJoinRequestModelRole) AllValues() []ApproveOrganizationJoinRequestModelRole {
-	return []ApproveOrganizationJoinRequestModelRole{
-		ApproveOrganizationJoinRequestModelRoleOwner,
-		ApproveOrganizationJoinRequestModelRoleAdmin,
-		ApproveOrganizationJoinRequestModelRoleMaintainer,
-		ApproveOrganizationJoinRequestModelRoleMember,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ApproveOrganizationJoinRequestModelRole) MarshalText() ([]byte, error) {
-	switch s {
-	case ApproveOrganizationJoinRequestModelRoleOwner:
-		return []byte(s), nil
-	case ApproveOrganizationJoinRequestModelRoleAdmin:
-		return []byte(s), nil
-	case ApproveOrganizationJoinRequestModelRoleMaintainer:
-		return []byte(s), nil
-	case ApproveOrganizationJoinRequestModelRoleMember:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ApproveOrganizationJoinRequestModelRole) UnmarshalText(data []byte) error {
-	switch ApproveOrganizationJoinRequestModelRole(data) {
-	case ApproveOrganizationJoinRequestModelRoleOwner:
-		*s = ApproveOrganizationJoinRequestModelRoleOwner
-		return nil
-	case ApproveOrganizationJoinRequestModelRoleAdmin:
-		*s = ApproveOrganizationJoinRequestModelRoleAdmin
-		return nil
-	case ApproveOrganizationJoinRequestModelRoleMaintainer:
-		*s = ApproveOrganizationJoinRequestModelRoleMaintainer
-		return nil
-	case ApproveOrganizationJoinRequestModelRoleMember:
-		*s = ApproveOrganizationJoinRequestModelRoleMember
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-// ApproveOrganizationJoinRequestOK is response for ApproveOrganizationJoinRequest operation.
-type ApproveOrganizationJoinRequestOK struct{}
 
 // Result of auth.
 // Ref: #/components/schemas/AuthResponseModel
@@ -412,25 +332,6 @@ func (s *BlockProblemRequestModel) SetReason(val OptString) {
 	s.Reason = val
 }
 
-// BlockSubmissionOK is response for BlockSubmission operation.
-type BlockSubmissionOK struct{}
-
-// Fields for the block submission request.
-// Ref: #/components/schemas/BlockSubmissionRequestModel
-type BlockSubmissionRequestModel struct {
-	Reason OptString `json:"reason"`
-}
-
-// GetReason returns the value of Reason.
-func (s *BlockSubmissionRequestModel) GetReason() OptString {
-	return s.Reason
-}
-
-// SetReason sets the value of Reason.
-func (s *BlockSubmissionRequestModel) SetReason(val OptString) {
-	s.Reason = val
-}
-
 type BuildProblemPackageReq struct {
 	ExpectedRevision int64 `json:"expected_revision"`
 }
@@ -453,6 +354,56 @@ type CancelInvitationOK struct{}
 
 // CancelOrganizationJoinRequestOK is response for CancelOrganizationJoinRequest operation.
 type CancelOrganizationJoinRequestOK struct{}
+
+// Cancels a queued or running build.
+// Ref: #/components/schemas/CancelProblemBuildRequestModel
+type CancelProblemBuildRequestModel struct {
+	Status CancelProblemBuildRequestModelStatus `json:"status"`
+}
+
+// GetStatus returns the value of Status.
+func (s *CancelProblemBuildRequestModel) GetStatus() CancelProblemBuildRequestModelStatus {
+	return s.Status
+}
+
+// SetStatus sets the value of Status.
+func (s *CancelProblemBuildRequestModel) SetStatus(val CancelProblemBuildRequestModelStatus) {
+	s.Status = val
+}
+
+type CancelProblemBuildRequestModelStatus string
+
+const (
+	CancelProblemBuildRequestModelStatusCancelled CancelProblemBuildRequestModelStatus = "cancelled"
+)
+
+// AllValues returns all CancelProblemBuildRequestModelStatus values.
+func (CancelProblemBuildRequestModelStatus) AllValues() []CancelProblemBuildRequestModelStatus {
+	return []CancelProblemBuildRequestModelStatus{
+		CancelProblemBuildRequestModelStatusCancelled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CancelProblemBuildRequestModelStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case CancelProblemBuildRequestModelStatusCancelled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CancelProblemBuildRequestModelStatus) UnmarshalText(data []byte) error {
+	switch CancelProblemBuildRequestModelStatus(data) {
+	case CancelProblemBuildRequestModelStatusCancelled:
+		*s = CancelProblemBuildRequestModelStatusCancelled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Fields for the change password request.
 // Ref: #/components/schemas/ChangePasswordRequestModel
@@ -1138,22 +1089,6 @@ func (s *ContestJoinRequestModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *ContestJoinRequestModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
-}
-
-// Result of contest join request nullable.
-// Ref: #/components/schemas/ContestJoinRequestNullableResponseModel
-type ContestJoinRequestNullableResponseModel struct {
-	Request OptContestJoinRequestModel `json:"request"`
-}
-
-// GetRequest returns the value of Request.
-func (s *ContestJoinRequestNullableResponseModel) GetRequest() OptContestJoinRequestModel {
-	return s.Request
-}
-
-// SetRequest sets the value of Request.
-func (s *ContestJoinRequestNullableResponseModel) SetRequest(val OptContestJoinRequestModel) {
-	s.Request = val
 }
 
 // Result of contest join request.
@@ -2737,6 +2672,45 @@ func (s *CreateContestJoinRequestModel) SetMessage(val OptString) {
 // CreateContestProblemNoContent is response for CreateContestProblem operation.
 type CreateContestProblemNoContent struct{}
 
+// Fields for the create contest request.
+// Ref: #/components/schemas/CreateContestRequestModel
+type CreateContestRequestModel struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Title          string    `json:"title"`
+	// Login within the organization; generated from the title when omitted.
+	Login OptString `json:"login"`
+}
+
+// GetOrganizationID returns the value of OrganizationID.
+func (s *CreateContestRequestModel) GetOrganizationID() uuid.UUID {
+	return s.OrganizationID
+}
+
+// GetTitle returns the value of Title.
+func (s *CreateContestRequestModel) GetTitle() string {
+	return s.Title
+}
+
+// GetLogin returns the value of Login.
+func (s *CreateContestRequestModel) GetLogin() OptString {
+	return s.Login
+}
+
+// SetOrganizationID sets the value of OrganizationID.
+func (s *CreateContestRequestModel) SetOrganizationID(val uuid.UUID) {
+	s.OrganizationID = val
+}
+
+// SetTitle sets the value of Title.
+func (s *CreateContestRequestModel) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetLogin sets the value of Login.
+func (s *CreateContestRequestModel) SetLogin(val OptString) {
+	s.Login = val
+}
+
 // CreateContestTeamOK is response for CreateContestTeam operation.
 type CreateContestTeamOK struct{}
 
@@ -3060,250 +3034,6 @@ func (s *CreationResponseModel) SetID(val uuid.UUID) {
 func (s *CreationResponseModel) SetLogin(val OptString) {
 	s.Login = val
 }
-
-// Dashboard contest data.
-// Ref: #/components/schemas/DashboardContestModel
-type DashboardContestModel struct {
-	Permissions        ContestPermissionsModel `json:"permissions"`
-	ID                 uuid.UUID               `json:"id"`
-	Login              string                  `json:"login"`
-	Title              string                  `json:"title"`
-	OrganizationID     uuid.UUID               `json:"organization_id"`
-	OrganizationName   string                  `json:"organization_name"`
-	OrganizationLogin  string                  `json:"organization_login"`
-	UserRole           string                  `json:"user_role"`
-	LastSubmissionTime OptNilDateTime          `json:"last_submission_time"`
-	StartTime          OptNilDateTime          `json:"start_time"`
-	EndTime            OptNilDateTime          `json:"end_time"`
-	CreatedAt          time.Time               `json:"created_at"`
-}
-
-// GetPermissions returns the value of Permissions.
-func (s *DashboardContestModel) GetPermissions() ContestPermissionsModel {
-	return s.Permissions
-}
-
-// GetID returns the value of ID.
-func (s *DashboardContestModel) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetLogin returns the value of Login.
-func (s *DashboardContestModel) GetLogin() string {
-	return s.Login
-}
-
-// GetTitle returns the value of Title.
-func (s *DashboardContestModel) GetTitle() string {
-	return s.Title
-}
-
-// GetOrganizationID returns the value of OrganizationID.
-func (s *DashboardContestModel) GetOrganizationID() uuid.UUID {
-	return s.OrganizationID
-}
-
-// GetOrganizationName returns the value of OrganizationName.
-func (s *DashboardContestModel) GetOrganizationName() string {
-	return s.OrganizationName
-}
-
-// GetOrganizationLogin returns the value of OrganizationLogin.
-func (s *DashboardContestModel) GetOrganizationLogin() string {
-	return s.OrganizationLogin
-}
-
-// GetUserRole returns the value of UserRole.
-func (s *DashboardContestModel) GetUserRole() string {
-	return s.UserRole
-}
-
-// GetLastSubmissionTime returns the value of LastSubmissionTime.
-func (s *DashboardContestModel) GetLastSubmissionTime() OptNilDateTime {
-	return s.LastSubmissionTime
-}
-
-// GetStartTime returns the value of StartTime.
-func (s *DashboardContestModel) GetStartTime() OptNilDateTime {
-	return s.StartTime
-}
-
-// GetEndTime returns the value of EndTime.
-func (s *DashboardContestModel) GetEndTime() OptNilDateTime {
-	return s.EndTime
-}
-
-// GetCreatedAt returns the value of CreatedAt.
-func (s *DashboardContestModel) GetCreatedAt() time.Time {
-	return s.CreatedAt
-}
-
-// SetPermissions sets the value of Permissions.
-func (s *DashboardContestModel) SetPermissions(val ContestPermissionsModel) {
-	s.Permissions = val
-}
-
-// SetID sets the value of ID.
-func (s *DashboardContestModel) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetLogin sets the value of Login.
-func (s *DashboardContestModel) SetLogin(val string) {
-	s.Login = val
-}
-
-// SetTitle sets the value of Title.
-func (s *DashboardContestModel) SetTitle(val string) {
-	s.Title = val
-}
-
-// SetOrganizationID sets the value of OrganizationID.
-func (s *DashboardContestModel) SetOrganizationID(val uuid.UUID) {
-	s.OrganizationID = val
-}
-
-// SetOrganizationName sets the value of OrganizationName.
-func (s *DashboardContestModel) SetOrganizationName(val string) {
-	s.OrganizationName = val
-}
-
-// SetOrganizationLogin sets the value of OrganizationLogin.
-func (s *DashboardContestModel) SetOrganizationLogin(val string) {
-	s.OrganizationLogin = val
-}
-
-// SetUserRole sets the value of UserRole.
-func (s *DashboardContestModel) SetUserRole(val string) {
-	s.UserRole = val
-}
-
-// SetLastSubmissionTime sets the value of LastSubmissionTime.
-func (s *DashboardContestModel) SetLastSubmissionTime(val OptNilDateTime) {
-	s.LastSubmissionTime = val
-}
-
-// SetStartTime sets the value of StartTime.
-func (s *DashboardContestModel) SetStartTime(val OptNilDateTime) {
-	s.StartTime = val
-}
-
-// SetEndTime sets the value of EndTime.
-func (s *DashboardContestModel) SetEndTime(val OptNilDateTime) {
-	s.EndTime = val
-}
-
-// SetCreatedAt sets the value of CreatedAt.
-func (s *DashboardContestModel) SetCreatedAt(val time.Time) {
-	s.CreatedAt = val
-}
-
-// Dashboard problem data.
-// Ref: #/components/schemas/DashboardProblemModel
-type DashboardProblemModel struct {
-	Permissions       ProblemPermissionsModel `json:"permissions"`
-	ID                uuid.UUID               `json:"id"`
-	Title             string                  `json:"title"`
-	OrganizationID    uuid.UUID               `json:"organization_id"`
-	OrganizationName  string                  `json:"organization_name"`
-	OrganizationLogin string                  `json:"organization_login"`
-	TimeLimit         int32                   `json:"time_limit"`
-	MemoryLimit       int32                   `json:"memory_limit"`
-	UpdatedAt         time.Time               `json:"updated_at"`
-}
-
-// GetPermissions returns the value of Permissions.
-func (s *DashboardProblemModel) GetPermissions() ProblemPermissionsModel {
-	return s.Permissions
-}
-
-// GetID returns the value of ID.
-func (s *DashboardProblemModel) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetTitle returns the value of Title.
-func (s *DashboardProblemModel) GetTitle() string {
-	return s.Title
-}
-
-// GetOrganizationID returns the value of OrganizationID.
-func (s *DashboardProblemModel) GetOrganizationID() uuid.UUID {
-	return s.OrganizationID
-}
-
-// GetOrganizationName returns the value of OrganizationName.
-func (s *DashboardProblemModel) GetOrganizationName() string {
-	return s.OrganizationName
-}
-
-// GetOrganizationLogin returns the value of OrganizationLogin.
-func (s *DashboardProblemModel) GetOrganizationLogin() string {
-	return s.OrganizationLogin
-}
-
-// GetTimeLimit returns the value of TimeLimit.
-func (s *DashboardProblemModel) GetTimeLimit() int32 {
-	return s.TimeLimit
-}
-
-// GetMemoryLimit returns the value of MemoryLimit.
-func (s *DashboardProblemModel) GetMemoryLimit() int32 {
-	return s.MemoryLimit
-}
-
-// GetUpdatedAt returns the value of UpdatedAt.
-func (s *DashboardProblemModel) GetUpdatedAt() time.Time {
-	return s.UpdatedAt
-}
-
-// SetPermissions sets the value of Permissions.
-func (s *DashboardProblemModel) SetPermissions(val ProblemPermissionsModel) {
-	s.Permissions = val
-}
-
-// SetID sets the value of ID.
-func (s *DashboardProblemModel) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetTitle sets the value of Title.
-func (s *DashboardProblemModel) SetTitle(val string) {
-	s.Title = val
-}
-
-// SetOrganizationID sets the value of OrganizationID.
-func (s *DashboardProblemModel) SetOrganizationID(val uuid.UUID) {
-	s.OrganizationID = val
-}
-
-// SetOrganizationName sets the value of OrganizationName.
-func (s *DashboardProblemModel) SetOrganizationName(val string) {
-	s.OrganizationName = val
-}
-
-// SetOrganizationLogin sets the value of OrganizationLogin.
-func (s *DashboardProblemModel) SetOrganizationLogin(val string) {
-	s.OrganizationLogin = val
-}
-
-// SetTimeLimit sets the value of TimeLimit.
-func (s *DashboardProblemModel) SetTimeLimit(val int32) {
-	s.TimeLimit = val
-}
-
-// SetMemoryLimit sets the value of MemoryLimit.
-func (s *DashboardProblemModel) SetMemoryLimit(val int32) {
-	s.MemoryLimit = val
-}
-
-// SetUpdatedAt sets the value of UpdatedAt.
-func (s *DashboardProblemModel) SetUpdatedAt(val time.Time) {
-	s.UpdatedAt = val
-}
-
-// DeclineInvitationOK is response for DeclineInvitation operation.
-type DeclineInvitationOK struct{}
 
 // DeleteAvatarOK is response for DeleteAvatar operation.
 type DeleteAvatarOK struct{}
@@ -4061,8 +3791,37 @@ func (s *FieldProblemParams) init() FieldProblemParams {
 	return m
 }
 
-// FinishVirtualRunNoContent is response for FinishVirtualRun operation.
-type FinishVirtualRunNoContent struct{}
+// FinishVirtualRunOK is response for FinishVirtualRun operation.
+type FinishVirtualRunOK struct{}
+
+// Ends the caller's virtual run.
+// Ref: #/components/schemas/FinishVirtualRunRequestModel
+type FinishVirtualRunRequestModel struct {
+	Finished FinishVirtualRunRequestModelFinished `json:"finished"`
+}
+
+// GetFinished returns the value of Finished.
+func (s *FinishVirtualRunRequestModel) GetFinished() FinishVirtualRunRequestModelFinished {
+	return s.Finished
+}
+
+// SetFinished sets the value of Finished.
+func (s *FinishVirtualRunRequestModel) SetFinished(val FinishVirtualRunRequestModelFinished) {
+	s.Finished = val
+}
+
+type FinishVirtualRunRequestModelFinished bool
+
+const (
+	FinishVirtualRunRequestModelFinishedTrue FinishVirtualRunRequestModelFinished = true
+)
+
+// AllValues returns all FinishVirtualRunRequestModelFinished values.
+func (FinishVirtualRunRequestModelFinished) AllValues() []FinishVirtualRunRequestModelFinished {
+	return []FinishVirtualRunRequestModelFinished{
+		FinishVirtualRunRequestModelFinishedTrue,
+	}
+}
 
 // ForgotPasswordOK is response for ForgotPassword operation.
 type ForgotPasswordOK struct{}
@@ -4177,6 +3936,10 @@ func (s *GetContestProblemResponseModel) SetProblem(val ContestProblemModel) {
 type GetContestResponseModel struct {
 	Contest  ContestModel                  `json:"contest"`
 	Problems []ContestProblemListItemModel `json:"problems"`
+	// The caller's effective contest role; absent for guests.
+	MyRole        OptString                  `json:"my_role"`
+	MyJoinRequest OptContestJoinRequestModel `json:"my_join_request"`
+	VirtualRun    OptVirtualRunModel         `json:"virtual_run"`
 }
 
 // GetContest returns the value of Contest.
@@ -4189,6 +3952,21 @@ func (s *GetContestResponseModel) GetProblems() []ContestProblemListItemModel {
 	return s.Problems
 }
 
+// GetMyRole returns the value of MyRole.
+func (s *GetContestResponseModel) GetMyRole() OptString {
+	return s.MyRole
+}
+
+// GetMyJoinRequest returns the value of MyJoinRequest.
+func (s *GetContestResponseModel) GetMyJoinRequest() OptContestJoinRequestModel {
+	return s.MyJoinRequest
+}
+
+// GetVirtualRun returns the value of VirtualRun.
+func (s *GetContestResponseModel) GetVirtualRun() OptVirtualRunModel {
+	return s.VirtualRun
+}
+
 // SetContest sets the value of Contest.
 func (s *GetContestResponseModel) SetContest(val ContestModel) {
 	s.Contest = val
@@ -4197,6 +3975,21 @@ func (s *GetContestResponseModel) SetContest(val ContestModel) {
 // SetProblems sets the value of Problems.
 func (s *GetContestResponseModel) SetProblems(val []ContestProblemListItemModel) {
 	s.Problems = val
+}
+
+// SetMyRole sets the value of MyRole.
+func (s *GetContestResponseModel) SetMyRole(val OptString) {
+	s.MyRole = val
+}
+
+// SetMyJoinRequest sets the value of MyJoinRequest.
+func (s *GetContestResponseModel) SetMyJoinRequest(val OptContestJoinRequestModel) {
+	s.MyJoinRequest = val
+}
+
+// SetVirtualRun sets the value of VirtualRun.
+func (s *GetContestResponseModel) SetVirtualRun(val OptVirtualRunModel) {
+	s.VirtualRun = val
 }
 
 // Result of get health.
@@ -4226,26 +4019,11 @@ func (s *GetHealthResponseModel) SetMessage(val string) {
 	s.Message = val
 }
 
-// Result of get my contest role.
-// Ref: #/components/schemas/GetMyContestRoleResponseModel
-type GetMyContestRoleResponseModel struct {
-	Role string `json:"role"`
-}
-
-// GetRole returns the value of Role.
-func (s *GetMyContestRoleResponseModel) GetRole() string {
-	return s.Role
-}
-
-// SetRole sets the value of Role.
-func (s *GetMyContestRoleResponseModel) SetRole(val string) {
-	s.Role = val
-}
-
 // Result of get organization.
 // Ref: #/components/schemas/GetOrganizationResponseModel
 type GetOrganizationResponseModel struct {
-	Organization OrganizationModel `json:"organization"`
+	Organization  OrganizationModel               `json:"organization"`
+	MyJoinRequest OptOrganizationJoinRequestModel `json:"my_join_request"`
 }
 
 // GetOrganization returns the value of Organization.
@@ -4253,9 +4031,19 @@ func (s *GetOrganizationResponseModel) GetOrganization() OrganizationModel {
 	return s.Organization
 }
 
+// GetMyJoinRequest returns the value of MyJoinRequest.
+func (s *GetOrganizationResponseModel) GetMyJoinRequest() OptOrganizationJoinRequestModel {
+	return s.MyJoinRequest
+}
+
 // SetOrganization sets the value of Organization.
 func (s *GetOrganizationResponseModel) SetOrganization(val OrganizationModel) {
 	s.Organization = val
+}
+
+// SetMyJoinRequest sets the value of MyJoinRequest.
+func (s *GetOrganizationResponseModel) SetMyJoinRequest(val OptOrganizationJoinRequestModel) {
+	s.MyJoinRequest = val
 }
 
 // GetPostImageNotModified is response for GetPostImage operation.
@@ -4521,33 +4309,6 @@ func (s *GetUserAvatarOKHeaders) SetResponse(val GetUserAvatarOK) {
 }
 
 func (*GetUserAvatarOKHeaders) getUserAvatarRes() {}
-
-// Result of get user dashboard.
-// Ref: #/components/schemas/GetUserDashboardResponseModel
-type GetUserDashboardResponseModel struct {
-	RecentContests []DashboardContestModel `json:"recent_contests"`
-	MyProblems     []DashboardProblemModel `json:"my_problems"`
-}
-
-// GetRecentContests returns the value of RecentContests.
-func (s *GetUserDashboardResponseModel) GetRecentContests() []DashboardContestModel {
-	return s.RecentContests
-}
-
-// GetMyProblems returns the value of MyProblems.
-func (s *GetUserDashboardResponseModel) GetMyProblems() []DashboardProblemModel {
-	return s.MyProblems
-}
-
-// SetRecentContests sets the value of RecentContests.
-func (s *GetUserDashboardResponseModel) SetRecentContests(val []DashboardContestModel) {
-	s.RecentContests = val
-}
-
-// SetMyProblems sets the value of MyProblems.
-func (s *GetUserDashboardResponseModel) SetMyProblems(val []DashboardProblemModel) {
-	s.MyProblems = val
-}
 
 // Result of get user.
 // Ref: #/components/schemas/GetUserResponseModel
@@ -4952,47 +4713,6 @@ func (s *JoinLinkTargetModel) SetContestTitle(val OptString) {
 	s.ContestTitle = val
 }
 
-type ListAdminContestsVisibility string
-
-const (
-	ListAdminContestsVisibilityPublic  ListAdminContestsVisibility = "public"
-	ListAdminContestsVisibilityPrivate ListAdminContestsVisibility = "private"
-)
-
-// AllValues returns all ListAdminContestsVisibility values.
-func (ListAdminContestsVisibility) AllValues() []ListAdminContestsVisibility {
-	return []ListAdminContestsVisibility{
-		ListAdminContestsVisibilityPublic,
-		ListAdminContestsVisibilityPrivate,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListAdminContestsVisibility) MarshalText() ([]byte, error) {
-	switch s {
-	case ListAdminContestsVisibilityPublic:
-		return []byte(s), nil
-	case ListAdminContestsVisibilityPrivate:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListAdminContestsVisibility) UnmarshalText(data []byte) error {
-	switch ListAdminContestsVisibility(data) {
-	case ListAdminContestsVisibilityPublic:
-		*s = ListAdminContestsVisibilityPublic
-		return nil
-	case ListAdminContestsVisibilityPrivate:
-		*s = ListAdminContestsVisibilityPrivate
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // Paginated collection of claimed accounts.
 // Ref: #/components/schemas/ListClaimedAccountsResponseModel
 type ListClaimedAccountsResponseModel struct {
@@ -5174,6 +4894,47 @@ func (s *ListContestsResponseModel) SetContests(val []ContestModel) {
 // SetPagination sets the value of Pagination.
 func (s *ListContestsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
+}
+
+type ListContestsVisibility string
+
+const (
+	ListContestsVisibilityPublic  ListContestsVisibility = "public"
+	ListContestsVisibilityPrivate ListContestsVisibility = "private"
+)
+
+// AllValues returns all ListContestsVisibility values.
+func (ListContestsVisibility) AllValues() []ListContestsVisibility {
+	return []ListContestsVisibility{
+		ListContestsVisibilityPublic,
+		ListContestsVisibilityPrivate,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListContestsVisibility) MarshalText() ([]byte, error) {
+	switch s {
+	case ListContestsVisibilityPublic:
+		return []byte(s), nil
+	case ListContestsVisibilityPrivate:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListContestsVisibility) UnmarshalText(data []byte) error {
+	switch ListContestsVisibility(data) {
+	case ListContestsVisibilityPublic:
+		*s = ListContestsVisibilityPublic
+		return nil
+	case ListContestsVisibilityPrivate:
+		*s = ListContestsVisibilityPrivate
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Pending named invitations, newest first.
@@ -5499,88 +5260,6 @@ func (s *ListTeamsResponseModel) SetTeams(val []TeamModel) {
 // SetPagination sets the value of Pagination.
 func (s *ListTeamsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
-}
-
-// Paginated collection of user contests.
-// Ref: #/components/schemas/ListUserContestsResponseModel
-type ListUserContestsResponseModel struct {
-	Contests   []ContestModel  `json:"contests"`
-	Pagination PaginationModel `json:"pagination"`
-}
-
-// GetContests returns the value of Contests.
-func (s *ListUserContestsResponseModel) GetContests() []ContestModel {
-	return s.Contests
-}
-
-// GetPagination returns the value of Pagination.
-func (s *ListUserContestsResponseModel) GetPagination() PaginationModel {
-	return s.Pagination
-}
-
-// SetContests sets the value of Contests.
-func (s *ListUserContestsResponseModel) SetContests(val []ContestModel) {
-	s.Contests = val
-}
-
-// SetPagination sets the value of Pagination.
-func (s *ListUserContestsResponseModel) SetPagination(val PaginationModel) {
-	s.Pagination = val
-}
-
-type ListUserContestsSortBy string
-
-const (
-	ListUserContestsSortByLastSubmissionTime ListUserContestsSortBy = "last_submission_time"
-	ListUserContestsSortByCreatedAt          ListUserContestsSortBy = "created_at"
-	ListUserContestsSortByUpdatedAt          ListUserContestsSortBy = "updated_at"
-	ListUserContestsSortByTitle              ListUserContestsSortBy = "title"
-)
-
-// AllValues returns all ListUserContestsSortBy values.
-func (ListUserContestsSortBy) AllValues() []ListUserContestsSortBy {
-	return []ListUserContestsSortBy{
-		ListUserContestsSortByLastSubmissionTime,
-		ListUserContestsSortByCreatedAt,
-		ListUserContestsSortByUpdatedAt,
-		ListUserContestsSortByTitle,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListUserContestsSortBy) MarshalText() ([]byte, error) {
-	switch s {
-	case ListUserContestsSortByLastSubmissionTime:
-		return []byte(s), nil
-	case ListUserContestsSortByCreatedAt:
-		return []byte(s), nil
-	case ListUserContestsSortByUpdatedAt:
-		return []byte(s), nil
-	case ListUserContestsSortByTitle:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListUserContestsSortBy) UnmarshalText(data []byte) error {
-	switch ListUserContestsSortBy(data) {
-	case ListUserContestsSortByLastSubmissionTime:
-		*s = ListUserContestsSortByLastSubmissionTime
-		return nil
-	case ListUserContestsSortByCreatedAt:
-		*s = ListUserContestsSortByCreatedAt
-		return nil
-	case ListUserContestsSortByUpdatedAt:
-		*s = ListUserContestsSortByUpdatedAt
-		return nil
-	case ListUserContestsSortByTitle:
-		*s = ListUserContestsSortByTitle
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
 }
 
 // Paginated collection of users.
@@ -6045,51 +5724,6 @@ func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
 	return d
 }
 
-// NewNilVirtualRunModel returns new NilVirtualRunModel with value set to v.
-func NewNilVirtualRunModel(v VirtualRunModel) NilVirtualRunModel {
-	return NilVirtualRunModel{
-		Value: v,
-	}
-}
-
-// NilVirtualRunModel is nullable VirtualRunModel.
-type NilVirtualRunModel struct {
-	Value VirtualRunModel
-	Null  bool
-}
-
-// SetTo sets value to v.
-func (o *NilVirtualRunModel) SetTo(v VirtualRunModel) {
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o NilVirtualRunModel) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *NilVirtualRunModel) SetToNull() {
-	o.Null = true
-	var v VirtualRunModel
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o NilVirtualRunModel) Get() (v VirtualRunModel, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o NilVirtualRunModel) Or(d VirtualRunModel) VirtualRunModel {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // Notification data.
 // Ref: #/components/schemas/NotificationModel
 type NotificationModel struct {
@@ -6278,98 +5912,6 @@ func (o OptAddTeamMemberRole) Or(d AddTeamMemberRole) AddTeamMemberRole {
 	return d
 }
 
-// NewOptApproveOrganizationJoinRequestModel returns new OptApproveOrganizationJoinRequestModel with value set to v.
-func NewOptApproveOrganizationJoinRequestModel(v ApproveOrganizationJoinRequestModel) OptApproveOrganizationJoinRequestModel {
-	return OptApproveOrganizationJoinRequestModel{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptApproveOrganizationJoinRequestModel is optional ApproveOrganizationJoinRequestModel.
-type OptApproveOrganizationJoinRequestModel struct {
-	Value ApproveOrganizationJoinRequestModel
-	Set   bool
-}
-
-// IsSet returns true if OptApproveOrganizationJoinRequestModel was set.
-func (o OptApproveOrganizationJoinRequestModel) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptApproveOrganizationJoinRequestModel) Reset() {
-	var v ApproveOrganizationJoinRequestModel
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptApproveOrganizationJoinRequestModel) SetTo(v ApproveOrganizationJoinRequestModel) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptApproveOrganizationJoinRequestModel) Get() (v ApproveOrganizationJoinRequestModel, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptApproveOrganizationJoinRequestModel) Or(d ApproveOrganizationJoinRequestModel) ApproveOrganizationJoinRequestModel {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptApproveOrganizationJoinRequestModelRole returns new OptApproveOrganizationJoinRequestModelRole with value set to v.
-func NewOptApproveOrganizationJoinRequestModelRole(v ApproveOrganizationJoinRequestModelRole) OptApproveOrganizationJoinRequestModelRole {
-	return OptApproveOrganizationJoinRequestModelRole{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptApproveOrganizationJoinRequestModelRole is optional ApproveOrganizationJoinRequestModelRole.
-type OptApproveOrganizationJoinRequestModelRole struct {
-	Value ApproveOrganizationJoinRequestModelRole
-	Set   bool
-}
-
-// IsSet returns true if OptApproveOrganizationJoinRequestModelRole was set.
-func (o OptApproveOrganizationJoinRequestModelRole) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptApproveOrganizationJoinRequestModelRole) Reset() {
-	var v ApproveOrganizationJoinRequestModelRole
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptApproveOrganizationJoinRequestModelRole) SetTo(v ApproveOrganizationJoinRequestModelRole) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptApproveOrganizationJoinRequestModelRole) Get() (v ApproveOrganizationJoinRequestModelRole, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptApproveOrganizationJoinRequestModelRole) Or(d ApproveOrganizationJoinRequestModelRole) ApproveOrganizationJoinRequestModelRole {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptBlockProblemRequestModel returns new OptBlockProblemRequestModel with value set to v.
 func NewOptBlockProblemRequestModel(v BlockProblemRequestModel) OptBlockProblemRequestModel {
 	return OptBlockProblemRequestModel{
@@ -6410,52 +5952,6 @@ func (o OptBlockProblemRequestModel) Get() (v BlockProblemRequestModel, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o OptBlockProblemRequestModel) Or(d BlockProblemRequestModel) BlockProblemRequestModel {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptBlockSubmissionRequestModel returns new OptBlockSubmissionRequestModel with value set to v.
-func NewOptBlockSubmissionRequestModel(v BlockSubmissionRequestModel) OptBlockSubmissionRequestModel {
-	return OptBlockSubmissionRequestModel{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptBlockSubmissionRequestModel is optional BlockSubmissionRequestModel.
-type OptBlockSubmissionRequestModel struct {
-	Value BlockSubmissionRequestModel
-	Set   bool
-}
-
-// IsSet returns true if OptBlockSubmissionRequestModel was set.
-func (o OptBlockSubmissionRequestModel) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptBlockSubmissionRequestModel) Reset() {
-	var v BlockSubmissionRequestModel
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptBlockSubmissionRequestModel) SetTo(v BlockSubmissionRequestModel) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptBlockSubmissionRequestModel) Get() (v BlockSubmissionRequestModel, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptBlockSubmissionRequestModel) Or(d BlockSubmissionRequestModel) BlockSubmissionRequestModel {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7198,38 +6694,38 @@ func (o OptInt32) Or(d int32) int32 {
 	return d
 }
 
-// NewOptListAdminContestsVisibility returns new OptListAdminContestsVisibility with value set to v.
-func NewOptListAdminContestsVisibility(v ListAdminContestsVisibility) OptListAdminContestsVisibility {
-	return OptListAdminContestsVisibility{
+// NewOptListContestsVisibility returns new OptListContestsVisibility with value set to v.
+func NewOptListContestsVisibility(v ListContestsVisibility) OptListContestsVisibility {
+	return OptListContestsVisibility{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptListAdminContestsVisibility is optional ListAdminContestsVisibility.
-type OptListAdminContestsVisibility struct {
-	Value ListAdminContestsVisibility
+// OptListContestsVisibility is optional ListContestsVisibility.
+type OptListContestsVisibility struct {
+	Value ListContestsVisibility
 	Set   bool
 }
 
-// IsSet returns true if OptListAdminContestsVisibility was set.
-func (o OptListAdminContestsVisibility) IsSet() bool { return o.Set }
+// IsSet returns true if OptListContestsVisibility was set.
+func (o OptListContestsVisibility) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptListAdminContestsVisibility) Reset() {
-	var v ListAdminContestsVisibility
+func (o *OptListContestsVisibility) Reset() {
+	var v ListContestsVisibility
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptListAdminContestsVisibility) SetTo(v ListAdminContestsVisibility) {
+func (o *OptListContestsVisibility) SetTo(v ListContestsVisibility) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptListAdminContestsVisibility) Get() (v ListAdminContestsVisibility, ok bool) {
+func (o OptListContestsVisibility) Get() (v ListContestsVisibility, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -7237,7 +6733,7 @@ func (o OptListAdminContestsVisibility) Get() (v ListAdminContestsVisibility, ok
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptListAdminContestsVisibility) Or(d ListAdminContestsVisibility) ListAdminContestsVisibility {
+func (o OptListContestsVisibility) Or(d ListContestsVisibility) ListContestsVisibility {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7284,52 +6780,6 @@ func (o OptListPostsSortOrder) Get() (v ListPostsSortOrder, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListPostsSortOrder) Or(d ListPostsSortOrder) ListPostsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListUserContestsSortBy returns new OptListUserContestsSortBy with value set to v.
-func NewOptListUserContestsSortBy(v ListUserContestsSortBy) OptListUserContestsSortBy {
-	return OptListUserContestsSortBy{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListUserContestsSortBy is optional ListUserContestsSortBy.
-type OptListUserContestsSortBy struct {
-	Value ListUserContestsSortBy
-	Set   bool
-}
-
-// IsSet returns true if OptListUserContestsSortBy was set.
-func (o OptListUserContestsSortBy) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListUserContestsSortBy) Reset() {
-	var v ListUserContestsSortBy
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListUserContestsSortBy) SetTo(v ListUserContestsSortBy) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListUserContestsSortBy) Get() (v ListUserContestsSortBy, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListUserContestsSortBy) Or(d ListUserContestsSortBy) ListUserContestsSortBy {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7816,6 +7266,98 @@ func (o OptProblemStatementModel) Or(d ProblemStatementModel) ProblemStatementMo
 	return d
 }
 
+// NewOptRejudgeContestRequestModel returns new OptRejudgeContestRequestModel with value set to v.
+func NewOptRejudgeContestRequestModel(v RejudgeContestRequestModel) OptRejudgeContestRequestModel {
+	return OptRejudgeContestRequestModel{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRejudgeContestRequestModel is optional RejudgeContestRequestModel.
+type OptRejudgeContestRequestModel struct {
+	Value RejudgeContestRequestModel
+	Set   bool
+}
+
+// IsSet returns true if OptRejudgeContestRequestModel was set.
+func (o OptRejudgeContestRequestModel) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRejudgeContestRequestModel) Reset() {
+	var v RejudgeContestRequestModel
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRejudgeContestRequestModel) SetTo(v RejudgeContestRequestModel) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRejudgeContestRequestModel) Get() (v RejudgeContestRequestModel, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRejudgeContestRequestModel) Or(d RejudgeContestRequestModel) RejudgeContestRequestModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptResolveOrganizationJoinRequestModelRole returns new OptResolveOrganizationJoinRequestModelRole with value set to v.
+func NewOptResolveOrganizationJoinRequestModelRole(v ResolveOrganizationJoinRequestModelRole) OptResolveOrganizationJoinRequestModelRole {
+	return OptResolveOrganizationJoinRequestModelRole{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptResolveOrganizationJoinRequestModelRole is optional ResolveOrganizationJoinRequestModelRole.
+type OptResolveOrganizationJoinRequestModelRole struct {
+	Value ResolveOrganizationJoinRequestModelRole
+	Set   bool
+}
+
+// IsSet returns true if OptResolveOrganizationJoinRequestModelRole was set.
+func (o OptResolveOrganizationJoinRequestModelRole) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptResolveOrganizationJoinRequestModelRole) Reset() {
+	var v ResolveOrganizationJoinRequestModelRole
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptResolveOrganizationJoinRequestModelRole) SetTo(v ResolveOrganizationJoinRequestModelRole) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptResolveOrganizationJoinRequestModelRole) Get() (v ResolveOrganizationJoinRequestModelRole, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptResolveOrganizationJoinRequestModelRole) Or(d ResolveOrganizationJoinRequestModelRole) ResolveOrganizationJoinRequestModelRole {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSortByQuery returns new OptSortByQuery with value set to v.
 func NewOptSortByQuery(v SortByQuery) OptSortByQuery {
 	return OptSortByQuery{
@@ -8230,6 +7772,52 @@ func (o OptUpdateUserRequestModelRole) Or(d UpdateUserRequestModelRole) UpdateUs
 	return d
 }
 
+// NewOptVirtualRunModel returns new OptVirtualRunModel with value set to v.
+func NewOptVirtualRunModel(v VirtualRunModel) OptVirtualRunModel {
+	return OptVirtualRunModel{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptVirtualRunModel is optional VirtualRunModel.
+type OptVirtualRunModel struct {
+	Value VirtualRunModel
+	Set   bool
+}
+
+// IsSet returns true if OptVirtualRunModel was set.
+func (o OptVirtualRunModel) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptVirtualRunModel) Reset() {
+	var v VirtualRunModel
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptVirtualRunModel) SetTo(v VirtualRunModel) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptVirtualRunModel) Get() (v VirtualRunModel, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptVirtualRunModel) Or(d VirtualRunModel) VirtualRunModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // Fields for the organization join request.
 // Ref: #/components/schemas/OrganizationJoinRequestModel
 type OrganizationJoinRequestModel struct {
@@ -8365,22 +7953,6 @@ func (s *OrganizationJoinRequestModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *OrganizationJoinRequestModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
-}
-
-// Result of organization join request nullable.
-// Ref: #/components/schemas/OrganizationJoinRequestNullableResponseModel
-type OrganizationJoinRequestNullableResponseModel struct {
-	Request OptOrganizationJoinRequestModel `json:"request"`
-}
-
-// GetRequest returns the value of Request.
-func (s *OrganizationJoinRequestNullableResponseModel) GetRequest() OptOrganizationJoinRequestModel {
-	return s.Request
-}
-
-// SetRequest sets the value of Request.
-func (s *OrganizationJoinRequestNullableResponseModel) SetRequest(val OptOrganizationJoinRequestModel) {
-	s.Request = val
 }
 
 // Result of organization join request.
@@ -11874,20 +11446,35 @@ func (s *RegisterRequestModel) SetPassword(val string) {
 	s.Password = val
 }
 
-// RejectContestJoinRequestOK is response for RejectContestJoinRequest operation.
-type RejectContestJoinRequestOK struct{}
-
-// RejectOrganizationJoinRequestOK is response for RejectOrganizationJoinRequest operation.
-type RejectOrganizationJoinRequestOK struct{}
-
 // RejudgeContestOK is response for RejudgeContest operation.
 type RejudgeContestOK struct{}
 
-// RejudgeContestProblemOK is response for RejudgeContestProblem operation.
-type RejudgeContestProblemOK struct{}
+// Narrows a contest rejudge; at most one field is set.
+// Ref: #/components/schemas/RejudgeContestRequestModel
+type RejudgeContestRequestModel struct {
+	ProblemID    OptUUID `json:"problem_id"`
+	SubmissionID OptUUID `json:"submission_id"`
+}
 
-// RejudgeSubmissionOK is response for RejudgeSubmission operation.
-type RejudgeSubmissionOK struct{}
+// GetProblemID returns the value of ProblemID.
+func (s *RejudgeContestRequestModel) GetProblemID() OptUUID {
+	return s.ProblemID
+}
+
+// GetSubmissionID returns the value of SubmissionID.
+func (s *RejudgeContestRequestModel) GetSubmissionID() OptUUID {
+	return s.SubmissionID
+}
+
+// SetProblemID sets the value of ProblemID.
+func (s *RejudgeContestRequestModel) SetProblemID(val OptUUID) {
+	s.ProblemID = val
+}
+
+// SetSubmissionID sets the value of SubmissionID.
+func (s *RejudgeContestRequestModel) SetSubmissionID(val OptUUID) {
+	s.SubmissionID = val
+}
 
 // RemoveOrganizationMemberOK is response for RemoveOrganizationMember operation.
 type RemoveOrganizationMemberOK struct{}
@@ -11991,6 +11578,254 @@ func (s *ResetPasswordRequestModel) SetToken(val string) {
 // SetPassword sets the value of Password.
 func (s *ResetPasswordRequestModel) SetPassword(val string) {
 	s.Password = val
+}
+
+// ResolveContestJoinRequestOK is response for ResolveContestJoinRequest operation.
+type ResolveContestJoinRequestOK struct{}
+
+// Decision on a contest join request.
+// Ref: #/components/schemas/ResolveJoinRequestModel
+type ResolveJoinRequestModel struct {
+	Status ResolveJoinRequestModelStatus `json:"status"`
+}
+
+// GetStatus returns the value of Status.
+func (s *ResolveJoinRequestModel) GetStatus() ResolveJoinRequestModelStatus {
+	return s.Status
+}
+
+// SetStatus sets the value of Status.
+func (s *ResolveJoinRequestModel) SetStatus(val ResolveJoinRequestModelStatus) {
+	s.Status = val
+}
+
+type ResolveJoinRequestModelStatus string
+
+const (
+	ResolveJoinRequestModelStatusApproved ResolveJoinRequestModelStatus = "approved"
+	ResolveJoinRequestModelStatusRejected ResolveJoinRequestModelStatus = "rejected"
+)
+
+// AllValues returns all ResolveJoinRequestModelStatus values.
+func (ResolveJoinRequestModelStatus) AllValues() []ResolveJoinRequestModelStatus {
+	return []ResolveJoinRequestModelStatus{
+		ResolveJoinRequestModelStatusApproved,
+		ResolveJoinRequestModelStatusRejected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ResolveJoinRequestModelStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ResolveJoinRequestModelStatusApproved:
+		return []byte(s), nil
+	case ResolveJoinRequestModelStatusRejected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ResolveJoinRequestModelStatus) UnmarshalText(data []byte) error {
+	switch ResolveJoinRequestModelStatus(data) {
+	case ResolveJoinRequestModelStatusApproved:
+		*s = ResolveJoinRequestModelStatusApproved
+		return nil
+	case ResolveJoinRequestModelStatusRejected:
+		*s = ResolveJoinRequestModelStatusRejected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Decision on an organization join request.
+// Ref: #/components/schemas/ResolveOrganizationJoinRequestModel
+type ResolveOrganizationJoinRequestModel struct {
+	Status ResolveOrganizationJoinRequestModelStatus `json:"status"`
+	// Role granted on approval; member when omitted.
+	Role OptResolveOrganizationJoinRequestModelRole `json:"role"`
+}
+
+// GetStatus returns the value of Status.
+func (s *ResolveOrganizationJoinRequestModel) GetStatus() ResolveOrganizationJoinRequestModelStatus {
+	return s.Status
+}
+
+// GetRole returns the value of Role.
+func (s *ResolveOrganizationJoinRequestModel) GetRole() OptResolveOrganizationJoinRequestModelRole {
+	return s.Role
+}
+
+// SetStatus sets the value of Status.
+func (s *ResolveOrganizationJoinRequestModel) SetStatus(val ResolveOrganizationJoinRequestModelStatus) {
+	s.Status = val
+}
+
+// SetRole sets the value of Role.
+func (s *ResolveOrganizationJoinRequestModel) SetRole(val OptResolveOrganizationJoinRequestModelRole) {
+	s.Role = val
+}
+
+// Role granted on approval; member when omitted.
+type ResolveOrganizationJoinRequestModelRole string
+
+const (
+	ResolveOrganizationJoinRequestModelRoleOwner      ResolveOrganizationJoinRequestModelRole = "owner"
+	ResolveOrganizationJoinRequestModelRoleAdmin      ResolveOrganizationJoinRequestModelRole = "admin"
+	ResolveOrganizationJoinRequestModelRoleMaintainer ResolveOrganizationJoinRequestModelRole = "maintainer"
+	ResolveOrganizationJoinRequestModelRoleMember     ResolveOrganizationJoinRequestModelRole = "member"
+)
+
+// AllValues returns all ResolveOrganizationJoinRequestModelRole values.
+func (ResolveOrganizationJoinRequestModelRole) AllValues() []ResolveOrganizationJoinRequestModelRole {
+	return []ResolveOrganizationJoinRequestModelRole{
+		ResolveOrganizationJoinRequestModelRoleOwner,
+		ResolveOrganizationJoinRequestModelRoleAdmin,
+		ResolveOrganizationJoinRequestModelRoleMaintainer,
+		ResolveOrganizationJoinRequestModelRoleMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ResolveOrganizationJoinRequestModelRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ResolveOrganizationJoinRequestModelRoleOwner:
+		return []byte(s), nil
+	case ResolveOrganizationJoinRequestModelRoleAdmin:
+		return []byte(s), nil
+	case ResolveOrganizationJoinRequestModelRoleMaintainer:
+		return []byte(s), nil
+	case ResolveOrganizationJoinRequestModelRoleMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ResolveOrganizationJoinRequestModelRole) UnmarshalText(data []byte) error {
+	switch ResolveOrganizationJoinRequestModelRole(data) {
+	case ResolveOrganizationJoinRequestModelRoleOwner:
+		*s = ResolveOrganizationJoinRequestModelRoleOwner
+		return nil
+	case ResolveOrganizationJoinRequestModelRoleAdmin:
+		*s = ResolveOrganizationJoinRequestModelRoleAdmin
+		return nil
+	case ResolveOrganizationJoinRequestModelRoleMaintainer:
+		*s = ResolveOrganizationJoinRequestModelRoleMaintainer
+		return nil
+	case ResolveOrganizationJoinRequestModelRoleMember:
+		*s = ResolveOrganizationJoinRequestModelRoleMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ResolveOrganizationJoinRequestModelStatus string
+
+const (
+	ResolveOrganizationJoinRequestModelStatusApproved ResolveOrganizationJoinRequestModelStatus = "approved"
+	ResolveOrganizationJoinRequestModelStatusRejected ResolveOrganizationJoinRequestModelStatus = "rejected"
+)
+
+// AllValues returns all ResolveOrganizationJoinRequestModelStatus values.
+func (ResolveOrganizationJoinRequestModelStatus) AllValues() []ResolveOrganizationJoinRequestModelStatus {
+	return []ResolveOrganizationJoinRequestModelStatus{
+		ResolveOrganizationJoinRequestModelStatusApproved,
+		ResolveOrganizationJoinRequestModelStatusRejected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ResolveOrganizationJoinRequestModelStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ResolveOrganizationJoinRequestModelStatusApproved:
+		return []byte(s), nil
+	case ResolveOrganizationJoinRequestModelStatusRejected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ResolveOrganizationJoinRequestModelStatus) UnmarshalText(data []byte) error {
+	switch ResolveOrganizationJoinRequestModelStatus(data) {
+	case ResolveOrganizationJoinRequestModelStatusApproved:
+		*s = ResolveOrganizationJoinRequestModelStatusApproved
+		return nil
+	case ResolveOrganizationJoinRequestModelStatusRejected:
+		*s = ResolveOrganizationJoinRequestModelStatusRejected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// ResolveOrganizationJoinRequestOK is response for ResolveOrganizationJoinRequest operation.
+type ResolveOrganizationJoinRequestOK struct{}
+
+// RespondInvitationOK is response for RespondInvitation operation.
+type RespondInvitationOK struct{}
+
+// Answer to an invitation.
+// Ref: #/components/schemas/RespondInvitationRequestModel
+type RespondInvitationRequestModel struct {
+	Status RespondInvitationRequestModelStatus `json:"status"`
+}
+
+// GetStatus returns the value of Status.
+func (s *RespondInvitationRequestModel) GetStatus() RespondInvitationRequestModelStatus {
+	return s.Status
+}
+
+// SetStatus sets the value of Status.
+func (s *RespondInvitationRequestModel) SetStatus(val RespondInvitationRequestModelStatus) {
+	s.Status = val
+}
+
+type RespondInvitationRequestModelStatus string
+
+const (
+	RespondInvitationRequestModelStatusAccepted RespondInvitationRequestModelStatus = "accepted"
+	RespondInvitationRequestModelStatusDeclined RespondInvitationRequestModelStatus = "declined"
+)
+
+// AllValues returns all RespondInvitationRequestModelStatus values.
+func (RespondInvitationRequestModelStatus) AllValues() []RespondInvitationRequestModelStatus {
+	return []RespondInvitationRequestModelStatus{
+		RespondInvitationRequestModelStatusAccepted,
+		RespondInvitationRequestModelStatusDeclined,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RespondInvitationRequestModelStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RespondInvitationRequestModelStatusAccepted:
+		return []byte(s), nil
+	case RespondInvitationRequestModelStatusDeclined:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RespondInvitationRequestModelStatus) UnmarshalText(data []byte) error {
+	switch RespondInvitationRequestModelStatus(data) {
+	case RespondInvitationRequestModelStatusAccepted:
+		*s = RespondInvitationRequestModelStatusAccepted
+		return nil
+	case RespondInvitationRequestModelStatusDeclined:
+		*s = RespondInvitationRequestModelStatusDeclined
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Scoreboard item data.
@@ -13545,9 +13380,6 @@ func (s *TestDetailItemModel) SetSample(val OptBool) {
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.
 type UnblockProblemForUserOK struct{}
 
-// UnblockSubmissionOK is response for UnblockSubmission operation.
-type UnblockSubmissionOK struct{}
-
 // Result of unread notifications count.
 // Ref: #/components/schemas/UnreadNotificationsCountResponseModel
 type UnreadNotificationsCountResponseModel struct {
@@ -14113,6 +13945,36 @@ func (s *UpdateProblemRequestModel) SetIsTemplate(val OptBool) {
 	s.IsTemplate = val
 }
 
+// UpdateSubmissionOK is response for UpdateSubmission operation.
+type UpdateSubmissionOK struct{}
+
+// Fields for the update submission request.
+// Ref: #/components/schemas/UpdateSubmissionRequestModel
+type UpdateSubmissionRequestModel struct {
+	Blocked bool      `json:"blocked"`
+	Reason  OptString `json:"reason"`
+}
+
+// GetBlocked returns the value of Blocked.
+func (s *UpdateSubmissionRequestModel) GetBlocked() bool {
+	return s.Blocked
+}
+
+// GetReason returns the value of Reason.
+func (s *UpdateSubmissionRequestModel) GetReason() OptString {
+	return s.Reason
+}
+
+// SetBlocked sets the value of Blocked.
+func (s *UpdateSubmissionRequestModel) SetBlocked(val bool) {
+	s.Blocked = val
+}
+
+// SetReason sets the value of Reason.
+func (s *UpdateSubmissionRequestModel) SetReason(val OptString) {
+	s.Reason = val
+}
+
 // UpdateTeamMemberRoleOK is response for UpdateTeamMemberRole operation.
 type UpdateTeamMemberRoleOK struct{}
 
@@ -14512,19 +14374,4 @@ func (s *VirtualRunModel) SetStartedAt(val time.Time) {
 // SetEndsAt sets the value of EndsAt.
 func (s *VirtualRunModel) SetEndsAt(val time.Time) {
 	s.EndsAt = val
-}
-
-// Ref: #/components/schemas/VirtualRunResponseModel
-type VirtualRunResponseModel struct {
-	VirtualRun NilVirtualRunModel `json:"virtual_run"`
-}
-
-// GetVirtualRun returns the value of VirtualRun.
-func (s *VirtualRunResponseModel) GetVirtualRun() NilVirtualRunModel {
-	return s.VirtualRun
-}
-
-// SetVirtualRun sets the value of VirtualRun.
-func (s *VirtualRunResponseModel) SetVirtualRun(val NilVirtualRunModel) {
-	s.VirtualRun = val
 }

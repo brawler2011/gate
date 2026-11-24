@@ -16,8 +16,7 @@ export type SanctionActionType =
 interface SubmissionSanctionsModalProps {
   actionType: SanctionActionType | null;
   onClose: () => void;
-  orgLogin?: string;
-  contestLogin?: string;
+  contestId?: string;
   submissionId?: string;
   userId?: string;
   problemId?: string;
@@ -29,8 +28,7 @@ interface SubmissionSanctionsModalProps {
 export const SubmissionSanctionsModal = ({
   actionType,
   onClose,
-  orgLogin,
-  contestLogin,
+  contestId,
   submissionId,
   userId,
   problemId,
@@ -49,7 +47,7 @@ export const SubmissionSanctionsModal = ({
   }
 
   const handleConfirm = async () => {
-    if (!orgLogin || !contestLogin) {
+    if (!contestId) {
       return;
     }
 
@@ -57,44 +55,24 @@ export const SubmissionSanctionsModal = ({
     let err: {detail?: string} | null | undefined = null;
 
     if (actionType === "block_submission" && submissionId) {
-      const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block",
-        {
-          params: {
-            path: {
-              org_login: orgLogin,
-              contest_login: contestLogin,
-              submission_id: submissionId,
-            },
-          },
-          body: {
-            reason: reason.trim() ? reason.trim() : undefined,
-          },
-        },
-      );
+      const {error} = await api.PATCH("/submissions/{submission_id}", {
+        params: {path: {submission_id: submissionId}},
+        body: {blocked: true, reason: reason.trim() ? reason.trim() : undefined},
+      });
       err = error;
     } else if (actionType === "unblock_submission" && submissionId) {
-      const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock",
-        {
-          params: {
-            path: {
-              org_login: orgLogin,
-              contest_login: contestLogin,
-              submission_id: submissionId,
-            },
-          },
-        },
-      );
+      const {error} = await api.PATCH("/submissions/{submission_id}", {
+        params: {path: {submission_id: submissionId}},
+        body: {blocked: false},
+      });
       err = error;
     } else if (actionType === "block_problem" && userId && problemId) {
       const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block",
+        "/contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block",
         {
           params: {
             path: {
-              org_login: orgLogin,
-              contest_login: contestLogin,
+              contest_id: contestId,
               user_id: userId,
               problem_id: problemId,
             },
@@ -107,12 +85,11 @@ export const SubmissionSanctionsModal = ({
       err = error;
     } else if (actionType === "unblock_problem" && userId && problemId) {
       const {error} = await api.DELETE(
-        "/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block",
+        "/contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block",
         {
           params: {
             path: {
-              org_login: orgLogin,
-              contest_login: contestLogin,
+              contest_id: contestId,
               user_id: userId,
               problem_id: problemId,
             },
@@ -160,12 +137,11 @@ export const SubmissionSanctionsModal = ({
       void queryClient.invalidateQueries({
         queryKey: api.queryOptions(
           "get",
-          "/organizations/{org_login}/contests/{contest_login}/submissions",
+          "/contests/{contest_id}/submissions",
           {
             params: {
               path: {
-                org_login: orgLogin,
-                contest_login: contestLogin,
+                contest_id: contestId,
               },
             },
           },
@@ -174,12 +150,11 @@ export const SubmissionSanctionsModal = ({
       void queryClient.invalidateQueries({
         queryKey: api.queryOptions(
           "get",
-          "/organizations/{org_login}/contests/{contest_login}/scoreboard",
+          "/contests/{contest_id}/scoreboard",
           {
             params: {
               path: {
-                org_login: orgLogin,
-                contest_login: contestLogin,
+                contest_id: contestId,
               },
             },
           },

@@ -57,12 +57,11 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     setRejudgingId(contest.id);
     try {
       const {error: err} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/rejudge",
+        "/contests/{contest_id}/rejudge",
         {
           params: {
             path: {
-              org_login: contest.organization_login,
-              contest_login: contest.login,
+              contest_id: contest.id,
             },
           },
         },

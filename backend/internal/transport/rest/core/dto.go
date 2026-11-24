@@ -720,19 +720,6 @@ func ContestClarificationDTO(c *contestsmodel.ContestClarification) *corev1.Cont
 	}
 }
 
-func ListUserContestsResponseDTO(contestsList *contestsmodel.ContestsList) *corev1.ListUserContestsResponseModel {
-	resp := corev1.ListUserContestsResponseModel{
-		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
-		Pagination: PaginationDTO(contestsList.Pagination),
-	}
-
-	for i, contest := range contestsList.Contests {
-		resp.Contests[i] = ContestDTO(contest)
-	}
-
-	return &resp
-}
-
 func usersListDTO(ul *identitymodel.UsersList) corev1.ListUsersResponseModel {
 	userDTOs := make([]corev1.UserModel, len(ul.Users))
 	for i, user := range ul.Users {
@@ -786,52 +773,6 @@ func listProblemMembersDTO(members []problemsmodel.ProblemMember, pagination pag
 		resp.Members[i] = problemMemberDTO(member)
 	}
 	return &resp
-}
-
-func DashboardContestDTO(c contestsmodel.DashboardContest) corev1.DashboardContestModel {
-	return corev1.DashboardContestModel{
-		ID:                 c.ID,
-		Login:              c.Login,
-		Title:              c.Title,
-		OrganizationID:     c.OrganizationID,
-		OrganizationName:   c.OrganizationName,
-		OrganizationLogin:  c.OrganizationLogin,
-		UserRole:           string(c.UserRole),
-		StartTime:          timePtrToOptNilDateTime(c.StartTime),
-		EndTime:            timePtrToOptNilDateTime(c.EndTime),
-		LastSubmissionTime: timePtrToOptNilDateTime(c.LastSubmissionTime),
-		CreatedAt:          c.CreatedAt,
-	}
-}
-
-func DashboardProblemDTO(p problemsmodel.DashboardProblem) corev1.DashboardProblemModel {
-	return corev1.DashboardProblemModel{
-		ID:                p.ID,
-		Title:             p.Title,
-		OrganizationID:    p.OrganizationID,
-		OrganizationName:  p.OrganizationName,
-		OrganizationLogin: p.OrganizationLogin,
-		TimeLimit:         safeInt32(p.TimeLimitMs),
-		MemoryLimit:       safeInt32(p.MemoryLimitMb),
-		UpdatedAt:         p.UpdatedAt,
-	}
-}
-
-func DashboardResponseDTO(contests []contestsmodel.DashboardContest, problems []problemsmodel.DashboardProblem) corev1.GetUserDashboardResponseModel {
-	contestDTOs := make([]corev1.DashboardContestModel, len(contests))
-	for i, c := range contests {
-		contestDTOs[i] = DashboardContestDTO(c)
-	}
-
-	problemDTOs := make([]corev1.DashboardProblemModel, len(problems))
-	for i, p := range problems {
-		problemDTOs[i] = DashboardProblemDTO(p)
-	}
-
-	return corev1.GetUserDashboardResponseModel{
-		RecentContests: contestDTOs,
-		MyProblems:     problemDTOs,
-	}
 }
 
 func ContestDraftDTO(draft contestsmodel.ContestDraft) corev1.ContestDraftModel {

@@ -56,11 +56,8 @@ describe("Organization join status through the organization page", () => {
           pagination: {page_size: 100, total_items: 101, page: Number(url.searchParams.get("page")), total_pages: 2},
         }) : Response.json({message: "Cannot list members"}, {status: membersError});
       }
-      if (url.pathname.endsWith("/requests/mine")) {
-        return Response.json({request: pending ? pendingRequest : null});
-      }
       if (url.pathname === "/api/organizations/school") {
-        return Response.json({organization: org});
+        return Response.json({organization: org, ...(pending ? {my_join_request: pendingRequest} : {})});
       }
       if (url.pathname.endsWith("/me")) {
         return authenticated ? Response.json({user}) : Response.json({message: "Unauthorized"}, {status: 401});
@@ -78,9 +75,8 @@ describe("Organization join status through the organization page", () => {
   };
 
   it("allows a nonmember without a pending request to apply", async () => {
-    const {view, fetch} = await renderPage();
-    await waitFor(() => expect(fetch.mock.calls.some(([url]) => String(url).includes("requests/mine"))).toBe(true));
-    expect(view.getByRole("button", {name: "Подать заявку на вступление"})).toBeTruthy();
+    const {view} = await renderPage();
+    await waitFor(() => expect(view.getByRole("button", {name: "Подать заявку на вступление"})).toBeTruthy());
     expect(view.queryByText("Участник организации")).toBeNull();
   });
 
@@ -91,11 +87,10 @@ describe("Organization join status through the organization page", () => {
     expect(view.getByRole("button", {name: "Отменить заявку"})).toBeTruthy();
   });
 
-  it("recognizes an accepted member after the first 100 entries and skips pending lookup", async () => {
+  it("recognizes an accepted member after the first 100 entries", async () => {
     const {view, fetch} = await renderPage({member: true});
     expect(view.getByText("Участник организации")).toBeTruthy();
     expect(view.queryByRole("button", {name: "Подать заявку на вступление"})).toBeNull();
-    expect(fetch.mock.calls.some(([url]) => String(url).includes("requests/mine"))).toBe(false);
     expect(fetch.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
   });
 
@@ -108,6 +103,6 @@ describe("Organization join status through the organization page", () => {
   it("does not look up membership or offer a join action to guests", async () => {
     const {view, fetch} = await renderPage({authenticated: false});
     expect(view.queryByRole("button", {name: "Подать заявку на вступление"})).toBeNull();
-    expect(fetch.mock.calls.some(([url]) => /members|requests\/mine/.test(String(url)))).toBe(false);
+    expect(fetch.mock.calls.some(([url]) => /members/.test(String(url)))).toBe(false);
   });
 });

@@ -32,10 +32,6 @@ func (m *visibilityStub) GetContest(context.Context, uuid.UUID) (contestsmodel.C
 	return m.contest, nil
 }
 
-func (m *visibilityStub) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
-	return m.contest, nil
-}
-
 func (m *visibilityStub) GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error) {
 	return m.submission, nil
 }
@@ -66,7 +62,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 			}
 			get, err := h.GetSubmission(ctx, corev1.GetSubmissionParams{SubmissionID: stub.submission.ID})
 			require.NoError(t, err)
-			list, err := h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{})
+			list, err := h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{ContestID: contestID})
 			require.NoError(t, err)
 			for _, dto := range []any{&get.Submission, &list.Submissions[0]} {
 				data, err := json.Marshal(dto)
@@ -87,22 +83,22 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	}
 	stub.submission.CreatedBy = &author
 	stub.listed = false
-	_, err := h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
+	_, err := h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{ContestID: contestID, State: corev1.NewOptInt32(200)})
 	require.ErrorIs(t, err, pkg.ErrScoreboardFrozen)
 	require.False(t, stub.listed)
-	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200), UserId: corev1.NewOptUUID(viewer)})
+	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{ContestID: contestID, State: corev1.NewOptInt32(200), UserId: corev1.NewOptUUID(viewer)})
 	require.NoError(t, err)
 	loader.Grant(contestID, viewer, string(accessmodel.ContestModerator))
 	get, err := h.GetSubmission(ctx, corev1.GetSubmissionParams{SubmissionID: stub.submission.ID})
 	require.NoError(t, err)
 	require.Equal(t, int32(200), get.Submission.State.Value)
 	require.True(t, get.Submission.Submission.IsSet())
-	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
+	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{ContestID: contestID, State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
 	loader.Grant(contestID, viewer, "")
 	stub.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusUnfrozen
 	setContest()
-	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
+	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{ContestID: contestID, State: corev1.NewOptInt32(200)})
 	require.NoError(t, err)
 	loader.Err = errors.New("db")
 	_, err = h.GetSubmission(ctx, corev1.GetSubmissionParams{SubmissionID: stub.submission.ID})

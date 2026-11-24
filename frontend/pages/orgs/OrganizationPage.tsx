@@ -30,7 +30,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const org = orgData.organization;
 
   const [{data: contestsData, error: contestsErr, response: contestsResponse}, {data: me}] = await Promise.all([
-    api.GET("/workshop/contests", {
+    api.GET("/contests", {
       params: {
         query: {
           page: currentPage,

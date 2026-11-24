@@ -7,7 +7,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/google/uuid"
@@ -245,16 +244,4 @@ func mapTeams(teams []sqlc.Team) []organizationsmodel.Team {
 	}
 
 	return result
-}
-
-func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error) {
-	request, err := request.Normalize()
-	if err != nil {
-		return nil, 0, err
-	}
-	viewer, all, err := (Access{q: r.q}).visibility(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-	return scopeContests(ctx, r.q, sqlc.ScopeContestsParams{TeamID: &teamID, ViewerID: viewer, All: all, PageSize: request.PageSize, PageOffset: request.Offset()})
 }

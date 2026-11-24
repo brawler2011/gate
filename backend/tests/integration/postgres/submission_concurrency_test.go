@@ -220,7 +220,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 					_, err := uc.RejudgeSubmissions(f.userContext(0), submissionsmodel.RejudgeFilter{ContestID: f.contest, SubmissionID: &job.SubmissionID})
 					return err
 				case "block submission":
-					return uc.BlockSubmission(f.userContext(0), f.contest, job.SubmissionID, nil)
+					return uc.SetSubmissionBlocked(f.userContext(0), job.SubmissionID, true, nil)
 				default:
 					return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.loader).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
 				}

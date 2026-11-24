@@ -30,7 +30,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	start, end := now.Add(-3*time.Hour), now.Add(-time.Hour)
 	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID,
 		StartTime: &start, StartTimeSet: true, EndTime: &end, EndTimeSet: true}))
-	path := corev1.UpdateContestParams{OrgLogin: org.Login, ContestLogin: "virtual"}
+	path := corev1.UpdateContestParams{ContestID: contestID}
 	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
 		AllowVirtual: corev1.NewOptBool(true), EnableUpsolving: corev1.NewOptBool(false), ScoreboardDuring: corev1.NewOptContestScope(corev1.ContestScopePublic), ScoreboardAfter: corev1.NewOptContestScope(corev1.ContestScopePublic)}, path))
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
@@ -43,7 +43,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Require().NoError(err)
 
 	as := func(user uuid.UUID) context.Context { return withTestUser(s.ctx, user) }
-	run := corev1.StartVirtualRunParams{OrgLogin: org.Login, ContestLogin: "virtual"}
+	run := corev1.StartVirtualRunParams{ContestID: contestID}
 	_, err = s.client.StartVirtualRun(as(participant.Id), run)
 	s.Equal(http.StatusForbidden, s.getStatusCode(err), "official competitors cannot replay")
 	contest, err := s.client.GetContest(as(runner.Id), corev1.GetContestParams{OrgLogin: org.Login, ContestLogin: "virtual"})
@@ -57,7 +57,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 
 	submit := func() (uuid.UUID, error) {
 		resp, err := s.client.CreateSubmission(as(runner.Id), &corev1.CreateSubmissionRequestModel{Submission: "print(1)"},
-			corev1.CreateSubmissionParams{ProblemID: problem.ID, OrganizationLogin: org.Login, ContestLogin: "virtual", Language: "python3"})
+			corev1.CreateSubmissionParams{ProblemID: problem.ID, ContestID: contestID, Language: "python3"})
 		if err != nil {
 			return uuid.Nil, err
 		}
@@ -70,7 +70,7 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Equal(corev1.SubmissionKindVirtual, sub.Submission.Kind)
 
 	board := func(user uuid.UUID, virtual bool) map[uuid.UUID]corev1.ScoreboardItemModel {
-		resp, err := s.client.GetContestScoreboard(as(user), corev1.GetContestScoreboardParams{OrgLogin: org.Login, ContestLogin: "virtual", Virtual: corev1.NewOptBool(virtual)})
+		resp, err := s.client.GetContestScoreboard(as(user), corev1.GetContestScoreboardParams{ContestID: contestID, Virtual: corev1.NewOptBool(virtual)})
 		s.Require().NoError(err)
 		rows := map[uuid.UUID]corev1.ScoreboardItemModel{}
 		for _, item := range resp.Items {
@@ -101,9 +101,9 @@ func (s *IntegrationTestSuite) TestVirtualContest() {
 	s.Require().Len(late.ProblemResults, 1)
 	s.Equal(int32(1), late.ProblemResults[0].FailedAttempts)
 
-	finish := corev1.FinishVirtualRunParams{OrgLogin: org.Login, ContestLogin: "virtual"}
-	s.Require().NoError(s.client.FinishVirtualRun(as(runner.Id), finish))
-	s.Equal(http.StatusConflict, s.getStatusCode(s.client.FinishVirtualRun(as(runner.Id), finish)))
+	finish := corev1.FinishVirtualRunParams{ContestID: contestID}
+	s.Require().NoError(s.client.FinishVirtualRun(as(runner.Id), &corev1.FinishVirtualRunRequestModel{Finished: true}, finish))
+	s.Equal(http.StatusConflict, s.getStatusCode(s.client.FinishVirtualRun(as(runner.Id), &corev1.FinishVirtualRunRequestModel{Finished: true}, finish)))
 	_, err = submit()
 	s.Equal(http.StatusConflict, s.getStatusCode(err), "after the run upsolving rules apply")
 	s.Equal(int32(1), board(runner.Id, false)[participant.Id].ProblemsSolved, "a finished run shows the final standings")

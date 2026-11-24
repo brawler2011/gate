@@ -69,7 +69,7 @@ describe("Observer visibility in production components", () => {
         problem_results: [{problem_id: "problem", solved: false, failed_attempts: 0, pending_attempts: 1}]}],
     };
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));
-    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" contestId="contest" initialScoreboard={snapshot} />);
     try {
       expect(listener!.url()).toContain("contestId=contest");
       const event = {data: JSON.stringify({event_type: "scoreboard.updated", payload: {

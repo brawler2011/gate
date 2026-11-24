@@ -11,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
@@ -32,19 +31,19 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 	}
 	_, err := s.dbPool.Exec(s.ctx, "UPDATE contests SET created_at=$1 WHERE organization_id=$2", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), org.ID)
 	s.Require().NoError(err)
-	params := corev1.ListOrganizationContestsParams{OrgLogin: org.Login, Search: corev1.NewOptString("Matching"), PageSize: corev1.NewOptInt32(1)}
-	first, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)
+	params := corev1.ListContestsParams{OrganizationID: corev1.NewOptUUID(org.ID), Search: corev1.NewOptString("Matching"), PageSize: corev1.NewOptInt32(1)}
+	first, err := s.client.ListContests(withTestUser(s.ctx, outsider.Id), params)
 	s.Require().NoError(err)
 	s.Require().Len(first.Contests, 1)
 	s.Equal(publicIDs[1], first.Contests[0].ID)
 	s.EqualValues(2, first.Pagination.TotalPages)
 	params.Page = corev1.NewOptInt32(2)
-	second, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)
+	second, err := s.client.ListContests(withTestUser(s.ctx, outsider.Id), params)
 	s.Require().NoError(err)
 	s.Require().Len(second.Contests, 1)
 	s.Equal(publicIDs[0], second.Contests[0].ID)
 	for _, actor := range []accessmodel.User{owner, member, admin} {
-		response, err := s.client.ListOrganizationContests(withTestUser(s.ctx, actor.Id), params)
+		response, err := s.client.ListContests(withTestUser(s.ctx, actor.Id), params)
 		s.Require().NoError(err)
 		expected := 3
 		if actor.Id == member.Id {
@@ -53,12 +52,12 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 		s.EqualValues(expected, response.Pagination.TotalPages)
 	}
 	params.Page = corev1.NewOptInt32(3)
-	empty, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)
+	empty, err := s.client.ListContests(withTestUser(s.ctx, outsider.Id), params)
 	s.Require().NoError(err)
 	s.Empty(empty.Contests)
 	s.EqualValues(2, empty.Pagination.TotalPages)
 	params.Search = corev1.NewOptString("absent")
-	empty, err = s.client.ListOrganizationContests(withTestUser(s.ctx, owner.Id), params)
+	empty, err = s.client.ListContests(withTestUser(s.ctx, owner.Id), params)
 	s.Require().NoError(err)
 	s.Empty(empty.Contests)
 	s.Zero(empty.Pagination.TotalPages)
@@ -76,26 +75,22 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 	reader := contests.NewContestsUseCase(s.contestsRepo, nil, nil, pgstore.NewAccess(s.dbPool))
 	ctx := accessmodel.WithUser(s.ctx, owner)
 	for _, orgID := range []*uuid.UUID{nil, &org.ID} {
-		list, err := reader.ListWorkshopContests(ctx, contestsmodel.WorkshopContestsFilter{UserId: owner.Id, Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 2, PageSize: 1, OrganizationID: orgID})
+		list, err := reader.ListContests(ctx, contestsmodel.ListContestsFilter{Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 2, PageSize: 1, OrganizationID: orgID})
 		s.Require().NoError(err)
 		s.Require().Len(list.Contests, 1)
 		s.Equal(ids[0], list.Contests[0].ID)
 		s.EqualValues(2, list.Pagination.TotalPages)
 	}
-	list, err := reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: owner.Id, Search: "Needle", SortBy: "title", SortOrder: "desc", Page: 2, PageSize: 1})
+	list, err := reader.ListContests(ctx, contestsmodel.ListContestsFilter{Search: "Needle", SortBy: "title", SortOrder: "desc", Page: 2, PageSize: 1})
 	s.Require().NoError(err)
 	s.Require().Len(list.Contests, 1)
 	s.Equal(ids[2], list.Contests[0].ID)
 	s.EqualValues(2, list.Pagination.TotalPages)
-	public, err := s.contestsRepo.ListPublicContests(s.ctx, contestsmodel.PublicContestsFilter{Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 1, PageSize: 1})
+	public, err := s.contestsRepo.ListContests(s.ctx, contestsmodel.ListContestsFilter{Search: "Needle", Visibility: contestsmodel.ContestVisibilityPublic, SortBy: "title", SortOrder: "asc", Page: 1, PageSize: 1})
 	s.Require().NoError(err)
 	s.Require().Len(public.Contests, 1)
 	s.Equal(ids[2], public.Contests[0].ID)
 	s.EqualValues(2, public.Pagination.TotalPages)
-	_, err = reader.ListAdminContests(ctx, contestsmodel.AdminContestsFilter{})
-	s.ErrorIs(err, pkg.ErrForbidden)
-	_, err = reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: other.Id})
-	s.ErrorIs(err, pkg.ErrForbidden)
 	// The owner is already a member of every contest it created.
 	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: ids[0], UserId: other.Id, Role: accessmodel.ContestParticipant}))
 	first, err := reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{ContestId: ids[0], Page: 1, PageSize: 1})

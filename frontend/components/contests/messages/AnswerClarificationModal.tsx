@@ -12,8 +12,7 @@ import type {ContestClarificationModel} from "@/contracts/core/v1/schema";
 interface AnswerClarificationModalProps {
   opened: boolean;
   onClose: () => void;
-  orgLogin: string;
-  contestLogin: string;
+  contestId: string;
   clarification: ContestClarificationModel | null;
   onSuccess?: () => void;
 }
@@ -28,8 +27,7 @@ const QUICK_TEMPLATES = [
 export const AnswerClarificationModal = ({
   opened,
   onClose,
-  orgLogin,
-  contestLogin,
+  contestId,
   clarification,
   onSuccess,
 }: AnswerClarificationModalProps): ReactNode => {
@@ -66,12 +64,11 @@ export const AnswerClarificationModal = ({
 
     setLoading(true);
     const {error: err} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer",
+      "/contests/{contest_id}/clarifications/{clarification_id}/answer",
       {
         params: {
           path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
+            contest_id: contestId,
             clarification_id: clarification.id,
           },
         },

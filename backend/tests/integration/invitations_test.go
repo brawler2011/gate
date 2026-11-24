@@ -19,7 +19,7 @@ func (s *IntegrationTestSuite) TestContestInvitation() {
 	org := s.createOrganization("cinv", "Contest invitations", owner.Id)
 	contest := uuid.New()
 	s.Require().NoError(dbfixtures.InsertContest(s.ctx, s.dbPool, dbfixtures.ContestSpec{ID: contest, OrganizationID: org.ID, Owner: owner.Id, Login: "final"}))
-	params := corev1.InviteContestParticipantParams{OrgLogin: "cinv", ContestLogin: "final"}
+	params := corev1.InviteContestParticipantParams{ContestID: contest}
 	inviteAs := func(user accessmodel.User) (*corev1.InvitationModel, error) {
 		return s.client.InviteContestParticipant(withTestUser(s.ctx, owner.Id), &corev1.InviteContestParticipantRequestModel{UserID: user.Id}, params)
 	}
@@ -31,14 +31,14 @@ func (s *IntegrationTestSuite) TestContestInvitation() {
 
 	_, err = s.client.GetContest(withTestUser(s.ctx, guest.Id), corev1.GetContestParams{OrgLogin: "cinv", ContestLogin: "final"})
 	s.Equal(http.StatusNotFound, s.getStatusCode(err), "a pending invitation grants nothing")
-	err = s.client.AcceptInvitation(withTestUser(s.ctx, other.Id), corev1.AcceptInvitationParams{ID: inv.ID})
+	err = s.client.RespondInvitation(withTestUser(s.ctx, other.Id), &corev1.RespondInvitationRequestModel{Status: corev1.RespondInvitationRequestModelStatusAccepted}, corev1.RespondInvitationParams{ID: inv.ID})
 	s.Equal(http.StatusNotFound, s.getStatusCode(err), "only the invitee may accept")
 
-	s.Require().NoError(s.client.AcceptInvitation(withTestUser(s.ctx, guest.Id), corev1.AcceptInvitationParams{ID: inv.ID}))
-	s.Require().Error(s.client.AcceptInvitation(withTestUser(s.ctx, guest.Id), corev1.AcceptInvitationParams{ID: inv.ID}), "an invitation is used once")
-	role, err := s.client.GetMyContestRole(withTestUser(s.ctx, guest.Id), corev1.GetMyContestRoleParams{OrgLogin: "cinv", ContestLogin: "final"})
+	s.Require().NoError(s.client.RespondInvitation(withTestUser(s.ctx, guest.Id), &corev1.RespondInvitationRequestModel{Status: corev1.RespondInvitationRequestModelStatusAccepted}, corev1.RespondInvitationParams{ID: inv.ID}))
+	s.Require().Error(s.client.RespondInvitation(withTestUser(s.ctx, guest.Id), &corev1.RespondInvitationRequestModel{Status: corev1.RespondInvitationRequestModelStatusAccepted}, corev1.RespondInvitationParams{ID: inv.ID}), "an invitation is used once")
+	got, err := s.client.GetContest(withTestUser(s.ctx, guest.Id), corev1.GetContestParams{OrgLogin: "cinv", ContestLogin: "final"})
 	s.Require().NoError(err)
-	s.Equal("participant", string(role.Role), "a participant without joining the organization")
+	s.Equal("participant", got.MyRole.Value, "a participant without joining the organization")
 	_, err = s.organizationsRepo.GetMember(s.ctx, org.ID, guest.Id)
 	s.Require().Error(err)
 
@@ -47,8 +47,8 @@ func (s *IntegrationTestSuite) TestContestInvitation() {
 
 	inv, err = inviteAs(other)
 	s.Require().NoError(err)
-	s.Require().NoError(s.client.DeclineInvitation(withTestUser(s.ctx, other.Id), corev1.DeclineInvitationParams{ID: inv.ID}))
-	list, err := s.client.ListContestInvitations(withTestUser(s.ctx, owner.Id), corev1.ListContestInvitationsParams{OrgLogin: "cinv", ContestLogin: "final"})
+	s.Require().NoError(s.client.RespondInvitation(withTestUser(s.ctx, other.Id), &corev1.RespondInvitationRequestModel{Status: corev1.RespondInvitationRequestModelStatusDeclined}, corev1.RespondInvitationParams{ID: inv.ID}))
+	list, err := s.client.ListContestInvitations(withTestUser(s.ctx, owner.Id), corev1.ListContestInvitationsParams{ContestID: contest})
 	s.Require().NoError(err)
 	s.Empty(list.Invitations)
 }
@@ -74,7 +74,7 @@ func (s *IntegrationTestSuite) TestOrganizationInvitationCancel() {
 	s.Require().NoError(cancel(owner, admin))
 	member := invite(corev1.InviteOrganizationMemberRequestModelRoleMember)
 	s.Require().NoError(cancel(maintainer, member))
-	s.Require().Error(s.client.AcceptInvitation(withTestUser(s.ctx, invitee.Id), corev1.AcceptInvitationParams{ID: member}))
+	s.Require().Error(s.client.RespondInvitation(withTestUser(s.ctx, invitee.Id), &corev1.RespondInvitationRequestModel{Status: corev1.RespondInvitationRequestModelStatusAccepted}, corev1.RespondInvitationParams{ID: member}))
 }
 
 func (s *IntegrationTestSuite) TestJoinLinks() {
@@ -126,13 +126,13 @@ func (s *IntegrationTestSuite) TestJoinLinks() {
 	contest := uuid.New()
 	s.Require().NoError(dbfixtures.InsertContest(s.ctx, s.dbPool, dbfixtures.ContestSpec{ID: contest, OrganizationID: org.ID, Owner: owner.Id, Login: "olymp"}))
 	outsider := s.createUser("link_outsider", accessmodel.UserRoleUser)
-	contestLink, err := s.client.ResetContestJoinLink(withTestUser(s.ctx, owner.Id), corev1.ResetContestJoinLinkParams{OrgLogin: "links", ContestLogin: "olymp"})
+	contestLink, err := s.client.ResetContestJoinLink(withTestUser(s.ctx, owner.Id), corev1.ResetContestJoinLinkParams{ContestID: contest})
 	s.Require().NoError(err)
 	_, err = s.client.FollowJoinLink(withTestUser(s.ctx, outsider.Id), corev1.FollowJoinLinkParams{Token: contestLink.Token.Value})
 	s.Require().NoError(err)
-	role, err := s.client.GetMyContestRole(withTestUser(s.ctx, outsider.Id), corev1.GetMyContestRoleParams{OrgLogin: "links", ContestLogin: "olymp"})
+	got, err := s.client.GetContest(withTestUser(s.ctx, outsider.Id), corev1.GetContestParams{OrgLogin: "links", ContestLogin: "olymp"})
 	s.Require().NoError(err)
-	s.Equal("participant", string(role.Role))
+	s.Equal("participant", got.MyRole.Value)
 	_, err = s.organizationsRepo.GetMember(s.ctx, org.ID, outsider.Id)
 	s.Require().Error(err, "a contest link does not join the organization")
 }

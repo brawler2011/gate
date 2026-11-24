@@ -6,7 +6,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -129,19 +128,4 @@ func (uc *TeamsUseCase) changeMember(ctx context.Context, teamID, userID uuid.UU
 		}
 		return write(tx)
 	})
-}
-
-func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error) {
-	if _, err := uc.GetTeam(ctx, teamID); err != nil {
-		return nil, err
-	}
-	request, err := request.Normalize()
-	if err != nil {
-		return nil, err
-	}
-	items, total, err := uc.repo.GetTeamContests(ctx, teamID, accessmodel.UserFromContext(ctx).Id, request)
-	if err != nil {
-		return nil, err
-	}
-	return &paging.List[contestsmodel.Contest]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }

@@ -23,7 +23,6 @@ type ProblemsRepo interface {
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
 	ListProblemMembers(context.Context, uuid.UUID, paging.Request) ([]problemsmodel.ProblemMember, int32, error)
 	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
-	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
 }
 
 type TemplatePackages interface {

@@ -96,12 +96,12 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
 
 	problem := func() corev1.ContestProblemModel {
-		resp, err := s.client.GetContestProblem(ctx, corev1.GetContestProblemParams{OrgLogin: org.Login, ContestLogin: "asset-contest", ProblemID: problemID})
+		resp, err := s.client.GetContestProblem(ctx, corev1.GetContestProblemParams{ContestID: contestID, ProblemID: problemID})
 		s.Require().NoError(err)
 		return resp.Problem
 	}
 	params := func(hash string) corev1.GetContestProblemAssetParams {
-		return corev1.GetContestProblemAssetParams{OrgLogin: org.Login, ContestLogin: "asset-contest", ProblemID: problemID, SHA256: hash}
+		return corev1.GetContestProblemAssetParams{ContestID: contestID, ProblemID: problemID, SHA256: hash}
 	}
 
 	got := problem()

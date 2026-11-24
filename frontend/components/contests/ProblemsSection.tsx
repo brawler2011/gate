@@ -20,7 +20,7 @@ import type {ReactNode} from "react";
 interface ProblemsSectionProps {
   orgLogin: string;
   contestLogin: string;
-  contestId?: string;
+  contestId: string;
   initialProblems: Array<corev1.ContestProblemListItemModel>;
 }
 
@@ -45,6 +45,7 @@ const checkHasChanges = (
 export const ProblemsSection = ({
   orgLogin,
   contestLogin,
+  contestId,
   initialProblems,
 }: ProblemsSectionProps): ReactNode => {
   const revalidator = useRevalidator();
@@ -121,10 +122,10 @@ export const ProblemsSection = ({
 
     setAdding(true);
     const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/problems",
+      "/contests/{contest_id}/problems",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {problem_id: selectedProblemId},
         },
       },
@@ -159,9 +160,9 @@ export const ProblemsSection = ({
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
     const {error} = await api.DELETE(
-      "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}",
+      "/contests/{contest_id}/problems/{problem_id}",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin, problem_id: problemId}},
+        params: {path: {contest_id: contestId, problem_id: problemId}},
       },
     );
     setDeletingId(null);
@@ -258,9 +259,9 @@ export const ProblemsSection = ({
   const handleSaveOrder = async () => {
     setSavingOrder(true);
     const {error} = await api.PUT(
-      "/organizations/{org_login}/contests/{contest_login}/problems/reorder",
+      "/contests/{contest_id}/problems/reorder",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
         body: {
           problems: problems.map((p) => ({
             problem_id: p.problem_id,
@@ -324,10 +325,10 @@ export const ProblemsSection = ({
 
     setReplacing(true);
     const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/problems",
+      "/contests/{contest_id}/problems",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {
             problem_id: replaceTarget.problemId,
             package_id: effectivePackageId,
@@ -404,7 +405,7 @@ export const ProblemsSection = ({
           </Text>
           <Group gap="xs">
             <DownloadStatementsButton
-              orgLogin={orgLogin}
+              contestId={contestId}
               contestLogin={contestLogin}
               size="xs"
               variant="default"

@@ -14,8 +14,7 @@ import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 interface CreateAnnouncementModalProps {
   opened: boolean;
   onClose: () => void;
-  orgLogin: string;
-  contestLogin: string;
+  contestId: string;
   problems?: ContestProblemListItemModel[];
   onSuccess?: () => void;
 }
@@ -23,8 +22,7 @@ interface CreateAnnouncementModalProps {
 export const CreateAnnouncementModal = ({
   opened,
   onClose,
-  orgLogin,
-  contestLogin,
+  contestId,
   problems = [],
   onSuccess,
 }: CreateAnnouncementModalProps): ReactNode => {
@@ -65,9 +63,9 @@ export const CreateAnnouncementModal = ({
 
     setLoading(true);
     const {error: err} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/announcements",
+      "/contests/{contest_id}/announcements",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
         body: {
           title: title.trim(),
           body: body.trim(),

@@ -37,23 +37,6 @@ func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, e
 	}, nil
 }
 
-func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
-	contests, err := h.Contests.ListDashboardContests(ctx, user.Id, 5)
-	if err != nil {
-		return nil, err
-	}
-
-	problems, err := h.Problems.ListDashboardProblems(ctx, user.Id, 5)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := DashboardResponseDTO(contests, problems)
-	return projectResponse(h, ctx, &resp)
-}
-
 func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)

@@ -13,13 +13,13 @@ export const Monitor = ({initialScoreboard, ...props}: ComponentProps<typeof Con
 }): ReactNode => {
   const [client] = useState(() => {
     const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: 10000, gcTime: 0}}});
-    client.setQueryData(api.queryOptions('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
-      params: {path: {org_login: props.orgLogin, contest_login: props.contestLogin}, query: {unfrozen: false}},
+    client.setQueryData(api.queryOptions('get', '/contests/{contest_id}/scoreboard', {
+      params: {path: {contest_id: props.contestId}, query: {unfrozen: false}},
     }).queryKey, initialScoreboard);
     return client;
   });
   return <QueryClientProvider client={client}>
-    <SubmissionsProvider contestId="contest" orgLogin={props.orgLogin} contestLogin={props.contestLogin} userId="user">
+    <SubmissionsProvider contestId={props.contestId} orgLogin={props.orgLogin} contestLogin={props.contestLogin} userId="user">
       <ContestMonitorTable {...props} />
     </SubmissionsProvider>
   </QueryClientProvider>;

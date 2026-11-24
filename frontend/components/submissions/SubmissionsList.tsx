@@ -299,8 +299,7 @@ const SubmissionsList = ({
       <SubmissionSanctionsModal
         actionType={sanctionState?.actionType ?? null}
         onClose={() => setSanctionState(null)}
-        orgLogin={sanctionState?.submission.organization_login}
-        contestLogin={sanctionState?.submission.contest_login}
+        contestId={sanctionState?.submission.contest_id}
         submissionId={sanctionState?.submission.id}
         userId={sanctionState?.submission.user_id}
         problemId={sanctionState?.submission.problem_id}

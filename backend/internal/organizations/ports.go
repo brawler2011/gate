@@ -6,7 +6,6 @@ import (
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
@@ -38,8 +37,6 @@ type TeamsRepo interface {
 
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error)
-
-	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error)
 }
 
 type UsersRepo interface {

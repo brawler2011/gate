@@ -15,72 +15,6 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// AcceptInvitationParams is parameters of AcceptInvitation operation.
-type AcceptInvitationParams struct {
-	// UUID of the invitation.
-	ID uuid.UUID
-}
-
-func unpackAcceptInvitationParams(packed middleware.Parameters) (params AcceptInvitationParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeAcceptInvitationParams(args [1]string, argsEscaped bool, r *http.Request) (params AcceptInvitationParams, _ error) {
-	// Decode path: id.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // AddOrganizationMemberParams is parameters of AddOrganizationMember operation.
 type AddOrganizationMemberParams struct {
 	// Organization login.
@@ -696,10 +630,8 @@ func decodeAdminSetPasswordParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // AnswerContestClarificationParams is parameters of AnswerContestClarification operation.
 type AnswerContestClarificationParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the clarification.
 	ClarificationID uuid.UUID
 }
@@ -707,17 +639,10 @@ type AnswerContestClarificationParams struct {
 func unpackAnswerContestClarificationParams(packed middleware.Parameters) (params AnswerContestClarificationParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -729,8 +654,8 @@ func unpackAnswerContestClarificationParams(packed middleware.Parameters) (param
 	return params
 }
 
-func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r *http.Request) (params AnswerContestClarificationParams, _ error) {
-	// Decode path: org_login.
+func decodeAnswerContestClarificationParams(args [2]string, argsEscaped bool, r *http.Request) (params AnswerContestClarificationParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -742,7 +667,7 @@ func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r 
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -754,12 +679,12 @@ func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r 
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -770,61 +695,16 @@ func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r 
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: clarification_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -861,300 +741,6 @@ func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r 
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "clarification_id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ApproveContestJoinRequestParams is parameters of ApproveContestJoinRequest operation.
-type ApproveContestJoinRequestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the join request.
-	ID uuid.UUID
-}
-
-func unpackApproveContestJoinRequestParams(packed middleware.Parameters) (params ApproveContestJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeApproveContestJoinRequestParams(args [3]string, argsEscaped bool, r *http.Request) (params ApproveContestJoinRequestParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ApproveOrganizationJoinRequestParams is parameters of ApproveOrganizationJoinRequest operation.
-type ApproveOrganizationJoinRequestParams struct {
-	// Organization login.
-	Login string
-	// UUID of the join request.
-	ID uuid.UUID
-}
-
-func unpackApproveOrganizationJoinRequestParams(packed middleware.Parameters) (params ApproveOrganizationJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "login",
-			In:   "path",
-		}
-		params.Login = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeApproveOrganizationJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params ApproveOrganizationJoinRequestParams, _ error) {
-	// Decode path: login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Login = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: id.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
@@ -1230,10 +816,8 @@ func decodeBatchCreateOrganizationUsersParams(args [1]string, argsEscaped bool, 
 
 // BlockProblemForUserParams is parameters of BlockProblemForUser operation.
 type BlockProblemForUserParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
 	// UUID of the problem.
@@ -1243,17 +827,10 @@ type BlockProblemForUserParams struct {
 func unpackBlockProblemForUserParams(packed middleware.Parameters) (params BlockProblemForUserParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -1272,8 +849,8 @@ func unpackBlockProblemForUserParams(packed middleware.Parameters) (params Block
 	return params
 }
 
-func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.Request) (params BlockProblemForUserParams, _ error) {
-	// Decode path: org_login.
+func decodeBlockProblemForUserParams(args [3]string, argsEscaped bool, r *http.Request) (params BlockProblemForUserParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -1285,7 +862,7 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -1297,12 +874,12 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -1313,61 +890,16 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: user_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -1410,9 +942,9 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[3]
+		param := args[2]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[3])
+			unescaped, err := url.PathUnescape(args[2])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -1449,180 +981,6 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "problem_id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// BlockSubmissionParams is parameters of BlockSubmission operation.
-type BlockSubmissionParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the submission.
-	SubmissionID uuid.UUID
-}
-
-func unpackBlockSubmissionParams(packed middleware.Parameters) (params BlockSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "submission_id",
-			In:   "path",
-		}
-		params.SubmissionID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeBlockSubmissionParams(args [3]string, argsEscaped bool, r *http.Request) (params BlockSubmissionParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: submission_id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "submission_id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.SubmissionID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "submission_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -1698,32 +1056,32 @@ func decodeBuildProblemPackageParams(args [1]string, argsEscaped bool, r *http.R
 
 // CancelContestJoinRequestParams is parameters of CancelContestJoinRequest operation.
 type CancelContestJoinRequestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackCancelContestJoinRequestParams(packed middleware.Parameters) (params CancelContestJoinRequestParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "contest_login",
+			Name: "id",
 			In:   "path",
 		}
-		params.ContestLogin = packed[key].(string)
+		params.ID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
 func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params CancelContestJoinRequestParams, _ error) {
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -1735,7 +1093,7 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -1747,12 +1105,12 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -1763,12 +1121,12 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
-	// Decode path: contest_login.
+	// Decode path: id.
 	if err := func() error {
 		param := args[1]
 		if argsEscaped {
@@ -1780,7 +1138,7 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -1792,12 +1150,12 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.ContestLogin = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -1808,7 +1166,7 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
@@ -1886,6 +1244,8 @@ func decodeCancelInvitationParams(args [1]string, argsEscaped bool, r *http.Requ
 type CancelOrganizationJoinRequestParams struct {
 	// Organization login.
 	Login string
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackCancelOrganizationJoinRequestParams(packed middleware.Parameters) (params CancelOrganizationJoinRequestParams) {
@@ -1896,10 +1256,17 @@ func unpackCancelOrganizationJoinRequestParams(packed middleware.Parameters) (pa
 		}
 		params.Login = packed[key].(string)
 	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
 	return params
 }
 
-func decodeCancelOrganizationJoinRequestParams(args [1]string, argsEscaped bool, r *http.Request) (params CancelOrganizationJoinRequestParams, _ error) {
+func decodeCancelOrganizationJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params CancelOrganizationJoinRequestParams, _ error) {
 	// Decode path: login.
 	if err := func() error {
 		param := args[0]
@@ -1941,6 +1308,51 @@ func decodeCancelOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2068,198 +1480,25 @@ func decodeCancelProblemBuildParams(args [2]string, argsEscaped bool, r *http.Re
 	return params, nil
 }
 
-// CreateContestParams is parameters of CreateContest operation.
-type CreateContestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Title of the new contest.
-	Title string
-	// Login of the new contest within the organization.
-	Login OptString `json:",omitempty,omitzero"`
-}
-
-func unpackCreateContestParams(packed middleware.Parameters) (params CreateContestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "title",
-			In:   "query",
-		}
-		params.Title = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "login",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Login = v.(OptString)
-		}
-	}
-	return params
-}
-
-func decodeCreateContestParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: title.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "title",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Title = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "title",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: login.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "login",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLoginVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotLoginVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Login.SetTo(paramsDotLoginVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "login",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // CreateContestAnnouncementParams is parameters of CreateContestAnnouncement operation.
 type CreateContestAnnouncementParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackCreateContestAnnouncementParams(packed middleware.Parameters) (params CreateContestAnnouncementParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestAnnouncementParams, _ error) {
-	// Decode path: org_login.
+func decodeCreateContestAnnouncementParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestAnnouncementParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2271,7 +1510,7 @@ func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2283,12 +1522,12 @@ func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2299,52 +1538,7 @@ func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2354,32 +1548,23 @@ func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *
 
 // CreateContestClarificationParams is parameters of CreateContestClarification operation.
 type CreateContestClarificationParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackCreateContestClarificationParams(packed middleware.Parameters) (params CreateContestClarificationParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestClarificationParams, _ error) {
-	// Decode path: org_login.
+func decodeCreateContestClarificationParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestClarificationParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2391,7 +1576,7 @@ func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r 
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2403,12 +1588,12 @@ func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r 
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2419,52 +1604,7 @@ func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r 
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2474,32 +1614,23 @@ func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r 
 
 // CreateContestDraftParams is parameters of CreateContestDraft operation.
 type CreateContestDraftParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackCreateContestDraftParams(packed middleware.Parameters) (params CreateContestDraftParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestDraftParams, _ error) {
-	// Decode path: org_login.
+func decodeCreateContestDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestDraftParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2511,7 +1642,7 @@ func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Re
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2523,12 +1654,12 @@ func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Re
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2539,52 +1670,7 @@ func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Re
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2594,32 +1680,23 @@ func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Re
 
 // CreateContestJoinRequestParams is parameters of CreateContestJoinRequest operation.
 type CreateContestJoinRequestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackCreateContestJoinRequestParams(packed middleware.Parameters) (params CreateContestJoinRequestParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestJoinRequestParams, _ error) {
-	// Decode path: org_login.
+func decodeCreateContestJoinRequestParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestJoinRequestParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2631,7 +1708,7 @@ func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2643,12 +1720,12 @@ func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2659,52 +1736,7 @@ func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2714,10 +1746,8 @@ func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 
 // CreateContestProblemParams is parameters of CreateContestProblem operation.
 type CreateContestProblemParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
 	// UUID of the problem package.
@@ -2727,17 +1757,10 @@ type CreateContestProblemParams struct {
 func unpackCreateContestProblemParams(packed middleware.Parameters) (params CreateContestProblemParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -2758,9 +1781,9 @@ func unpackCreateContestProblemParams(packed middleware.Parameters) (params Crea
 	return params
 }
 
-func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestProblemParams, _ error) {
+func decodeCreateContestProblemParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestProblemParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2772,7 +1795,7 @@ func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2784,12 +1807,12 @@ func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2800,52 +1823,7 @@ func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -2932,10 +1910,8 @@ func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.
 
 // CreateContestTeamParams is parameters of CreateContestTeam operation.
 type CreateContestTeamParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the team.
 	TeamID uuid.UUID
 	// Role to assign to the member.
@@ -2945,17 +1921,10 @@ type CreateContestTeamParams struct {
 func unpackCreateContestTeamParams(packed middleware.Parameters) (params CreateContestTeamParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -2976,9 +1945,9 @@ func unpackCreateContestTeamParams(packed middleware.Parameters) (params CreateC
 	return params
 }
 
-func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Request) (params CreateContestTeamParams, _ error) {
+func decodeCreateContestTeamParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateContestTeamParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -2990,7 +1959,7 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -3002,12 +1971,12 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -3018,52 +1987,7 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -3755,10 +2679,8 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 type CreateSubmissionParams struct {
 	// UUID of the problem.
 	ProblemID uuid.UUID
-	// Organization login.
-	OrganizationLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Identifier of a language configuration from GET /languages.
 	Language string
 }
@@ -3773,17 +2695,10 @@ func unpackCreateSubmissionParams(packed middleware.Parameters) (params CreateSu
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "organization_login",
+			Name: "contest_id",
 			In:   "query",
 		}
-		params.OrganizationLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "query",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -3833,10 +2748,10 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 			Err:  err,
 		}
 	}
-	// Decode query: organization_login.
+	// Decode query: contest_id.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "organization_login",
+			Name:    "contest_id",
 			Style:   uri.QueryStyleForm,
 			Explode: true,
 		}
@@ -3848,12 +2763,12 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrganizationLogin = c
+				params.ContestID = c
 				return nil
 			}); err != nil {
 				return err
@@ -3864,43 +2779,7 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "organization_login",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: contest_login.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "contest_login",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "query",
 			Err:  err,
 		}
@@ -3938,72 +2817,6 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 		return params, &ogenerrors.DecodeParamError{
 			Name: "language",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeclineInvitationParams is parameters of DeclineInvitation operation.
-type DeclineInvitationParams struct {
-	// UUID of the invitation.
-	ID uuid.UUID
-}
-
-func unpackDeclineInvitationParams(packed middleware.Parameters) (params DeclineInvitationParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeDeclineInvitationParams(args [1]string, argsEscaped bool, r *http.Request) (params DeclineInvitationParams, _ error) {
-	// Decode path: id.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
 			Err:  err,
 		}
 	}
@@ -4078,32 +2891,23 @@ func decodeDeleteAvatarParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // DeleteContestParams is parameters of DeleteContest operation.
 type DeleteContestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackDeleteContestParams(packed middleware.Parameters) (params DeleteContestParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestParams, _ error) {
-	// Decode path: org_login.
+func decodeDeleteContestParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteContestParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4115,7 +2919,7 @@ func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4127,12 +2931,12 @@ func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4143,52 +2947,7 @@ func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -4198,10 +2957,8 @@ func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request
 
 // DeleteContestAnnouncementParams is parameters of DeleteContestAnnouncement operation.
 type DeleteContestAnnouncementParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the contest announcement.
 	AnnouncementID uuid.UUID
 }
@@ -4209,17 +2966,10 @@ type DeleteContestAnnouncementParams struct {
 func unpackDeleteContestAnnouncementParams(packed middleware.Parameters) (params DeleteContestAnnouncementParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -4231,8 +2981,8 @@ func unpackDeleteContestAnnouncementParams(packed middleware.Parameters) (params
 	return params
 }
 
-func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *http.Request) (params DeleteContestAnnouncementParams, _ error) {
-	// Decode path: org_login.
+func decodeDeleteContestAnnouncementParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestAnnouncementParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4244,7 +2994,7 @@ func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4256,12 +3006,12 @@ func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4272,61 +3022,16 @@ func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: announcement_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -4372,10 +3077,8 @@ func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *
 
 // DeleteContestDraftParams is parameters of DeleteContestDraft operation.
 type DeleteContestDraftParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the draft problem package.
 	DraftID uuid.UUID
 }
@@ -4383,17 +3086,10 @@ type DeleteContestDraftParams struct {
 func unpackDeleteContestDraftParams(packed middleware.Parameters) (params DeleteContestDraftParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -4405,8 +3101,8 @@ func unpackDeleteContestDraftParams(packed middleware.Parameters) (params Delete
 	return params
 }
 
-func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Request) (params DeleteContestDraftParams, _ error) {
-	// Decode path: org_login.
+func decodeDeleteContestDraftParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestDraftParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4418,7 +3114,7 @@ func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Re
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4430,12 +3126,12 @@ func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Re
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4446,61 +3142,16 @@ func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Re
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: draft_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -4548,10 +3199,8 @@ func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Re
 type DeleteContestMemberParams struct {
 	// UUID of the user.
 	UserID uuid.UUID
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackDeleteContestMemberParams(packed middleware.Parameters) (params DeleteContestMemberParams) {
@@ -4564,22 +3213,15 @@ func unpackDeleteContestMemberParams(packed middleware.Parameters) (params Delet
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestMemberParams, _ error) {
+func decodeDeleteContestMemberParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteContestMemberParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
 	// Decode query: user_id.
 	if err := func() error {
@@ -4617,7 +3259,7 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 			Err:  err,
 		}
 	}
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4629,7 +3271,7 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4641,12 +3283,12 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4657,52 +3299,7 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -4712,10 +3309,8 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 
 // DeleteContestProblemParams is parameters of DeleteContestProblem operation.
 type DeleteContestProblemParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
 }
@@ -4723,17 +3318,10 @@ type DeleteContestProblemParams struct {
 func unpackDeleteContestProblemParams(packed middleware.Parameters) (params DeleteContestProblemParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -4745,8 +3333,8 @@ func unpackDeleteContestProblemParams(packed middleware.Parameters) (params Dele
 	return params
 }
 
-func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.Request) (params DeleteContestProblemParams, _ error) {
-	// Decode path: org_login.
+func decodeDeleteContestProblemParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestProblemParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4758,7 +3346,7 @@ func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4770,12 +3358,12 @@ func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4786,61 +3374,16 @@ func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -4886,10 +3429,8 @@ func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.
 
 // DeleteContestTeamParams is parameters of DeleteContestTeam operation.
 type DeleteContestTeamParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the team.
 	TeamID uuid.UUID
 }
@@ -4897,17 +3438,10 @@ type DeleteContestTeamParams struct {
 func unpackDeleteContestTeamParams(packed middleware.Parameters) (params DeleteContestTeamParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -4919,9 +3453,9 @@ func unpackDeleteContestTeamParams(packed middleware.Parameters) (params DeleteC
 	return params
 }
 
-func decodeDeleteContestTeamParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteContestTeamParams, _ error) {
+func decodeDeleteContestTeamParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteContestTeamParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -4933,7 +3467,7 @@ func decodeDeleteContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -4945,12 +3479,12 @@ func decodeDeleteContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -4961,52 +3495,7 @@ func decodeDeleteContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -5428,32 +3917,23 @@ func decodeDeleteTeamParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // DisableContestJoinLinkParams is parameters of DisableContestJoinLink operation.
 type DisableContestJoinLinkParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackDisableContestJoinLinkParams(packed middleware.Parameters) (params DisableContestJoinLinkParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeDisableContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Request) (params DisableContestJoinLinkParams, _ error) {
-	// Decode path: org_login.
+func decodeDisableContestJoinLinkParams(args [1]string, argsEscaped bool, r *http.Request) (params DisableContestJoinLinkParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -5465,7 +3945,7 @@ func decodeDisableContestJoinLinkParams(args [2]string, argsEscaped bool, r *htt
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -5477,12 +3957,12 @@ func decodeDisableContestJoinLinkParams(args [2]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -5493,52 +3973,7 @@ func decodeDisableContestJoinLinkParams(args [2]string, argsEscaped bool, r *htt
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -5614,10 +4049,8 @@ func decodeDisableTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.R
 
 // DownloadContestStatementsPdfParams is parameters of DownloadContestStatementsPdf operation.
 type DownloadContestStatementsPdfParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Language code of the problem statement.
 	Lang OptString `json:",omitempty,omitzero"`
 }
@@ -5625,17 +4058,10 @@ type DownloadContestStatementsPdfParams struct {
 func unpackDownloadContestStatementsPdfParams(packed middleware.Parameters) (params DownloadContestStatementsPdfParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -5649,9 +4075,9 @@ func unpackDownloadContestStatementsPdfParams(packed middleware.Parameters) (par
 	return params
 }
 
-func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadContestStatementsPdfParams, _ error) {
+func decodeDownloadContestStatementsPdfParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadContestStatementsPdfParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -5663,7 +4089,7 @@ func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, 
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -5675,12 +4101,12 @@ func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, 
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -5691,52 +4117,7 @@ func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, 
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -5977,32 +4358,23 @@ func decodeExportProblemDraftParams(args [1]string, argsEscaped bool, r *http.Re
 
 // FinishVirtualRunParams is parameters of FinishVirtualRun operation.
 type FinishVirtualRunParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackFinishVirtualRunParams(packed middleware.Parameters) (params FinishVirtualRunParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeFinishVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params FinishVirtualRunParams, _ error) {
-	// Decode path: org_login.
+func decodeFinishVirtualRunParams(args [1]string, argsEscaped bool, r *http.Request) (params FinishVirtualRunParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -6014,7 +4386,7 @@ func decodeFinishVirtualRunParams(args [2]string, argsEscaped bool, r *http.Requ
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -6026,12 +4398,12 @@ func decodeFinishVirtualRunParams(args [2]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -6042,52 +4414,7 @@ func decodeFinishVirtualRunParams(args [2]string, argsEscaped bool, r *http.Requ
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -6283,32 +4610,23 @@ func decodeGetContestParams(args [2]string, argsEscaped bool, r *http.Request) (
 
 // GetContestJoinLinkParams is parameters of GetContestJoinLink operation.
 type GetContestJoinLinkParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackGetContestJoinLinkParams(packed middleware.Parameters) (params GetContestJoinLinkParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeGetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Request) (params GetContestJoinLinkParams, _ error) {
-	// Decode path: org_login.
+func decodeGetContestJoinLinkParams(args [1]string, argsEscaped bool, r *http.Request) (params GetContestJoinLinkParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -6320,7 +4638,7 @@ func decodeGetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Re
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -6332,12 +4650,12 @@ func decodeGetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Re
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -6348,52 +4666,7 @@ func decodeGetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Re
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -6403,10 +4676,8 @@ func decodeGetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Re
 
 // GetContestProblemParams is parameters of GetContestProblem operation.
 type GetContestProblemParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
 }
@@ -6414,17 +4685,10 @@ type GetContestProblemParams struct {
 func unpackGetContestProblemParams(packed middleware.Parameters) (params GetContestProblemParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -6436,8 +4700,8 @@ func unpackGetContestProblemParams(packed middleware.Parameters) (params GetCont
 	return params
 }
 
-func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Request) (params GetContestProblemParams, _ error) {
-	// Decode path: org_login.
+func decodeGetContestProblemParams(args [2]string, argsEscaped bool, r *http.Request) (params GetContestProblemParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -6449,7 +4713,7 @@ func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -6461,12 +4725,12 @@ func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -6477,61 +4741,16 @@ func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -6577,10 +4796,8 @@ func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Req
 
 // GetContestProblemAssetParams is parameters of GetContestProblemAsset operation.
 type GetContestProblemAssetParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
 	// SHA-256 of the image, as listed in the problem's `assets`.
@@ -6590,17 +4807,10 @@ type GetContestProblemAssetParams struct {
 func unpackGetContestProblemAssetParams(packed middleware.Parameters) (params GetContestProblemAssetParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -6619,8 +4829,8 @@ func unpackGetContestProblemAssetParams(packed middleware.Parameters) (params Ge
 	return params
 }
 
-func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *http.Request) (params GetContestProblemAssetParams, _ error) {
-	// Decode path: org_login.
+func decodeGetContestProblemAssetParams(args [3]string, argsEscaped bool, r *http.Request) (params GetContestProblemAssetParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -6632,7 +4842,7 @@ func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *htt
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -6644,12 +4854,12 @@ func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -6660,61 +4870,16 @@ func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *htt
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -6757,9 +4922,9 @@ func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *htt
 	}
 	// Decode path: sha256.
 	if err := func() error {
-		param := args[3]
+		param := args[2]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[3])
+			unescaped, err := url.PathUnescape(args[2])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -6825,10 +4990,8 @@ func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *htt
 
 // GetContestScoreboardParams is parameters of GetContestScoreboard operation.
 type GetContestScoreboardParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Whether to return unfrozen scoreboard (managers only).
 	Unfrozen OptBool `json:",omitempty,omitzero"`
 	// Whether to rank virtual runs with the official participants.
@@ -6838,17 +5001,10 @@ type GetContestScoreboardParams struct {
 func unpackGetContestScoreboardParams(packed middleware.Parameters) (params GetContestScoreboardParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -6871,9 +5027,9 @@ func unpackGetContestScoreboardParams(packed middleware.Parameters) (params GetC
 	return params
 }
 
-func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.Request) (params GetContestScoreboardParams, _ error) {
+func decodeGetContestScoreboardParams(args [1]string, argsEscaped bool, r *http.Request) (params GetContestScoreboardParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -6885,7 +5041,7 @@ func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -6897,12 +5053,12 @@ func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -6913,52 +5069,7 @@ func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -7107,312 +5218,6 @@ func decodeGetJoinLinkTargetParams(args [1]string, argsEscaped bool, r *http.Req
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "token",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetMyContestJoinRequestParams is parameters of GetMyContestJoinRequest operation.
-type GetMyContestJoinRequestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-}
-
-func unpackGetMyContestJoinRequestParams(packed middleware.Parameters) (params GetMyContestJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetMyContestJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params GetMyContestJoinRequestParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetMyContestRoleParams is parameters of GetMyContestRole operation.
-type GetMyContestRoleParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-}
-
-func unpackGetMyContestRoleParams(packed middleware.Parameters) (params GetMyContestRoleParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetMyContestRoleParams(args [2]string, argsEscaped bool, r *http.Request) (params GetMyContestRoleParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetMyOrganizationJoinRequestParams is parameters of GetMyOrganizationJoinRequest operation.
-type GetMyOrganizationJoinRequestParams struct {
-	// Organization login.
-	Login string
-}
-
-func unpackGetMyOrganizationJoinRequestParams(packed middleware.Parameters) (params GetMyOrganizationJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "login",
-			In:   "path",
-		}
-		params.Login = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetMyOrganizationJoinRequestParams(args [1]string, argsEscaped bool, r *http.Request) (params GetMyOrganizationJoinRequestParams, _ error) {
-	// Decode path: login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Login = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "login",
 			In:   "path",
 			Err:  err,
 		}
@@ -7877,10 +5682,8 @@ func decodeGetProblemAssetParams(args [2]string, argsEscaped bool, r *http.Reque
 
 // GetProblemBlockStatusForUserParams is parameters of GetProblemBlockStatusForUser operation.
 type GetProblemBlockStatusForUserParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
 	// UUID of the problem.
@@ -7890,17 +5693,10 @@ type GetProblemBlockStatusForUserParams struct {
 func unpackGetProblemBlockStatusForUserParams(packed middleware.Parameters) (params GetProblemBlockStatusForUserParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -7919,8 +5715,8 @@ func unpackGetProblemBlockStatusForUserParams(packed middleware.Parameters) (par
 	return params
 }
 
-func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, r *http.Request) (params GetProblemBlockStatusForUserParams, _ error) {
-	// Decode path: org_login.
+func decodeGetProblemBlockStatusForUserParams(args [3]string, argsEscaped bool, r *http.Request) (params GetProblemBlockStatusForUserParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -7932,7 +5728,7 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -7944,12 +5740,12 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -7960,61 +5756,16 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: user_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -8057,9 +5808,9 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[3]
+		param := args[2]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[3])
+			unescaped, err := url.PathUnescape(args[2])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -8790,126 +6541,6 @@ func decodeGetUserAvatarParams(args [1]string, argsEscaped bool, r *http.Request
 	return params, nil
 }
 
-// GetVirtualRunParams is parameters of GetVirtualRun operation.
-type GetVirtualRunParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-}
-
-func unpackGetVirtualRunParams(packed middleware.Parameters) (params GetVirtualRunParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params GetVirtualRunParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // ImportProblemParams is parameters of ImportProblem operation.
 type ImportProblemParams struct {
 	// UUID of the problem.
@@ -9042,32 +6673,23 @@ func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request
 
 // InviteContestParticipantParams is parameters of InviteContestParticipant operation.
 type InviteContestParticipantParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackInviteContestParticipantParams(packed middleware.Parameters) (params InviteContestParticipantParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeInviteContestParticipantParams(args [2]string, argsEscaped bool, r *http.Request) (params InviteContestParticipantParams, _ error) {
-	// Decode path: org_login.
+func decodeInviteContestParticipantParams(args [1]string, argsEscaped bool, r *http.Request) (params InviteContestParticipantParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -9079,7 +6701,7 @@ func decodeInviteContestParticipantParams(args [2]string, argsEscaped bool, r *h
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -9091,12 +6713,12 @@ func decodeInviteContestParticipantParams(args [2]string, argsEscaped bool, r *h
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -9107,52 +6729,7 @@ func decodeInviteContestParticipantParams(args [2]string, argsEscaped bool, r *h
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -9226,442 +6803,10 @@ func decodeInviteOrganizationMemberParams(args [1]string, argsEscaped bool, r *h
 	return params, nil
 }
 
-// ListAdminContestsParams is parameters of ListAdminContests operation.
-type ListAdminContestsParams struct {
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-	// Search text used to filter results.
-	Search OptString `json:",omitempty,omitzero"`
-	// Visibility level of the resource.
-	Visibility OptListAdminContestsVisibility `json:",omitempty,omitzero"`
-	// Field used to sort results.
-	SortBy OptSortByQuery `json:",omitempty,omitzero"`
-	// Sort direction: asc or desc.
-	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
-}
-
-func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdminContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "search",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Search = v.(OptString)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "visibility",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Visibility = v.(OptListAdminContestsVisibility)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortBy",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptSortByQuery)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortOrder",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptContestSortOrderQuery)
-		}
-	}
-	return params
-}
-
-func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListAdminContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: search.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "search",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSearchVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSearchVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Search.SetTo(paramsDotSearchVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "search",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: visibility.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "visibility",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotVisibilityVal ListAdminContestsVisibility
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotVisibilityVal = ListAdminContestsVisibility(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Visibility.SetTo(paramsDotVisibilityVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Visibility.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "visibility",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortBy.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortBy",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal SortByQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortByVal = SortByQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortBy.SetTo(paramsDotSortByVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortBy.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortBy",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortOrder.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortOrder",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ContestSortOrderQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortOrderVal = ContestSortOrderQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortOrder.SetTo(paramsDotSortOrderVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortOrder.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortOrder",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // ListContestAnnouncementsParams is parameters of ListContestAnnouncements operation.
 type ListContestAnnouncementsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
@@ -9671,17 +6816,10 @@ type ListContestAnnouncementsParams struct {
 func unpackListContestAnnouncementsParams(packed middleware.Parameters) (params ListContestAnnouncementsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -9704,9 +6842,9 @@ func unpackListContestAnnouncementsParams(packed middleware.Parameters) (params 
 	return params
 }
 
-func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestAnnouncementsParams, _ error) {
+func decodeListContestAnnouncementsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestAnnouncementsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -9718,7 +6856,7 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -9730,12 +6868,12 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -9746,52 +6884,7 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -9943,10 +7036,8 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 
 // ListContestClarificationsParams is parameters of ListContestClarifications operation.
 type ListContestClarificationsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID OptUUID `json:",omitempty,omitzero"`
 	// Filter results by status.
@@ -9960,17 +7051,10 @@ type ListContestClarificationsParams struct {
 func unpackListContestClarificationsParams(packed middleware.Parameters) (params ListContestClarificationsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -10011,9 +7095,9 @@ func unpackListContestClarificationsParams(packed middleware.Parameters) (params
 	return params
 }
 
-func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestClarificationsParams, _ error) {
+func decodeListContestClarificationsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestClarificationsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -10025,7 +7109,7 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10037,12 +7121,12 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10053,52 +7137,7 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -10332,10 +7371,8 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 
 // ListContestDraftsParams is parameters of ListContestDrafts operation.
 type ListContestDraftsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
@@ -10345,17 +7382,10 @@ type ListContestDraftsParams struct {
 func unpackListContestDraftsParams(packed middleware.Parameters) (params ListContestDraftsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -10378,9 +7408,9 @@ func unpackListContestDraftsParams(packed middleware.Parameters) (params ListCon
 	return params
 }
 
-func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestDraftsParams, _ error) {
+func decodeListContestDraftsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestDraftsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -10392,7 +7422,7 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10404,12 +7434,12 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10420,52 +7450,7 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -10617,32 +7602,23 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 
 // ListContestInvitationsParams is parameters of ListContestInvitations operation.
 type ListContestInvitationsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackListContestInvitationsParams(packed middleware.Parameters) (params ListContestInvitationsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeListContestInvitationsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestInvitationsParams, _ error) {
-	// Decode path: org_login.
+func decodeListContestInvitationsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestInvitationsParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -10654,7 +7630,7 @@ func decodeListContestInvitationsParams(args [2]string, argsEscaped bool, r *htt
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10666,12 +7642,12 @@ func decodeListContestInvitationsParams(args [2]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10682,52 +7658,7 @@ func decodeListContestInvitationsParams(args [2]string, argsEscaped bool, r *htt
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -10737,32 +7668,23 @@ func decodeListContestInvitationsParams(args [2]string, argsEscaped bool, r *htt
 
 // ListContestJoinRequestsParams is parameters of ListContestJoinRequests operation.
 type ListContestJoinRequestsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackListContestJoinRequestsParams(packed middleware.Parameters) (params ListContestJoinRequestsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestJoinRequestsParams, _ error) {
-	// Decode path: org_login.
+func decodeListContestJoinRequestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestJoinRequestsParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -10774,7 +7696,7 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10786,12 +7708,12 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10802,52 +7724,7 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -10857,10 +7734,8 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 
 // ListContestMembersParams is parameters of ListContestMembers operation.
 type ListContestMembersParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
@@ -10870,17 +7745,10 @@ type ListContestMembersParams struct {
 func unpackListContestMembersParams(packed middleware.Parameters) (params ListContestMembersParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -10903,9 +7771,9 @@ func unpackListContestMembersParams(packed middleware.Parameters) (params ListCo
 	return params
 }
 
-func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestMembersParams, _ error) {
+func decodeListContestMembersParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestMembersParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -10917,7 +7785,7 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10929,12 +7797,12 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10945,52 +7813,7 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -11142,10 +7965,8 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 
 // ListContestSubmissionsParams is parameters of ListContestSubmissions operation.
 type ListContestSubmissionsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
@@ -11165,17 +7986,10 @@ type ListContestSubmissionsParams struct {
 func unpackListContestSubmissionsParams(packed middleware.Parameters) (params ListContestSubmissionsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -11243,9 +8057,9 @@ func unpackListContestSubmissionsParams(packed middleware.Parameters) (params Li
 	return params
 }
 
-func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestSubmissionsParams, _ error) {
+func decodeListContestSubmissionsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestSubmissionsParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -11257,7 +8071,7 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -11269,12 +8083,12 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -11285,52 +8099,7 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -11702,32 +8471,23 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 // ListContestTeamsParams is parameters of ListContestTeams operation.
 type ListContestTeamsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackListContestTeamsParams(packed middleware.Parameters) (params ListContestTeamsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeListContestTeamsParams(args [2]string, argsEscaped bool, r *http.Request) (params ListContestTeamsParams, _ error) {
-	// Decode path: org_login.
+func decodeListContestTeamsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestTeamsParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -11739,7 +8499,7 @@ func decodeListContestTeamsParams(args [2]string, argsEscaped bool, r *http.Requ
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -11751,12 +8511,12 @@ func decodeListContestTeamsParams(args [2]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -11767,53 +8527,542 @@ func decodeListContestTeamsParams(args [2]string, argsEscaped bool, r *http.Requ
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
+	return params, nil
+}
+
+// ListContestsParams is parameters of ListContests operation.
+type ListContestsParams struct {
+	// Page number.
+	Page OptInt32 `json:",omitempty,omitzero"`
+	// Number of items per page.
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// UUID of the organization.
+	OrganizationID OptUUID `json:",omitempty,omitzero"`
+	// Only contests the team is registered in.
+	TeamID OptUUID `json:",omitempty,omitzero"`
+	// Visibility level of the resource.
+	Visibility OptListContestsVisibility `json:",omitempty,omitzero"`
+	// Field used to sort results.
+	SortBy OptSortByQuery `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
+}
+
+func unpackListContestsParams(packed middleware.Parameters) (params ListContestsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "page",
+			In:   "query",
 		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
+		if v, ok := packed[key]; ok {
+			params.Page = v.(OptInt32)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "pageSize",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.PageSize = v.(OptInt32)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "search",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Search = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "organization_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.OrganizationID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "team_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.TeamID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "visibility",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Visibility = v.(OptListContestsVisibility)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sortBy",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.SortBy = v.(OptSortByQuery)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sortOrder",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.SortOrder = v.(OptContestSortOrderQuery)
+		}
+	}
+	return params
+}
 
+func decodeListContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListContestsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: page.
+	{
+		val := int32(1)
+		params.Page.SetTo(val)
+	}
+	// Decode query: page.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "page",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPageVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Page.SetTo(paramsDotPageVal)
+				return nil
+			}); err != nil {
+				return err
+			}
 			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
+				if value, ok := params.Page.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
 				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
 				return nil
 			}(); err != nil {
 				return err
 			}
-		} else {
-			return validate.ErrFieldRequired
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
+			Name: "page",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: pageSize.
+	{
+		val := int32(50)
+		params.PageSize.SetTo(val)
+	}
+	// Decode query: pageSize.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "pageSize",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPageSizeVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPageSizeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PageSize.SetTo(paramsDotPageSizeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PageSize.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "pageSize",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: search.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "search",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSearchVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSearchVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Search.SetTo(paramsDotSearchVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "search",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: organization_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "organization_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotOrganizationIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotOrganizationIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.OrganizationID.SetTo(paramsDotOrganizationIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "organization_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: team_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "team_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotTeamIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotTeamIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.TeamID.SetTo(paramsDotTeamIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "team_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: visibility.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "visibility",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotVisibilityVal ListContestsVisibility
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotVisibilityVal = ListContestsVisibility(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Visibility.SetTo(paramsDotVisibilityVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Visibility.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "visibility",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: sortBy.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "sortBy",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSortByVal SortByQuery
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSortByVal = SortByQuery(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.SortBy.SetTo(paramsDotSortByVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.SortBy.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sortBy",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: sortOrder.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "sortOrder",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSortOrderVal ContestSortOrderQuery
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSortOrderVal = ContestSortOrderQuery(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.SortOrder.SetTo(paramsDotSortOrderVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.SortOrder.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sortOrder",
+			In:   "query",
 			Err:  err,
 		}
 	}
@@ -12042,289 +9291,6 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "unread_only",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListOrganizationContestsParams is parameters of ListOrganizationContests operation.
-type ListOrganizationContestsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-	// Search text used to filter results.
-	Search OptString `json:",omitempty,omitzero"`
-}
-
-func unpackListOrganizationContestsParams(packed middleware.Parameters) (params ListOrganizationContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "search",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Search = v.(OptString)
-		}
-	}
-	return params
-}
-
-func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListOrganizationContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: search.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "search",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSearchVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSearchVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Search.SetTo(paramsDotSearchVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "search",
 			In:   "query",
 			Err:  err,
 		}
@@ -14208,369 +11174,6 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
-// ListPublicContestsParams is parameters of ListPublicContests operation.
-type ListPublicContestsParams struct {
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-	// Search text used to filter results.
-	Search OptString `json:",omitempty,omitzero"`
-	// Field used to sort results.
-	SortBy OptSortByQuery `json:",omitempty,omitzero"`
-	// Sort direction: asc or desc.
-	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
-}
-
-func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPublicContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "search",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Search = v.(OptString)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortBy",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptSortByQuery)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortOrder",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptContestSortOrderQuery)
-		}
-	}
-	return params
-}
-
-func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListPublicContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: search.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "search",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSearchVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSearchVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Search.SetTo(paramsDotSearchVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "search",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortBy.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortBy",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal SortByQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortByVal = SortByQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortBy.SetTo(paramsDotSortByVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortBy.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortBy",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortOrder.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortOrder",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ContestSortOrderQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortOrderVal = ContestSortOrderQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortOrder.SetTo(paramsDotSortOrderVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortOrder.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortOrder",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // ListSubmissionsParams is parameters of ListSubmissions operation.
 type ListSubmissionsParams struct {
 	// Page number.
@@ -15068,237 +11671,6 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "language",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListTeamContestsParams is parameters of ListTeamContests operation.
-type ListTeamContestsParams struct {
-	// UUID of the team.
-	ID uuid.UUID
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-}
-
-func unpackListTeamContestsParams(packed middleware.Parameters) (params ListTeamContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	return params
-}
-
-func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListTeamContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: id.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
 			In:   "query",
 			Err:  err,
 		}
@@ -15811,423 +12183,6 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "organization_id",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListUserContestsParams is parameters of ListUserContests operation.
-type ListUserContestsParams struct {
-	// Username of the user.
-	Username string
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-	// Search text used to filter results.
-	Search OptString `json:",omitempty,omitzero"`
-	// Field used to sort results.
-	SortBy OptListUserContestsSortBy `json:",omitempty,omitzero"`
-	// Sort direction: asc or desc.
-	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
-}
-
-func unpackListUserContestsParams(packed middleware.Parameters) (params ListUserContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "username",
-			In:   "path",
-		}
-		params.Username = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "search",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Search = v.(OptString)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortBy",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptListUserContestsSortBy)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortOrder",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptContestSortOrderQuery)
-		}
-	}
-	return params
-}
-
-func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListUserContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: username.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "username",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Username = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "username",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: search.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "search",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSearchVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSearchVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Search.SetTo(paramsDotSearchVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "search",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortBy.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortBy",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal ListUserContestsSortBy
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortByVal = ListUserContestsSortBy(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortBy.SetTo(paramsDotSortByVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortBy.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortBy",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortOrder.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortOrder",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ContestSortOrderQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortOrderVal = ContestSortOrderQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortOrder.SetTo(paramsDotSortOrderVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortOrder.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortOrder",
 			In:   "query",
 			Err:  err,
 		}
@@ -16970,421 +12925,6 @@ func decodeListUsersParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	return params, nil
 }
 
-// ListWorkshopContestsParams is parameters of ListWorkshopContests operation.
-type ListWorkshopContestsParams struct {
-	// Page number.
-	Page OptInt32 `json:",omitempty,omitzero"`
-	// Number of items per page.
-	PageSize OptInt32 `json:",omitempty,omitzero"`
-	// Search text used to filter results.
-	Search OptString `json:",omitempty,omitzero"`
-	// Field used to sort results.
-	SortBy OptSortByQuery `json:",omitempty,omitzero"`
-	// Sort direction: asc or desc.
-	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
-	// UUID of the organization.
-	OrganizationID OptUUID `json:",omitempty,omitzero"`
-}
-
-func unpackListWorkshopContestsParams(packed middleware.Parameters) (params ListWorkshopContestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "page",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Page = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "pageSize",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.PageSize = v.(OptInt32)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "search",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Search = v.(OptString)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortBy",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptSortByQuery)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "sortOrder",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptContestSortOrderQuery)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "organization_id",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.OrganizationID = v.(OptUUID)
-		}
-	}
-	return params
-}
-
-func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListWorkshopContestsParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Set default value for query: page.
-	{
-		val := int32(1)
-		params.Page.SetTo(val)
-	}
-	// Decode query: page.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "page",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Page.SetTo(paramsDotPageVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.Page.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        false,
-							Max:           0,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "page",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Set default value for query: pageSize.
-	{
-		val := int32(50)
-		params.PageSize.SetTo(val)
-	}
-	// Decode query: pageSize.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "pageSize",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotPageSizeVal int32
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToInt32(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotPageSizeVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.PageSize.SetTo(paramsDotPageSizeVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.PageSize.Get(); ok {
-					if err := func() error {
-						if err := (validate.Int{
-							MinSet:        true,
-							Min:           1,
-							MaxSet:        true,
-							Max:           100,
-							MinExclusive:  false,
-							MaxExclusive:  false,
-							MultipleOfSet: false,
-							MultipleOf:    0,
-							Pattern:       nil,
-						}).Validate(int64(value)); err != nil {
-							return errors.Wrap(err, "int")
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "pageSize",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: search.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "search",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSearchVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSearchVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Search.SetTo(paramsDotSearchVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "search",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortBy.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortBy",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal SortByQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortByVal = SortByQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortBy.SetTo(paramsDotSortByVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortBy.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortBy",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: sortOrder.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "sortOrder",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ContestSortOrderQuery
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotSortOrderVal = ContestSortOrderQuery(c)
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.SortOrder.SetTo(paramsDotSortOrderVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if value, ok := params.SortOrder.Get(); ok {
-					if err := func() error {
-						if err := value.Validate(); err != nil {
-							return err
-						}
-						return nil
-					}(); err != nil {
-						return err
-					}
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "sortOrder",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: organization_id.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "organization_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotOrganizationIDVal uuid.UUID
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToUUID(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotOrganizationIDVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.OrganizationID.SetTo(paramsDotOrganizationIDVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "organization_id",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // MarkNotificationAsReadParams is parameters of MarkNotificationAsRead operation.
 type MarkNotificationAsReadParams struct {
 	// UUID of the notification.
@@ -17517,328 +13057,25 @@ func decodePatchPostByIdParams(args [1]string, argsEscaped bool, r *http.Request
 	return params, nil
 }
 
-// RejectContestJoinRequestParams is parameters of RejectContestJoinRequest operation.
-type RejectContestJoinRequestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the join request.
-	ID uuid.UUID
-}
-
-func unpackRejectContestJoinRequestParams(packed middleware.Parameters) (params RejectContestJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeRejectContestJoinRequestParams(args [3]string, argsEscaped bool, r *http.Request) (params RejectContestJoinRequestParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// RejectOrganizationJoinRequestParams is parameters of RejectOrganizationJoinRequest operation.
-type RejectOrganizationJoinRequestParams struct {
-	// Organization login.
-	Login string
-	// UUID of the join request.
-	ID uuid.UUID
-}
-
-func unpackRejectOrganizationJoinRequestParams(packed middleware.Parameters) (params RejectOrganizationJoinRequestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "login",
-			In:   "path",
-		}
-		params.Login = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeRejectOrganizationJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params RejectOrganizationJoinRequestParams, _ error) {
-	// Decode path: login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Login = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: id.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // RejudgeContestParams is parameters of RejudgeContest operation.
 type RejudgeContestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackRejudgeContestParams(packed middleware.Parameters) (params RejudgeContestParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeRejudgeContestParams(args [2]string, argsEscaped bool, r *http.Request) (params RejudgeContestParams, _ error) {
-	// Decode path: org_login.
+func decodeRejudgeContestParams(args [1]string, argsEscaped bool, r *http.Request) (params RejudgeContestParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -17850,226 +13087,7 @@ func decodeRejudgeContestParams(args [2]string, argsEscaped bool, r *http.Reques
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// RejudgeContestProblemParams is parameters of RejudgeContestProblem operation.
-type RejudgeContestProblemParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the problem.
-	ProblemID uuid.UUID
-}
-
-func unpackRejudgeContestProblemParams(packed middleware.Parameters) (params RejudgeContestProblemParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "problem_id",
-			In:   "path",
-		}
-		params.ProblemID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeRejudgeContestProblemParams(args [3]string, argsEscaped bool, r *http.Request) (params RejudgeContestProblemParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: problem_id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problem_id",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -18086,7 +13104,7 @@ func decodeRejudgeContestProblemParams(args [3]string, argsEscaped bool, r *http
 					return err
 				}
 
-				params.ProblemID = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -18097,181 +13115,7 @@ func decodeRejudgeContestProblemParams(args [3]string, argsEscaped bool, r *http
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problem_id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// RejudgeSubmissionParams is parameters of RejudgeSubmission operation.
-type RejudgeSubmissionParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the submission.
-	SubmissionID uuid.UUID
-}
-
-func unpackRejudgeSubmissionParams(packed middleware.Parameters) (params RejudgeSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "submission_id",
-			In:   "path",
-		}
-		params.SubmissionID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeRejudgeSubmissionParams(args [3]string, argsEscaped bool, r *http.Request) (params RejudgeSubmissionParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: submission_id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "submission_id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.SubmissionID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "submission_id",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -18505,32 +13349,23 @@ func decodeRemoveTeamMemberParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ReorderContestProblemsParams is parameters of ReorderContestProblems operation.
 type ReorderContestProblemsParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackReorderContestProblemsParams(packed middleware.Parameters) (params ReorderContestProblemsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *http.Request) (params ReorderContestProblemsParams, _ error) {
-	// Decode path: org_login.
+func decodeReorderContestProblemsParams(args [1]string, argsEscaped bool, r *http.Request) (params ReorderContestProblemsParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -18542,7 +13377,7 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -18554,12 +13389,12 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -18570,52 +13405,7 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -18625,32 +13415,23 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 
 // ResetContestJoinLinkParams is parameters of ResetContestJoinLink operation.
 type ResetContestJoinLinkParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackResetContestJoinLinkParams(packed middleware.Parameters) (params ResetContestJoinLinkParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeResetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.Request) (params ResetContestJoinLinkParams, _ error) {
-	// Decode path: org_login.
+func decodeResetContestJoinLinkParams(args [1]string, argsEscaped bool, r *http.Request) (params ResetContestJoinLinkParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -18662,7 +13443,7 @@ func decodeResetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -18674,12 +13455,12 @@ func decodeResetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -18690,52 +13471,7 @@ func decodeResetContestJoinLinkParams(args [2]string, argsEscaped bool, r *http.
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -18761,6 +13497,312 @@ func unpackResetTeamJoinLinkParams(packed middleware.Parameters) (params ResetTe
 }
 
 func decodeResetTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.Request) (params ResetTeamJoinLinkParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ResolveContestJoinRequestParams is parameters of ResolveContestJoinRequest operation.
+type ResolveContestJoinRequestParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
+}
+
+func unpackResolveContestJoinRequestParams(packed middleware.Parameters) (params ResolveContestJoinRequestParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "path",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeResolveContestJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params ResolveContestJoinRequestParams, _ error) {
+	// Decode path: contest_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ResolveOrganizationJoinRequestParams is parameters of ResolveOrganizationJoinRequest operation.
+type ResolveOrganizationJoinRequestParams struct {
+	// Organization login.
+	Login string
+	// UUID of the join request.
+	ID uuid.UUID
+}
+
+func unpackResolveOrganizationJoinRequestParams(packed middleware.Parameters) (params ResolveOrganizationJoinRequestParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "login",
+			In:   "path",
+		}
+		params.Login = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeResolveOrganizationJoinRequestParams(args [2]string, argsEscaped bool, r *http.Request) (params ResolveOrganizationJoinRequestParams, _ error) {
+	// Decode path: login.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "login",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Login = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "login",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RespondInvitationParams is parameters of RespondInvitation operation.
+type RespondInvitationParams struct {
+	// UUID of the invitation.
+	ID uuid.UUID
+}
+
+func unpackRespondInvitationParams(packed middleware.Parameters) (params RespondInvitationParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeRespondInvitationParams(args [1]string, argsEscaped bool, r *http.Request) (params RespondInvitationParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -18941,32 +13983,23 @@ func decodeSaveProblemDraftParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // StartVirtualRunParams is parameters of StartVirtualRun operation.
 type StartVirtualRunParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
 func unpackStartVirtualRunParams(packed middleware.Parameters) (params StartVirtualRunParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Request) (params StartVirtualRunParams, _ error) {
-	// Decode path: org_login.
+func decodeStartVirtualRunParams(args [1]string, argsEscaped bool, r *http.Request) (params StartVirtualRunParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -18978,7 +14011,7 @@ func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Reque
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -18990,12 +14023,12 @@ func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Reque
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -19006,52 +14039,7 @@ func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Reque
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -19061,10 +14049,8 @@ func decodeStartVirtualRunParams(args [2]string, argsEscaped bool, r *http.Reque
 
 // UnblockProblemForUserParams is parameters of UnblockProblemForUser operation.
 type UnblockProblemForUserParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
 	// UUID of the problem.
@@ -19076,17 +14062,10 @@ type UnblockProblemForUserParams struct {
 func unpackUnblockProblemForUserParams(packed middleware.Parameters) (params UnblockProblemForUserParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -19114,9 +14093,9 @@ func unpackUnblockProblemForUserParams(packed middleware.Parameters) (params Unb
 	return params
 }
 
-func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http.Request) (params UnblockProblemForUserParams, _ error) {
+func decodeUnblockProblemForUserParams(args [3]string, argsEscaped bool, r *http.Request) (params UnblockProblemForUserParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -19128,7 +14107,7 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -19140,12 +14119,12 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -19156,61 +14135,16 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
 	}
 	// Decode path: user_id.
 	if err := func() error {
-		param := args[2]
+		param := args[1]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
+			unescaped, err := url.PathUnescape(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -19253,9 +14187,9 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 	}
 	// Decode path: problem_id.
 	if err := func() error {
-		param := args[3]
+		param := args[2]
 		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[3])
+			unescaped, err := url.PathUnescape(args[2])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}
@@ -19345,43 +14279,25 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 	return params, nil
 }
 
-// UnblockSubmissionParams is parameters of UnblockSubmission operation.
-type UnblockSubmissionParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-	// UUID of the submission.
-	SubmissionID uuid.UUID
+// UpdateContestParams is parameters of UpdateContest operation.
+type UpdateContestParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
 }
 
-func unpackUnblockSubmissionParams(packed middleware.Parameters) (params UnblockSubmissionParams) {
+func unpackUpdateContestParams(packed middleware.Parameters) (params UpdateContestParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "submission_id",
-			In:   "path",
-		}
-		params.SubmissionID = packed[key].(uuid.UUID)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeUnblockSubmissionParams(args [3]string, argsEscaped bool, r *http.Request) (params UnblockSubmissionParams, _ error) {
-	// Decode path: org_login.
+func decodeUpdateContestParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateContestParams, _ error) {
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -19393,97 +14309,7 @@ func decodeUnblockSubmissionParams(args [3]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: submission_id.
-	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "submission_id",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -19500,7 +14326,7 @@ func decodeUnblockSubmissionParams(args [3]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				params.SubmissionID = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -19511,127 +14337,7 @@ func decodeUnblockSubmissionParams(args [3]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "submission_id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateContestParams is parameters of UpdateContest operation.
-type UpdateContestParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
-}
-
-func unpackUpdateContestParams(packed middleware.Parameters) (params UpdateContestParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "org_login",
-			In:   "path",
-		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateContestParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateContestParams, _ error) {
-	// Decode path: org_login.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.OrgLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -19641,10 +14347,8 @@ func decodeUpdateContestParams(args [2]string, argsEscaped bool, r *http.Request
 
 // UpdateContestMemberParams is parameters of UpdateContestMember operation.
 type UpdateContestMemberParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
 	// Role to assign to the contest member.
@@ -19654,17 +14358,10 @@ type UpdateContestMemberParams struct {
 func unpackUpdateContestMemberParams(packed middleware.Parameters) (params UpdateContestMemberParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -19683,9 +14380,9 @@ func unpackUpdateContestMemberParams(packed middleware.Parameters) (params Updat
 	return params
 }
 
-func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateContestMemberParams, _ error) {
+func decodeUpdateContestMemberParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateContestMemberParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -19697,7 +14394,7 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -19709,12 +14406,12 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -19725,52 +14422,7 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -19860,10 +14512,8 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 
 // UpdateContestTeamParams is parameters of UpdateContestTeam operation.
 type UpdateContestTeamParams struct {
-	// Organization login.
-	OrgLogin string
-	// Contest login within the organization.
-	ContestLogin string
+	// UUID of the contest.
+	ContestID uuid.UUID
 	// UUID of the team.
 	TeamID uuid.UUID
 	// Role to assign to the contest team.
@@ -19873,17 +14523,10 @@ type UpdateContestTeamParams struct {
 func unpackUpdateContestTeamParams(packed middleware.Parameters) (params UpdateContestTeamParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "org_login",
+			Name: "contest_id",
 			In:   "path",
 		}
-		params.OrgLogin = packed[key].(string)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "contest_login",
-			In:   "path",
-		}
-		params.ContestLogin = packed[key].(string)
+		params.ContestID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -19902,9 +14545,9 @@ func unpackUpdateContestTeamParams(packed middleware.Parameters) (params UpdateC
 	return params
 }
 
-func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateContestTeamParams, _ error) {
+func decodeUpdateContestTeamParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateContestTeamParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: org_login.
+	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -19916,7 +14559,7 @@ func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "org_login",
+				Param:   "contest_id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -19928,12 +14571,12 @@ func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.OrgLogin = c
+				params.ContestID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -19944,52 +14587,7 @@ func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "org_login",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: contest_login.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "contest_login",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.ContestLogin = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "contest_login",
+			Name: "contest_id",
 			In:   "path",
 			Err:  err,
 		}
@@ -20368,6 +14966,72 @@ func decodeUpdateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 		return params, &ogenerrors.DecodeParamError{
 			Name: "role",
 			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateSubmissionParams is parameters of UpdateSubmission operation.
+type UpdateSubmissionParams struct {
+	// UUID of the submission.
+	SubmissionID uuid.UUID
+}
+
+func unpackUpdateSubmissionParams(packed middleware.Parameters) (params UpdateSubmissionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "submission_id",
+			In:   "path",
+		}
+		params.SubmissionID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeUpdateSubmissionParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateSubmissionParams, _ error) {
+	// Decode path: submission_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "submission_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.SubmissionID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "submission_id",
+			In:   "path",
 			Err:  err,
 		}
 	}

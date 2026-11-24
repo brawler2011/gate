@@ -4,11 +4,11 @@ import {useNavigate} from "react-router-dom";
 
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {DashboardProblemModel} from "@/contracts/core/v1/schema";
+import type {ProblemsListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type DashboardProblemsListProps = {
-  problems: DashboardProblemModel[];
+  problems: ProblemsListItemModel[];
 };
 
 export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): ReactNode => {
@@ -70,7 +70,7 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
 
               <Stack gap={2} style={{flex: 1, minWidth: 0}}>
                 <Text size="xs" c="dimmed" fw={500} lineClamp={1}>
-                  {problem.organization_name}
+                  {problem.organization_login}
                 </Text>
                 <Title order={4} size="md" fw={600} lineClamp={1}>
                   {problem.title}

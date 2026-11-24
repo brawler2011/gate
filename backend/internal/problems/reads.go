@@ -46,16 +46,6 @@ func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID,
 	return &paging.List[problemsmodel.ProblemMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
-func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, user uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, user); err != nil {
-		return nil, err
-	}
-	if limit < 1 || limit > 100 {
-		return nil, pkg.ErrInvalid
-	}
-	return uc.repo.ListDashboardProblems(ctx, user, limit)
-}
-
 func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template, error) {
 	user, err := accessmodel.RequireUser(ctx)
 	if err != nil {

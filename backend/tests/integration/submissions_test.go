@@ -78,8 +78,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 			Submission: "print('hello')",
 		}, corev1.CreateSubmissionParams{
 			ProblemID:         problemID,
-			OrganizationLogin: contestOrg.Login,
-			ContestLogin:      "submission-contest",
+			ContestID: contestID,
 			Language:          "python3",
 		})
 		s.Require().NoError(err)
@@ -90,8 +89,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 			_, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{
 				Submission: "print('hello')",
 			}, corev1.CreateSubmissionParams{
-				ProblemID: problemID, OrganizationLogin: contestOrg.Login,
-				ContestLogin: "submission-contest", Language: "python3",
+				ProblemID: problemID, ContestID: contestID, Language: "python3",
 			})
 			s.Require().NoError(err)
 		}
@@ -100,7 +98,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	// Submissions accept only catalog configurations allowed by the contest.
 	s.Run("ContestLanguageRestriction", func() {
 		admin := withTestUser(s.ctx, admin.Id)
-		contest := corev1.UpdateContestParams{OrgLogin: contestOrg.Login, ContestLogin: "submission-contest"}
+		contest := corev1.UpdateContestParams{ContestID: contestID}
 		err := s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{"cpp14"}}, contest)
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 		s.Require().NoError(s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{"cpp17"}}, contest))
@@ -110,7 +108,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 		submit := func(language string) error {
 			_, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{Submission: "int main() {}"}, corev1.CreateSubmissionParams{
-				ProblemID: problemID, OrganizationLogin: contestOrg.Login, ContestLogin: "submission-contest", Language: language,
+				ProblemID: problemID, ContestID: contestID, Language: language,
 			})
 			return err
 		}
@@ -153,10 +151,8 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneRevision() {
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	before, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
-	contest, err := s.contestsRepo.GetContest(s.ctx, contestID)
-	s.Require().NoError(err)
 	s.Require().NoError(s.client.UnblockProblemForUser(withTestUser(s.ctx, userID), corev1.UnblockProblemForUserParams{
-		OrgLogin: contest.OrganizationLogin, ContestLogin: contest.Login, UserID: userID, ProblemID: problemID, RejudgeSubmissions: corev1.NewOptBool(true),
+		ContestID: contestID, UserID: userID, ProblemID: problemID, RejudgeSubmissions: corev1.NewOptBool(true),
 	}))
 	after, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
@@ -188,7 +184,7 @@ func (s *IntegrationTestSuite) TestUpsolving() {
 		ContestId: contestID, UserId: participant.Id, Role: accessmodel.ContestParticipant}))
 	submit := func(user uuid.UUID) (uuid.UUID, error) {
 		resp, err := s.client.CreateSubmission(withTestUser(s.ctx, user), &corev1.CreateSubmissionRequestModel{Submission: "print(1)"},
-			corev1.CreateSubmissionParams{ProblemID: problem.ID, OrganizationLogin: org.Login, ContestLogin: "upsolving", Language: "python3"})
+			corev1.CreateSubmissionParams{ProblemID: problem.ID, ContestID: contestID, Language: "python3"})
 		if err != nil {
 			return uuid.Nil, err
 		}
@@ -199,7 +195,7 @@ func (s *IntegrationTestSuite) TestUpsolving() {
 	s.Require().NoError(err)
 	_, err = submit(outsider.Id)
 	s.Require().NoError(err, "anyone who can view a finished contest may upsolve")
-	list, err := s.client.ListContestSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListContestSubmissionsParams{OrgLogin: org.Login, ContestLogin: "upsolving"})
+	list, err := s.client.ListContestSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListContestSubmissionsParams{ContestID: contestID})
 	s.Require().NoError(err)
 	s.Require().Len(list.Submissions, 2)
 	for _, sub := range list.Submissions {
@@ -207,9 +203,9 @@ func (s *IntegrationTestSuite) TestUpsolving() {
 	}
 
 	setEnd(time.Now().Add(time.Hour))
-	s.Require().NoError(s.client.BlockSubmission(withTestUser(s.ctx, admin.Id), corev1.NewOptBlockSubmissionRequestModel(corev1.BlockSubmissionRequestModel{}),
-		corev1.BlockSubmissionParams{OrgLogin: org.Login, ContestLogin: "upsolving", SubmissionID: upsolved}))
-	board, err := s.client.GetContestScoreboard(withTestUser(s.ctx, admin.Id), corev1.GetContestScoreboardParams{OrgLogin: org.Login, ContestLogin: "upsolving"})
+	s.Require().NoError(s.client.UpdateSubmission(withTestUser(s.ctx, admin.Id), &corev1.UpdateSubmissionRequestModel{Blocked: true},
+		corev1.UpdateSubmissionParams{SubmissionID: upsolved}))
+	board, err := s.client.GetContestScoreboard(withTestUser(s.ctx, admin.Id), corev1.GetContestScoreboardParams{ContestID: contestID})
 	s.Require().NoError(err)
 	s.Require().Len(board.Items, 1)
 	for _, result := range board.Items[0].ProblemResults {
@@ -219,7 +215,7 @@ func (s *IntegrationTestSuite) TestUpsolving() {
 
 	setEnd(time.Now().Add(-time.Hour))
 	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{EnableUpsolving: corev1.NewOptBool(false)},
-		corev1.UpdateContestParams{OrgLogin: org.Login, ContestLogin: "upsolving"}))
+		corev1.UpdateContestParams{ContestID: contestID}))
 	_, err = submit(participant.Id)
 	var problemErr *corev1.ProblemStatusCodeWithHeaders
 	s.Require().ErrorAs(err, &problemErr)

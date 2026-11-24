@@ -103,8 +103,9 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST("/invitations/{id}/accept", {
+    const {error} = await api.PATCH("/invitations/{id}", {
       params: {path: {id: invitationId}},
+      body: {status: "accepted"},
     });
     setActionLoadingId(null);
 
@@ -134,8 +135,9 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST("/invitations/{id}/decline", {
+    const {error} = await api.PATCH("/invitations/{id}", {
       params: {path: {id: invitationId}},
+      body: {status: "declined"},
     });
     setActionLoadingId(null);
 
@@ -164,13 +166,10 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST(
-      "/organizations/{login}/requests/{id}/approve",
-      {
-        params: {path: {login: orgLogin, id: requestId}},
-        body: {role: "member"},
-      },
-    );
+    const {error} = await api.PATCH("/organizations/{login}/requests/{id}", {
+      params: {path: {login: orgLogin, id: requestId}},
+      body: {status: "approved" as const, role: "member" as const},
+    });
     setActionLoadingId(null);
 
     if (error) {
@@ -198,12 +197,10 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST(
-      "/organizations/{login}/requests/{id}/reject",
-      {
-        params: {path: {login: orgLogin, id: requestId}},
-      },
-    );
+    const {error} = await api.PATCH("/organizations/{login}/requests/{id}", {
+      params: {path: {login: orgLogin, id: requestId}},
+      body: {status: "rejected" as const},
+    });
     setActionLoadingId(null);
 
     if (error) {
@@ -225,25 +222,16 @@ export const NotificationsClient = (): ReactNode => {
   const handleApproveContestJoinRequest = async (notif: NotificationModel) => {
     const data = notif.data as Record<string, unknown> | undefined;
     const requestId = data?.request_id as string | undefined;
-    const orgLogin = data?.organization_login as string | undefined;
-    const contestLogin = data?.contest_login as string | undefined;
-    if (!requestId || !orgLogin || !contestLogin) {
+    const contestId = data?.contest_id as string | undefined;
+    if (!requestId || !contestId) {
       return;
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve",
-      {
-        params: {
-          path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
-            id: requestId,
-          },
-        },
-      },
-    );
+    const {error} = await api.PATCH("/contests/{contest_id}/requests/{id}", {
+      params: {path: {contest_id: contestId, id: requestId}},
+      body: {status: "approved"},
+    });
     setActionLoadingId(null);
 
     if (error) {
@@ -265,25 +253,16 @@ export const NotificationsClient = (): ReactNode => {
   const handleRejectContestJoinRequest = async (notif: NotificationModel) => {
     const data = notif.data as Record<string, unknown> | undefined;
     const requestId = data?.request_id as string | undefined;
-    const orgLogin = data?.organization_login as string | undefined;
-    const contestLogin = data?.contest_login as string | undefined;
-    if (!requestId || !orgLogin || !contestLogin) {
+    const contestId = data?.contest_id as string | undefined;
+    if (!requestId || !contestId) {
       return;
     }
 
     setActionLoadingId(notif.id);
-    const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject",
-      {
-        params: {
-          path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
-            id: requestId,
-          },
-        },
-      },
-    );
+    const {error} = await api.PATCH("/contests/{contest_id}/requests/{id}", {
+      params: {path: {contest_id: contestId, id: requestId}},
+      body: {status: "rejected" as const},
+    });
     setActionLoadingId(null);
 
     if (error) {

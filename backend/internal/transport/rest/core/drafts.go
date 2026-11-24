@@ -17,13 +17,8 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	draftCreation := &contestsmodel.ContestDraftCreation{
-		ContestID: contest.ID,
+		ContestID: params.ContestID,
 		Code:      req.Code,
 	}
 
@@ -32,22 +27,17 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		return nil, err
 	}
 
-	slog.InfoContext(ctx, "contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID)
+	slog.InfoContext(ctx, "contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", params.ContestID)
 
 	return &corev1.CreationResponseModel{ID: draftID}, nil
 }
 
 func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListContestDraftsParams) (*corev1.ListContestDraftsResponseModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(20)
 
 	draftsList, err := h.Drafts.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{
-		ContestID: contest.ID,
+		ContestID: params.ContestID,
 		Page:      page,
 		PageSize:  pageSize,
 	})
@@ -61,16 +51,11 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.DeleteContestDraftParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
+	if err := h.Drafts.DeleteDraft(ctx, params.ContestID, params.DraftID); err != nil {
 		return err
 	}
 
-	if err := h.Drafts.DeleteDraft(ctx, contest.ID, params.DraftID); err != nil {
-		return err
-	}
-
-	slog.InfoContext(ctx, "contest draft deleted", "draft_id", params.DraftID, "user_id", user.Id, "contest_id", contest.ID)
+	slog.InfoContext(ctx, "contest draft deleted", "draft_id", params.DraftID, "user_id", user.Id, "contest_id", params.ContestID)
 
 	return nil
 }

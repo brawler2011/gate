@@ -26,6 +26,9 @@ type detailStore struct {
 func (s *detailStore) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
 	return s.contest, nil
 }
+func (s *detailStore) GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error) {
+	return nil, nil
+}
 func (s *detailStore) GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
 	return s.link, nil
 }
@@ -94,7 +97,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			reader := NewDetailsReader(store, statements, detailAccess(contest, actor.Id, tc.role), compiler)
 			ctx := accessmodel.WithUser(context.Background(), actor)
 
-			result, err := reader.GetContestProblemDetails(ctx, "org", "contest", store.link.ProblemID)
+			result, err := reader.GetContestProblemDetails(ctx, contest.ID, store.link.ProblemID)
 			require.ErrorIs(t, err, tc.problem)
 			if tc.problem == nil {
 				require.Equal(t, tc.statement, result.Statement != nil)
@@ -102,7 +105,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			}
 			require.Equal(t, tc.statement, statements.calls == 1)
 
-			file, contentType, err := reader.OpenProblemAsset(ctx, "org", "contest", store.link.ProblemID, "abc")
+			file, contentType, err := reader.OpenProblemAsset(ctx, contest.ID, store.link.ProblemID, "abc")
 			if tc.statement {
 				require.NoError(t, err)
 				require.NoError(t, file.Close())
@@ -113,7 +116,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.Zero(t, statements.fileCalls)
 			}
 
-			_, err = reader.ReadBooklet(ctx, "org", "contest", "ru")
+			_, err = reader.ReadBooklet(ctx, contest.ID, "ru")
 			require.ErrorIs(t, err, tc.booklet)
 			require.Equal(t, tc.booklet == nil, compiler.calls == 1)
 		})

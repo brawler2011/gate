@@ -139,24 +139,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemBuild'
-  /problems/{id}/builds/{buildId}/cancel:
-    post:
-      tags:
-      - problems
+    patch:
+      tags: [problems]
       operationId: CancelProblemBuild
       summary: Cancel a queued or running build
       parameters:
-      - $ref: '#/components/parameters/ProblemIDPath'
-      - $ref: '#/components/parameters/BuildIDPath'
+        - $ref: "#/components/parameters/ProblemIDPath"
+        - $ref: "#/components/parameters/BuildIDPath"
+      requestBody:
+        description: "Request payload for cancel problem build."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelProblemBuildRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemBuildCancelled'
+                $ref: "#/components/schemas/ProblemBuildCancelled"
   /problems/{id}/draft/uploads:
     post:
       tags:
@@ -415,15 +420,23 @@ paths:
         "200":
           description: OK
           content: {}
-  /admin/contests:
+  /contests:
     get:
-      summary: "List admin contests"
+      summary: "List contests"
+      description: "Contests visible to the caller; administrators see all."
       tags: [contests]
-      operationId: ListAdminContests
+      operationId: ListContests
       parameters:
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
         - $ref: "#/components/parameters/ContestSearchQuery"
+        - $ref: "#/components/parameters/OrganizationIDQuery"
+        - name: team_id
+          description: "Only contests the team is registered in."
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: visibility
           description: "Visibility level of the resource."
           in: query
@@ -443,6 +456,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestsResponseModel"
+    post:
+      summary: "Create contest"
+      tags: [contests]
+      operationId: CreateContest
+      requestBody:
+        description: "Request payload for create contest."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContestRequestModel"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
   /admin/users/{username}/change-email:
     post:
       tags: [system]
@@ -509,126 +542,6 @@ paths:
         "200":
           description: OK
           content: {}
-  /users/{username}/contests:
-    get:
-      summary: "List user contests"
-      tags: [contests]
-      operationId: ListUserContests
-      parameters:
-        - $ref: "#/components/parameters/UsernamePath"
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-        - $ref: "#/components/parameters/ContestSearchQuery"
-        - name: sortBy
-          description: "Field used to sort results."
-          in: query
-          schema:
-            type: string
-            enum:
-              - last_submission_time
-              - created_at
-              - updated_at
-              - title
-          example: last_submission_time
-        - $ref: "#/components/parameters/ContestSortOrderQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListUserContestsResponseModel"
-  /workshop/contests:
-    get:
-      summary: "List workshop contests"
-      tags: [contests]
-      operationId: ListWorkshopContests
-      parameters:
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-        - $ref: "#/components/parameters/ContestSearchQuery"
-        - $ref: "#/components/parameters/SortByQuery"
-        - $ref: "#/components/parameters/ContestSortOrderQuery"
-        - $ref: "#/components/parameters/OrganizationIDQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
-  /public/contests:
-    get:
-      summary: "List public contests"
-      tags: [contests]
-      operationId: ListPublicContests
-      parameters:
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-        - $ref: "#/components/parameters/ContestSearchQuery"
-        - $ref: "#/components/parameters/SortByQuery"
-        - $ref: "#/components/parameters/ContestSortOrderQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
-  /organizations/{org_login}/contests:
-    post:
-      summary: "Create contest"
-      tags: [contests]
-      operationId: CreateContest
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - name: title
-          description: "Title of the new contest."
-          in: query
-          required: true
-          schema:
-            type: string
-          example: Contest 1
-        - name: login
-          description: "Login of the new contest within the organization."
-          in: query
-          required: false
-          schema:
-            type: string
-          example: contest-1
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreationResponseModel"
-    get:
-      summary: "List organization contests"
-      tags: [contests]
-      operationId: ListOrganizationContests
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-        - $ref: "#/components/parameters/ContestSearchQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
   /organizations/{org_login}/contests/{contest_login}:
     get:
       summary: "Get contest"
@@ -646,13 +559,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetContestResponseModel"
+  /contests/{contest_id}:
     delete:
       summary: "Delete contest"
       tags: [contests]
       operationId: DeleteContest
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -663,8 +576,7 @@ paths:
       tags: [contests]
       operationId: UpdateContest
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for update contest."
         required: true
@@ -677,14 +589,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/statements.pdf:
+  /contests/{contest_id}/statements.pdf:
     get:
       tags: [contests]
       operationId: DownloadContestStatementsPdf
       summary: Download PDF booklet with contest statements
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: lang
           description: "Language code of the problem statement."
           in: query
@@ -701,14 +612,13 @@ paths:
               schema:
                 type: string
                 format: binary
-  /organizations/{org_login}/contests/{contest_login}/problems:
+  /contests/{contest_id}/problems:
     post:
       summary: "Create contest problem"
       tags: [contests]
       operationId: CreateContestProblem
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/ProblemIDQuery"
         - name: package_id
           description: "UUID of the problem package."
@@ -722,14 +632,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "204":
           description: No Content
-  /organizations/{org_login}/contests/{contest_login}/problems/reorder:
+  /contests/{contest_id}/problems/reorder:
     put:
       summary: "Reorder contest problems"
       tags: [contests]
       operationId: ReorderContestProblems
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for reorder contest problems."
         required: true
@@ -742,14 +651,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}:
+  /contests/{contest_id}/problems/{problem_id}:
     get:
       summary: "Get contest problem"
       tags: [contests]
       operationId: GetContestProblem
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
         default:
@@ -765,23 +673,21 @@ paths:
       tags: [contests]
       operationId: DeleteContestProblem
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}:
+  /contests/{contest_id}/problems/{problem_id}/assets/{sha256}:
     get:
       summary: "Get a contest problem statement image"
       description: "Serves a statement image of the problem package the contest currently uses, addressed by content hash, so the response never changes."
       tags: [contests]
       operationId: GetContestProblemAsset
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
         - name: sha256
           description: "SHA-256 of the image, as listed in the problem's `assets`."
@@ -810,14 +716,13 @@ paths:
               schema:
                 type: string
                 format: binary
-  /organizations/{org_login}/contests/{contest_login}/members:
+  /contests/{contest_id}/members:
     get:
       summary: "List contest members"
       tags: [contests]
       operationId: ListContestMembers
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
@@ -835,8 +740,7 @@ paths:
       operationId: DeleteContestMember
       parameters:
         - $ref: "#/components/parameters/UserIDQuery"
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -847,8 +751,7 @@ paths:
       tags: [contests]
       operationId: UpdateContestMember
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/UserIDQuery"
         - $ref: "#/components/parameters/ContestRoleQuery"
       responses:
@@ -856,14 +759,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/invitations:
+  /contests/{contest_id}/invitations:
     get:
       summary: "List pending contest invitations"
       tags: [invitations]
       operationId: ListContestInvitations
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -878,8 +780,7 @@ paths:
       tags: [invitations]
       operationId: InviteContestParticipant
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "The user to invite."
         required: true
@@ -896,14 +797,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InvitationModel"
-  /organizations/{org_login}/contests/{contest_login}/join-link:
+  /contests/{contest_id}/join-link:
     get:
       summary: "Get the contest join link"
       tags: [invitations]
       operationId: GetContestJoinLink
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -918,8 +818,7 @@ paths:
       tags: [invitations]
       operationId: ResetContestJoinLink
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -934,21 +833,19 @@ paths:
       tags: [invitations]
       operationId: DisableContestJoinLink
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "204":
           description: No Content
-  /organizations/{org_login}/contests/{contest_login}/teams:
+  /contests/{contest_id}/teams:
     get:
       summary: "List contest teams"
       tags: [contests]
       operationId: ListContestTeams
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -963,8 +860,7 @@ paths:
       tags: [contests]
       operationId: CreateContestTeam
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
         - name: role
           description: "Role to assign to the member."
@@ -984,8 +880,7 @@ paths:
       tags: [contests]
       operationId: DeleteContestTeam
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
       responses:
         default:
@@ -997,8 +892,7 @@ paths:
       tags: [contests]
       operationId: UpdateContestTeam
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/TeamIDQuery"
         - $ref: "#/components/parameters/ContestTeamRoleQuery"
       responses:
@@ -1006,32 +900,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-
-  /organizations/{org_login}/contests/{contest_login}/my-role:
-    get:
-      summary: "Get my contest role"
-      tags: [contests]
-      operationId: GetMyContestRole
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetMyContestRoleResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/submissions:
+  /contests/{contest_id}/submissions:
     get:
       summary: "List contest submissions"
       tags: [contests]
       operationId: ListContestSubmissions
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
         - $ref: "#/components/parameters/OptionalUserIDQuery"
@@ -1048,63 +923,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListSubmissionsResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge:
-    post:
-      summary: "Rejudge submission"
-      tags: [contests]
-      operationId: RejudgeSubmission
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/SubmissionIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block:
-    post:
-      summary: "Block submission"
-      tags: [contests]
-      operationId: BlockSubmission
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/SubmissionIDPath"
-      requestBody:
-        description: "Request payload for block submission."
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/BlockSubmissionRequestModel"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-  /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock:
-    post:
-      summary: "Unblock submission"
-      tags: [contests]
-      operationId: UnblockSubmission
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/SubmissionIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-  /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block:
+  /contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block:
     post:
       summary: "Block problem for user"
       tags: [contests]
       operationId: BlockProblemForUser
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/UserIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       requestBody:
@@ -1124,8 +949,7 @@ paths:
       tags: [contests]
       operationId: UnblockProblemForUser
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/UserIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
         - name: rejudge_submissions
@@ -1145,8 +969,7 @@ paths:
       tags: [contests]
       operationId: GetProblemBlockStatusForUser
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/UserIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
       responses:
@@ -1158,41 +981,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProblemBlockStatusResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge:
+  /contests/{contest_id}/rejudge:
     post:
-      summary: "Rejudge contest problem"
-      tags: [contests]
-      operationId: RejudgeContestProblem
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-  /organizations/{org_login}/contests/{contest_login}/rejudge:
-    post:
-      summary: "Rejudge contest"
+      summary: "Rejudge contest submissions"
       tags: [contests]
       operationId: RejudgeContest
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
+      requestBody:
+        description: "Narrows the rejudge to one problem or one submission; empty rejudges the whole contest."
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejudgeContestRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/scoreboard:
+  /contests/{contest_id}/scoreboard:
     get:
       summary: "Get contest scoreboard"
       tags: [contests]
       operationId: GetContestScoreboard
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: unfrozen
           in: query
           required: false
@@ -1214,30 +1028,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ScoreboardResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/virtual:
-    get:
-      summary: "Get the caller's virtual run"
-      tags: [contests]
-      operationId: GetVirtualRun
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/VirtualRunResponseModel"
+  /contests/{contest_id}/virtual:
     post:
       summary: "Start a virtual run of a finished contest"
       tags: [contests]
       operationId: StartVirtualRun
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -1247,27 +1044,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VirtualRunModel"
-  /organizations/{org_login}/contests/{contest_login}/virtual/finish:
-    post:
+    patch:
       summary: "Finish the caller's virtual run early"
       tags: [contests]
       operationId: FinishVirtualRun
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
+      requestBody:
+        description: "Request payload for finish virtual run."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinishVirtualRunRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
-        "204":
-          description: No Content
-  /organizations/{org_login}/contests/{contest_login}/drafts:
+        "200":
+          description: OK
+  /contests/{contest_id}/drafts:
     post:
       summary: "Create contest draft"
       tags: [contests]
       operationId: CreateContestDraft
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for create contest draft."
         required: true
@@ -1289,8 +1090,7 @@ paths:
       tags: [contests]
       operationId: ListContestDrafts
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
@@ -1302,14 +1102,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListContestDraftsResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}:
+  /contests/{contest_id}/drafts/{draft_id}:
     delete:
       summary: "Delete contest draft"
       tags: [contests]
       operationId: DeleteContestDraft
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: draft_id
           description: "UUID of the draft problem package."
           in: path
@@ -1322,14 +1121,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/requests:
+  /contests/{contest_id}/requests:
     get:
       tags: [contests]
       operationId: ListContestJoinRequests
       summary: List pending contest join requests
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -1344,8 +1142,7 @@ paths:
       operationId: CreateContestJoinRequest
       summary: Request to participate in contest
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for create contest join request."
         required: false
@@ -1362,72 +1159,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContestJoinRequestResponseModel"
-  /organizations/{org_login}/contests/{contest_login}/requests/mine:
-    get:
+  /contests/{contest_id}/requests/{id}:
+    patch:
       tags: [contests]
-      operationId: GetMyContestJoinRequest
-      summary: Get my pending contest join request
+      operationId: ResolveContestJoinRequest
+      summary: Approve or reject a contest join request
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
+        - $ref: "#/components/parameters/JoinRequestIDPath"
+      requestBody:
+        description: "Request payload for resolve contest join request."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveJoinRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
-          description: My pending contest join request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContestJoinRequestNullableResponseModel"
+          description: Request resolved
     delete:
       tags: [contests]
       operationId: CancelContestJoinRequest
       summary: Cancel my contest join request
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
+        - $ref: "#/components/parameters/JoinRequestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
           description: Request canceled
-  /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve:
-    post:
-      tags: [contests]
-      operationId: ApproveContestJoinRequest
-      summary: Approve contest join request
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/JoinRequestIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: Request approved
-  /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject:
-    post:
-      tags: [contests]
-      operationId: RejectContestJoinRequest
-      summary: Reject contest join request
-      parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
-        - $ref: "#/components/parameters/JoinRequestIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: Request rejected
-
-  /organizations/{org_login}/contests/{contest_login}/announcements:
+  /contests/{contest_id}/announcements:
     get:
       tags: [contests]
       operationId: ListContestAnnouncements
       summary: List contest announcements
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
@@ -1444,8 +1214,7 @@ paths:
       operationId: CreateContestAnnouncement
       summary: Create a contest announcement (jury only)
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for create contest announcement."
         required: true
@@ -1462,15 +1231,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContestAnnouncementModel"
-
-  /organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}:
+  /contests/{contest_id}/announcements/{announcement_id}:
     delete:
       tags: [contests]
       operationId: DeleteContestAnnouncement
       summary: Delete a contest announcement (jury only)
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: announcement_id
           description: "UUID of the contest announcement."
           in: path
@@ -1483,15 +1250,13 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: Announcement deleted
-
-  /organizations/{org_login}/contests/{contest_login}/clarifications:
+  /contests/{contest_id}/clarifications:
     get:
       tags: [contests]
       operationId: ListContestClarifications
       summary: "List contest clarifications (for participant: own questions; for jury: all questions)"
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: problem_id
           description: "UUID of the problem."
           in: query
@@ -1519,8 +1284,7 @@ paths:
       operationId: CreateContestClarification
       summary: Submit a clarification question to the jury
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
       requestBody:
         description: "Request payload for create contest clarification."
         required: true
@@ -1537,15 +1301,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContestClarificationModel"
-
-  /organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer:
+  /contests/{contest_id}/clarifications/{clarification_id}/answer:
     post:
       tags: [contests]
       operationId: AnswerContestClarification
       summary: Answer a clarification question (jury only)
       parameters:
-        - $ref: "#/components/parameters/OrgLoginPath"
-        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ContestIDPath"
         - name: clarification_id
           description: "UUID of the clarification."
           in: path
@@ -1569,7 +1331,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContestClarificationModel"
-
   /submissions:
     post:
       summary: "Create submission"
@@ -1577,18 +1338,13 @@ paths:
       operationId: CreateSubmission
       parameters:
         - $ref: "#/components/parameters/ProblemIDQuery"
-        - name: organization_login
-          description: "Organization login."
+        - name: contest_id
+          description: "UUID of the contest."
           in: query
           required: true
           schema:
             type: string
-        - name: contest_login
-          description: "Contest login within the organization."
-          in: query
-          required: true
-          schema:
-            type: string
+            format: uuid
         - name: language
           description: "Identifier of a language configuration from GET /languages."
           in: query
@@ -1650,6 +1406,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetSubmissionResponseModel"
+    patch:
+      summary: "Block or unblock a contest submission"
+      tags: [submissions]
+      operationId: UpdateSubmission
+      parameters:
+        - $ref: "#/components/parameters/SubmissionIDPath"
+      requestBody:
+        description: "Request payload for update submission."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubmissionRequestModel"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
   /health:
     get:
       summary: "Get health"
@@ -1764,20 +1538,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserResponseModel"
-  /users/me/dashboard:
-    get:
-      summary: "Get my dashboard"
-      tags: [users]
-      operationId: GetMyDashboard
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetUserDashboardResponseModel"
   /users/claim-temporary:
     post:
       tags: [users]
@@ -1858,7 +1618,6 @@ paths:
         "200":
           description: Email change requested
           content: {}
-
   /users/{username}/avatar:
     get:
       tags: [users]
@@ -2326,30 +2085,24 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: Invitation canceled
-  /invitations/{id}/accept:
-    post:
+    patch:
       tags: [invitations]
-      operationId: AcceptInvitation
-      summary: Accept an invitation addressed to the caller
+      operationId: RespondInvitation
+      summary: Accept or decline an invitation addressed to the caller
       parameters:
         - $ref: "#/components/parameters/InvitationIDPath"
+      requestBody:
+        description: "Request payload for respond invitation."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondInvitationRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
-          description: Invitation accepted
-  /invitations/{id}/decline:
-    post:
-      tags: [invitations]
-      operationId: DeclineInvitation
-      summary: Decline an invitation addressed to the caller
-      parameters:
-        - $ref: "#/components/parameters/InvitationIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: Invitation declined
+          description: Invitation answered
   /join-links/{token}:
     get:
       tags: [invitations]
@@ -2420,66 +2173,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrganizationJoinRequestResponseModel"
-  /organizations/{login}/requests/mine:
-    get:
+  /organizations/{login}/requests/{id}:
+    patch:
       tags: [organizations]
-      operationId: GetMyOrganizationJoinRequest
-      summary: Get my pending join request to organization
+      operationId: ResolveOrganizationJoinRequest
+      summary: Approve or reject an organization join request
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
+        - $ref: "#/components/parameters/JoinRequestIDPath"
+      requestBody:
+        description: "Request payload for resolve organization join request."
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveOrganizationJoinRequestModel"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
-          description: My pending join request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrganizationJoinRequestNullableResponseModel"
+          description: Request resolved
     delete:
       tags: [organizations]
       operationId: CancelOrganizationJoinRequest
-      summary: Cancel my join request to organization
+      summary: Cancel my organization join request
       parameters:
         - $ref: "#/components/parameters/OrganizationLoginPath"
+        - $ref: "#/components/parameters/JoinRequestIDPath"
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
           description: Request canceled
-  /organizations/{login}/requests/{id}/approve:
-    post:
-      tags: [organizations]
-      operationId: ApproveOrganizationJoinRequest
-      summary: Approve organization join request
-      parameters:
-        - $ref: "#/components/parameters/OrganizationLoginPath"
-        - $ref: "#/components/parameters/JoinRequestIDPath"
-      requestBody:
-        description: "Request payload for approve organization join request."
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApproveOrganizationJoinRequestModel"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: Request approved
-  /organizations/{login}/requests/{id}/reject:
-    post:
-      tags: [organizations]
-      operationId: RejectOrganizationJoinRequest
-      summary: Reject organization join request
-      parameters:
-        - $ref: "#/components/parameters/OrganizationLoginPath"
-        - $ref: "#/components/parameters/JoinRequestIDPath"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: Request rejected
   /notifications:
     get:
       tags: [notifications]
@@ -2746,24 +2471,6 @@ paths:
           $ref: "#/components/responses/Problem"
         "204":
           description: No Content
-  /teams/{id}/contests:
-    get:
-      tags: [contests]
-      operationId: ListTeamContests
-      summary: List contests accessible by team
-      parameters:
-        - $ref: "#/components/parameters/TeamIDPath"
-        - $ref: "#/components/parameters/PageQuery"
-        - $ref: "#/components/parameters/PageSizeQuery"
-      responses:
-        default:
-          $ref: "#/components/responses/Problem"
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListContestsResponseModel"
   /posts:
     get:
       tags: [posts]
@@ -3214,6 +2921,14 @@ components:
       required: true
       schema:
         type: string
+    ContestIDPath:
+      name: contest_id
+      description: UUID of the contest.
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ProblemIDQuery:
       name: problem_id
       description: UUID of the problem.
@@ -4981,47 +4696,6 @@ components:
             $ref: "#/components/schemas/ContestModel"
         pagination:
           $ref: "#/components/schemas/PaginationModel"
-    ListUserContestsResponseModel:
-      description: "Paginated collection of user contests."
-      example:
-        contests:
-        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
-          id: 123e4567-e89b-42d3-a456-426614174000
-          login: contest-1
-          organization_id: 123e4567-e89b-42d3-a456-426614174000
-          organization_login: example
-          title: Test contest
-          description: Example description
-          visibility: example
-          monitor_scope: participant
-          submissions_list_scope: moderator
-          submissions_review_scope: moderator
-          submission_details_scope: moderator
-          freeze_status: auto
-          join_policy: open
-          hide_statements: false
-          allow_clarifications: true
-          enable_drafts: true
-          enable_upsolving: true
-          languages: []
-          created_at: '2026-01-01T12:00:00Z'
-          updated_at: '2026-01-01T12:00:00Z'
-        pagination:
-          page: 1
-          page_size: 50
-          total_items: 500
-          total_pages: 10
-      type: object
-      required:
-        - contests
-        - pagination
-      properties:
-        contests:
-          type: array
-          items:
-            $ref: "#/components/schemas/ContestModel"
-        pagination:
-          $ref: "#/components/schemas/PaginationModel"
     ContestProblemListItemModel:
       description: "Contest problem list item data."
       example:
@@ -5114,6 +4788,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ContestProblemListItemModel"
+        my_role:
+          type: string
+          description: "The caller's effective contest role; absent for guests."
+        my_join_request:
+          $ref: "#/components/schemas/ContestJoinRequestModel"
+        virtual_run:
+          $ref: "#/components/schemas/VirtualRunModel"
     ReorderContestProblemsRequestModel:
       description: "Fields for the reorder contest problems request."
       example:
@@ -5331,15 +5012,6 @@ components:
         ends_at:
           type: string
           format: date-time
-    VirtualRunResponseModel:
-      type: object
-      required:
-        - virtual_run
-      properties:
-        virtual_run:
-          allOf:
-            - $ref: "#/components/schemas/VirtualRunModel"
-          nullable: true
     SubmissionKind:
       description: How the author took part; only contest submissions count toward the standings.
       type: string
@@ -5698,15 +5370,84 @@ components:
       properties:
         submission:
           $ref: "#/components/schemas/SubmissionModel"
-    BlockSubmissionRequestModel:
-      description: "Fields for the block submission request."
+    UpdateSubmissionRequestModel:
+      description: "Fields for the update submission request."
       example:
+        blocked: true
         reason: Cheating detected
       type: object
+      required:
+        - blocked
       properties:
+        blocked:
+          type: boolean
         reason:
           type: string
           example: Cheating detected
+    RejudgeContestRequestModel:
+      description: "Narrows a contest rejudge; at most one field is set."
+      example:
+        problem_id: 123e4567-e89b-42d3-a456-426614174000
+      type: object
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+    RespondInvitationRequestModel:
+      description: "Answer to an invitation."
+      example:
+        status: accepted
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [accepted, declined]
+    FinishVirtualRunRequestModel:
+      description: "Ends the caller's virtual run."
+      example:
+        finished: true
+      type: object
+      required:
+        - finished
+      properties:
+        finished:
+          type: boolean
+          enum: [true]
+    CancelProblemBuildRequestModel:
+      description: "Cancels a queued or running build."
+      example:
+        status: cancelled
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [cancelled]
+    CreateContestRequestModel:
+      description: "Fields for the create contest request."
+      example:
+        organization_id: 123e4567-e89b-42d3-a456-426614174000
+        title: Contest 1
+        login: contest-1
+      type: object
+      required:
+        - organization_id
+        - title
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        login:
+          description: "Login within the organization; generated from the title when omitted."
+          type: string
     BlockProblemRequestModel:
       description: "Fields for the block problem request."
       example:
@@ -5733,147 +5474,6 @@ components:
           type: string
           format: date-time
           nullable: true
-    DashboardContestModel:
-      description: "Dashboard contest data."
-      example:
-        permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
-        id: 123e4567-e89b-42d3-a456-426614174000
-        login: contest-1
-        title: A + B
-        organization_id: 123e4567-e89b-42d3-a456-426614174000
-        organization_name: example
-        organization_login: example
-        user_role: example
-        created_at: '2026-01-01T12:00:00Z'
-      type: object
-      required:
-        - permissions
-        - id
-        - login
-        - title
-        - organization_id
-        - organization_name
-        - organization_login
-        - user_role
-        - created_at
-      properties:
-        permissions:
-          $ref: "#/components/schemas/ContestPermissionsModel"
-        id:
-          type: string
-          format: uuid
-        login:
-          type: string
-          example: contest-1
-        title:
-          type: string
-        organization_id:
-          type: string
-          format: uuid
-        organization_name:
-          type: string
-        organization_login:
-          type: string
-        user_role:
-          type: string
-        last_submission_time:
-          type: string
-          format: date-time
-          nullable: true
-        start_time:
-          type: string
-          format: date-time
-          nullable: true
-        end_time:
-          type: string
-          format: date-time
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-    DashboardProblemModel:
-      description: "Dashboard problem data."
-      example:
-        permissions: {use: false, read: false, edit: false, manage: false, delete: false}
-        id: 123e4567-e89b-42d3-a456-426614174000
-        title: A + B
-        organization_id: 123e4567-e89b-42d3-a456-426614174000
-        organization_name: example
-        organization_login: example
-        time_limit: 1
-        memory_limit: 1
-        updated_at: '2026-01-01T12:00:00Z'
-      type: object
-      required:
-        - permissions
-        - id
-        - title
-        - organization_id
-        - organization_name
-        - organization_login
-        - time_limit
-        - memory_limit
-        - updated_at
-      properties:
-        permissions:
-          $ref: "#/components/schemas/ProblemPermissionsModel"
-        id:
-          type: string
-          format: uuid
-        title:
-          type: string
-        organization_id:
-          type: string
-          format: uuid
-        organization_name:
-          type: string
-        organization_login:
-          type: string
-        time_limit:
-          type: integer
-          format: int32
-        memory_limit:
-          type: integer
-          format: int32
-        updated_at:
-          type: string
-          format: date-time
-    GetUserDashboardResponseModel:
-      description: "Result of get user dashboard."
-      example:
-        recent_contests:
-        - permissions: {view_problems: false, submit: false, list_own_submissions: false, list_submissions: false, view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false}
-          id: 123e4567-e89b-42d3-a456-426614174000
-          login: contest-1
-          title: A + B
-          organization_id: 123e4567-e89b-42d3-a456-426614174000
-          organization_name: example
-          organization_login: example
-          user_role: example
-          created_at: '2026-01-01T12:00:00Z'
-        my_problems:
-        - permissions: {use: false, read: false, edit: false, manage: false, delete: false}
-          id: 123e4567-e89b-42d3-a456-426614174000
-          title: A + B
-          organization_id: 123e4567-e89b-42d3-a456-426614174000
-          organization_name: example
-          organization_login: example
-          time_limit: 1
-          memory_limit: 1
-          updated_at: '2026-01-01T12:00:00Z'
-      type: object
-      required:
-        - recent_contests
-        - my_problems
-      properties:
-        recent_contests:
-          type: array
-          items:
-            $ref: "#/components/schemas/DashboardContestModel"
-        my_problems:
-          type: array
-          items:
-            $ref: "#/components/schemas/DashboardProblemModel"
     GetUserResponseModel:
       description: "Result of get user."
       example:
@@ -6050,17 +5650,6 @@ components:
         updated_at:
           type: string
           format: date-time
-    GetMyContestRoleResponseModel:
-      description: "Result of get my contest role."
-      example:
-        role: owner
-      type: object
-      required:
-        - role
-      properties:
-        role:
-          type: string
-          example: owner
     ScoreboardProblemResultModel:
       description: "Scoreboard problem result data."
       example:
@@ -6577,6 +6166,8 @@ components:
       properties:
         organization:
           $ref: "#/components/schemas/OrganizationModel"
+        my_join_request:
+          $ref: "#/components/schemas/OrganizationJoinRequestModel"
     UpdateOrganizationRequestModel:
       description: "Fields for the update organization request."
       example:
@@ -7779,17 +7370,33 @@ components:
         message:
           type: string
 
-    ApproveOrganizationJoinRequestModel:
-      description: "Fields for the approve organization join request."
+    ResolveOrganizationJoinRequestModel:
+      description: "Decision on an organization join request."
       example:
-        role: owner
+        status: approved
+        role: member
       type: object
+      required:
+        - status
       properties:
+        status:
+          type: string
+          enum: [approved, rejected]
         role:
+          description: "Role granted on approval; member when omitted."
           type: string
           enum: [owner, admin, maintainer, member]
-          default: member
-
+    ResolveJoinRequestModel:
+      description: "Decision on a contest join request."
+      example:
+        status: approved
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
     ListOrganizationJoinRequestsResponseModel:
       description: "Paginated collection of organization join requests."
       example:
@@ -7824,24 +7431,6 @@ components:
           $ref: "#/components/schemas/OrganizationJoinRequestModel"
         joined:
           type: boolean
-
-    OrganizationJoinRequestNullableResponseModel:
-      description: "Result of organization join request nullable."
-      example:
-        request:
-          id: 123e4567-e89b-42d3-a456-426614174000
-          organization_id: 123e4567-e89b-42d3-a456-426614174000
-          organization_name: example
-          organization_login: example
-          user_id: 123e4567-e89b-42d3-a456-426614174000
-          username: alice
-          status: example
-          created_at: '2026-01-01T12:00:00Z'
-          updated_at: '2026-01-01T12:00:00Z'
-      type: object
-      properties:
-        request:
-          $ref: "#/components/schemas/OrganizationJoinRequestModel"
 
     ContestJoinRequestModel:
       description: "Fields for the contest join request."
@@ -7945,25 +7534,6 @@ components:
           $ref: "#/components/schemas/ContestJoinRequestModel"
         registered:
           type: boolean
-
-    ContestJoinRequestNullableResponseModel:
-      description: "Result of contest join request nullable."
-      example:
-        request:
-          id: 123e4567-e89b-42d3-a456-426614174000
-          contest_id: 123e4567-e89b-42d3-a456-426614174000
-          contest_title: example
-          contest_login: example
-          organization_login: example
-          user_id: 123e4567-e89b-42d3-a456-426614174000
-          username: alice
-          status: example
-          created_at: '2026-01-01T12:00:00Z'
-          updated_at: '2026-01-01T12:00:00Z'
-      type: object
-      properties:
-        request:
-          $ref: "#/components/schemas/ContestJoinRequestModel"
 
     ContestAnnouncementModel:
       description: "Contest announcement data."

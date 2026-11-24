@@ -166,17 +166,6 @@ type CreateProblemMemberParams struct {
 	Role      accessmodel.ProblemRole
 }
 
-type DashboardProblem struct {
-	ID                uuid.UUID
-	Title             string
-	OrganizationID    uuid.UUID
-	OrganizationName  string
-	OrganizationLogin string
-	TimeLimitMs       int
-	MemoryLimitMb     int
-	UpdatedAt         time.Time
-}
-
 type Sample struct {
 	Input  string `json:"input"`
 	Output string `json:"output"`

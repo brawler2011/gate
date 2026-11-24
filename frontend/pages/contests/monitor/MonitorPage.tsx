@@ -39,6 +39,7 @@ const Page = (): ReactNode => {
       <ContestMonitorTable
         orgLogin={slug}
         contestLogin={contestLogin}
+        contestId={contestResponse.contest.id}
         isManager={isManager}
         allowVirtual={allowVirtual}
       />

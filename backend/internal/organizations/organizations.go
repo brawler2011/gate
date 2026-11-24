@@ -441,19 +441,22 @@ func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin s
 	return uc.repo.ListJoinRequests(ctx, org.ID, &status)
 }
 
-func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin string) error {
+func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return err
 	}
 
 	return access.WithinActor(ctx, uc.transactor, func(tx OrganizationTxStore, user accessmodel.User) error {
-		req, err := tx.GetPendingJoinRequest(ctx, org.ID, user.Id)
+		req, err := tx.GetJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
 		}
-		if req == nil {
-			return pkg.ErrNotFound
+		if req.OrganizationID != org.ID || req.UserID != user.Id {
+			return pkg.Wrap(pkg.ErrNotFound, nil, "join request not found")
+		}
+		if req.Status != organizationsmodel.RequestStatusPending {
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 		return tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusCanceled, nil)
 	})

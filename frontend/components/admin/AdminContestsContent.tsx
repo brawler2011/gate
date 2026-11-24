@@ -30,7 +30,7 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
     queryKey: ["admin-contests", page, search],
     queryFn: () =>
       unwrap(
-        api.GET("/admin/contests", {
+        api.GET("/contests", {
           params: {
             query: {page, pageSize: 10, search},
           },
@@ -42,17 +42,9 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
   const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   const handleDeleteContest = async (contest: {id: string; organization_login: string; login: string}) => {
-    const {error: err} = await api.DELETE(
-      "/organizations/{org_login}/contests/{contest_login}",
-      {
-        params: {
-          path: {
-            org_login: contest.organization_login,
-            contest_login: contest.login,
-          },
-        },
-      },
-    );
+    const {error: err} = await api.DELETE("/contests/{contest_id}", {
+      params: {path: {contest_id: contest.id}},
+    });
 
     if (err) {
       console.error("Error deleting contest:", err);

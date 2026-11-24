@@ -4,13 +4,11 @@ import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import {useSession} from "@/contexts/SessionContext";
-import {type ContestRoleResponse} from "@/lib/permissions";
 
 import type {ContestModel, UserModel} from "@/contracts/core/v1/schema";
 
 export type ContestHeaderNavProps = {
   contest: ContestModel;
-  contestRole?: ContestRoleResponse | null;
   orgLogin?: string;
   user?: UserModel | null;
 };

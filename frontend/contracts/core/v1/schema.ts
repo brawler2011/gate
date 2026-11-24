@@ -70,24 +70,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{id}/builds/{buildId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /** Cancel a queued or running build */
-        post: operations["CancelProblemBuild"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        patch: operations["CancelProblemBuild"];
         trace?: never;
     };
     "/problems/{id}/draft/uploads": {
@@ -235,17 +219,21 @@ export interface paths {
         patch: operations["UpdateProblem"];
         trace?: never;
     };
-    "/admin/contests": {
+    "/contests": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List admin contests */
-        get: operations["ListAdminContests"];
+        /**
+         * List contests
+         * @description Contests visible to the caller; administrators see all.
+         */
+        get: operations["ListContests"];
         put?: never;
-        post?: never;
+        /** Create contest */
+        post: operations["CreateContest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -320,75 +308,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/users/{username}/contests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List user contests */
-        get: operations["ListUserContests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workshop/contests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List workshop contests */
-        get: operations["ListWorkshopContests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/public/contests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List public contests */
-        get: operations["ListPublicContests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List organization contests */
-        get: operations["ListOrganizationContests"];
-        put?: never;
-        /** Create contest */
-        post: operations["CreateContest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/organizations/{org_login}/contests/{contest_login}": {
         parameters: {
             query?: never;
@@ -400,6 +319,22 @@ export interface paths {
         get: operations["GetContest"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contests/{contest_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
         /** Delete contest */
         delete: operations["DeleteContest"];
         options?: never;
@@ -408,7 +343,7 @@ export interface paths {
         patch: operations["UpdateContest"];
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/statements.pdf": {
+    "/contests/{contest_id}/statements.pdf": {
         parameters: {
             query?: never;
             header?: never;
@@ -425,7 +360,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems": {
+    "/contests/{contest_id}/problems": {
         parameters: {
             query?: never;
             header?: never;
@@ -442,7 +377,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems/reorder": {
+    "/contests/{contest_id}/problems/reorder": {
         parameters: {
             query?: never;
             header?: never;
@@ -459,7 +394,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}": {
+    "/contests/{contest_id}/problems/{problem_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -477,7 +412,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}": {
+    "/contests/{contest_id}/problems/{problem_id}/assets/{sha256}": {
         parameters: {
             query?: never;
             header?: never;
@@ -497,7 +432,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/members": {
+    "/contests/{contest_id}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -516,7 +451,7 @@ export interface paths {
         patch: operations["UpdateContestMember"];
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/invitations": {
+    "/contests/{contest_id}/invitations": {
         parameters: {
             query?: never;
             header?: never;
@@ -534,7 +469,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/join-link": {
+    "/contests/{contest_id}/join-link": {
         parameters: {
             query?: never;
             header?: never;
@@ -553,7 +488,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/teams": {
+    "/contests/{contest_id}/teams": {
         parameters: {
             query?: never;
             header?: never;
@@ -573,24 +508,7 @@ export interface paths {
         patch: operations["UpdateContestTeam"];
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/my-role": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get my contest role */
-        get: operations["GetMyContestRole"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/submissions": {
+    "/contests/{contest_id}/submissions": {
         parameters: {
             query?: never;
             header?: never;
@@ -607,58 +525,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rejudge submission */
-        post: operations["RejudgeSubmission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Block submission */
-        post: operations["BlockSubmission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Unblock submission */
-        post: operations["UnblockSubmission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block": {
+    "/contests/{contest_id}/participants/{user_id}/problems/{problem_id}/block": {
         parameters: {
             query?: never;
             header?: never;
@@ -677,7 +544,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge": {
+    "/contests/{contest_id}/rejudge": {
         parameters: {
             query?: never;
             header?: never;
@@ -686,24 +553,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rejudge contest problem */
-        post: operations["RejudgeContestProblem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/rejudge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Rejudge contest */
+        /** Rejudge contest submissions */
         post: operations["RejudgeContest"];
         delete?: never;
         options?: never;
@@ -711,7 +561,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/scoreboard": {
+    "/contests/{contest_id}/scoreboard": {
         parameters: {
             query?: never;
             header?: never;
@@ -728,25 +578,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/virtual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the caller's virtual run */
-        get: operations["GetVirtualRun"];
-        put?: never;
-        /** Start a virtual run of a finished contest */
-        post: operations["StartVirtualRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/virtual/finish": {
+    "/contests/{contest_id}/virtual": {
         parameters: {
             query?: never;
             header?: never;
@@ -755,15 +587,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Finish the caller's virtual run early */
-        post: operations["FinishVirtualRun"];
+        /** Start a virtual run of a finished contest */
+        post: operations["StartVirtualRun"];
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Finish the caller's virtual run early */
+        patch: operations["FinishVirtualRun"];
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/drafts": {
+    "/contests/{contest_id}/drafts": {
         parameters: {
             query?: never;
             header?: never;
@@ -781,7 +614,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}": {
+    "/contests/{contest_id}/drafts/{draft_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -798,7 +631,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/requests": {
+    "/contests/{contest_id}/requests": {
         parameters: {
             query?: never;
             header?: never;
@@ -816,59 +649,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/requests/mine": {
+    "/contests/{contest_id}/requests/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get my pending contest join request */
-        get: operations["GetMyContestJoinRequest"];
+        get?: never;
         put?: never;
         post?: never;
         /** Cancel my contest join request */
         delete: operations["CancelContestJoinRequest"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Approve or reject a contest join request */
+        patch: operations["ResolveContestJoinRequest"];
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve contest join request */
-        post: operations["ApproveContestJoinRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject contest join request */
-        post: operations["RejectContestJoinRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{org_login}/contests/{contest_login}/announcements": {
+    "/contests/{contest_id}/announcements": {
         parameters: {
             query?: never;
             header?: never;
@@ -886,7 +685,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}": {
+    "/contests/{contest_id}/announcements/{announcement_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -903,7 +702,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/clarifications": {
+    "/contests/{contest_id}/clarifications": {
         parameters: {
             query?: never;
             header?: never;
@@ -921,7 +720,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/clarifications/{clarification_id}/answer": {
+    "/contests/{contest_id}/clarifications/{clarification_id}/answer": {
         parameters: {
             query?: never;
             header?: never;
@@ -970,7 +769,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Block or unblock a contest submission */
+        patch: operations["UpdateSubmission"];
         trace?: never;
     };
     "/health": {
@@ -1051,23 +851,6 @@ export interface paths {
         };
         /** Get me */
         get: operations["GetMe"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/me/dashboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get my dashboard */
-        get: operations["GetMyDashboard"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1362,41 +1145,8 @@ export interface paths {
         delete: operations["CancelInvitation"];
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invitations/{id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Accept an invitation addressed to the caller */
-        post: operations["AcceptInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/invitations/{id}/decline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Decline an invitation addressed to the caller */
-        post: operations["DeclineInvitation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        /** Accept or decline an invitation addressed to the caller */
+        patch: operations["RespondInvitation"];
         trace?: never;
     };
     "/join-links/{token}": {
@@ -1438,56 +1188,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{login}/requests/mine": {
+    "/organizations/{login}/requests/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get my pending join request to organization */
-        get: operations["GetMyOrganizationJoinRequest"];
+        get?: never;
         put?: never;
         post?: never;
-        /** Cancel my join request to organization */
+        /** Cancel my organization join request */
         delete: operations["CancelOrganizationJoinRequest"];
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{login}/requests/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve organization join request */
-        post: operations["ApproveOrganizationJoinRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/organizations/{login}/requests/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject organization join request */
-        post: operations["RejectOrganizationJoinRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        /** Approve or reject an organization join request */
+        patch: operations["ResolveOrganizationJoinRequest"];
         trace?: never;
     };
     "/notifications": {
@@ -1629,23 +1345,6 @@ export interface paths {
         post?: never;
         /** Turn off the team join link */
         delete: operations["DisableTeamJoinLink"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/teams/{id}/contests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List contests accessible by team */
-        get: operations["ListTeamContests"];
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2759,56 +2458,6 @@ export interface components {
             pagination: components["schemas"]["PaginationModel"];
         };
         /**
-         * @description Paginated collection of user contests.
-         * @example {
-         *       "contests": [
-         *         {
-         *           "permissions": {
-         *             "view_problems": false,
-         *             "submit": false,
-         *             "list_own_submissions": false,
-         *             "list_submissions": false,
-         *             "view_submission_details": false,
-         *             "view_scoreboard": false,
-         *             "manage": false,
-         *             "delete": false,
-         *             "start_virtual": false
-         *           },
-         *           "id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "login": "contest-1",
-         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "organization_login": "example",
-         *           "title": "Test contest",
-         *           "description": "Example description",
-         *           "visibility": "example",
-         *           "monitor_scope": "participant",
-         *           "submissions_list_scope": "moderator",
-         *           "submissions_review_scope": "moderator",
-         *           "submission_details_scope": "moderator",
-         *           "freeze_status": "auto",
-         *           "join_policy": "open",
-         *           "hide_statements": false,
-         *           "allow_clarifications": true,
-         *           "enable_drafts": true,
-         *           "enable_upsolving": true,
-         *           "languages": [],
-         *           "created_at": "2026-01-01T12:00:00Z",
-         *           "updated_at": "2026-01-01T12:00:00Z"
-         *         }
-         *       ],
-         *       "pagination": {
-         *         "page": 1,
-         *         "page_size": 50,
-         *         "total_items": 500,
-         *         "total_pages": 10
-         *       }
-         *     }
-         */
-        ListUserContestsResponseModel: {
-            contests: components["schemas"]["ContestModel"][];
-            pagination: components["schemas"]["PaginationModel"];
-        };
-        /**
          * @description Contest problem list item data.
          * @example {
          *       "permissions": {
@@ -2905,6 +2554,10 @@ export interface components {
         GetContestResponseModel: {
             contest: components["schemas"]["ContestModel"];
             problems: components["schemas"]["ContestProblemListItemModel"][];
+            /** @description The caller's effective contest role; absent for guests. */
+            my_role?: string;
+            my_join_request?: components["schemas"]["ContestJoinRequestModel"];
+            virtual_run?: components["schemas"]["VirtualRunModel"];
         };
         /**
          * @description Fields for the reorder contest problems request.
@@ -3072,9 +2725,6 @@ export interface components {
             started_at: string;
             /** Format: date-time */
             ends_at: string;
-        };
-        VirtualRunResponseModel: {
-            virtual_run: components["schemas"]["VirtualRunModel"] | null;
         };
         /**
          * @description How the author took part; only contest submissions count toward the standings.
@@ -3376,14 +3026,73 @@ export interface components {
             submission: components["schemas"]["SubmissionModel"];
         };
         /**
-         * @description Fields for the block submission request.
+         * @description Fields for the update submission request.
          * @example {
+         *       "blocked": true,
          *       "reason": "Cheating detected"
          *     }
          */
-        BlockSubmissionRequestModel: {
+        UpdateSubmissionRequestModel: {
+            blocked: boolean;
             /** @example Cheating detected */
             reason?: string;
+        };
+        /**
+         * @description Narrows a contest rejudge; at most one field is set.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000"
+         *     }
+         */
+        RejudgeContestRequestModel: {
+            /** Format: uuid */
+            problem_id?: string;
+            /** Format: uuid */
+            submission_id?: string;
+        };
+        /**
+         * @description Answer to an invitation.
+         * @example {
+         *       "status": "accepted"
+         *     }
+         */
+        RespondInvitationRequestModel: {
+            /** @enum {string} */
+            status: "accepted" | "declined";
+        };
+        /**
+         * @description Ends the caller's virtual run.
+         * @example {
+         *       "finished": true
+         *     }
+         */
+        FinishVirtualRunRequestModel: {
+            /** @enum {boolean} */
+            finished: true;
+        };
+        /**
+         * @description Cancels a queued or running build.
+         * @example {
+         *       "status": "cancelled"
+         *     }
+         */
+        CancelProblemBuildRequestModel: {
+            /** @enum {string} */
+            status: "cancelled";
+        };
+        /**
+         * @description Fields for the create contest request.
+         * @example {
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "title": "Contest 1",
+         *       "login": "contest-1"
+         *     }
+         */
+        CreateContestRequestModel: {
+            /** Format: uuid */
+            organization_id: string;
+            title: string;
+            /** @description Login within the organization; generated from the title when omitted. */
+            login?: string;
         };
         /**
          * @description Fields for the block problem request.
@@ -3406,138 +3115,6 @@ export interface components {
             reason?: string | null;
             /** Format: date-time */
             created_at?: string | null;
-        };
-        /**
-         * @description Dashboard contest data.
-         * @example {
-         *       "permissions": {
-         *         "view_problems": false,
-         *         "submit": false,
-         *         "list_own_submissions": false,
-         *         "list_submissions": false,
-         *         "view_submission_details": false,
-         *         "view_scoreboard": false,
-         *         "manage": false,
-         *         "delete": false,
-         *         "start_virtual": false
-         *       },
-         *       "id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "login": "contest-1",
-         *       "title": "A + B",
-         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "organization_name": "example",
-         *       "organization_login": "example",
-         *       "user_role": "example",
-         *       "created_at": "2026-01-01T12:00:00Z"
-         *     }
-         */
-        DashboardContestModel: {
-            permissions: components["schemas"]["ContestPermissionsModel"];
-            /** Format: uuid */
-            id: string;
-            /** @example contest-1 */
-            login: string;
-            title: string;
-            /** Format: uuid */
-            organization_id: string;
-            organization_name: string;
-            organization_login: string;
-            user_role: string;
-            /** Format: date-time */
-            last_submission_time?: string | null;
-            /** Format: date-time */
-            start_time?: string | null;
-            /** Format: date-time */
-            end_time?: string | null;
-            /** Format: date-time */
-            created_at: string;
-        };
-        /**
-         * @description Dashboard problem data.
-         * @example {
-         *       "permissions": {
-         *         "use": false,
-         *         "read": false,
-         *         "edit": false,
-         *         "manage": false,
-         *         "delete": false
-         *       },
-         *       "id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "title": "A + B",
-         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *       "organization_name": "example",
-         *       "organization_login": "example",
-         *       "time_limit": 1,
-         *       "memory_limit": 1,
-         *       "updated_at": "2026-01-01T12:00:00Z"
-         *     }
-         */
-        DashboardProblemModel: {
-            permissions: components["schemas"]["ProblemPermissionsModel"];
-            /** Format: uuid */
-            id: string;
-            title: string;
-            /** Format: uuid */
-            organization_id: string;
-            organization_name: string;
-            organization_login: string;
-            /** Format: int32 */
-            time_limit: number;
-            /** Format: int32 */
-            memory_limit: number;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        /**
-         * @description Result of get user dashboard.
-         * @example {
-         *       "recent_contests": [
-         *         {
-         *           "permissions": {
-         *             "view_problems": false,
-         *             "submit": false,
-         *             "list_own_submissions": false,
-         *             "list_submissions": false,
-         *             "view_submission_details": false,
-         *             "view_scoreboard": false,
-         *             "manage": false,
-         *             "delete": false,
-         *             "start_virtual": false
-         *           },
-         *           "id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "login": "contest-1",
-         *           "title": "A + B",
-         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "organization_name": "example",
-         *           "organization_login": "example",
-         *           "user_role": "example",
-         *           "created_at": "2026-01-01T12:00:00Z"
-         *         }
-         *       ],
-         *       "my_problems": [
-         *         {
-         *           "permissions": {
-         *             "use": false,
-         *             "read": false,
-         *             "edit": false,
-         *             "manage": false,
-         *             "delete": false
-         *           },
-         *           "id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "title": "A + B",
-         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *           "organization_name": "example",
-         *           "organization_login": "example",
-         *           "time_limit": 1,
-         *           "memory_limit": 1,
-         *           "updated_at": "2026-01-01T12:00:00Z"
-         *         }
-         *       ]
-         *     }
-         */
-        GetUserDashboardResponseModel: {
-            recent_contests: components["schemas"]["DashboardContestModel"][];
-            my_problems: components["schemas"]["DashboardProblemModel"][];
         };
         /**
          * @description Result of get user.
@@ -3685,16 +3262,6 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-        };
-        /**
-         * @description Result of get my contest role.
-         * @example {
-         *       "role": "owner"
-         *     }
-         */
-        GetMyContestRoleResponseModel: {
-            /** @example owner */
-            role: string;
         };
         /**
          * ScoreboardProblemResultModel
@@ -4149,6 +3716,7 @@ export interface components {
          */
         GetOrganizationResponseModel: {
             organization: components["schemas"]["OrganizationModel"];
+            my_join_request?: components["schemas"]["OrganizationJoinRequestModel"];
         };
         /**
          * @description Fields for the update organization request.
@@ -5160,17 +4728,30 @@ export interface components {
             message?: string;
         };
         /**
-         * @description Fields for the approve organization join request.
+         * @description Decision on an organization join request.
          * @example {
-         *       "role": "owner"
+         *       "status": "approved",
+         *       "role": "member"
          *     }
          */
-        ApproveOrganizationJoinRequestModel: {
+        ResolveOrganizationJoinRequestModel: {
+            /** @enum {string} */
+            status: "approved" | "rejected";
             /**
-             * @default member
+             * @description Role granted on approval; member when omitted.
              * @enum {string}
              */
-            role: "owner" | "admin" | "maintainer" | "member";
+            role?: "owner" | "admin" | "maintainer" | "member";
+        };
+        /**
+         * @description Decision on a contest join request.
+         * @example {
+         *       "status": "approved"
+         *     }
+         */
+        ResolveJoinRequestModel: {
+            /** @enum {string} */
+            status: "approved" | "rejected";
         };
         /**
          * @description Paginated collection of organization join requests.
@@ -5202,25 +4783,6 @@ export interface components {
         OrganizationJoinRequestResponseModel: {
             request?: components["schemas"]["OrganizationJoinRequestModel"];
             joined: boolean;
-        };
-        /**
-         * @description Result of organization join request nullable.
-         * @example {
-         *       "request": {
-         *         "id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "organization_name": "example",
-         *         "organization_login": "example",
-         *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "username": "alice",
-         *         "status": "example",
-         *         "created_at": "2026-01-01T12:00:00Z",
-         *         "updated_at": "2026-01-01T12:00:00Z"
-         *       }
-         *     }
-         */
-        OrganizationJoinRequestNullableResponseModel: {
-            request?: components["schemas"]["OrganizationJoinRequestModel"];
         };
         /**
          * @description Fields for the contest join request.
@@ -5297,26 +4859,6 @@ export interface components {
         ContestJoinRequestResponseModel: {
             request?: components["schemas"]["ContestJoinRequestModel"];
             registered: boolean;
-        };
-        /**
-         * @description Result of contest join request nullable.
-         * @example {
-         *       "request": {
-         *         "id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "contest_id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "contest_title": "example",
-         *         "contest_login": "example",
-         *         "organization_login": "example",
-         *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
-         *         "username": "alice",
-         *         "status": "example",
-         *         "created_at": "2026-01-01T12:00:00Z",
-         *         "updated_at": "2026-01-01T12:00:00Z"
-         *       }
-         *     }
-         */
-        ContestJoinRequestNullableResponseModel: {
-            request?: components["schemas"]["ContestJoinRequestModel"];
         };
         /**
          * @description Contest announcement data.
@@ -5539,6 +5081,8 @@ export interface components {
         OrgLoginPath: string;
         /** @description Contest login within the organization. */
         ContestLoginPath: string;
+        /** @description UUID of the contest. */
+        ContestIDPath: string;
         /** @description UUID of the problem. */
         ProblemIDQuery: string;
         /** @description UUID of the problem. */
@@ -5658,7 +5202,6 @@ export type ContestScope = components['schemas']['ContestScope'];
 export type FeedbackLevel = components['schemas']['FeedbackLevel'];
 export type ContestModel = components['schemas']['ContestModel'];
 export type ListContestsResponseModel = components['schemas']['ListContestsResponseModel'];
-export type ListUserContestsResponseModel = components['schemas']['ListUserContestsResponseModel'];
 export type ContestProblemListItemModel = components['schemas']['ContestProblemListItemModel'];
 export type GetContestResponseModel = components['schemas']['GetContestResponseModel'];
 export type ReorderContestProblemsRequestModel = components['schemas']['ReorderContestProblemsRequestModel'];
@@ -5668,7 +5211,6 @@ export type UpdateContestRequestModel = components['schemas']['UpdateContestRequ
 export type CreateSubmissionRequestModel = components['schemas']['CreateSubmissionRequestModel'];
 export type ListSubmissionsResponseModel = components['schemas']['ListSubmissionsResponseModel'];
 export type VirtualRunModel = components['schemas']['VirtualRunModel'];
-export type VirtualRunResponseModel = components['schemas']['VirtualRunResponseModel'];
 export type SubmissionKind = components['schemas']['SubmissionKind'];
 export type SubmissionsListItemModel = components['schemas']['SubmissionsListItemModel'];
 export type TestDetailItemModel = components['schemas']['TestDetailItemModel'];
@@ -5676,19 +5218,20 @@ export type FailedTestDetailModel = components['schemas']['FailedTestDetailModel
 export type SubmissionTestDetailsModel = components['schemas']['SubmissionTestDetailsModel'];
 export type SubmissionModel = components['schemas']['SubmissionModel'];
 export type GetSubmissionResponseModel = components['schemas']['GetSubmissionResponseModel'];
-export type BlockSubmissionRequestModel = components['schemas']['BlockSubmissionRequestModel'];
+export type UpdateSubmissionRequestModel = components['schemas']['UpdateSubmissionRequestModel'];
+export type RejudgeContestRequestModel = components['schemas']['RejudgeContestRequestModel'];
+export type RespondInvitationRequestModel = components['schemas']['RespondInvitationRequestModel'];
+export type FinishVirtualRunRequestModel = components['schemas']['FinishVirtualRunRequestModel'];
+export type CancelProblemBuildRequestModel = components['schemas']['CancelProblemBuildRequestModel'];
+export type CreateContestRequestModel = components['schemas']['CreateContestRequestModel'];
 export type BlockProblemRequestModel = components['schemas']['BlockProblemRequestModel'];
 export type ProblemBlockStatusResponseModel = components['schemas']['ProblemBlockStatusResponseModel'];
-export type DashboardContestModel = components['schemas']['DashboardContestModel'];
-export type DashboardProblemModel = components['schemas']['DashboardProblemModel'];
-export type GetUserDashboardResponseModel = components['schemas']['GetUserDashboardResponseModel'];
 export type GetUserResponseModel = components['schemas']['GetUserResponseModel'];
 export type UserModel = components['schemas']['UserModel'];
 export type ListUsersResponseModel = components['schemas']['ListUsersResponseModel'];
 export type ListContestMembersResponseModel = components['schemas']['ListContestMembersResponseModel'];
 export type GetHealthResponseModel = components['schemas']['GetHealthResponseModel'];
 export type ContestMemberModel = components['schemas']['ContestMemberModel'];
-export type GetMyContestRoleResponseModel = components['schemas']['GetMyContestRoleResponseModel'];
 export type ScoreboardProblemResultModel = components['schemas']['ScoreboardProblemResultModel'];
 export type ScoreboardItemModel = components['schemas']['ScoreboardItemModel'];
 export type ScoreboardProblemHeaderModel = components['schemas']['ScoreboardProblemHeaderModel'];
@@ -5765,15 +5308,14 @@ export type InviteOrganizationMemberRequestModel = components['schemas']['Invite
 export type ListInvitationsResponseModel = components['schemas']['ListInvitationsResponseModel'];
 export type OrganizationJoinRequestModel = components['schemas']['OrganizationJoinRequestModel'];
 export type CreateOrganizationJoinRequestModel = components['schemas']['CreateOrganizationJoinRequestModel'];
-export type ApproveOrganizationJoinRequestModel = components['schemas']['ApproveOrganizationJoinRequestModel'];
+export type ResolveOrganizationJoinRequestModel = components['schemas']['ResolveOrganizationJoinRequestModel'];
+export type ResolveJoinRequestModel = components['schemas']['ResolveJoinRequestModel'];
 export type ListOrganizationJoinRequestsResponseModel = components['schemas']['ListOrganizationJoinRequestsResponseModel'];
 export type OrganizationJoinRequestResponseModel = components['schemas']['OrganizationJoinRequestResponseModel'];
-export type OrganizationJoinRequestNullableResponseModel = components['schemas']['OrganizationJoinRequestNullableResponseModel'];
 export type ContestJoinRequestModel = components['schemas']['ContestJoinRequestModel'];
 export type CreateContestJoinRequestModel = components['schemas']['CreateContestJoinRequestModel'];
 export type ListContestJoinRequestsResponseModel = components['schemas']['ListContestJoinRequestsResponseModel'];
 export type ContestJoinRequestResponseModel = components['schemas']['ContestJoinRequestResponseModel'];
-export type ContestJoinRequestNullableResponseModel = components['schemas']['ContestJoinRequestNullableResponseModel'];
 export type ContestAnnouncementModel = components['schemas']['ContestAnnouncementModel'];
 export type CreateContestAnnouncementRequestModel = components['schemas']['CreateContestAnnouncementRequestModel'];
 export type ListContestAnnouncementsResponseModel = components['schemas']['ListContestAnnouncementsResponseModel'];
@@ -5795,6 +5337,7 @@ export type ParameterContestSortOrderQuery = components['parameters']['ContestSo
 export type ParameterUsernamePath = components['parameters']['UsernamePath'];
 export type ParameterOrgLoginPath = components['parameters']['OrgLoginPath'];
 export type ParameterContestLoginPath = components['parameters']['ContestLoginPath'];
+export type ParameterContestIdPath = components['parameters']['ContestIDPath'];
 export type ParameterProblemIdQuery = components['parameters']['ProblemIDQuery'];
 export type ParameterProblemIdPathBySnakeName = components['parameters']['ProblemIDPathBySnakeName'];
 export type ParameterUserIdQuery = components['parameters']['UserIDQuery'];
@@ -5976,7 +5519,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description Request payload for cancel problem build. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelProblemBuildRequestModel"];
+            };
+        };
         responses: {
             /** @description Success */
             200: {
@@ -6298,7 +5846,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    ListAdminContests: {
+    ListContests: {
         parameters: {
             query?: {
                 /** @description Page number */
@@ -6310,6 +5858,10 @@ export interface operations {
                  * @example Contest
                  */
                 search?: components["parameters"]["ContestSearchQuery"];
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
+                /** @description Only contests the team is registered in. */
+                team_id?: string;
                 /** @description Visibility level of the resource. */
                 visibility?: "public" | "private";
                 /**
@@ -6336,6 +5888,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListContestsResponseModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    CreateContest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Request payload for create contest. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateContestRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreationResponseModel"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -6451,206 +6029,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    ListUserContests: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-                /**
-                 * @description Search text used to filter results.
-                 * @example Contest
-                 */
-                search?: components["parameters"]["ContestSearchQuery"];
-                /**
-                 * @description Field used to sort results.
-                 * @example last_submission_time
-                 */
-                sortBy?: "last_submission_time" | "created_at" | "updated_at" | "title";
-                /**
-                 * @description Sort direction: asc or desc.
-                 * @example desc
-                 */
-                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
-            };
-            header?: never;
-            path: {
-                /**
-                 * @description Username of the user.
-                 * @example user123
-                 */
-                username: components["parameters"]["UsernamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListUserContestsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ListWorkshopContests: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-                /**
-                 * @description Search text used to filter results.
-                 * @example Contest
-                 */
-                search?: components["parameters"]["ContestSearchQuery"];
-                /**
-                 * @description Field used to sort results.
-                 * @example created_at
-                 */
-                sortBy?: components["parameters"]["SortByQuery"];
-                /**
-                 * @description Sort direction: asc or desc.
-                 * @example desc
-                 */
-                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
-                /** @description UUID of the organization. */
-                organization_id?: components["parameters"]["OrganizationIDQuery"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListContestsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ListPublicContests: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-                /**
-                 * @description Search text used to filter results.
-                 * @example Contest
-                 */
-                search?: components["parameters"]["ContestSearchQuery"];
-                /**
-                 * @description Field used to sort results.
-                 * @example created_at
-                 */
-                sortBy?: components["parameters"]["SortByQuery"];
-                /**
-                 * @description Sort direction: asc or desc.
-                 * @example desc
-                 */
-                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListContestsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ListOrganizationContests: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-                /**
-                 * @description Search text used to filter results.
-                 * @example Contest
-                 */
-                search?: components["parameters"]["ContestSearchQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListContestsResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    CreateContest: {
-        parameters: {
-            query: {
-                /**
-                 * @description Title of the new contest.
-                 * @example Contest 1
-                 */
-                title: string;
-                /**
-                 * @description Login of the new contest within the organization.
-                 * @example contest-1
-                 */
-                login?: string;
-            };
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreationResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     GetContest: {
         parameters: {
             query?: never;
@@ -6682,10 +6060,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6706,10 +6082,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6738,10 +6112,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6769,10 +6141,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6793,10 +6163,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6822,10 +6190,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
@@ -6850,10 +6216,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
@@ -6876,10 +6240,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
                 /** @description SHA-256 of the image, as listed in the problem's `assets`. */
@@ -6914,10 +6276,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6943,10 +6303,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6972,10 +6330,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -6996,10 +6352,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7022,10 +6376,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7053,10 +6405,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7079,10 +6429,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7105,10 +6453,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7129,10 +6475,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7160,10 +6504,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7187,10 +6529,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7216,10 +6556,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7231,32 +6569,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    GetMyContestRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetMyContestRoleResponseModel"];
-                };
             };
             default: components["responses"]["Problem"];
         };
@@ -7290,10 +6602,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7311,98 +6621,13 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    RejudgeSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-                /** @description UUID of the submission. */
-                submission_id: components["parameters"]["SubmissionIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    BlockSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-                /** @description UUID of the submission. */
-                submission_id: components["parameters"]["SubmissionIDPath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for block submission. */
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["BlockSubmissionRequestModel"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    UnblockSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-                /** @description UUID of the submission. */
-                submission_id: components["parameters"]["SubmissionIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     GetProblemBlockStatusForUser: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDPath"];
                 /** @description UUID of the problem. */
@@ -7429,10 +6654,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDPath"];
                 /** @description UUID of the problem. */
@@ -7465,38 +6688,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDPath"];
-                /** @description UUID of the problem. */
-                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    RejudgeContestProblem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
@@ -7519,14 +6714,17 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description Narrows the rejudge to one problem or one submission; empty rejudges the whole contest. */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RejudgeContestRequestModel"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -7548,10 +6746,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7569,41 +6765,13 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    GetVirtualRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VirtualRunResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     StartVirtualRun: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7626,17 +6794,20 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description Request payload for finish virtual run. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinishVirtualRunRequestModel"];
+            };
+        };
         responses: {
-            /** @description No Content */
-            204: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7655,10 +6826,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7681,10 +6850,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7712,10 +6879,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the draft problem package. */
                 draft_id: string;
             };
@@ -7738,10 +6903,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7764,10 +6927,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7790,41 +6951,15 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    GetMyContestJoinRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description My pending contest join request */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContestJoinRequestNullableResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     CancelContestJoinRequest: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
@@ -7840,49 +6975,26 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    ApproveContestJoinRequest: {
+    ResolveContestJoinRequest: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the join request. */
                 id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Request approved */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
+        /** @description Request payload for resolve contest join request. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveJoinRequestModel"];
             };
-            default: components["responses"]["Problem"];
         };
-    };
-    RejectContestJoinRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
-                /** @description UUID of the join request. */
-                id: components["parameters"]["JoinRequestIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
-            /** @description Request rejected */
+            /** @description Request resolved */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7902,10 +7014,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7928,10 +7038,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -7959,10 +7067,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the contest announcement. */
                 announcement_id: string;
             };
@@ -7994,10 +7100,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -8020,10 +7124,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
             };
             cookie?: never;
         };
@@ -8051,10 +7153,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Organization login. */
-                org_login: components["parameters"]["OrgLoginPath"];
-                /** @description Contest login within the organization. */
-                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
                 /** @description UUID of the clarification. */
                 clarification_id: string;
             };
@@ -8131,10 +7231,8 @@ export interface operations {
             query: {
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDQuery"];
-                /** @description Organization login. */
-                organization_login: string;
-                /** @description Contest login within the organization. */
-                contest_login: string;
+                /** @description UUID of the contest. */
+                contest_id: string;
                 /**
                  * @description Identifier of a language configuration from GET /languages.
                  * @example cpp17
@@ -8184,6 +7282,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GetSubmissionResponseModel"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    UpdateSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
+            };
+            cookie?: never;
+        };
+        /** @description Request payload for update submission. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSubmissionRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -8364,27 +7489,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GetUserResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    GetMyDashboard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GetUserDashboardResponseModel"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -9136,7 +8240,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    AcceptInvitation: {
+    RespondInvitation: {
         parameters: {
             query?: never;
             header?: never;
@@ -9146,31 +8250,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Invitation accepted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
+        /** @description Request payload for respond invitation. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondInvitationRequestModel"];
             };
-            default: components["responses"]["Problem"];
         };
-    };
-    DeclineInvitation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the invitation. */
-                id: components["parameters"]["InvitationIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
-            /** @description Invitation declined */
+            /** @description Invitation answered */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9281,30 +8368,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    GetMyOrganizationJoinRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                login: components["parameters"]["OrganizationLoginPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description My pending join request */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrganizationJoinRequestNullableResponseModel"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     CancelOrganizationJoinRequest: {
         parameters: {
             query?: never;
@@ -9312,6 +8375,8 @@ export interface operations {
             path: {
                 /** @description Organization login. */
                 login: components["parameters"]["OrganizationLoginPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
@@ -9327,7 +8392,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    ApproveOrganizationJoinRequest: {
+    ResolveOrganizationJoinRequest: {
         parameters: {
             query?: never;
             header?: never;
@@ -9339,38 +8404,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description Request payload for approve organization join request. */
-        requestBody?: {
+        /** @description Request payload for resolve organization join request. */
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["ApproveOrganizationJoinRequestModel"];
+                "application/json": components["schemas"]["ResolveOrganizationJoinRequestModel"];
             };
         };
         responses: {
-            /** @description Request approved */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    RejectOrganizationJoinRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Organization login. */
-                login: components["parameters"]["OrganizationLoginPath"];
-                /** @description UUID of the join request. */
-                id: components["parameters"]["JoinRequestIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Request rejected */
+            /** @description Request resolved */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9777,35 +8818,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ListTeamContests: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: components["parameters"]["PageQuery"];
-                /** @description Number of items per page */
-                pageSize?: components["parameters"]["PageSizeQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the team. */
-                id: components["parameters"]["TeamIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ListContestsResponseModel"];
-                };
             };
             default: components["responses"]["Problem"];
         };

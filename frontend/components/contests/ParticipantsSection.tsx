@@ -32,7 +32,7 @@ const getRoleDisplay = (role: string) => {
 interface ParticipantsSectionProps {
   orgLogin: string;
   contestLogin: string;
-  contestId?: string;
+  contestId: string;
   orgId?: string;
 }
 
@@ -77,10 +77,10 @@ export const ParticipantsSection = ({
   const loadParticipants = useCallback(async () => {
     setLoading(true);
     const {data: response, error} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/members",
+      "/contests/{contest_id}/members",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {page, pageSize},
         },
       },
@@ -94,28 +94,28 @@ export const ParticipantsSection = ({
 
     setParticipants(response.members);
     setTotalPages(response.pagination.total_pages);
-  }, [orgLogin, contestLogin, page]);
+  }, [contestId, page]);
 
-  const contestPath = {org_login: orgLogin, contest_login: contestLogin};
+  const contestPath = {contest_id: contestId};
   const invitations = useQuery({
     queryKey: ["contest-invitations", orgLogin, contestLogin],
-    queryFn: () => unwrap(api.GET("/organizations/{org_login}/contests/{contest_login}/invitations", {params: {path: contestPath}})),
+    queryFn: () => unwrap(api.GET("/contests/{contest_id}/invitations", {params: {path: contestPath}})),
   });
   const pendingInvitations = invitations.data?.invitations ?? [];
 
   const loadRequests = useCallback(async () => {
     setLoadingRequests(true);
     const {data} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/requests",
+      "/contests/{contest_id}/requests",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
       },
     );
     setLoadingRequests(false);
     if (data) {
       setRequests(data.requests);
     }
-  }, [orgLogin, contestLogin]);
+  }, [contestId]);
 
   useEffect(() => {
     loadParticipants();
@@ -154,7 +154,7 @@ export const ParticipantsSection = ({
     }
 
     setInviting(true);
-    const {error} = await api.POST("/organizations/{org_login}/contests/{contest_login}/invitations", {
+    const {error} = await api.POST("/contests/{contest_id}/invitations", {
       params: {path: contestPath},
       body: {user_id: selectedUserId},
     });
@@ -197,10 +197,10 @@ export const ParticipantsSection = ({
   const handleDeleteParticipant = async (userId: string) => {
     setDeletingId(userId);
     const {error} = await api.DELETE(
-      "/organizations/{org_login}/contests/{contest_login}/members",
+      "/contests/{contest_id}/members",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {user_id: userId},
         },
       },
@@ -244,10 +244,10 @@ export const ParticipantsSection = ({
     }
 
     const {error} = await api.PATCH(
-      "/organizations/{org_login}/contests/{contest_login}/members",
+      "/contests/{contest_id}/members",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {
             user_id: editingParticipant.userId,
             role: newRole as "owner" | "moderator" | "participant",
@@ -282,18 +282,10 @@ export const ParticipantsSection = ({
 
   const handleApproveRequest = async (requestId: string, username: string) => {
     setProcessingRequestId(requestId);
-    const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/approve",
-      {
-        params: {
-          path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
-            id: requestId,
-          },
-        },
-      },
-    );
+    const {error} = await api.PATCH("/contests/{contest_id}/requests/{id}", {
+      params: {path: {contest_id: contestId, id: requestId}},
+      body: {status: "approved"},
+    });
     setProcessingRequestId(null);
 
     if (error) {
@@ -315,18 +307,10 @@ export const ParticipantsSection = ({
 
   const handleRejectRequest = async (requestId: string, username: string) => {
     setProcessingRequestId(requestId);
-    const {error} = await api.POST(
-      "/organizations/{org_login}/contests/{contest_login}/requests/{id}/reject",
-      {
-        params: {
-          path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
-            id: requestId,
-          },
-        },
-      },
-    );
+    const {error} = await api.PATCH("/contests/{contest_id}/requests/{id}", {
+      params: {path: {contest_id: contestId, id: requestId}},
+      body: {status: "rejected"},
+    });
     setProcessingRequestId(null);
 
     if (error) {
@@ -350,10 +334,10 @@ export const ParticipantsSection = ({
       <Stack mb="md">
         <JoinLinkCard
           queryKey={["contest-join-link", orgLogin, contestLogin]}
-          load={() => unwrap(api.GET("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}}))}
-          reset={() => unwrap(api.PUT("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}}))}
+          load={() => unwrap(api.GET("/contests/{contest_id}/join-link", {params: {path: contestPath}}))}
+          reset={() => unwrap(api.PUT("/contests/{contest_id}/join-link", {params: {path: contestPath}}))}
           disable={async () => {
-            const {error} = await api.DELETE("/organizations/{org_login}/contests/{contest_login}/join-link", {params: {path: contestPath}});
+            const {error} = await api.DELETE("/contests/{contest_id}/join-link", {params: {path: contestPath}});
             if (error) {
               throw new Error(problemMessage(error, "Не удалось выключить ссылку"));
             }
@@ -569,7 +553,7 @@ export const ParticipantsSection = ({
         </Tabs.Panel>
 
         <Tabs.Panel value="teams" pt="md">
-          <ContestTeamsManagement orgLogin={orgLogin} contestLogin={contestLogin} contestId={contestId} orgId={orgId} />
+          <ContestTeamsManagement contestId={contestId} orgId={orgId} />
         </Tabs.Panel>
 
         <Tabs.Panel value="requests" pt="md">

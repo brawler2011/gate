@@ -505,8 +505,7 @@ export const SubmissionDetailsContent = ({
       <SubmissionSanctionsModal
         actionType={sanctionAction}
         onClose={() => setSanctionAction(null)}
-        orgLogin={submission.organization_login}
-        contestLogin={submission.contest_login}
+        contestId={submission.contest_id}
         submissionId={submission.id}
         userId={submission.user_id}
         problemId={submission.problem_id}

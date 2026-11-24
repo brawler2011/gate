@@ -26,15 +26,12 @@ const getRoleDisplay = (role: string) => {
 };
 
 export interface ContestTeamsManagementProps {
-  orgLogin: string;
-  contestLogin: string;
-  contestId?: string;
+  contestId: string;
   orgId?: string;
 }
 
 export const ContestTeamsManagement = ({
-  orgLogin,
-  contestLogin,
+  contestId,
   orgId,
 }: ContestTeamsManagementProps): ReactNode => {
   const {pendingId: addingId, run: addTeam} = useEntityMutation();
@@ -54,9 +51,9 @@ export const ContestTeamsManagement = ({
 
   const fetchTeams = useCallback(async () => {
     const {data: response, error} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/teams",
+      "/contests/{contest_id}/teams",
       {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
       },
     );
     if (error || !response) {
@@ -64,7 +61,7 @@ export const ContestTeamsManagement = ({
       return;
     }
     return response.teams;
-  }, [orgLogin, contestLogin]);
+  }, [contestId]);
   const {items: teams, loading, reload: loadTeams} = useEntityCollection(fetchTeams);
 
   const searchTeamsFn = useCallback(
@@ -113,10 +110,10 @@ export const ContestTeamsManagement = ({
 
     const error = await addTeam(selectedTeamId, async () => {
       const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/teams",
+        "/contests/{contest_id}/teams",
         {
           params: {
-            path: {org_login: orgLogin, contest_login: contestLogin},
+            path: {contest_id: contestId},
             query: {team_id: selectedTeamId, role: "participant"},
           },
         },
@@ -149,10 +146,10 @@ export const ContestTeamsManagement = ({
   const handleDeleteTeam = async (team: corev1.ContestTeamModel) => {
     const error = await deleteTeam(team.team_id, async () => {
       const {error} = await api.DELETE(
-        "/organizations/{org_login}/contests/{contest_login}/teams",
+        "/contests/{contest_id}/teams",
         {
           params: {
-            path: {org_login: orgLogin, contest_login: contestLogin},
+            path: {contest_id: contestId},
             query: {team_id: team.team_id},
           },
         },
@@ -196,10 +193,10 @@ export const ContestTeamsManagement = ({
     }
 
     const {error} = await api.PATCH(
-      "/organizations/{org_login}/contests/{contest_login}/teams",
+      "/contests/{contest_id}/teams",
       {
         params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
+          path: {contest_id: contestId},
           query: {
             team_id: editingTeam.teamId,
             role: newRole as "moderator" | "participant",

@@ -67,7 +67,7 @@ describe("List pagination through production components", () => {
       }
       return Response.json({requests: [], teams: []});
     });
-    const view = renderWithProviders(<ParticipantsSection orgLogin="org" contestLogin="round" />);
+    const view = renderWithProviders(<ParticipantsSection orgLogin="org" contestLogin="round" contestId="contest" />);
     await waitFor(() => expect(view.getByText("@user-1")).toBeTruthy());
     fireEvent.click(view.getByRole("button", {name: "3"}));
     await waitFor(() => expect(view.getByText("@user-3")).toBeTruthy());
@@ -118,7 +118,7 @@ describe("List pagination through production components", () => {
       return Response.json({});
     });
     const problem = {permissions: {submit: false, manage: true, edit_problem: false}, problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;
-    const view = renderWithProviders(<ProblemsSection orgLogin="org" contestLogin="round" initialProblems={[problem]} />);
+    const view = renderWithProviders(<ProblemsSection orgLogin="org" contestLogin="round" contestId="contest" initialProblems={[problem]} />);
     fireEvent.click(view.getByRole("button", {name: "Заменить пакет Example"}));
     await waitFor(() => expect(view.getByRole("button", {name: "Ещё"})).toBeTruthy());
     fireEvent.click(view.getByRole("button", {name: "Ещё"}));

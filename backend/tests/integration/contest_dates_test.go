@@ -57,7 +57,7 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 				}
 				raw, err := json.Marshal(body)
 				s.Require().NoError(err)
-				path := "/organizations/" + org.Login + "/contests/" + login
+				path := "/contests/" + id.String()
 				patch := func(userID uuid.UUID, body string) int {
 					req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(body))
 					req.Header.Set("Content-Type", "application/json")
@@ -142,7 +142,7 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 			s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{
 				FreezeStatus: &frozen, FreezeDurationMinutes: new(int32(30)), FreezeDurationSet: true,
 			}}))
-			req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(tc.body))
+			req := httptest.NewRequest(http.MethodPatch, "/contests/"+id.String(), strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("X-Test-User-ID", owner.Id.String())
 			recorder := httptest.NewRecorder()
@@ -173,7 +173,7 @@ func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
 	frozen := contestsmodel.FreezeStatusFrozen
 	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: id, Settings: contestsmodel.ContestSettingsPatch{FreezeStatus: &frozen}}))
 
-	req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(`{"freeze_status":null}`))
+	req := httptest.NewRequest(http.MethodPatch, "/contests/"+id.String(), strings.NewReader(`{"freeze_status":null}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Test-User-ID", owner.Id.String())
 	recorder := httptest.NewRecorder()

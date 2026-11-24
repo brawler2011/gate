@@ -44,7 +44,7 @@ export const SubmissionsListClient = ({
   }
 
   const handleRejudgeConfirm = async () => {
-    if (!modalState || !filter.orgLogin || !filter.contestLogin) {
+    if (!modalState) {
       return;
     }
 
@@ -53,41 +53,24 @@ export const SubmissionsListClient = ({
 
     if (modalState.type === "submission") {
       setRejudgingId(modalState.id);
-      const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge",
-        {
-          params: {
-            path: {
-              org_login: filter.orgLogin,
-              contest_login: filter.contestLogin,
-              submission_id: modalState.id,
-            },
-          },
-        },
-      );
+      const {error} = await api.POST("/contests/{contest_id}/rejudge", {
+        params: {path: {contest_id: filter.contestId}},
+        body: {submission_id: modalState.id},
+      });
       err = error;
     } else if (modalState.type === "problem") {
-      const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge",
-        {
-          params: {
-            path: {
-              org_login: filter.orgLogin,
-              contest_login: filter.contestLogin,
-              problem_id: modalState.problemId,
-            },
-          },
-        },
-      );
+      const {error} = await api.POST("/contests/{contest_id}/rejudge", {
+        params: {path: {contest_id: filter.contestId}},
+        body: {problem_id: modalState.problemId},
+      });
       err = error;
     } else if (modalState.type === "all") {
       const {error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/rejudge",
+        "/contests/{contest_id}/rejudge",
         {
           params: {
             path: {
-              org_login: filter.orgLogin,
-              contest_login: filter.contestLogin,
+              contest_id: filter.contestId,
             },
           },
         },

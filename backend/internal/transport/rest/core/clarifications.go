@@ -9,11 +9,6 @@ import (
 )
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	var problemID *uuid.UUID
 	if params.ProblemID.IsSet() {
 		problemID = &params.ProblemID.Value
@@ -22,7 +17,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 	if params.Status.IsSet() {
 		status = &params.Status.Value
 	}
-	list, err := h.Clarifications.ListClarifications(ctx, contest.ID, &contestsmodel.ContestClarificationsFilter{
+	list, err := h.Clarifications.ListClarifications(ctx, params.ContestID, &contestsmodel.ContestClarificationsFilter{
 		ProblemID: problemID, Status: status, Page: params.Page.Or(1), PageSize: params.PageSize.Or(50),
 	})
 	if err != nil {
@@ -33,18 +28,13 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 }
 
 func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value
 	}
 
 	clarification, err := h.Clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
-		ContestID: contest.ID,
+		ContestID: params.ContestID,
 		ProblemID: problemID,
 		Question:  req.Question,
 	})
@@ -56,17 +46,12 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 }
 
 func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1.AnswerContestClarificationRequestModel, params corev1.AnswerContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return nil, err
-	}
-
 	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)
 	announcementTitle := req.AnnouncementTitle.Or("")
 
 	clarification, err := h.Clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       params.ClarificationID,
-		ContestID:             contest.ID,
+		ContestID:             params.ContestID,
 		Answer:                req.Answer,
 		PublishAsAnnouncement: publishAsAnnouncement,
 		AnnouncementTitle:     announcementTitle,
