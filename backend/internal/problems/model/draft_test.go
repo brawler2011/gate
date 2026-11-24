@@ -102,7 +102,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 func TestGradersNeedLanguagesThatLinkThem(t *testing.T) {
 	languages := map[string]sandbox.Language{
 		"cpp":    {Extensions: []string{"cpp"}, Compile: "g++ -o ${name} foo.cpp ${graders}"},
-		"c":      {Extensions: []string{"c"}, Compile: "gcc -o ${name} foo.c ${graders}"},
+		"c":      {Extensions: []string{"c"}, CodeFile: "foo.c", Compile: "gcc -o ${name} foo.c ${graders}"},
 		"python": {Extensions: []string{"py"}},
 	}
 	d := validDraft()
@@ -113,6 +113,18 @@ func TestGradersNeedLanguagesThatLinkThem(t *testing.T) {
 	fields := fieldErrors(t, d.ValidateBuild(testQuotas, languages))
 	require.Len(t, fields, 1, "%v", fields)
 	require.Equal(t, "/solutions/0/language", fields[0].Pointer)
+
+	// A grader named like C's own source would replace the submission.
+	d.Graders = append(d.Graders, DraftFile{Name: "foo.c"})
+	require.Equal(t, "/solutions/0/language", fieldErrors(t, d.ValidateBuild(testQuotas, languages))[0].Pointer)
+
+	// Without a main solution nothing compiles the graders before contestants do.
+	d = validDraft()
+	d.Graders = []DraftFile{{Name: "grader.cpp"}}
+	d.MainSolution = nil
+	fields = fieldErrors(t, d.ValidateBuild(testQuotas, languages))
+	require.Len(t, fields, 1, "%v", fields)
+	require.Equal(t, "/main_solution", fields[0].Pointer)
 
 	d = validDraft()
 	d.Graders = []DraftFile{{Name: "grader.py"}}

@@ -133,9 +133,6 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 			return Executable{}, fmt.Errorf("%w: %s", ErrGradersUnsupported, langKey)
 		}
 		for _, name := range slices.Sorted(maps.Keys(graders)) {
-			if name == lang.CodeFile || name == outputName {
-				return Executable{}, fmt.Errorf("grader file %s clashes with the solution's files", name)
-			}
 			if lang.compiles(name) {
 				linked = append(linked, name)
 			}

@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -82,9 +83,10 @@ func ParseConfig(data []byte) (*Config, error) {
 	return cfg, nil
 }
 
-// Graded reports whether the language links a solution with these grader files: one of them must be its source.
+// Graded reports whether the language links a solution with these grader files: one of them must be its source, and none may replace the solution's own files.
 func (l Language) Graded(graders []string) bool {
-	return slices.Contains(strings.Fields(l.Compile), gradersArg) && slices.ContainsFunc(graders, l.compiles)
+	clash := func(name string) bool { return name == l.CodeFile || name == cmp.Or(l.CompileFile, "solution") }
+	return slices.Contains(strings.Fields(l.Compile), gradersArg) && slices.ContainsFunc(graders, l.compiles) && !slices.ContainsFunc(graders, clash)
 }
 
 func (l Language) compiles(file string) bool {

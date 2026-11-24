@@ -626,6 +626,9 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 		if !graded {
 			v.fail("/graders", pkg.ErrInconsistent, nil, "no language compiles a solution with these graders")
 		}
+		if d.MainSolution == nil {
+			v.fail("/main_solution", pkg.ErrRequired, with("/graders"), "a problem with graders needs a main solution, whose build checks that they compile")
+		}
 		for i, s := range d.Solutions {
 			if lang, ok := languages[s.Language]; ok && !lang.Graded(graders) {
 				v.fail(fmt.Sprintf("/solutions/%d/language", i), pkg.ErrInconsistent, with("/graders"), "language %q does not compile with the graders", s.Language)
