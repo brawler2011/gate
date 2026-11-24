@@ -13,7 +13,7 @@ import (
 
 const scopeContests = `-- name: ScopeContests :many
 WITH visible AS (
-  SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login FROM contests c JOIN organizations o ON o.id = c.organization_id
+  SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login FROM contests c JOIN organizations o ON o.id = c.organization_id
   LEFT JOIN contest_access a ON a.contest_id = c.id AND a.user_id = $3::uuid
   WHERE (c.visibility = 'public' OR a.role IS NOT NULL OR $4::boolean)
     AND ($5::uuid IS NULL OR c.organization_id = $5::uuid)
@@ -21,7 +21,7 @@ WITH visible AS (
     AND ($7::text = '' OR c.visibility::text = $7::text)
     AND ($8::uuid IS NULL OR EXISTS (SELECT 1 FROM contest_teams link WHERE link.contest_id = c.id AND link.team_id = $8::uuid))
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
-  SELECT id, organization_id, visibility, title, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, languages, start_time, end_time, created_at, updated_at, org_login FROM visible c ORDER BY CASE WHEN $1::text IN ('', 'created_at') AND $2::text = 'asc' THEN c.created_at END ASC,
+  SELECT id, organization_id, visibility, title, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, pretests, languages, start_time, end_time, created_at, updated_at, org_login FROM visible c ORDER BY CASE WHEN $1::text IN ('', 'created_at') AND $2::text = 'asc' THEN c.created_at END ASC,
     CASE WHEN $1::text IN ('', 'created_at') AND $2::text <> 'asc' THEN c.created_at END DESC,
     CASE WHEN $1::text = 'updated_at' AND $2::text = 'asc' THEN c.updated_at END ASC,
     CASE WHEN $1::text = 'updated_at' AND $2::text <> 'asc' THEN c.updated_at END DESC,

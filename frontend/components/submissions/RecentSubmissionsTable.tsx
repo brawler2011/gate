@@ -24,7 +24,7 @@ interface StatusCellProps {
 }
 
 const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
-  const {state, progress, failed_test} = submission;
+  const {state, progress, failed_test, pretests} = submission;
 
   if (state === 1 && !progress) {
     return (
@@ -50,8 +50,8 @@ const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
     );
   }
 
-  const shortVerdict = ShortVerdictString(state, failed_test);
-  const fullVerdict = StateString(state, failed_test);
+  const shortVerdict = ShortVerdictString(state, failed_test, pretests);
+  const fullVerdict = StateString(state, failed_test, pretests);
 
   return (
     <Tooltip label={fullVerdict} withArrow>

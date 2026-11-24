@@ -27,7 +27,7 @@ interface VerdictCellProps {
 }
 
 const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
-  const {state, progress, failed_test} = submission;
+  const {state, progress, failed_test, pretests} = submission;
 
   if (submission.result_hidden) {
     return <Text c="dimmed">Скрыто</Text>;
@@ -56,8 +56,8 @@ const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
     );
   }
 
-  const shortVerdict = ShortVerdictString(state, failed_test);
-  const fullVerdict = StateString(state, failed_test);
+  const shortVerdict = ShortVerdictString(state, failed_test, pretests);
+  const fullVerdict = StateString(state, failed_test, pretests);
 
   return (
     <Tooltip label={fullVerdict} withArrow>

@@ -3394,6 +3394,10 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 		e.Bool(s.AllowVirtual)
 	}
 	{
+		e.FieldStart("pretests")
+		e.Bool(s.Pretests)
+	}
+	{
 		e.FieldStart("join_policy")
 		s.JoinPolicy.Encode(e)
 	}
@@ -3411,7 +3415,7 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfContestModel = [33]string{
+var jsonFieldsNameOfContestModel = [34]string{
 	0:  "permissions",
 	1:  "id",
 	2:  "login",
@@ -3442,9 +3446,10 @@ var jsonFieldsNameOfContestModel = [33]string{
 	27: "allow_clarifications",
 	28: "enable_upsolving",
 	29: "allow_virtual",
-	30: "join_policy",
-	31: "hide_statements",
-	32: "languages",
+	30: "pretests",
+	31: "join_policy",
+	32: "hide_statements",
+	33: "languages",
 }
 
 // Decode decodes ContestModel from json.
@@ -3784,8 +3789,20 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"allow_virtual\"")
 			}
-		case "join_policy":
+		case "pretests":
 			requiredBitSet[3] |= 1 << 6
+			if err := func() error {
+				v, err := d.Bool()
+				s.Pretests = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pretests\"")
+			}
+		case "join_policy":
+			requiredBitSet[3] |= 1 << 7
 			if err := func() error {
 				if err := s.JoinPolicy.Decode(d); err != nil {
 					return err
@@ -3795,7 +3812,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"join_policy\"")
 			}
 		case "hide_statements":
-			requiredBitSet[3] |= 1 << 7
+			requiredBitSet[4] |= 1 << 0
 			if err := func() error {
 				v, err := d.Bool()
 				s.HideStatements = bool(v)
@@ -3807,7 +3824,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
 			}
 		case "languages":
-			requiredBitSet[4] |= 1 << 0
+			requiredBitSet[4] |= 1 << 1
 			if err := func() error {
 				s.Languages = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -3840,7 +3857,7 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 		0b11111111,
 		0b11100111,
 		0b11111100,
-		0b00000001,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -18681,6 +18698,10 @@ func (s *ProblemDraftTest) encodeFields(e *jx.Encoder) {
 		e.Bool(s.Sample)
 	}
 	{
+		e.FieldStart("pretest")
+		e.Bool(s.Pretest)
+	}
+	{
 		e.FieldStart("input")
 		s.Input.Encode(e)
 	}
@@ -18690,14 +18711,15 @@ func (s *ProblemDraftTest) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraftTest = [7]string{
+var jsonFieldsNameOfProblemDraftTest = [8]string{
 	0: "points",
 	1: "id",
 	2: "ordinal",
 	3: "subtask_id",
 	4: "sample",
-	5: "input",
-	6: "answer",
+	5: "pretest",
+	6: "input",
+	7: "answer",
 }
 
 // Decode decodes ProblemDraftTest from json.
@@ -18769,8 +18791,20 @@ func (s *ProblemDraftTest) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sample\"")
 			}
-		case "input":
+		case "pretest":
 			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Pretest = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pretest\"")
+			}
+		case "input":
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				if err := s.Input.Decode(d); err != nil {
 					return err
@@ -18780,7 +18814,7 @@ func (s *ProblemDraftTest) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"input\"")
 			}
 		case "answer":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				if err := s.Answer.Decode(d); err != nil {
 					return err
@@ -18799,7 +18833,7 @@ func (s *ProblemDraftTest) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b01111111,
+		0b11111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -23023,6 +23057,12 @@ func (s *SubmissionModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Pretests.Set {
+			e.FieldStart("pretests")
+			s.Pretests.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("id")
 		json.EncodeUUID(e, s.ID)
 	}
@@ -23132,31 +23172,32 @@ func (s *SubmissionModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSubmissionModel = [24]string{
+var jsonFieldsNameOfSubmissionModel = [25]string{
 	0:  "kind",
 	1:  "result_hidden",
-	2:  "id",
-	3:  "user_id",
-	4:  "username",
-	5:  "submission",
-	6:  "state",
-	7:  "score",
-	8:  "penalty",
-	9:  "time_stat",
-	10: "memory_stat",
-	11: "language",
-	12: "failed_test",
-	13: "test_details",
-	14: "problem_id",
-	15: "problem_title",
-	16: "position",
-	17: "contest_id",
-	18: "contest_login",
-	19: "contest_title",
-	20: "organization_login",
-	21: "ban_reason",
-	22: "updated_at",
-	23: "created_at",
+	2:  "pretests",
+	3:  "id",
+	4:  "user_id",
+	5:  "username",
+	6:  "submission",
+	7:  "state",
+	8:  "score",
+	9:  "penalty",
+	10: "time_stat",
+	11: "memory_stat",
+	12: "language",
+	13: "failed_test",
+	14: "test_details",
+	15: "problem_id",
+	16: "problem_title",
+	17: "position",
+	18: "contest_id",
+	19: "contest_login",
+	20: "contest_title",
+	21: "organization_login",
+	22: "ban_reason",
+	23: "updated_at",
+	24: "created_at",
 }
 
 // Decode decodes SubmissionModel from json.
@@ -23164,7 +23205,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode SubmissionModel to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -23188,8 +23229,18 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"result_hidden\"")
 			}
+		case "pretests":
+			if err := func() error {
+				s.Pretests.Reset()
+				if err := s.Pretests.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pretests\"")
+			}
 		case "id":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ID = v
@@ -23201,7 +23252,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
 		case "user_id":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.UserID = v
@@ -23213,7 +23264,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"user_id\"")
 			}
 		case "username":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.Username = string(v)
@@ -23285,7 +23336,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"memory_stat\"")
 			}
 		case "language":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Language = string(v)
@@ -23317,7 +23368,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"test_details\"")
 			}
 		case "problem_id":
-			requiredBitSet[1] |= 1 << 6
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ProblemID = v
@@ -23329,7 +23380,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"problem_id\"")
 			}
 		case "problem_title":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.ProblemTitle = string(v)
@@ -23341,7 +23392,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"problem_title\"")
 			}
 		case "position":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int32()
 				s.Position = int32(v)
@@ -23353,7 +23404,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"position\"")
 			}
 		case "contest_id":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ContestID = v
@@ -23365,7 +23416,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"contest_id\"")
 			}
 		case "contest_login":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.ContestLogin = string(v)
@@ -23377,7 +23428,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"contest_login\"")
 			}
 		case "contest_title":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.ContestTitle = string(v)
@@ -23409,7 +23460,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"ban_reason\"")
 			}
 		case "updated_at":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -23421,7 +23472,7 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "created_at":
-			requiredBitSet[2] |= 1 << 7
+			requiredBitSet[3] |= 1 << 0
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -23441,10 +23492,11 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
-		0b00011101,
-		0b11001000,
-		0b11001111,
+	for i, mask := range [4]uint8{
+		0b00111001,
+		0b10010000,
+		0b10011111,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -23650,6 +23702,12 @@ func (s *SubmissionsListItemModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Pretests.Set {
+			e.FieldStart("pretests")
+			s.Pretests.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("id")
 		json.EncodeUUID(e, s.ID)
 	}
@@ -23747,30 +23805,31 @@ func (s *SubmissionsListItemModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSubmissionsListItemModel = [23]string{
+var jsonFieldsNameOfSubmissionsListItemModel = [24]string{
 	0:  "kind",
 	1:  "revision",
 	2:  "result_hidden",
-	3:  "id",
-	4:  "user_id",
-	5:  "username",
-	6:  "state",
-	7:  "score",
-	8:  "penalty",
-	9:  "time_stat",
-	10: "memory_stat",
-	11: "language",
-	12: "failed_test",
-	13: "problem_id",
-	14: "problem_title",
-	15: "position",
-	16: "contest_id",
-	17: "contest_login",
-	18: "contest_title",
-	19: "organization_login",
-	20: "ban_reason",
-	21: "updated_at",
-	22: "created_at",
+	3:  "pretests",
+	4:  "id",
+	5:  "user_id",
+	6:  "username",
+	7:  "state",
+	8:  "score",
+	9:  "penalty",
+	10: "time_stat",
+	11: "memory_stat",
+	12: "language",
+	13: "failed_test",
+	14: "problem_id",
+	15: "problem_title",
+	16: "position",
+	17: "contest_id",
+	18: "contest_login",
+	19: "contest_title",
+	20: "organization_login",
+	21: "ban_reason",
+	22: "updated_at",
+	23: "created_at",
 }
 
 // Decode decodes SubmissionsListItemModel from json.
@@ -23814,8 +23873,18 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"result_hidden\"")
 			}
+		case "pretests":
+			if err := func() error {
+				s.Pretests.Reset()
+				if err := s.Pretests.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pretests\"")
+			}
 		case "id":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ID = v
@@ -23827,7 +23896,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
 		case "user_id":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.UserID = v
@@ -23839,7 +23908,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"user_id\"")
 			}
 		case "username":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.Username = string(v)
@@ -23901,7 +23970,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"memory_stat\"")
 			}
 		case "language":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Language = string(v)
@@ -23923,7 +23992,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"failed_test\"")
 			}
 		case "problem_id":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ProblemID = v
@@ -23935,7 +24004,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"problem_id\"")
 			}
 		case "problem_title":
-			requiredBitSet[1] |= 1 << 6
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.ProblemTitle = string(v)
@@ -23947,7 +24016,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"problem_title\"")
 			}
 		case "position":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				v, err := d.Int32()
 				s.Position = int32(v)
@@ -23959,7 +24028,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"position\"")
 			}
 		case "contest_id":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ContestID = v
@@ -23971,7 +24040,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"contest_id\"")
 			}
 		case "contest_login":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.ContestLogin = string(v)
@@ -23983,7 +24052,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"contest_login\"")
 			}
 		case "contest_title":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.ContestTitle = string(v)
@@ -24015,7 +24084,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"ban_reason\"")
 			}
 		case "updated_at":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -24027,7 +24096,7 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "created_at":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -24048,9 +24117,9 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
-		0b00111011,
-		0b11101000,
-		0b01100111,
+		0b01110011,
+		0b11010000,
+		0b11001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -25898,6 +25967,12 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Pretests.Set {
+			e.FieldStart("pretests")
+			s.Pretests.Encode(e)
+		}
+	}
+	{
 		if s.EnableUpsolving.Set {
 			e.FieldStart("enable_upsolving")
 			s.EnableUpsolving.Encode(e)
@@ -25927,7 +26002,7 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfUpdateContestRequestModel = [27]string{
+var jsonFieldsNameOfUpdateContestRequestModel = [28]string{
 	0:  "login",
 	1:  "title",
 	2:  "description",
@@ -25951,10 +26026,11 @@ var jsonFieldsNameOfUpdateContestRequestModel = [27]string{
 	20: "enable_drafts",
 	21: "allow_clarifications",
 	22: "allow_virtual",
-	23: "enable_upsolving",
-	24: "join_policy",
-	25: "hide_statements",
-	26: "languages",
+	23: "pretests",
+	24: "enable_upsolving",
+	25: "join_policy",
+	26: "hide_statements",
+	27: "languages",
 }
 
 // Decode decodes UpdateContestRequestModel from json.
@@ -26194,6 +26270,16 @@ func (s *UpdateContestRequestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"allow_virtual\"")
+			}
+		case "pretests":
+			if err := func() error {
+				s.Pretests.Reset()
+				if err := s.Pretests.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pretests\"")
 			}
 		case "enable_upsolving":
 			if err := func() error {

@@ -52,6 +52,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     enable_drafts = COALESCE(sqlc.narg('enable_drafts'), enable_drafts),
     enable_upsolving = COALESCE(sqlc.narg('enable_upsolving'), enable_upsolving),
     allow_virtual = COALESCE(sqlc.narg('allow_virtual'), allow_virtual),
+    pretests = COALESCE(sqlc.narg('pretests'), pretests),
     languages = COALESCE(sqlc.narg('languages')::text[], languages),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END

@@ -134,6 +134,7 @@ type DraftTest struct {
 	Ordinal   int          `json:"ordinal"`
 	SubtaskID uuid.UUID    `json:"subtask_id"`
 	Sample    bool         `json:"sample"`
+	Pretest   bool         `json:"pretest"`
 	Input     DraftInput   `json:"input"`
 	Answer    DraftAnswer  `json:"answer"`
 }

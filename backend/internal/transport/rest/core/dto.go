@@ -205,6 +205,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 		AllowClarifications:   s.AllowClarifications,
 		EnableUpsolving:       s.EnableUpsolving,
 		AllowVirtual:          s.AllowVirtual,
+		Pretests:              s.Pretests,
 		JoinPolicy:            corev1.ContestModelJoinPolicy(s.JoinPolicy),
 		HideStatements:        s.HideStatements,
 		Languages:             append([]string{}, s.Languages...),
@@ -311,6 +312,7 @@ func SubmissionListItemDTO(s submissionsmodel.Submission) corev1.SubmissionsList
 		MemoryStat: corev1.NewOptInt32(s.MemoryStat),
 		Language:   s.Language,
 		FailedTest: int32PtrToOptNilInt32(s.FailedTest),
+		Pretests:   corev1.NewOptBool(s.Pretests),
 
 		ProblemID:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,
@@ -412,6 +414,7 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 		Language:    s.Language,
 		FailedTest:  int32PtrToOptNilInt32(s.FailedTest),
 		TestDetails: testDetailsOpt,
+		Pretests:    corev1.NewOptBool(s.Pretests),
 
 		ProblemID:    uuidPtrToUUID(s.ProblemID),
 		ProblemTitle: s.ProblemTitle,

@@ -1,8 +1,13 @@
 -- name: ScheduleJudgeJob :one
+WITH s AS (
+  UPDATE submissions s SET pretests = s.kind = 'contest' AND EXISTS (
+    SELECT 1 FROM contests c WHERE c.id = s.contest_id AND c.pretests AND now() < c.end_time)
+  WHERE s.id = sqlc.arg(submission_id)::uuid
+  RETURNING s.id, s.revision, s.package_id
+)
 INSERT INTO judge_jobs(id,submission_id,revision,package_id,package_hash)
 SELECT sqlc.arg(id)::uuid,s.id,s.revision,p.id,p.package_hash
-FROM submissions s JOIN problem_packages p ON p.id=s.package_id
-WHERE s.id=sqlc.arg(submission_id)::uuid
+FROM s JOIN problem_packages p ON p.id=s.package_id
 RETURNING *;
 
 -- name: ClaimNextJudgeJob :one

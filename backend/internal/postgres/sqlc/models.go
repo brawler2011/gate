@@ -657,6 +657,7 @@ type Contest struct {
 	EnableDrafts          bool                            `json:"enable_drafts"`
 	EnableUpsolving       bool                            `json:"enable_upsolving"`
 	AllowVirtual          bool                            `json:"allow_virtual"`
+	Pretests              bool                            `json:"pretests"`
 	Languages             []string                        `json:"languages"`
 	StartTime             *time.Time                      `json:"start_time"`
 	EndTime               *time.Time                      `json:"end_time"`
@@ -969,6 +970,7 @@ type Submission struct {
 	BanReason      *string                `json:"ban_reason"`
 	Revision       int64                  `json:"revision"`
 	PackageID      *uuid.UUID             `json:"package_id"`
+	Pretests       bool                   `json:"pretests"`
 	JudgeK         *float64               `json:"judge_k"`
 	JudgeBenchmark *string                `json:"judge_benchmark"`
 }

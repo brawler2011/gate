@@ -93,7 +93,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, job judgingmodel.Jo
 		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error", err)
 	}
 
-	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, uc.progress)
+	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, submission.Pretests, uc.progress)
 	if err != nil {
 		if IsTemporary(err) {
 			return err
@@ -107,7 +107,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, job judgingmodel.Jo
 		failedTest = &ft
 	}
 
-	if err := uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: verdict.State, Score: verdict.Score, TimeStat: verdict.MaxTime, MemoryStat: verdict.MaxMemory, FailedTest: failedTest, TestDetails: verdict.TestDetails, Calibration: verdict.Calibration}); err != nil {
+	if err := uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: verdict.State, Score: verdict.Score, TimeStat: verdict.MaxTime, MemoryStat: verdict.MaxMemory, FailedTest: failedTest, TestDetails: verdict.TestDetails, Pretests: verdict.Pretests, Calibration: verdict.Calibration}); err != nil {
 		return err
 	}
 

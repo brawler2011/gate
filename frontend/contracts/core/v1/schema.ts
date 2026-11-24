@@ -1730,6 +1730,8 @@ export interface components {
             /** Format: uuid */
             subtask_id: string;
             sample: boolean;
+            /** @description Contests with pretests judge their submissions on these tests until the end. */
+            pretest: boolean;
             input: components["schemas"]["ProblemDraftInput"];
             answer: components["schemas"]["ProblemDraftAnswer"];
         };
@@ -2406,6 +2408,8 @@ export interface components {
             allow_clarifications: boolean;
             enable_upsolving: boolean;
             allow_virtual: boolean;
+            /** @description Contest submissions are judged on pretests until the end, then on all tests. */
+            pretests: boolean;
             /** @enum {string} */
             join_policy: "open" | "by_request" | "invite_only";
             hide_statements: boolean;
@@ -2673,6 +2677,8 @@ export interface components {
             enable_drafts?: boolean;
             allow_clarifications?: boolean;
             allow_virtual?: boolean;
+            /** @description Requires an end time. */
+            pretests?: boolean;
             enable_upsolving?: boolean;
             /** @enum {string} */
             join_policy?: "open" | "by_request" | "invite_only";
@@ -2764,6 +2770,8 @@ export interface components {
             revision: number;
             /** @description The verdict and resources are withheld by the freeze or the contest's feedback level. */
             result_hidden?: boolean;
+            /** @description Judged on pretests only; system testing rejudges it on all tests after the contest. */
+            pretests?: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2952,6 +2960,8 @@ export interface components {
             kind: components["schemas"]["SubmissionKind"];
             /** @description The verdict and resources are withheld by the freeze or the contest's feedback level. */
             result_hidden?: boolean;
+            /** @description Judged on pretests only; system testing rejudges it on all tests after the contest. */
+            pretests?: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */

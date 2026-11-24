@@ -360,14 +360,17 @@ export const AdminSubmissionsContent = ({
                         </Badge>
                       </Table.Td>
                       <Table.Td>
-                        <Tooltip label={StateString(submission.state, submission.failed_test)} withArrow>
+                        <Tooltip
+                          label={StateString(submission.state, submission.failed_test, submission.pretests)}
+                          withArrow
+                        >
                           <Text
                             c={StateColor(submission.state)}
                             fw={600}
                             style={{cursor: "pointer"}}
                             onClick={() => setSelectedSubmissionId(submission.id)}
                           >
-                            {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test)}
+                            {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test, submission.pretests)}
                           </Text>
                         </Tooltip>
                       </Table.Td>

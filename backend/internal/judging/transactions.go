@@ -18,6 +18,8 @@ type JudgeTxStore interface {
 	RequeueStalledJob(context.Context, judgingmodel.JobRef) (bool, error)
 	GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error)
 	UpdateSubmission(context.Context, uuid.UUID, *submissionsmodel.SubmissionUpdate) (submissionsmodel.SubmissionChange, error)
+	ResetFinishedPretests(context.Context) ([]submissionsmodel.SubmissionReset, error)
+	ScheduleJob(context.Context, uuid.UUID) (judgingmodel.Job, error)
 }
 
 type JudgeTransactions interface {

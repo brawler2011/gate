@@ -282,6 +282,7 @@ type ContestSettings struct {
 	EnableDrafts          bool
 	EnableUpsolving       bool
 	AllowVirtual          bool
+	Pretests              bool
 	Languages             []string
 }
 
@@ -309,6 +310,7 @@ type ContestSettingsPatch struct {
 	EnableDrafts          *bool
 	EnableUpsolving       *bool
 	AllowVirtual          *bool
+	Pretests              *bool
 	Languages             []string
 }
 

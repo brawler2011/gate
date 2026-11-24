@@ -452,6 +452,8 @@ CREATE TABLE contests (
     enable_drafts boolean DEFAULT true NOT NULL,
     enable_upsolving boolean DEFAULT true NOT NULL,
     allow_virtual boolean DEFAULT false NOT NULL,
+    -- Contest submissions are judged on pretests until the end, then on all tests.
+    pretests boolean DEFAULT false NOT NULL,
     languages text[] DEFAULT '{}'::text[] NOT NULL,
     start_time timestamptz,
     end_time timestamptz,
@@ -461,6 +463,7 @@ CREATE TABLE contests (
     CONSTRAINT contests_freeze_duration_check CHECK ((freeze_duration_minutes > 0)),
     CONSTRAINT contests_freeze_started_check CHECK (((freeze_status = 'frozen'::freeze_status) = (freeze_started_at IS NOT NULL))),
     CONSTRAINT contests_unfreeze_time_check CHECK ((unfreeze_time >= end_time)),
+    CONSTRAINT contests_pretests_check CHECK (((NOT pretests) OR (end_time IS NOT NULL))),
     CONSTRAINT contests_login_check CHECK (((length((login)::text) >= 3) AND (length((login)::text) <= 64))),
     CONSTRAINT contests_pkey PRIMARY KEY (id),
     CONSTRAINT contests_id_organization_unique UNIQUE (id, organization_id),
@@ -679,6 +682,8 @@ CREATE TABLE submissions (
     ban_reason text,
     revision bigint DEFAULT 1 NOT NULL,
     package_id uuid,
+    -- Judged or queued on pretests only; system testing rejudges it after the contest ends.
+    pretests boolean DEFAULT false NOT NULL,
     -- Strict mode: the time limit factor and the benchmark that measured it.
     judge_k double precision,
     judge_benchmark text,
@@ -696,6 +701,7 @@ CREATE INDEX submissions_problem_id_idx ON submissions USING btree (problem_id);
 CREATE INDEX submissions_scoreboard_idx ON submissions USING btree (contest_id, owner_id, problem_id, created_at) WHERE ((contest_id IS NOT NULL) AND (owner_id IS NOT NULL));
 CREATE INDEX submissions_scoreboard_state_idx ON submissions USING btree (contest_id, owner_id, state, created_at) WHERE ((contest_id IS NOT NULL) AND (owner_id IS NOT NULL));
 CREATE INDEX submissions_state_idx ON submissions USING btree (state);
+CREATE INDEX submissions_pretests_idx ON submissions USING btree (contest_id) WHERE pretests;
 
 CREATE TABLE judge_jobs (
     id uuid NOT NULL,

@@ -34,6 +34,7 @@ var constraintErrors = map[string]struct {
 	"contest_virtual_runs_pkey":                     {pkg.ErrConflict, "a virtual run was already started"},
 	"contests_check":                                {pkg.ErrEndBeforeStart, "end time must be after start time"},
 	"contests_unfreeze_time_check":                  {pkg.ErrEndBeforeStart, "unfreeze time must not be before the end time"},
+	"contests_pretests_check":                       {pkg.ErrRequired, "pretests need an end time"},
 	"contests_login_check":                          {pkg.ErrLength, "contest login must be 3 to 64 characters"},
 	"contest_problems_ordinal_check":                {pkg.ErrRange, "problem positions must be non-negative"},
 	"contest_problems_contest_id_ordinal_key":       {pkg.ErrDuplicate, "problem positions must be distinct"},

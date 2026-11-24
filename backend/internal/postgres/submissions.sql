@@ -53,7 +53,8 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.created_at
+  s.created_at,
+  s.pretests
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id
@@ -70,7 +71,7 @@ WITH previous AS (
   SELECT id, state FROM submissions WHERE id = @id::uuid FOR UPDATE
 )
 UPDATE submissions s
-SET state = @state, score = @score, test_details = @test_details,
+SET state = @state, score = @score, test_details = @test_details, pretests = @pretests,
     judge_k = sqlc.narg(judge_k), judge_benchmark = sqlc.narg(judge_benchmark),
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
@@ -123,7 +124,8 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.created_at
+  s.created_at,
+  s.pretests
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id
@@ -194,6 +196,11 @@ WHERE contest_id = @contest_id::uuid
   AND (sqlc.narg('submission_id')::uuid IS NULL OR id = sqlc.narg('submission_id')::uuid)
   AND (sqlc.narg('owner_id')::uuid IS NULL OR owner_id = sqlc.narg('owner_id')::uuid)
 ORDER BY id;
+
+-- name: FinishedPretestCandidates :many
+SELECT s.id FROM submissions s JOIN contests c ON c.id = s.contest_id
+WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
+ORDER BY s.id;
 
 -- name: LockSubmission :one
 SELECT id, revision, state FROM submissions WHERE id = @id::uuid FOR UPDATE;

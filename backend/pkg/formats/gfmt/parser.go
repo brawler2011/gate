@@ -204,6 +204,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 				return nil, err
 			}
 			test.Sample = t.Sample || samples[key(t)]
+			test.Pretest = t.Pretest
 			group.Tests = append(group.Tests, test)
 		}
 		if name == "samples" && len(subtask.Tests) > 0 && len(group.Tests) == 0 {

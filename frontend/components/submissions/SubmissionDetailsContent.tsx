@@ -201,10 +201,10 @@ export const SubmissionDetailsContent = ({
             </Text>
             <Group gap="xs" align="center">
               <Badge color={StateColor(submission.state)} variant="filled" size="md">
-                {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test)}
+                {submission.result_hidden ? "Скрыто" : ShortVerdictString(submission.state, submission.failed_test, submission.pretests)}
               </Badge>
               <Text size="xs" c={StateColor(submission.state)} fw={500}>
-                {submission.result_hidden ? "Результат скрыт" : StateString(submission.state, submission.failed_test)}
+                {submission.result_hidden ? "Результат скрыт" : StateString(submission.state, submission.failed_test, submission.pretests)}
               </Text>
             </Group>
           </Box>

@@ -1,6 +1,7 @@
 package polygon
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"path"
@@ -106,6 +107,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 	}
 	if p.Groups, err = groups(fsys, testset, generators); err != nil {
+		return nil, err
+	}
+	if err := markPretests(fsys, testset, prob.Judging.Testsets, p.Groups); err != nil {
 		return nil, err
 	}
 	p.Type = problemType(prob, p.Groups)
@@ -366,6 +370,56 @@ func statements(list []Statement) []spec.Statement {
 		}
 	}
 	return result
+}
+
+// markPretests marks the main tests a pretests testset repeats, by generator command or input bytes.
+func markPretests(fsys fs.FS, main Testset, testsets []Testset, groups []spec.Group) error {
+	i := slices.IndexFunc(testsets, func(ts Testset) bool { return ts.Name == "pretests" })
+	if i < 0 {
+		return nil
+	}
+	pretests := testsets[i]
+	// groups() appends tests in testset order, so a group's k-th test is its k-th main test.
+	group := map[string]int{}
+	for g := range groups {
+		group[groups[g].Name] = g
+	}
+	seen := map[string]int{}
+	tests := make([]*spec.Test, len(main.Tests))
+	for n, t := range main.Tests {
+		tests[n] = &groups[group[t.Group]].Tests[seen[t.Group]]
+		seen[t.Group]++
+	}
+	for n, pre := range pretests.Tests {
+		number := n + 1
+		match := -1
+		if pre.Method == "generated" {
+			argv, err := spec.ParseCommand(pre.Cmd)
+			if err != nil {
+				return fmt.Errorf("pretest %d: %w", number, err)
+			}
+			match = slices.IndexFunc(main.Tests, func(t Test) bool {
+				other, err := spec.ParseCommand(t.Cmd)
+				return t.Method == "generated" && err == nil && slices.Equal(argv, other)
+			})
+		} else {
+			input, err := spec.ReadFile(fsys, fmt.Sprintf(pretests.InputPathPattern, number))
+			if err != nil {
+				return err
+			}
+			for m := range main.Tests {
+				if other, err := fs.ReadFile(fsys, fmt.Sprintf(main.InputPathPattern, m+1)); err == nil && bytes.Equal(input, other) {
+					match = m
+					break
+				}
+			}
+		}
+		if match < 0 {
+			return spec.Fail(pkg.ErrUnknown, "problem.xml", strconv.Itoa(number), "pretest %d is not one of the tests", number)
+		}
+		tests[match].Pretest = true
+	}
+	return nil
 }
 
 func exists(fsys fs.FS, name string) bool {

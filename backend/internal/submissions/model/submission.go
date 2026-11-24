@@ -81,6 +81,7 @@ type SubmissionUpdate struct {
 	MemoryStat  int32
 	FailedTest  *int32
 	TestDetails *SubmissionTestDetails
+	Pretests    bool
 	// Recorded only when a benchmark calibrated the host.
 	Calibration calibration.Calibration
 }
@@ -155,6 +156,8 @@ type Submission struct {
 	Language     string                 `json:"language"`
 	FailedTest   *int32                 `json:"failed_test,omitempty"`
 	TestDetails  *SubmissionTestDetails `json:"test_details,omitempty"`
+	// Pretests marks a contest submission judged on pretests only, until system testing.
+	Pretests bool `json:"pretests,omitempty"`
 	// FailedTestFeedback stands in for TestDetails in lists, which do not load reports.
 	FailedTestFeedback string     `json:"-"`
 	BanReason          *string    `json:"ban_reason,omitempty"`
@@ -260,6 +263,7 @@ type SubmissionCompletedEvent struct {
 	FailedTest *int32       `json:"failed_test,omitempty"`
 	// FailedTestFeedback is the feedback policy of the failed test's group, which may hide the number.
 	FailedTestFeedback string `json:"failed_test_feedback,omitempty"`
+	Pretests           bool   `json:"pretests,omitempty"`
 }
 
 func (s Submission) EventMeta() SubmissionEventMeta {
@@ -267,7 +271,7 @@ func (s Submission) EventMeta() SubmissionEventMeta {
 }
 
 func (s Submission) CompletedEvent() SubmissionCompletedEvent {
-	e := SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
+	e := SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, Pretests: s.Pretests, SubmissionEventMeta: s.EventMeta()}
 	if s.FailedTest != nil {
 		e.FailedTestFeedback = s.FailedFeedback()
 	}

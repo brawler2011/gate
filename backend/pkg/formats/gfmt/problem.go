@@ -57,6 +57,31 @@ type Test struct {
 	// Solution names the solutions/ file whose output is the answer.
 	Solution string `yaml:"solution,omitempty" json:"solution,omitempty"`
 	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`
+	// Pretest tests judge contest submissions until the contest ends.
+	Pretest bool `yaml:"pretest,omitempty" json:"pretest,omitempty"`
+}
+
+// Pretests keeps only pretests and drops subtasks left without tests; ok is false unless that leaves a proper subset.
+func (p *Problem) Pretests() (restricted *Problem, ok bool) {
+	copy := *p
+	copy.Subtasks = map[string]Subtask{}
+	kept, total := 0, 0
+	for name, s := range p.Subtasks {
+		total += len(s.Tests)
+		s.Tests = slices.DeleteFunc(slices.Clone(s.Tests), func(t Test) bool { return !t.Pretest })
+		kept += len(s.Tests)
+		if len(s.Tests) > 0 {
+			copy.Subtasks[name] = s
+		}
+	}
+	if kept == 0 || kept == total {
+		return p, false
+	}
+	for name, s := range copy.Subtasks {
+		s.Dependencies = slices.DeleteFunc(slices.Clone(s.Dependencies), func(d string) bool { _, ok := copy.Subtasks[d]; return !ok })
+		copy.Subtasks[name] = s
+	}
+	return &copy, true
 }
 
 func (p *Problem) hasOrdinals() bool {

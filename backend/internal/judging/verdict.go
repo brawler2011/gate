@@ -55,6 +55,7 @@ type FinalVerdict struct {
 	MaxMemory   int32 // megabytes
 	Message     string
 	FailedTest  *int // first failing test in fail-fast mode
+	Pretests    bool
 	TestDetails *submissionsmodel.SubmissionTestDetails
 	Calibration calibration.Calibration
 }

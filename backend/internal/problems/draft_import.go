@@ -555,7 +555,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, so
 	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
 		return model.DraftTest{}, pkg.ErrPayloadTooLarge
 	}
-	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, SubtaskID: subtask, Points: test.Points, Sample: test.Sample}
+	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, SubtaskID: subtask, Points: test.Points, Sample: test.Sample, Pretest: test.Pretest}
 	if test.Generator != "" {
 		gen, ok := generators[test.Generator]
 		if !ok {

@@ -164,6 +164,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     enable_drafts: boolean;
     enable_upsolving: boolean;
     allow_virtual: boolean;
+    pretests: boolean;
     hide_statements: boolean;
     languages: string[];
   }>({
@@ -176,6 +177,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_drafts: contest.enable_drafts,
       enable_upsolving: contest.enable_upsolving,
       allow_virtual: contest.allow_virtual,
+      pretests: contest.pretests,
       hide_statements: contest.hide_statements,
       languages: contest.languages,
       scoreboard_during: contest.scoreboard_during,
@@ -241,6 +243,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
       allow_virtual: values.allow_virtual,
+      pretests: values.pretests,
       hide_statements: values.hide_statements,
     };
     const {error} = await api.PATCH("/contests/{contest_id}", {
@@ -395,6 +398,16 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
               checked={form.values.enable_upsolving}
               onChange={(event) => form.setFieldValue("enable_upsolving", event.currentTarget.checked)}
             />
+          </Group>
+
+          <Group justify="space-between">
+            <Stack gap={2}>
+              <Text size="sm">Проверять на претестах</Text>
+              <Text size="xs" c="dimmed">
+                До конца контеста посылки проверяются только на претестах, после — на всех тестах
+              </Text>
+            </Stack>
+            <Switch checked={form.values.pretests} onChange={(event) => form.setFieldValue("pretests", event.currentTarget.checked)} />
           </Group>
 
           <Group justify="space-between">
