@@ -32,7 +32,8 @@ export const DownloadStatementsButton = ({
   fullWidth = false,
 }: DownloadStatementsButtonProps): ReactNode => {
   const [downloading, setDownloading] = useState(false);
-  const booklets = useBooklets(contestId).data?.booklets ?? [];
+  const query = useBooklets(contestId);
+  const booklets = query.data?.booklets ?? [];
 
   const handleDownload = async (lang: string) => {
     setDownloading(true);
@@ -43,6 +44,7 @@ export const DownloadStatementsButton = ({
       });
       if (error) {
         notifications.show({title: "Ошибка скачивания", message: problemMessage(error), color: "red"});
+        void query.refetch();
         return;
       }
       const objectUrl = window.URL.createObjectURL(data);
@@ -59,7 +61,7 @@ export const DownloadStatementsButton = ({
   };
 
   return (
-    <Menu position="bottom-end" shadow="md">
+    <Menu position="bottom-end" shadow="md" onOpen={() => void query.refetch()}>
       <Menu.Target>
         <Button
           leftSection={<IconFileTypePdf size={16} />}
@@ -68,13 +70,13 @@ export const DownloadStatementsButton = ({
           size={size}
           loading={downloading}
           fullWidth={fullWidth}
-          disabled={booklets.length === 0}
         >
           Скачать условия (PDF)
         </Button>
       </Menu.Target>
 
       <Menu.Dropdown>
+        {booklets.length === 0 && <Menu.Item disabled>Условий пока нет</Menu.Item>}
         {booklets.map((booklet) => (
           <Menu.Item key={booklet.language} disabled={booklet.state !== "ready"} onClick={() => handleDownload(booklet.language)}>
             {LANGUAGE_NAMES[booklet.language] ?? booklet.language.toUpperCase()}

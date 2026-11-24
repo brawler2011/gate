@@ -135,7 +135,11 @@ func (c *Client) run(ctx context.Context, req request) ([]result, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("sandbox run: HTTP %d: %s", resp.StatusCode, bytes.TrimSpace(msg))
+		err := fmt.Errorf("sandbox run: HTTP %d: %s", resp.StatusCode, bytes.TrimSpace(msg))
+		if resp.StatusCode >= http.StatusInternalServerError {
+			err = fmt.Errorf("%w: %w", ErrUnavailable, err)
+		}
+		return nil, err
 	}
 	var results []result
 	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {

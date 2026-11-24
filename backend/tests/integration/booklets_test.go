@@ -181,4 +181,7 @@ func (s *IntegrationTestSuite) TestContestBookletIsBuiltAheadAndNeverServedStale
 	s.ErrorIs(err, pkg.ErrConflict)
 	_, status = download()
 	s.Equal(http.StatusConflict, status)
+
+	s.Require().NoError(s.client.DeleteContestProblem(ctx, corev1.DeleteContestProblemParams{ContestID: contestID, ProblemID: created.ID}))
+	s.Empty(states(), "a contest without problems has no booklets")
 }

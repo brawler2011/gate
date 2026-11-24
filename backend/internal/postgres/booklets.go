@@ -24,6 +24,8 @@ func (r *BookletsRepo) QueueBooklet(ctx context.Context, contestID uuid.UUID, la
 }
 
 func (r *BookletsRepo) KeepBooklets(ctx context.Context, contestID uuid.UUID, languages []string) error {
+	// pgx sends a nil slice as NULL, which would keep every booklet.
+	languages = append([]string{}, languages...)
 	err := sqlc.New(r.pool).DeleteContestBookletsExcept(ctx, sqlc.DeleteContestBookletsExceptParams{ContestID: contestID, Languages: languages})
 	return dbError("delete booklets", err)
 }

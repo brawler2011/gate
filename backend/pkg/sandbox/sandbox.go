@@ -262,9 +262,14 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileR
 	res := results[0]
 	pdfID := res.FileIDs["booklet.pdf"]
 	defer s.client.release(pdfID)
-	if res.Status != resultAccepted {
+	switch res.Status {
+	case resultAccepted:
+	case resultNonzeroExit, resultTimeLimit, resultMemoryLimit, resultOutputLimit:
 		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\n%s",
 			res.Status, res.ExitStatus, latexError(res.Files["stdout"]+res.Files["stderr"]))
+	default:
+		// go-judge's own failures (Internal Error, File Error) say nothing about the source.
+		return nil, fmt.Errorf("%w: LaTeX run: %s: %s", ErrUnavailable, res.Status, res.Error)
 	}
 	if pdfID == "" {
 		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")

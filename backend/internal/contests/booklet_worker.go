@@ -52,7 +52,7 @@ func (w *BookletWorker) Run(ctx context.Context) error {
 	ticker := time.NewTicker(w.Poll)
 	defer ticker.Stop()
 	for {
-		job, err := w.Queue.ClaimBooklet(ctx, w.Limits.Wall+time.Minute)
+		job, err := w.Queue.ClaimBooklet(ctx, w.lease())
 		if err != nil && ctx.Err() == nil {
 			w.Logger.ErrorContext(ctx, "claim booklet", "error", err)
 		}
@@ -68,11 +68,16 @@ func (w *BookletWorker) Run(ctx context.Context) error {
 	}
 }
 
+func (w *BookletWorker) lease() time.Duration { return w.Limits.Wall + time.Minute }
+
 func (w *BookletWorker) build(ctx context.Context, job contestsmodel.BookletJob) {
 	log := w.Logger.With("contest_id", job.ContestID, "language", job.Language, "attempt", job.Attempt)
 	err := errors.New("booklet attempts exhausted")
 	if job.Attempt <= w.MaxAttempts {
-		err = w.compile(ctx, job)
+		// A hung sandbox or storage call must not hold the worker past the lease.
+		attemptCtx, cancel := context.WithTimeout(ctx, w.lease())
+		err = w.compile(attemptCtx, job)
+		cancel()
 	}
 	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
