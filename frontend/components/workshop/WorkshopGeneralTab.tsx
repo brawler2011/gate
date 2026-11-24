@@ -39,7 +39,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [mainSolution, setMainSolution] = useState(draft.main_solution);
   const [inputFile, setInputFile] = useState(draft.input_file);
   const [outputFile, setOutputFile] = useState(draft.output_file);
-  const [processes, setProcesses] = useState(Math.max(draft.processes, 2));
+  const [processes, setProcesses] = useState(draft.processes || 2);
 
   const changed =
     title !== draft.title ||
