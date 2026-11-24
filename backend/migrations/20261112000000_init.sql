@@ -310,7 +310,7 @@ CREATE TABLE problem_drafts (
     -- Stored objects the content references; written with it so GC need not parse drafts.
     object_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
     CONSTRAINT problem_drafts_content_check CHECK ((jsonb_typeof(content) = 'object'::text)),
-    CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
+    CONSTRAINT problem_drafts_check CHECK (((type = ANY (ARRAY['scoring'::text, 'output-only'::text])) = (max_score IS NOT NULL))),
     CONSTRAINT problem_drafts_max_score_check CHECK ((max_score >= (0)::numeric)),
     CONSTRAINT problem_drafts_memory_limit_mb_check CHECK ((memory_limit_mb > 0)),
     CONSTRAINT problem_drafts_revision_check CHECK ((revision > 0)),

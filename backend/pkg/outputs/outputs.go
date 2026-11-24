@@ -19,6 +19,8 @@ import (
 const (
 	MaxBytes     = 64 << 20
 	MaxFileBytes = 16 << 20
+	// MaxFiles also counts skipped archive entries, so their metadata stays bounded.
+	MaxFiles = 10000
 )
 
 type File struct {
@@ -50,7 +52,8 @@ func invalid(code *pkg.Error, params map[string]any, format string, args ...any)
 // Pack takes outputs one per file or inside .zip archives and returns the archive with its SHA-256.
 func Pack(files []File) ([]byte, string, error) {
 	byOrdinal := map[int][]byte{}
-	total := 0
+	total, count := 0, 0
+	tooMany := invalid(pkg.ErrTooLarge, map[string]any{"max": MaxFiles}, "more than %d files", MaxFiles)
 	add := func(name string, data []byte) error {
 		n, ok := Ordinal(name)
 		switch {
@@ -68,6 +71,9 @@ func Pack(files []File) ([]byte, string, error) {
 		return nil
 	}
 	for _, f := range files {
+		if count++; count > MaxFiles {
+			return nil, "", tooMany
+		}
 		data, err := io.ReadAll(io.LimitReader(f.Data, MaxBytes+1))
 		if err != nil {
 			return nil, "", fmt.Errorf("read %s: %w", f.Name, err)
@@ -84,6 +90,9 @@ func Pack(files []File) ([]byte, string, error) {
 		z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 		if err != nil {
 			return nil, "", invalid(pkg.ErrFormat, map[string]any{"value": f.Name}, "%s is not a zip archive", f.Name)
+		}
+		if count += len(z.File); count > MaxFiles {
+			return nil, "", tooMany
 		}
 		for _, entry := range z.File {
 			// Finder adds __MACOSX/ and ._ metadata to the archives it makes.

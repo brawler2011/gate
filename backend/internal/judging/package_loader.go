@@ -84,7 +84,7 @@ func (l *PackageLoader) LoadOutputs(ctx context.Context, sha string) (*diskcache
 		if err != nil {
 			return fmt.Errorf("open outputs: %w", err)
 		}
-		return ziputil.ExtractZipLimited(z, dir, outputs.MaxBytes, len(z.File)) //nolint:wrapcheck // describes the archive
+		return ziputil.ExtractZipLimited(z, dir, outputs.MaxBytes, outputs.MaxFiles) //nolint:wrapcheck // describes the archive
 	})
 }
 

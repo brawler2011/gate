@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -56,6 +57,15 @@ func TestPackNamesOutputsByTest(t *testing.T) {
 	assert.Equal(t, packed, again)
 }
 
+func manyEntries(t *testing.T) []byte {
+	t.Helper()
+	files := map[string]string{}
+	for i := 1; i <= MaxFiles+1; i++ {
+		files[strconv.Itoa(i)] = ""
+	}
+	return zipOf(t, files)
+}
+
 func TestPackRejects(t *testing.T) {
 	for name, files := range map[string][]File{
 		"no number": {{Name: "answer.txt", Data: strings.NewReader("x")}},
@@ -64,6 +74,7 @@ func TestPackRejects(t *testing.T) {
 		"not a zip": {{Name: "all.zip", Data: strings.NewReader("x")}},
 		"nothing":   {},
 		"too large": {{Name: "1.out", Data: bytes.NewReader(make([]byte, MaxFileBytes+1))}},
+		"too many":  {{Name: "many.zip", Data: bytes.NewReader(manyEntries(t))}},
 	} {
 		_, _, err := Pack(files)
 		var e *pkg.Error
