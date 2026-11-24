@@ -1,11 +1,13 @@
-// Package icpc reads legacy ICPC packages; checker, validator and interactor programs must use testlib.
+// Package icpc reads legacy ICPC packages.
 package icpc
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -32,10 +34,12 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "scoring", "ICPC scoring problems are not supported")
 	}
 	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
-	interactive := slices.Contains(strings.Fields(prob.Validation), "interactive")
+	validation := strings.Fields(prob.Validation)
+	interactive := slices.Contains(validation, "interactive")
 	if interactive {
 		p.Type = "interactive"
 	}
+	custom := len(validation) > 0 && validation[0] == "custom"
 	if prob.Limits != nil {
 		if prob.Limits.Time > 0 {
 			p.TimeLimitMs = int(prob.Limits.Time * 1000)
@@ -56,16 +60,27 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if len(output) > 1 {
 		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "package has %d output validators; Gate supports one", len(output))
 	}
+	if !custom && !interactive {
+		output = []spec.Program{{File: spec.File{Name: "default_validator.cpp"}, Dependencies: map[string]string{}, Text: defaultValidator}}
+	}
+	if p.Validators, err = collect("input_validators"); err != nil {
+		return nil, err
+	}
+	for _, programs := range [][]spec.Program{output, p.Validators} {
+		for i := range programs {
+			if programs[i].Protocol, err = protocol(fsys, programs[i]); err != nil {
+				return nil, err
+			}
+		}
+	}
 	if len(output) == 1 {
+		output[0].Args = strings.Fields(prob.ValidatorFlags)
 		// The output validator of an interactive problem is its interactor.
 		if interactive {
 			p.Interactor = &output[0]
 		} else {
 			p.Checker = &output[0]
 		}
-	}
-	if p.Validators, err = collect("input_validators"); err != nil {
-		return nil, err
 	}
 	if p.Generators, err = collect("generators"); err != nil {
 		return nil, err
@@ -76,9 +91,35 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Groups, err = groups(fsys); err != nil {
 		return nil, err
 	}
+	if err := rejectGroupFlags(fsys); err != nil {
+		return nil, err
+	}
 	p.KeepInteractiveInputsPrivate()
 	p.Statements = statements(fsys, p)
 	return p, nil
+}
+
+// The ICPC default output validator, called with the validator_flags of the problem.
+//
+//go:embed validator/default.cpp
+var defaultValidator string
+
+var testlibInclude = regexp.MustCompile(`(?m)^\s*#\s*include\s*["<]testlib\.h[">]`)
+
+// Programs including testlib.h are taken to speak its protocol, as Gate's own fixtures do.
+func protocol(fsys fs.FS, p spec.Program) (string, error) {
+	text := p.Text
+	if text == "" {
+		data, err := spec.ReadFile(fsys, p.Path)
+		if err != nil {
+			return "", err
+		}
+		text = string(data)
+	}
+	if testlibInclude.MatchString(text) {
+		return "testlib", nil
+	}
+	return "icpc", nil
 }
 
 // A program is one source file with its adjacent headers, optionally in its own directory.
@@ -197,6 +238,37 @@ func groups(fsys fs.FS) ([]spec.Group, error) {
 		}
 	}
 	return result, nil
+}
+
+// Gate gives each program one set of arguments, so flags cannot vary by group.
+func rejectGroupFlags(fsys fs.FS) error {
+	err := fs.WalkDir(fsys, "data", func(name string, d fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) && name == "data" {
+			return fs.SkipAll
+		}
+		if err != nil || d.Name() != "testdata.yaml" {
+			return err
+		}
+		data, err := spec.ReadFile(fsys, name)
+		if err != nil {
+			return err
+		}
+		var flags struct {
+			Input  any `yaml:"input_validator_flags"`
+			Output any `yaml:"output_validator_flags"`
+		}
+		if err := yaml.Unmarshal(data, &flags); err != nil {
+			return spec.Syntax(name, err)
+		}
+		if flags.Input != nil || flags.Output != nil {
+			return spec.Fail(pkg.ErrUnsupported, name, "", "validator flags in %s are not supported", name)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("read test groups: %w", err)
+	}
+	return nil
 }
 
 func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {

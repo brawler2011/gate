@@ -51,9 +51,10 @@ export const setSingleProgram = <Role extends SingleRole>(
     [role]: program,
   });
 
-export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, standard: "", tests: []});
+export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, protocol: "testlib", args: [], standard: "", tests: []});
 
-export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name, tests: []});
+export const standardChecker = (name: string, language: string): ProblemDraftChecker =>
+  ({language, source: "", protocol: "testlib", args: [], standard: name, tests: []});
 
 // Preserve system includes when converting a standard checker to editable source.
 export const customizeChecker = (draft: ProblemDraft, source: string, systemFiles: string[]): ProblemDraft => {
@@ -81,7 +82,7 @@ export const addProgram = (
   if (programsOf(draft, role).some((p) => p.name === name)) {
     return nameTaken(role, name);
   }
-  const extra = {validator: {subtasks: [], tests: []}, solution: {verdicts: ["OK"], points: null}, generator: {}}[role];
+  const extra = {validator: {protocol: "testlib", args: [], subtasks: [], tests: []}, solution: {verdicts: ["OK"], points: null}, generator: {}}[role];
   const program = {name, language, source, ...extra};
   return {
     draft: {

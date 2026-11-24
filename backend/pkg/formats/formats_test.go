@@ -150,6 +150,32 @@ func TestICPCGroups(t *testing.T) {
 	require.Empty(t, p.Groups[2].Tests[0].Answer)
 }
 
+func TestICPCProtocols(t *testing.T) {
+	protocols := func(p *spec.Problem) []string {
+		result := []string{p.Checker.Protocol}
+		for _, v := range p.Validators {
+			result = append(result, v.Protocol)
+		}
+		return result
+	}
+	p, err := Read(filepath.Join("..", "testdata", "icpc", "a-plus-b"))
+	require.NoError(t, err)
+	require.Equal(t, []string{"testlib", "testlib"}, protocols(p))
+	p, err = Read(filepath.Join("..", "testdata", "icpc", "icpc-protocol"))
+	require.NoError(t, err)
+	require.Equal(t, []string{"icpc", "icpc"}, protocols(p))
+
+	dir := filepath.Join(t.TempDir(), "float-default")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("..", "testdata", "icpc", "float-default"))))
+	p, err = Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "default_validator.cpp", p.Checker.Name)
+	require.Equal(t, []string{"icpc", "float_tolerance", "1e-6"}, append(protocols(p), p.Checker.Args...))
+	write(t, dir, "data/secret/testdata.yaml", "output_validator_flags: float_tolerance 1e-3\n")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "validator flags in data/secret/testdata.yaml are not supported")
+}
+
 func TestICPCRejectsScoring(t *testing.T) {
 	_, err := Read(unpack(t, "icpc-scoring"))
 	require.ErrorContains(t, err, "ICPC scoring problems are not supported")

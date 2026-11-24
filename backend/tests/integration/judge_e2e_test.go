@@ -352,8 +352,9 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		return func(d *problemsmodel.Draft) {
 			generator, solution, group := "gen", "main", uuid.New()
 			d.Type = "interactive"
-			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}}
-			d.Interactor = &problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}
+			testlib := problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}
+			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}, DraftJury: testlib}
+			d.Interactor = &problemsmodel.DraftInteractor{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}, DraftJury: testlib}
 			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
 			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
@@ -427,7 +428,6 @@ func TestStandardCheckerE2E(t *testing.T) {
 		})
 	}
 }
-
 
 // contestOwner keeps the judged user a plain participant.
 func contestOwner(t *testing.T, ctx context.Context, db dbfixtures.Execer) uuid.UUID {

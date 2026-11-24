@@ -1,9 +1,9 @@
 package problems
 
 import (
-	"cmp"
 	"archive/zip"
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -172,9 +172,11 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 		}
 	}
 	if p.Interactor != nil {
-		if c.draft.Interactor, err = c.program(*p.Interactor); err != nil {
+		program, err := c.program(*p.Interactor)
+		if err != nil {
 			return err
 		}
+		c.draft.Interactor = &model.DraftInteractor{DraftProgram: *program, DraftJury: jury(*p.Interactor)}
 	}
 	for _, v := range p.Validators {
 		programs := c.draft.ValidatorPrograms()
@@ -185,7 +187,7 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 		if err != nil {
 			return err
 		}
-		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], Subtasks: []uuid.UUID{}, Tests: tests})
+		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], DraftJury: jury(v), Subtasks: []uuid.UUID{}, Tests: tests})
 	}
 	generators := map[string]string{}
 	for _, g := range p.Generators {
@@ -411,13 +413,24 @@ func (c *importConverter) checker(program spec.Program) (*model.DraftChecker, er
 		if err != nil {
 			return nil, err
 		}
-		return &model.DraftChecker{DraftProgram: model.DraftProgram{Language: language}, Standard: program.Standard}, nil
+		return &model.DraftChecker{DraftProgram: model.DraftProgram{Language: language}, DraftJury: jury(spec.Program{}), Standard: program.Standard}, nil
 	}
 	p, err := c.program(program)
 	if err != nil {
 		return nil, err
 	}
-	return &model.DraftChecker{DraftProgram: *p}, nil
+	return &model.DraftChecker{DraftProgram: *p, DraftJury: jury(program)}, nil
+}
+
+func jury(program spec.Program) model.DraftJury {
+	j := model.DraftJury{Protocol: sandbox.Protocol(program.Protocol), Args: program.Args}
+	if j.Protocol == "" {
+		j.Protocol = sandbox.ProtocolTestlib
+	}
+	if j.Args == nil {
+		j.Args = []string{}
+	}
+	return j
 }
 
 func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
@@ -425,9 +438,12 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	if err != nil {
 		return nil, err
 	}
-	text, err := c.readText(program.Path, "")
-	if err != nil {
-		return nil, err
+	text := program.Text
+	if text == "" {
+		var err error
+		if text, err = c.readText(program.Path, ""); err != nil {
+			return nil, err
+		}
 	}
 	if err := c.charge(len(text)); err != nil {
 		return nil, err
@@ -588,7 +604,8 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, so
 		t.Input = model.DraftInput{Mode: "manual", ObjectID: &oid, Args: []string{}}
 	}
 	switch {
-	case c.draft.Type == "interactive":
+	// Only ICPC interactors read the answer; testlib ones produce it.
+	case c.draft.Type == "interactive" && (test.Answer == "" || c.draft.Interactor == nil || c.draft.Interactor.Protocol != sandbox.ProtocolICPC):
 		t.Answer = model.DraftAnswer{Mode: "interactive"}
 	case test.Answer != "":
 		oid, err := c.object(test.Answer, "test-answer")

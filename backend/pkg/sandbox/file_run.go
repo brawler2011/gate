@@ -148,31 +148,35 @@ func (s *Sandbox) runFile(ctx context.Context, c *cmd, output string) (*FileRunR
 	}, nil
 }
 
-func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, language string, input, output, answer File, limits FileRunLimits) (*CheckerResult, error) {
+// CheckFiles gives an ICPC checker the output on standard input.
+func (s *Sandbox) CheckFiles(ctx context.Context, checker Jury, input, output, answer File, limits FileRunLimits) (*CheckerResult, error) {
 	limits.Output = limits.Diagnostic
-	c, err := s.fileCommand(executable, language, File{}, []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []File{input, output, answer}, limits)
+	stdin, args, extras := File{}, []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []File{input, output, answer}
+	if checker.Protocol == ProtocolICPC {
+		stdin, args, extras = output, []string{"/dev/fd/3", "/dev/fd/4", feedbackDir}, []File{input, answer}
+	}
+	c, err := s.fileCommand(checker.Executable, checker.Language, stdin, append(args, checker.Args...), extras, limits)
 	if err != nil {
 		return nil, err
 	}
 	c.CopyOutCached = nil
+	if checker.Protocol == ProtocolICPC {
+		icpcFeedback(c)
+	}
 	results, err := s.client.run(ctx, request{Cmd: []cmd{*c}})
 	if err != nil {
 		return nil, fmt.Errorf("checker file execution: %w", err)
 	}
 	r := results[0]
-	status, score := parseTestlibVerdict(r.ExitStatus, r.Files["stdout"], r.Files["stderr"])
-	if r.Status != resultAccepted && r.Status != resultNonzeroExit {
-		status = StatusFail
-		score = nil
-	}
-	return &CheckerResult{Status: status, ExitStatus: r.ExitStatus, Message: r.Files["stderr"], Score: score}, nil
+	status, score, message := checker.verdict(r, r.Files["stdout"])
+	return &CheckerResult{Status: status, ExitStatus: r.ExitStatus, Message: message, Score: score}, nil
 }
 
 const interactorOutput = "output.txt"
 
-// InteractFiles allows a zero answer; OutputID is the interactor's file for the checker.
+// InteractFiles allows a zero answer; OutputID is a testlib interactor's file for the checker.
 // The caller owns OutputID even on failure.
-func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage string, input, answer File, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
+func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Jury, input, answer File, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
 	sol, err := s.fileCommand(solution, solutionLanguage, File{}, nil, nil, solutionLimits)
 	if err != nil {
 		return nil, err
@@ -181,9 +185,18 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	if answer != (File{}) {
 		args, extra = append(args, "/dev/fd/4"), append(extra, answer)
 	}
-	intr, err := s.fileCommand(interactor, interactorLanguage, File{}, args, extra, interactorLimits)
+	if interactor.Protocol == ProtocolICPC {
+		args = []string{"/dev/fd/3", "/dev/null", feedbackDir}
+		if answer != (File{}) {
+			args[1] = "/dev/fd/4"
+		}
+	}
+	intr, err := s.fileCommand(interactor.Executable, interactor.Language, File{}, append(args, interactor.Args...), extra, interactorLimits)
 	if err != nil {
 		return nil, err
+	}
+	if interactor.Protocol == ProtocolICPC {
+		icpcFeedback(intr)
 	}
 	for _, c := range []*cmd{sol, intr} {
 		c.Files[0] = nil
@@ -203,16 +216,12 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	}
 	a, b := results[0], results[1]
 	outputID := b.FileIDs[interactorOutput]
-	status, score := parseTestlibVerdict(b.ExitStatus, "", b.Files["stderr"])
-	if b.Status != resultAccepted && b.Status != resultNonzeroExit {
-		status = StatusFail
-		score = nil
-	}
+	status, score, message := interactor.verdict(b, "")
 	if (status == StatusOK || status == StatusPoints) && a.Status != resultAccepted {
 		status = statusToString(a.Status)
 		score = nil
 	}
-	return &InteractiveResult{Status: status, Score: score, Message: b.Files["stderr"], OutputID: outputID,
+	return &InteractiveResult{Status: status, Score: score, Message: message, OutputID: outputID,
 		SolutionResult:   RunResult{Status: statusToString(a.Status), ExitStatus: a.ExitStatus, Time: safeDuration(a.Time), Memory: safeInt64(a.Memory), Stderr: []byte(a.Files["stderr"])},
 		InteractorResult: RunResult{Status: statusToString(b.Status), ExitStatus: b.ExitStatus, Time: safeDuration(b.Time), Memory: safeInt64(b.Memory), Stderr: []byte(b.Files["stderr"])}}, nil
 }

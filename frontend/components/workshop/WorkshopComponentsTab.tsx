@@ -327,7 +327,7 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
               return save((current) =>
                 role === "checker"
                   ? setSingleProgram(current, "checker", customChecker(language, source))
-                  : setSingleProgram(current, "interactor", {language, source}),
+                  : setSingleProgram(current, "interactor", {language, source, protocol: "testlib", args: []}),
               );
             }}
           />

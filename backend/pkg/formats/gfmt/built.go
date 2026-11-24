@@ -68,14 +68,14 @@ func OpenBuilt(dir string) (*Built, error) {
 	return &Built{Path: dir, Problem: p}, nil
 }
 
-// Program finds the source of a checker or interactor and its language.
-func (p *Problem) Program(role string) (path, language string, ok bool) {
+// Program finds the source of a checker or interactor.
+func (p *Problem) Program(role string) (string, Source, bool) {
 	for path, source := range p.Sources {
 		if strings.HasPrefix(path, RoleFolder(role)+"/") {
-			return path, source.Language, true
+			return path, source, true
 		}
 	}
-	return "", "", false
+	return "", Source{}, false
 }
 
 // CheckBuilt checks what the judge relies on; regular checks that a package path is a file.

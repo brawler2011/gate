@@ -76,6 +76,11 @@ type Program struct {
 	Dependencies map[string]string
 	// Standard checker sources remain in the package even when identified by testlib name.
 	Standard string
+	// Protocol of a checker, interactor or validator is a sandbox.Protocol; empty means testlib.
+	Protocol string
+	Args     []string
+	// Text is the source of a program the importer writes itself instead of reading Path.
+	Text string
 	// Groups limits a validator to the tests of these groups; empty means every test.
 	Groups []string
 	// Verdicts a solution may get on a test; empty keeps it out of the build (see problemsmodel.DraftSolution).

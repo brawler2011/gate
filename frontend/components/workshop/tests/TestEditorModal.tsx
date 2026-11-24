@@ -45,7 +45,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
 
   const buildAnswer = (): ProblemDraftTest["answer"] => {
     if (interactive) {
-      return {mode: "interactive", object_id: null, solution: null};
+      return test.answer.mode === "provided" ? test.answer : {mode: "interactive", object_id: null, solution: null};
     }
     if (answerMode === "provided") {
       return {mode: "provided", object_id: test.answer.object_id, solution: null};

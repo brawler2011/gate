@@ -15,7 +15,7 @@ func validDraft() Draft {
 	gen, sol, sub := "gen", "main", uuid.New()
 	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
 		DraftContent: DraftContent{
-			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
+			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}},
 			Generators:   []DraftNamedProgram{{Name: gen, DraftProgram: DraftProgram{Language: "python"}}},
 			Solutions:    []DraftSolution{{DraftNamedProgram: DraftNamedProgram{Name: sol, DraftProgram: DraftProgram{Language: "cpp"}}, Verdicts: []string{"OK"}}},
 			MainSolution: &sol,
@@ -66,8 +66,9 @@ func TestValidateLocatesViolations(t *testing.T) {
 			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each", Feedback: "complete"})
 		}, "/subtasks/1/name", pkg.ErrDuplicate.Code},
 		"validator of an unknown subtask": {func(d *Draft) {
-			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, Subtasks: []uuid.UUID{uuid.New()}}}
+			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}, Subtasks: []uuid.UUID{uuid.New()}}}
 		}, "/validators/0/subtasks/0", pkg.ErrUnknown.Code},
+		"arguments of a testlib checker": {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
 		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See \\includegraphics{tree.png}." }, "/statements/0/notes", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {

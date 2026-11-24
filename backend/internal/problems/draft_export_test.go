@@ -20,6 +20,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/points"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -174,12 +175,12 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.InputFile, d.OutputFile = "input.txt", "output.txt"
 	object := *d.Tests[0].Input.ObjectID
 	half := points.Value(50)
-	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp", Tests: []model.DraftCheckerTest{
+	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, DraftJury: model.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: "wcmp", Tests: []model.DraftCheckerTest{
 		{ID: uuid.New(), Input: object, Output: object, Answer: object, Verdict: "OK"},
 		{ID: uuid.New(), Input: object, Output: object, Answer: object, Verdict: "POINTS", Points: &half},
 	}}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
-	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
+	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}}, DraftJury: model.DraftJury{Protocol: sandbox.ProtocolICPC, Args: []string{"--max", "9"}},
 		Subtasks: []uuid.UUID{d.Subtasks[1].ID}, Tests: []model.DraftValidatorTest{{ID: uuid.New(), Input: object, Valid: true, Group: "a b"}, {ID: uuid.New(), Input: object}}})
 	gen, other := "gen", d.Solutions[1].Name
 	partial := points.Value(5)

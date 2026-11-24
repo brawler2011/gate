@@ -1650,6 +1650,7 @@ export interface components {
             generator: string | null;
             args: string[];
         };
+        /** @description An interactive test's answer is the interactor's output on the main solution, or provided for ICPC interactors, which read it. */
         ProblemDraftAnswer: {
             /** @enum {string} */
             mode: "provided" | "generated" | "interactive";
@@ -1664,13 +1665,29 @@ export interface components {
             language: string;
             source: string;
         };
-        /** @description The checker. A standard checker (standard is set) has an empty source; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language. */
+        /**
+         * @description How a checker, interactor or validator is called and reports. testlib uses testlib's arguments and exit codes; icpc follows the ICPC problem package format (exit 42 accepts, 43 rejects; a checker reads the output on standard input and gets input, answer and a feedback directory).
+         * @enum {string}
+         */
+        ProblemDraftProtocol: "testlib" | "icpc";
+        ProblemDraftInteractor: {
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
+            language: string;
+            source: string;
+            protocol: components["schemas"]["ProblemDraftProtocol"];
+            /** @description Arguments after those of the protocol; only ICPC programs take them. */
+            args: string[];
+        };
+        /** @description The checker. A standard checker (standard is set) has an empty source and the testlib protocol; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language. */
         ProblemDraftChecker: {
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
             /** @description Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source. */
             standard: string;
+            protocol: components["schemas"]["ProblemDraftProtocol"];
+            /** @description Arguments after those of the protocol; only ICPC programs take them. */
+            args: string[];
             /** @description Run by every build after compiling the checker; a test whose verdict or points differ fails the build. */
             tests: components["schemas"]["ProblemDraftCheckerTest"][];
         };
@@ -1775,6 +1792,9 @@ export interface components {
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
+            protocol: components["schemas"]["ProblemDraftProtocol"];
+            /** @description Arguments after those of the protocol; only ICPC programs take them. */
+            args: string[];
             /** @description IDs of the subtasks whose tests the validator checks; empty checks every test. */
             subtasks: string[];
             /** @description Run by every build after compiling the validator; a test it judges differently fails the build. */
@@ -1859,7 +1879,7 @@ export interface components {
             /** Format: double */
             max_score: number | null;
             checker: components["schemas"]["ProblemDraftChecker"] | null;
-            interactor: components["schemas"]["ProblemDraftProgram"] | null;
+            interactor: components["schemas"]["ProblemDraftInteractor"] | null;
             validators: components["schemas"]["ProblemDraftValidator"][];
             generators: components["schemas"]["ProblemDraftNamedProgram"][];
             solutions: components["schemas"]["ProblemDraftSolution"][];
@@ -5307,6 +5327,8 @@ export interface components {
 export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
 export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
+export type ProblemDraftProtocol = components['schemas']['ProblemDraftProtocol'];
+export type ProblemDraftInteractor = components['schemas']['ProblemDraftInteractor'];
 export type ProblemDraftChecker = components['schemas']['ProblemDraftChecker'];
 export type ProblemDraftCheckerTest = components['schemas']['ProblemDraftCheckerTest'];
 export type ProblemDraftValidatorTest = components['schemas']['ProblemDraftValidatorTest'];

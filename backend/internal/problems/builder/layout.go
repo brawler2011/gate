@@ -24,7 +24,7 @@ func programs(d model.Draft, languages *sandbox.Config) []placedProgram {
 		place("checker", "checker", "checker", model.DraftProgram{Language: d.Checker.Language, Source: d.Checker.Text()})
 	}
 	if d.Interactor != nil {
-		place("interactor", "interactor", "interactor", *d.Interactor)
+		place("interactor", "interactor", "interactor", d.Interactor.DraftProgram)
 	}
 	for _, list := range []struct {
 		role     string

@@ -5762,37 +5762,37 @@ func (o NilProblemDraftChecker) Or(d ProblemDraftChecker) ProblemDraftChecker {
 	return d
 }
 
-// NewNilProblemDraftProgram returns new NilProblemDraftProgram with value set to v.
-func NewNilProblemDraftProgram(v ProblemDraftProgram) NilProblemDraftProgram {
-	return NilProblemDraftProgram{
+// NewNilProblemDraftInteractor returns new NilProblemDraftInteractor with value set to v.
+func NewNilProblemDraftInteractor(v ProblemDraftInteractor) NilProblemDraftInteractor {
+	return NilProblemDraftInteractor{
 		Value: v,
 	}
 }
 
-// NilProblemDraftProgram is nullable ProblemDraftProgram.
-type NilProblemDraftProgram struct {
-	Value ProblemDraftProgram
+// NilProblemDraftInteractor is nullable ProblemDraftInteractor.
+type NilProblemDraftInteractor struct {
+	Value ProblemDraftInteractor
 	Null  bool
 }
 
 // SetTo sets value to v.
-func (o *NilProblemDraftProgram) SetTo(v ProblemDraftProgram) {
+func (o *NilProblemDraftInteractor) SetTo(v ProblemDraftInteractor) {
 	o.Null = false
 	o.Value = v
 }
 
 // IsNull returns true if value is Null.
-func (o NilProblemDraftProgram) IsNull() bool { return o.Null }
+func (o NilProblemDraftInteractor) IsNull() bool { return o.Null }
 
 // SetToNull sets value to null.
-func (o *NilProblemDraftProgram) SetToNull() {
+func (o *NilProblemDraftInteractor) SetToNull() {
 	o.Null = true
-	var v ProblemDraftProgram
+	var v ProblemDraftInteractor
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o NilProblemDraftProgram) Get() (v ProblemDraftProgram, ok bool) {
+func (o NilProblemDraftInteractor) Get() (v ProblemDraftInteractor, ok bool) {
 	if o.Null {
 		return v, false
 	}
@@ -5800,7 +5800,7 @@ func (o NilProblemDraftProgram) Get() (v ProblemDraftProgram, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o NilProblemDraftProgram) Or(d ProblemDraftProgram) ProblemDraftProgram {
+func (o NilProblemDraftInteractor) Or(d ProblemDraftInteractor) ProblemDraftInteractor {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -9397,7 +9397,7 @@ type ProblemDraft struct {
 	MemoryLimitMB int64                      `json:"memory_limit_mb"`
 	MaxScore      NilFloat64                 `json:"max_score"`
 	Checker       NilProblemDraftChecker     `json:"checker"`
-	Interactor    NilProblemDraftProgram     `json:"interactor"`
+	Interactor    NilProblemDraftInteractor  `json:"interactor"`
 	Validators    []ProblemDraftValidator    `json:"validators"`
 	Generators    []ProblemDraftNamedProgram `json:"generators"`
 	Solutions     []ProblemDraftSolution     `json:"solutions"`
@@ -9460,7 +9460,7 @@ func (s *ProblemDraft) GetChecker() NilProblemDraftChecker {
 }
 
 // GetInteractor returns the value of Interactor.
-func (s *ProblemDraft) GetInteractor() NilProblemDraftProgram {
+func (s *ProblemDraft) GetInteractor() NilProblemDraftInteractor {
 	return s.Interactor
 }
 
@@ -9565,7 +9565,7 @@ func (s *ProblemDraft) SetChecker(val NilProblemDraftChecker) {
 }
 
 // SetInteractor sets the value of Interactor.
-func (s *ProblemDraft) SetInteractor(val NilProblemDraftProgram) {
+func (s *ProblemDraft) SetInteractor(val NilProblemDraftInteractor) {
 	s.Interactor = val
 }
 
@@ -9624,6 +9624,8 @@ func (s *ProblemDraft) SetTests(val []ProblemDraftTest) {
 	s.Tests = val
 }
 
+// An interactive test's answer is the interactor's output on the main solution, or provided for ICPC
+// interactors, which read it.
 // Ref: #/components/schemas/ProblemDraftAnswer
 type ProblemDraftAnswer struct {
 	Mode     ProblemDraftAnswerMode `json:"mode"`
@@ -9737,15 +9739,19 @@ func (s *ProblemDraftAsset) SetObjectID(val uuid.UUID) {
 	s.ObjectID = val
 }
 
-// The checker. A standard checker (standard is set) has an empty source; every build takes its current
-// version from GET /lib with the system testlib.h, compiled in the C++ configuration language.
+// The checker. A standard checker (standard is set) has an empty source and the testlib protocol;
+// every build takes its current version from GET /lib with the system testlib.h, compiled in the C++
+// configuration language.
 // Ref: #/components/schemas/ProblemDraftChecker
 type ProblemDraftChecker struct {
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
 	Language string `json:"language"`
 	Source   string `json:"source"`
 	// Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
-	Standard string `json:"standard"`
+	Standard string               `json:"standard"`
+	Protocol ProblemDraftProtocol `json:"protocol"`
+	// Arguments after those of the protocol; only ICPC programs take them.
+	Args []string `json:"args"`
 	// Run by every build after compiling the checker; a test whose verdict or points differ fails the
 	// build.
 	Tests []ProblemDraftCheckerTest `json:"tests"`
@@ -9766,6 +9772,16 @@ func (s *ProblemDraftChecker) GetStandard() string {
 	return s.Standard
 }
 
+// GetProtocol returns the value of Protocol.
+func (s *ProblemDraftChecker) GetProtocol() ProblemDraftProtocol {
+	return s.Protocol
+}
+
+// GetArgs returns the value of Args.
+func (s *ProblemDraftChecker) GetArgs() []string {
+	return s.Args
+}
+
 // GetTests returns the value of Tests.
 func (s *ProblemDraftChecker) GetTests() []ProblemDraftCheckerTest {
 	return s.Tests
@@ -9784,6 +9800,16 @@ func (s *ProblemDraftChecker) SetSource(val string) {
 // SetStandard sets the value of Standard.
 func (s *ProblemDraftChecker) SetStandard(val string) {
 	s.Standard = val
+}
+
+// SetProtocol sets the value of Protocol.
+func (s *ProblemDraftChecker) SetProtocol(val ProblemDraftProtocol) {
+	s.Protocol = val
+}
+
+// SetArgs sets the value of Args.
+func (s *ProblemDraftChecker) SetArgs(val []string) {
+	s.Args = val
 }
 
 // SetTests sets the value of Tests.
@@ -10016,6 +10042,56 @@ func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/ProblemDraftInteractor
+type ProblemDraftInteractor struct {
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+	Language string               `json:"language"`
+	Source   string               `json:"source"`
+	Protocol ProblemDraftProtocol `json:"protocol"`
+	// Arguments after those of the protocol; only ICPC programs take them.
+	Args []string `json:"args"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftInteractor) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftInteractor) GetSource() string {
+	return s.Source
+}
+
+// GetProtocol returns the value of Protocol.
+func (s *ProblemDraftInteractor) GetProtocol() ProblemDraftProtocol {
+	return s.Protocol
+}
+
+// GetArgs returns the value of Args.
+func (s *ProblemDraftInteractor) GetArgs() []string {
+	return s.Args
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftInteractor) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftInteractor) SetSource(val string) {
+	s.Source = val
+}
+
+// SetProtocol sets the value of Protocol.
+func (s *ProblemDraftInteractor) SetProtocol(val ProblemDraftProtocol) {
+	s.Protocol = val
+}
+
+// SetArgs sets the value of Args.
+func (s *ProblemDraftInteractor) SetArgs(val []string) {
+	s.Args = val
+}
+
 // A source file judge programs include by its name; names are unique in a draft and identify the file.
 // Ref: #/components/schemas/ProblemDraftLibraryFile
 type ProblemDraftLibraryFile struct {
@@ -10098,33 +10174,49 @@ func (s *ProblemDraftNamedProgram) SetSource(val string) {
 	s.Source = val
 }
 
-// A source in a language configuration. The checker, interactor, validators and generators compile
-// with the whole draft library, each file under its name; solutions compile alone.
-// Ref: #/components/schemas/ProblemDraftProgram
-type ProblemDraftProgram struct {
-	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language string `json:"language"`
-	Source   string `json:"source"`
+// How a checker, interactor or validator is called and reports. testlib uses testlib's arguments and
+// exit codes; icpc follows the ICPC problem package format (exit 42 accepts, 43 rejects; a checker
+// reads the output on standard input and gets input, answer and a feedback directory).
+// Ref: #/components/schemas/ProblemDraftProtocol
+type ProblemDraftProtocol string
+
+const (
+	ProblemDraftProtocolTestlib ProblemDraftProtocol = "testlib"
+	ProblemDraftProtocolIcpc    ProblemDraftProtocol = "icpc"
+)
+
+// AllValues returns all ProblemDraftProtocol values.
+func (ProblemDraftProtocol) AllValues() []ProblemDraftProtocol {
+	return []ProblemDraftProtocol{
+		ProblemDraftProtocolTestlib,
+		ProblemDraftProtocolIcpc,
+	}
 }
 
-// GetLanguage returns the value of Language.
-func (s *ProblemDraftProgram) GetLanguage() string {
-	return s.Language
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftProtocol) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftProtocolTestlib:
+		return []byte(s), nil
+	case ProblemDraftProtocolIcpc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
 }
 
-// GetSource returns the value of Source.
-func (s *ProblemDraftProgram) GetSource() string {
-	return s.Source
-}
-
-// SetLanguage sets the value of Language.
-func (s *ProblemDraftProgram) SetLanguage(val string) {
-	s.Language = val
-}
-
-// SetSource sets the value of Source.
-func (s *ProblemDraftProgram) SetSource(val string) {
-	s.Source = val
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftProtocol) UnmarshalText(data []byte) error {
+	switch ProblemDraftProtocol(data) {
+	case ProblemDraftProtocolTestlib:
+		*s = ProblemDraftProtocolTestlib
+		return nil
+	case ProblemDraftProtocolIcpc:
+		*s = ProblemDraftProtocolIcpc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // A solution; the build judges it on every test unless verdicts is empty.
@@ -10617,8 +10709,11 @@ type ProblemDraftValidator struct {
 	// language.
 	Name string `json:"name"`
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language string `json:"language"`
-	Source   string `json:"source"`
+	Language string               `json:"language"`
+	Source   string               `json:"source"`
+	Protocol ProblemDraftProtocol `json:"protocol"`
+	// Arguments after those of the protocol; only ICPC programs take them.
+	Args []string `json:"args"`
 	// IDs of the subtasks whose tests the validator checks; empty checks every test.
 	Subtasks []uuid.UUID `json:"subtasks"`
 	// Run by every build after compiling the validator; a test it judges differently fails the build.
@@ -10638,6 +10733,16 @@ func (s *ProblemDraftValidator) GetLanguage() string {
 // GetSource returns the value of Source.
 func (s *ProblemDraftValidator) GetSource() string {
 	return s.Source
+}
+
+// GetProtocol returns the value of Protocol.
+func (s *ProblemDraftValidator) GetProtocol() ProblemDraftProtocol {
+	return s.Protocol
+}
+
+// GetArgs returns the value of Args.
+func (s *ProblemDraftValidator) GetArgs() []string {
+	return s.Args
 }
 
 // GetSubtasks returns the value of Subtasks.
@@ -10663,6 +10768,16 @@ func (s *ProblemDraftValidator) SetLanguage(val string) {
 // SetSource sets the value of Source.
 func (s *ProblemDraftValidator) SetSource(val string) {
 	s.Source = val
+}
+
+// SetProtocol sets the value of Protocol.
+func (s *ProblemDraftValidator) SetProtocol(val ProblemDraftProtocol) {
+	s.Protocol = val
+}
+
+// SetArgs sets the value of Args.
+func (s *ProblemDraftValidator) SetArgs(val []string) {
+	s.Args = val
 }
 
 // SetSubtasks sets the value of Subtasks.

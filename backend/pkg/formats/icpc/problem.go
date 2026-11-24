@@ -9,6 +9,8 @@ type Problem struct {
 	Limits *Limits `yaml:"limits"`
 	// Validation accepts default or custom followed by optional score and interactive flags.
 	Validation string `yaml:"validation"`
+	// ValidatorFlags are arguments of the output validator, the default one included.
+	ValidatorFlags string `yaml:"validator_flags"`
 }
 
 type Limits struct {
