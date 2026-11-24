@@ -44,7 +44,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 				return err
 			}
 			source := manifest.Sources[rel]
-			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard, Groups: source.Groups})
+			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard, Protocol: source.Protocol, Args: source.Args, Groups: source.Groups})
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
 			auto := manifest.Sources[rel].AutoUpdate
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})

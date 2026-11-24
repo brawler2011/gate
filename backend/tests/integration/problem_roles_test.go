@@ -70,9 +70,9 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 				languages["interactor"] = interactor.Language
 			}
 			for role, language := range languages {
-				_, builtLanguage, ok := pkg.Format.Problem.Program(role)
+				_, built, ok := pkg.Format.Problem.Program(role)
 				s.Require().True(ok, "%s missing from package", role)
-				s.Equal(language, builtLanguage)
+				s.Equal(language, built.Language)
 			}
 			var main corev1.ProblemDraftSolution
 			for _, solution := range draft.Solutions {
@@ -110,8 +110,8 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().Equal(draft.Tests, saved.Tests)
 
 	built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
-	path, language, ok := built.Program("checker")
+	path, source, ok := built.Program("checker")
 	s.Require().True(ok, "package has the checker")
-	s.Equal("python3", language)
+	s.Equal("python3", source.Language)
 	s.True(strings.HasSuffix(path, ".py"), "checker source follows the language: %s", path)
 }

@@ -1,0 +1,6 @@
+name: "Ratio"
+limits:
+  time: 1.0
+  memory: 256
+validation: default
+validator_flags: float_tolerance 1e-6

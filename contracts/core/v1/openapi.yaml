@@ -3289,6 +3289,7 @@ components:
           items:
             type: string
     ProblemDraftAnswer:
+      description: An interactive test's answer is the interactor's output on the main solution, or provided for ICPC interactors, which read it.
       type: object
       required:
       - mode
@@ -3321,12 +3322,40 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
-    ProblemDraftChecker:
-      description: The checker. A standard checker (standard is set) has an empty source; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language.
+    ProblemDraftProtocol:
+      type: string
+      description: How a checker, interactor or validator is called and reports. testlib uses testlib's arguments and exit codes; icpc follows the ICPC problem package format (exit 42 accepts, 43 rejects; a checker reads the output on standard input and gets input, answer and a feedback directory).
+      enum:
+      - testlib
+      - icpc
+    ProblemDraftInteractor:
       type: object
       required:
       - language
       - source
+      - protocol
+      - args
+      properties:
+        language:
+          type: string
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+        source:
+          type: string
+        protocol:
+          $ref: '#/components/schemas/ProblemDraftProtocol'
+        args:
+          type: array
+          description: Arguments after those of the protocol; only ICPC programs take them.
+          items:
+            type: string
+    ProblemDraftChecker:
+      description: The checker. A standard checker (standard is set) has an empty source and the testlib protocol; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language.
+      type: object
+      required:
+      - language
+      - source
+      - protocol
+      - args
       - standard
       - tests
       properties:
@@ -3338,6 +3367,13 @@ components:
         standard:
           type: string
           description: Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
+        protocol:
+          $ref: '#/components/schemas/ProblemDraftProtocol'
+        args:
+          type: array
+          description: Arguments after those of the protocol; only ICPC programs take them.
+          items:
+            type: string
         tests:
           type: array
           description: Run by every build after compiling the checker; a test whose verdict or points differ fails the build.
@@ -3519,6 +3555,8 @@ components:
       - name
       - language
       - source
+      - protocol
+      - args
       - subtasks
       - tests
       properties:
@@ -3530,6 +3568,13 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
+        protocol:
+          $ref: '#/components/schemas/ProblemDraftProtocol'
+        args:
+          type: array
+          description: Arguments after those of the protocol; only ICPC programs take them.
+          items:
+            type: string
         subtasks:
           type: array
           description: IDs of the subtasks whose tests the validator checks; empty checks every test.
@@ -3744,7 +3789,7 @@ components:
         interactor:
           nullable: true
           allOf:
-          - $ref: '#/components/schemas/ProblemDraftProgram'
+          - $ref: '#/components/schemas/ProblemDraftInteractor'
         validators:
           type: array
           items:

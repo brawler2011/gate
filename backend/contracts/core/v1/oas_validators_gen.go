@@ -2372,6 +2372,24 @@ func (s *ProblemDraft) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Interactor.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "interactor",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Validators == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -2593,6 +2611,28 @@ func (s *ProblemDraftChecker) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if err := s.Protocol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "protocol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Args == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "args",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Tests == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -2723,6 +2763,51 @@ func (s ProblemDraftInputMode) Validate() error {
 	case "manual":
 		return nil
 	case "generator":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *ProblemDraftInteractor) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Protocol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "protocol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Args == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "args",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ProblemDraftProtocol) Validate() error {
+	switch s {
+	case "testlib":
+		return nil
+	case "icpc":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -2978,6 +3063,28 @@ func (s *ProblemDraftValidator) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Protocol.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "protocol",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Args == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "args",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if s.Subtasks == nil {
 			return errors.New("nil is invalid value")

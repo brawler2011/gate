@@ -123,6 +123,9 @@ type Source struct {
 	Standard string `yaml:"standard,omitempty" json:"standard,omitempty"`
 	// AutoUpdate on a system library file: true replaces its text with the current system file.
 	AutoUpdate *bool `yaml:"auto_update,omitempty" json:"auto_update,omitempty"`
+	// Protocol of a checker, interactor or validator; empty means testlib.
+	Protocol string   `yaml:"protocol,omitempty" json:"protocol,omitempty"`
+	Args     []string `yaml:"args,omitempty" json:"args,omitempty"`
 	// Groups names the subtasks a validator checks; empty means every test.
 	Groups []string      `yaml:"groups,omitempty" json:"groups,omitempty"`
 	Tests  []ProgramTest `yaml:"tests,omitempty" json:"tests,omitempty"`

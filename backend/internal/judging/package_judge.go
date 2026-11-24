@@ -81,25 +81,25 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, path, la
 	return j.Files.UploadCompiled(ctx, compiled.Dir(), int64(limits.Output)) //nolint:wrapcheck // already describes the upload
 }
 
-type roleProgram struct {
-	executable sandbox.Executable
-	language   string
-}
 
-func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role string) (*roleProgram, error) {
-	path, language, ok := pkg.Format.Problem.Program(role)
+func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role string) (*sandbox.Jury, error) {
+	path, source, ok := pkg.Format.Problem.Program(role)
 	if !ok {
 		return nil, nil
 	}
-	executable, err := j.program(ctx, pkg, path, language)
+	executable, err := j.program(ctx, pkg, path, source.Language)
 	if err != nil {
 		return nil, err
 	}
-	return &roleProgram{executable: executable, language: language}, nil
+	protocol := sandbox.Protocol(source.Protocol)
+	if protocol == "" {
+		protocol = sandbox.ProtocolTestlib
+	}
+	return &sandbox.Jury{Executable: executable, Language: source.Language, Protocol: protocol, Args: source.Args}, nil
 }
-func (j *PackageJudge) releaseRoleProgram(p *roleProgram) {
+func (j *PackageJudge) releaseRoleProgram(p *sandbox.Jury) {
 	if p != nil {
-		j.releaseExecutable(p.executable)
+		j.releaseExecutable(p.Executable)
 	}
 }
 
@@ -137,7 +137,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	if err != nil {
 		return nil, err
 	}
-	var interactor *roleProgram
+	var interactor *sandbox.Jury
 	if p.Type == "interactive" {
 		interactor, err = j.roleProgram(ctx, pkg, "interactor")
 		defer j.releaseRoleProgram(interactor)
@@ -177,7 +177,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	verdict.Pretests = pretests
 	return verdict, nil
 }
-func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, calib calibration.Calibration, details bool) (TestResult, error) {
+func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *sandbox.Jury, test FlatTest, calib calibration.Calibration, details bool) (TestResult, error) {
 	p := pkg.Format.Problem
 	limits := j.Limits.Solution(calib.Limit(time.Duration(p.Limits.TimeMs)*time.Millisecond), bytesize.Size(p.Limits.MemoryMb)*bytesize.MiB)
 	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
@@ -192,7 +192,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	run := func() (TestResult, string, error) {
 		result := TestResult{TestNumber: test.TestIndex, Sample: test.Test.Sample, Subtask: test.SubtaskName}
 		if interactor != nil {
-			r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, j.Limits.Auxiliary)
+			r, err := sb.InteractFiles(ctx, sol, lang, *interactor, input, answer, limits, j.Limits.Auxiliary)
 			if err != nil {
 				return result, "", err
 			}
@@ -217,7 +217,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	}
 	defer j.release(output)
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
-		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
+		check, err := sb.CheckFiles(ctx, *checker, input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}

@@ -436,7 +436,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							}
 
 							if pkg.Problem.Type == "interactive" {
-								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, interactor.exe, interactor.lang, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(limits, timeLimit, memLimit), limits.Auxiliary)
+								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, sandbox.Jury{Executable: interactor.exe, Language: interactor.lang, Protocol: sandbox.ProtocolTestlib}, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(limits, timeLimit, memLimit), limits.Auxiliary)
 								if err != nil {
 									t.Fatalf("interact failed: %v", err)
 								}
@@ -455,7 +455,7 @@ func TestIntegrationSandbox(t *testing.T) {
 									lastExitStatus = runRes.ExitStatus
 									break
 								}
-								checkRes, err := sb.CheckFiles(ctx, checker.exe, checker.lang, r.upload(t, tcd.Input), r.upload(t, stdout), r.upload(t, tcd.Answer), limits.Auxiliary)
+								checkRes, err := sb.CheckFiles(ctx, sandbox.Jury{Executable: checker.exe, Language: checker.lang, Protocol: sandbox.ProtocolTestlib}, r.upload(t, tcd.Input), r.upload(t, stdout), r.upload(t, tcd.Answer), limits.Auxiliary)
 								if err != nil {
 									t.Fatalf("checker failed: %v", err)
 								}

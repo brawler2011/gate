@@ -84,7 +84,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	d.Checker = checker("cpp17", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftSolution{solutionProgram(solution, "cpp17", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
-	d.Validators = []model.DraftValidator{{DraftNamedProgram: named(validator, "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}}
+	d.Validators = []model.DraftValidator{{DraftJury: testlib, DraftNamedProgram: named(validator, "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}}
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
@@ -133,8 +133,8 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftSolution{solutionProgram(solution, "python3", "print(sum(map(int, input().split())))\n")}
 	d.Validators = []model.DraftValidator{
-		{DraftNamedProgram: named("nonneg", "python3", "import sys\nassert sys.argv[1:] in ([], ['--group', 'small']), sys.argv\na, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
-		{DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
+		{DraftJury: testlib, DraftNamedProgram: named("nonneg", "python3", "import sys\nassert sys.argv[1:] in ([], ['--group', 'small']), sys.argv\na, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
+		{DraftJury: testlib, DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
 	}
 	d.MainSolution = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete", Feedback: "complete"}, {ID: large, Ordinal: 2, Policy: "complete", Feedback: "complete"}}

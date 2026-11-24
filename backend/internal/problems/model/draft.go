@@ -2,6 +2,7 @@ package problemsmodel
 
 import (
 	"fmt"
+	"iter"
 	"regexp"
 	"slices"
 	"strings"
@@ -35,7 +36,7 @@ type Draft struct {
 // DraftContent is stored as one document; catalog-query fields remain separate columns.
 type DraftContent struct {
 	Checker      *DraftChecker       `json:"checker"`
-	Interactor   *DraftProgram       `json:"interactor"`
+	Interactor   *DraftInteractor    `json:"interactor"`
 	Validators   []DraftValidator    `json:"validators"`
 	Generators   []DraftNamedProgram `json:"generators"`
 	Solutions    []DraftSolution     `json:"solutions"`
@@ -55,9 +56,25 @@ type DraftProgram struct {
 	Source   string `json:"source"`
 }
 
+// DraftJury is how a checker, interactor or validator is called; Args follow the protocol's own arguments.
+type DraftJury struct {
+	Protocol sandbox.Protocol `json:"protocol"`
+	Args     []string         `json:"args"`
+}
+
+func (j DraftJury) Jury(executable sandbox.Executable, language string) sandbox.Jury {
+	return sandbox.Jury{Executable: executable, Language: language, Protocol: j.Protocol, Args: j.Args}
+}
+
+type DraftInteractor struct {
+	DraftProgram
+	DraftJury
+}
+
 // DraftChecker uses the current system source when Standard names a checker and Source is empty.
 type DraftChecker struct {
 	DraftProgram
+	DraftJury
 	Standard string             `json:"standard"`
 	Tests    []DraftCheckerTest `json:"tests"`
 }
@@ -79,6 +96,7 @@ type DraftNamedProgram struct {
 // DraftValidator checks the tests of the listed subtasks, or every test when the list is empty.
 type DraftValidator struct {
 	DraftNamedProgram
+	DraftJury
 	Subtasks []uuid.UUID          `json:"subtasks"`
 	Tests    []DraftValidatorTest `json:"tests"`
 }
@@ -314,6 +332,15 @@ func (d *Draft) Normalize() {
 	}
 	if d.Checker != nil && d.Checker.Tests == nil {
 		d.Checker.Tests = []DraftCheckerTest{}
+	}
+	for _, j := range d.juries() {
+		// Drafts saved before protocols existed are testlib.
+		if j.Protocol == "" {
+			j.Protocol = sandbox.ProtocolTestlib
+		}
+		if j.Args == nil {
+			j.Args = []string{}
+		}
 	}
 	empty(&d.Generators)
 	if d.Solutions == nil {
@@ -588,7 +615,19 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		}
 	}
 	if d.Interactor != nil {
-		program("/interactor", *d.Interactor)
+		program("/interactor", d.Interactor.DraftProgram)
+	}
+	for at, j := range d.juries() {
+		switch {
+		case j.Protocol != sandbox.ProtocolTestlib && j.Protocol != sandbox.ProtocolICPC:
+			v.fail(at+"/protocol", pkg.ErrUnknown, value(string(j.Protocol)), "invalid protocol %q", j.Protocol)
+		case j.Protocol == sandbox.ProtocolTestlib && len(j.Args) > 0:
+			// testlib reads arguments after its own files as a result file and flags.
+			v.fail(at+"/args", pkg.ErrInconsistent, with(at+"/protocol"), "only ICPC programs take arguments")
+		}
+	}
+	if d.Checker != nil && d.Checker.Standard != "" && d.Checker.Protocol != sandbox.ProtocolTestlib {
+		v.fail("/checker/protocol", pkg.ErrInconsistent, with("/checker/standard"), "a standard checker uses testlib")
 	}
 	for _, list := range []struct {
 		role     string
@@ -791,9 +830,9 @@ func (d *Draft) validateTests(v *validation) {
 			}
 		}
 		a := test.Answer
-		if d.Type == "interactive" {
+		if d.Type == "interactive" && a.Mode != "provided" {
 			if a.Mode != "interactive" || a.ObjectID != nil || a.Solution != nil {
-				v.fail(at+"/answer", pkg.ErrInconsistent, with("/type"), "interactive test cannot have an ordinary answer")
+				v.fail(at+"/answer", pkg.ErrInconsistent, with("/type"), "interactive test answer is the interactor's output or provided")
 			}
 			continue
 		}
@@ -818,12 +857,29 @@ func (d *Draft) validateTests(v *validation) {
 	}
 }
 
+// juries yields the JSON pointers of the checker, interactor and validators with how they are called.
+func (d *Draft) juries() iter.Seq2[string, *DraftJury] {
+	return func(yield func(string, *DraftJury) bool) {
+		if d.Checker != nil && !yield("/checker", &d.Checker.DraftJury) {
+			return
+		}
+		if d.Interactor != nil && !yield("/interactor", &d.Interactor.DraftJury) {
+			return
+		}
+		for i := range d.Validators {
+			if !yield(fmt.Sprintf("/validators/%d", i), &d.Validators[i].DraftJury) {
+				return
+			}
+		}
+	}
+}
+
 func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	if d.Checker != nil {
 		f("/checker", d.Checker.DraftProgram)
 	}
 	if d.Interactor != nil {
-		f("/interactor", *d.Interactor)
+		f("/interactor", d.Interactor.DraftProgram)
 	}
 	for _, list := range []struct {
 		role     string

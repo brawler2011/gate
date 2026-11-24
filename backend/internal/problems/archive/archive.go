@@ -76,7 +76,7 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 		return strings.TrimPrefix(path, gfmt.RoleFolder(role)+"/")
 	}
 	if c := d.Checker; c != nil {
-		source := gfmt.Source{Standard: c.Standard}
+		source := gfmt.Source{Standard: c.Standard, Protocol: string(c.Protocol), Args: c.Args}
 		for i, t := range c.Tests {
 			name := fmt.Sprintf("checker/%02d", i+1)
 			test := gfmt.ProgramTest{Input: p.object(name, t.Input), Output: p.object(name+".o", t.Output), Answer: p.object(name+".a", t.Answer), Verdict: t.Verdict, Points: t.Points}
@@ -89,10 +89,10 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 		program("checker", name, model.DraftProgram{Language: c.Language, Source: c.Text()}, source)
 	}
 	if d.Interactor != nil {
-		program("interactor", "interactor", *d.Interactor, gfmt.Source{})
+		program("interactor", "interactor", d.Interactor.DraftProgram, gfmt.Source{Protocol: string(d.Interactor.Protocol), Args: d.Interactor.Args})
 	}
 	for _, v := range d.Validators {
-		source := gfmt.Source{}
+		source := gfmt.Source{Protocol: string(v.Protocol), Args: v.Args}
 		for _, id := range v.Subtasks {
 			source.Groups = append(source.Groups, d.Subtask(id).Name)
 		}

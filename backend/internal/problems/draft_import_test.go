@@ -97,8 +97,10 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				require.NotEmpty(t, s.Legend, s.Language)
 				require.NotEmpty(t, s.Output, s.Language)
 			}
-			// Every testdata checker, validator, interactor and generator uses testlib.
-			require.NotNil(t, libraryFile(d, "testlib.h"))
+			// testlib programs keep the library file they include.
+			if (d.Checker != nil && d.Checker.Protocol == sandbox.ProtocolTestlib) || (d.Interactor != nil && d.Interactor.Protocol == sandbox.ProtocolTestlib) {
+				require.NotNil(t, libraryFile(d, "testlib.h"))
+			}
 		})
 	}
 }

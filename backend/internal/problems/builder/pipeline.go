@@ -486,30 +486,37 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 			return tr, fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
-	var args []string
-	if g := s.Draft.Subtask(test.SubtaskID); g != nil && g.Name != "" {
-		args = []string{"--group", g.Name}
+	var group string
+	if g := s.Draft.Subtask(test.SubtaskID); g != nil {
+		group = g.Name
 	}
 	for _, validator := range s.Draft.Validators {
 		if !validator.Applies(test.SubtaskID) {
 			continue
 		}
 		v := e.compiled[programKey("validator", validator.Name)]
-		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, sandbox.FileID(inputID), args, nil, aux)
+		result, err := e.sandbox.ValidateFiles(ctx, validator.Jury(v.executable, v.language), sandbox.FileID(inputID), group, aux)
 		if err != nil {
 			return tr, fail("validate", test.Ordinal, "infrastructure", fmt.Errorf("validator %s: %w", validator.Name, err))
 		}
-		ids = append(ids, result.OutputID)
-		if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-			return tr, fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: exit %d: %s", validator.Name, result.ExitStatus, result.Stderr))
+		if result.Status != sandbox.StatusOK {
+			return tr, fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: %s", validator.Name, result.Message))
 		}
 	}
 	var outputID, answerID string
 	if s.Draft.Type == "interactive" {
-		// The main solution's interactor output becomes the answer for later judging.
+		var answer sandbox.File
+		if test.Answer.Mode == "provided" {
+			id, err := e.upload(ctx, files.Answer)
+			if err != nil {
+				return tr, fail("answer", test.Ordinal, "infrastructure", err)
+			}
+			answerID, answer = id, sandbox.FileID(id)
+			ids = append(ids, id)
+		}
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, sandbox.FileID(inputID), sandbox.File{}, e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language), sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
 		if err != nil {
 			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -517,9 +524,13 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		if result.Status != sandbox.StatusOK {
 			return tr, fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
-		outputID, answerID = result.OutputID, result.OutputID
-		if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
-			return tr, fail("interact", test.Ordinal, "infrastructure", err)
+		outputID = result.OutputID
+		// Without a provided answer, the main solution's interactor output becomes the answer for later judging.
+		if answerID == "" {
+			answerID = outputID
+			if err := e.download(ctx, files.Answer, answerID, int64(s.Limits.ObjectBytes)); err != nil {
+				return tr, fail("interact", test.Ordinal, "infrastructure", err)
+			}
 		}
 	} else {
 		if test.Answer.Mode == "provided" {
@@ -556,7 +567,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 	}
 	if s.Draft.Checker != nil {
 		checker := e.compiled["checker"]
-		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
+		result, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
 			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
@@ -606,7 +617,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inp
 	var outputID string
 	if s.Draft.Type == "interactive" {
 		intr := e.compiled["interactor"]
-		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
+		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language), sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
 		if err != nil {
 			return result, err
 		}
@@ -622,7 +633,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inp
 	}
 	if s.Draft.Checker != nil && result.Verdict == string(sandbox.StatusOK) {
 		checker := e.compiled["checker"]
-		r, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
+		r, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
 			return result, err
 		}
@@ -705,7 +716,7 @@ func (e *execution) checkPrograms(ctx context.Context) error {
 				}
 				files[j] = f
 			}
-			r, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, files[0], files[1], files[2], aux)
+			r, err := e.sandbox.CheckFiles(ctx, d.Checker.Jury(checker.executable, checker.language), files[0], files[1], files[2], aux)
 			if err != nil {
 				return fail("program-tests", 0, "infrastructure", fmt.Errorf("checker test %d: %w", i+1, err))
 			}
@@ -724,18 +735,12 @@ func (e *execution) checkPrograms(ctx context.Context) error {
 			if err != nil {
 				return fail("program-tests", 0, "infrastructure", fmt.Errorf("validator %s test %d: %w", v.Name, i+1, err))
 			}
-			var args []string
-			if t.Group != "" {
-				args = []string{"--group", t.Group}
-			}
-			r, err := e.sandbox.RunFiles(ctx, validator.executable, validator.language, input, args, nil, aux)
+			r, err := e.sandbox.ValidateFiles(ctx, v.Jury(validator.executable, validator.language), input, t.Group, aux)
 			if err != nil {
 				return fail("program-tests", 0, "infrastructure", fmt.Errorf("validator %s test %d: %w", v.Name, i+1, err))
 			}
-			e.release(r.OutputID)
-			// A validator rejects with a non-zero exit; running out of limits is no answer.
-			if r.Status != sandbox.StatusOK && r.Status != sandbox.StatusRE {
-				return fail("program-tests", 0, string(r.Status), fmt.Errorf("validator %s test %d: %s", v.Name, i+1, r.Stderr))
+			if r.Status != sandbox.StatusOK && r.Status != sandbox.StatusWA {
+				return fail("program-tests", 0, string(r.Status), fmt.Errorf("validator %s test %d: %s", v.Name, i+1, r.Message))
 			}
 			result := t.Check(r.Status == sandbox.StatusOK)
 			if result.Mismatch != "" {

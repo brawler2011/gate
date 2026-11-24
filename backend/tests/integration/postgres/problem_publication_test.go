@@ -19,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -398,7 +399,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 				}
 				if kind == "interactive" {
 					solution := "main"
-					d.Interactor = program("python3", "print('hello', flush=True)\n")
+					d.Interactor = &model.DraftInteractor{DraftProgram: *program("python3", "print('hello', flush=True)\n"), DraftJury: model.DraftJury{Protocol: sandbox.ProtocolTestlib}}
 					d.Solutions = append(d.Solutions, solutionProgram(solution, "python3", "input()\n"))
 					d.MainSolution = &solution
 					for i := range d.Tests {
