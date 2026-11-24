@@ -6,8 +6,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"gopkg.in/yaml.v3"
 )
@@ -109,7 +111,7 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 	ordinals := map[int]bool{}
 	total := points.Value(0)
 	for _, s := range p.Subtasks {
-		if s.Policy != "complete" && s.Policy != "each" || s.Points < 0 {
+		if s.Policy != "complete" && s.Policy != "each" || s.Points < 0 || s.Feedback != "" && !slices.Contains(spec.FeedbackPolicies, s.Feedback) {
 			return fmt.Errorf("invalid package subtask")
 		}
 		total += s.Points

@@ -39,6 +39,7 @@ const FIELD_LABELS: Record<string, string> = {
   points: "баллы",
   ordinal: "номер",
   policy: "политика",
+  feedback: "видимость на контесте",
   depends_on: "зависимости",
   subtask_id: "подзадача",
   subtasks: "подзадачи",

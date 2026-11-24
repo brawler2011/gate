@@ -3486,6 +3486,7 @@ components:
       - name
       - points
       - policy
+      - feedback
       - depends_on
       properties:
         id:
@@ -3504,6 +3505,14 @@ components:
           enum:
           - complete
           - each
+        feedback:
+          description: "What participants see of the group while the contest runs: every test, tests up to the first failure, the group's points, or nothing."
+          type: string
+          enum:
+          - complete
+          - icpc
+          - points
+          - none
         depends_on:
           type: array
           items:
@@ -5164,6 +5173,22 @@ components:
           example: 2048
         sample:
           type: boolean
+        subtask:
+          type: string
+    SubtaskResultModel:
+      description: "A subtask's score; pass-fail and interactive problems have none."
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        score:
+          type: number
+          format: double
+        points:
+          type: number
+          format: double
     FailedTestDetailModel:
       description: "Failed test detail data."
       example:
@@ -5236,6 +5261,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestDetailItemModel"
+        subtasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubtaskResultModel"
         failed_test_details:
           $ref: "#/components/schemas/FailedTestDetailModel"
     SubmissionModel:

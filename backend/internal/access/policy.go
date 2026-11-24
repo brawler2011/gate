@@ -170,6 +170,8 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 type SubmissionGrant struct {
 	Open, Source bool
 	Results      contestsmodel.FeedbackLevel
+	// Groups applies the package's per-group feedback policies, which bind while the contest runs.
+	Groups bool
 }
 
 // SubmissionAllows grants authors their feedback level and others never more than the author sees.
@@ -181,16 +183,16 @@ func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, virtual bo
 		return SubmissionGrant{Open: true, Source: true, Results: contestsmodel.FeedbackFull}
 	}
 	own := !actor.IsGuest() && author == actor.Id && s.competitor
-	level := settings.Feedback.At(s.after)
+	after := s.after
 	if virtual {
-		if own && f.Run != nil {
-			level = settings.Feedback.At(!f.Now.Before(f.Run.Over()))
-		} else {
-			level = settings.Feedback.During.Meet(settings.Feedback.After)
-		}
+		after = own && f.Run != nil && !f.Now.Before(f.Run.Over())
+	}
+	level := settings.Feedback.At(after)
+	if virtual && (!own || f.Run == nil) {
+		level = settings.Feedback.During.Meet(settings.Feedback.After)
 	}
 	if own {
-		return SubmissionGrant{Open: true, Source: level != contestsmodel.FeedbackHidden, Results: level}
+		return SubmissionGrant{Open: true, Source: level != contestsmodel.FeedbackHidden, Results: level, Groups: !after}
 	}
 	reports, source := s.audience(settings.Reports), s.audience(settings.Sources)
 	if !source && !reports && !s.audience(settings.Submissions) {
@@ -202,7 +204,7 @@ func SubmissionAllows(actor m.User, f ContestFacts, author uuid.UUID, virtual bo
 	if !reports {
 		level = contestsmodel.FeedbackVerdict
 	}
-	return SubmissionGrant{Open: true, Source: source, Results: level}
+	return SubmissionGrant{Open: true, Source: source, Results: level, Groups: !after}
 }
 
 // ChangeRole decides setting target's role from current to next, where "" means no role.

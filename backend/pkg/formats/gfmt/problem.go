@@ -40,6 +40,8 @@ type Subtask struct {
 	Ordinal      int          `yaml:"ordinal,omitempty" json:"ordinal,omitempty"`
 	Points       points.Value `yaml:"points" json:"points"`
 	Policy       string       `yaml:"policy" json:"policy"` // "complete", "each"
+	// Feedback is a Polygon feedback policy limiting what participants see during a contest; empty means complete.
+	Feedback     string       `yaml:"feedback,omitempty" json:"feedback,omitempty"`
 	Dependencies []string     `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 	Tests        []Test       `yaml:"tests" json:"tests"`
 }

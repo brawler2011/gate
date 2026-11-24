@@ -112,6 +112,8 @@ type Group struct {
 	// Empty for ungrouped tests.
 	Name      string
 	Policy    string // "complete" or "each"
+	// Feedback is one of FeedbackPolicies; empty means complete.
+	Feedback  string
 	DependsOn []string
 	Tests     []Test
 }
@@ -128,6 +130,9 @@ type Test struct {
 	// Positive ordinals order tests across groups; zero keeps the group order.
 	Ordinal int
 }
+
+// FeedbackPolicies are Polygon's: every test, tests up to the first failure, the group's points, nothing.
+var FeedbackPolicies = []string{"complete", "icpc", "points", "none"}
 
 // Metadata reads have a separate bound from the draft quotas enforced during content import.
 const MaxMetadataBytes = 4 << 20

@@ -108,6 +108,9 @@ func projectSubmission(event *WrappedEvent, view submissions.SubmissionVisibilit
 	if !view.Source {
 		delete(envelope.Payload, "source")
 	}
+	if completed, ok := event.RawEvent.(*sm.SubmissionCompletedEvent); ok && view.Groups && !sm.FeedbackShowsFailure(completed.FailedTestFeedback) {
+		delete(envelope.Payload, "failed_test")
+	}
 	if view.Hidden() {
 		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source"} {
 			delete(envelope.Payload, field)

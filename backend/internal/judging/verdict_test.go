@@ -149,6 +149,7 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, 2, *verdict.FailedTest)
 		// A failed dependency blocks group points even when that group's own tests pass.
 		assert.Equal(t, points.Value(3333), verdict.Score)
+		assert.Equal(t, []points.Value{3333, 0}, []points.Value{*verdict.TestDetails.Subtasks[0].Score, *verdict.TestDetails.Subtasks[1].Score})
 
 		verdict = calculator.Calculate([]TestResult{
 			{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "OK"},

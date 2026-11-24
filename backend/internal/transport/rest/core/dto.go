@@ -355,7 +355,16 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 				TimeMs:    t.TimeMs,
 				MemoryKB:  t.MemoryKb,
 				Sample:    corev1.NewOptBool(t.Sample),
+				Subtask:   corev1.NewOptString(t.Subtask),
 			}
+		}
+	}
+	subtasks := make([]corev1.SubtaskResultModel, len(td.Subtasks))
+	for i, s := range td.Subtasks {
+		subtasks[i] = corev1.SubtaskResultModel{Name: s.Name}
+		if s.Score != nil && s.Points != nil {
+			subtasks[i].Score = corev1.NewOptFloat64(s.Score.Float64())
+			subtasks[i].Points = corev1.NewOptFloat64(s.Points.Float64())
 		}
 	}
 
@@ -375,6 +384,7 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 	return &corev1.SubmissionTestDetailsModel{
 		CompilerOutput:    stringPtrToOptNilString(td.CompilerOutput),
 		Tests:             tests,
+		Subtasks:          subtasks,
 		FailedTestDetails: failedTestDetails,
 	}
 }

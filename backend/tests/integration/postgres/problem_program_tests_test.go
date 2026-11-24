@@ -38,7 +38,7 @@ func TestProblemPipelineRunsCheckerAndValidatorTests(t *testing.T) {
 		d.Generators = []model.DraftNamedProgram{named(generator, "python3", "print(1, 2)\n")}
 		d.Solutions = []model.DraftSolution{solutionProgram(main, "python3", "print(sum(map(int, input().split())))\n")}
 		d.MainSolution = &main
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete"}}
+		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete", Feedback: "complete"}}
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}}
 	})
 	checkerTests := []struct{ output, verdict string }{{"3", "OK"}, {"4", "WA"}, {"three", "PE"}}

@@ -51,6 +51,7 @@ const SubtasksSection = ({draft, problemId}: PanelProps): ReactNode => {
               <Table.Tr>
                 <Table.Th>Название</Table.Th>
                 <Table.Th>Начисление</Table.Th>
+                <Table.Th>Видно на контесте</Table.Th>
                 <Table.Th>Зависит от</Table.Th>
                 <Table.Th>Баллы</Table.Th>
                 <Table.Th />
@@ -82,6 +83,20 @@ const SubtasksSection = ({draft, problemId}: PanelProps): ReactNode => {
                       value={subtask.policy}
                       allowDeselect={false}
                       onChange={(value) => value && void update(subtask.id, {policy: value as ProblemDraftSubtask["policy"]})}
+                    />
+                  </Table.Td>
+                  <Table.Td>
+                    <Select
+                      size="xs"
+                      data={[
+                        {value: "complete", label: "Все тесты"},
+                        {value: "icpc", label: "До первой ошибки"},
+                        {value: "points", label: "Только баллы"},
+                        {value: "none", label: "Ничего"},
+                      ]}
+                      value={subtask.feedback}
+                      allowDeselect={false}
+                      onChange={(value) => value && void update(subtask.id, {feedback: value as ProblemDraftSubtask["feedback"]})}
                     />
                   </Table.Td>
                   <Table.Td>

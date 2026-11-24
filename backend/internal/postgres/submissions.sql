@@ -105,6 +105,13 @@ SELECT s.id,
   COALESCE((s.test_details->>'memory_stat')::integer, 0)::integer AS memory_stat,
   s.language,
   COALESCE((s.test_details->>'failed_test')::integer, 0)::integer AS failed_test,
+  COALESCE((
+    SELECT g->>'feedback'
+    FROM jsonb_array_elements(s.test_details->'tests') t
+      JOIN jsonb_array_elements(s.test_details->'subtasks') g ON g->>'name' = COALESCE(t->>'subtask', '')
+    WHERE (t->>'test_index')::integer = (s.test_details->>'failed_test')::integer
+    LIMIT 1
+  ), '')::text AS failed_test_feedback,
   s.ban_reason,
   s.problem_id,
   pp.title AS problem_title,

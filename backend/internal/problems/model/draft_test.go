@@ -22,7 +22,7 @@ func validDraft() Draft {
 			Library:      []DraftLibraryFile{{Name: "testlib.h"}},
 			Statements:   []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},
 			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
-			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
+			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete", Feedback: "complete"}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
 				Input:  DraftInput{Mode: "generator", Generator: &gen},
 				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
@@ -55,7 +55,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", pkg.ErrFormat.Code},
 		"subtask cycle": {func(d *Draft) {
 			other := uuid.New()
-			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
+			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", Feedback: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 			d.Subtasks[0].DependsOn = []uuid.UUID{other}
 		}, "/subtasks/1/depends_on/0", pkg.ErrCycle.Code},
 		"auto-updated file with own text": {func(d *Draft) {
@@ -63,7 +63,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 		}, "/library/0/auto_update", pkg.ErrInconsistent.Code},
 		"two unnamed subtasks": {func(d *Draft) {
 			d.Subtasks[0].Name = ""
-			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each"})
+			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each", Feedback: "complete"})
 		}, "/subtasks/1/name", pkg.ErrDuplicate.Code},
 		"validator of an unknown subtask": {func(d *Draft) {
 			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, Subtasks: []uuid.UUID{uuid.New()}}}

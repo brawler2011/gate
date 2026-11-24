@@ -40,7 +40,7 @@ func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.Probl
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	g := uuid.New()
 	d.Checker = checker("cpp17", "int main(){return 0;}")
-	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d
 }
@@ -155,7 +155,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
 	d.Generators = []model.DraftNamedProgram{named(generator, "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)

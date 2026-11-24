@@ -10092,12 +10092,15 @@ func (s *ProblemDraftStatement) SetScoring(val string) {
 
 // Ref: #/components/schemas/ProblemDraftSubtask
 type ProblemDraftSubtask struct {
-	ID        uuid.UUID                 `json:"id"`
-	Ordinal   int64                     `json:"ordinal"`
-	Name      string                    `json:"name"`
-	Points    float64                   `json:"points"`
-	Policy    ProblemDraftSubtaskPolicy `json:"policy"`
-	DependsOn []uuid.UUID               `json:"depends_on"`
+	ID      uuid.UUID                 `json:"id"`
+	Ordinal int64                     `json:"ordinal"`
+	Name    string                    `json:"name"`
+	Points  float64                   `json:"points"`
+	Policy  ProblemDraftSubtaskPolicy `json:"policy"`
+	// What participants see of the group while the contest runs: every test, tests up to the first
+	// failure, the group's points, or nothing.
+	Feedback  ProblemDraftSubtaskFeedback `json:"feedback"`
+	DependsOn []uuid.UUID                 `json:"depends_on"`
 }
 
 // GetID returns the value of ID.
@@ -10123,6 +10126,11 @@ func (s *ProblemDraftSubtask) GetPoints() float64 {
 // GetPolicy returns the value of Policy.
 func (s *ProblemDraftSubtask) GetPolicy() ProblemDraftSubtaskPolicy {
 	return s.Policy
+}
+
+// GetFeedback returns the value of Feedback.
+func (s *ProblemDraftSubtask) GetFeedback() ProblemDraftSubtaskFeedback {
+	return s.Feedback
 }
 
 // GetDependsOn returns the value of DependsOn.
@@ -10155,9 +10163,71 @@ func (s *ProblemDraftSubtask) SetPolicy(val ProblemDraftSubtaskPolicy) {
 	s.Policy = val
 }
 
+// SetFeedback sets the value of Feedback.
+func (s *ProblemDraftSubtask) SetFeedback(val ProblemDraftSubtaskFeedback) {
+	s.Feedback = val
+}
+
 // SetDependsOn sets the value of DependsOn.
 func (s *ProblemDraftSubtask) SetDependsOn(val []uuid.UUID) {
 	s.DependsOn = val
+}
+
+// What participants see of the group while the contest runs: every test, tests up to the first
+// failure, the group's points, or nothing.
+type ProblemDraftSubtaskFeedback string
+
+const (
+	ProblemDraftSubtaskFeedbackComplete ProblemDraftSubtaskFeedback = "complete"
+	ProblemDraftSubtaskFeedbackIcpc     ProblemDraftSubtaskFeedback = "icpc"
+	ProblemDraftSubtaskFeedbackPoints   ProblemDraftSubtaskFeedback = "points"
+	ProblemDraftSubtaskFeedbackNone     ProblemDraftSubtaskFeedback = "none"
+)
+
+// AllValues returns all ProblemDraftSubtaskFeedback values.
+func (ProblemDraftSubtaskFeedback) AllValues() []ProblemDraftSubtaskFeedback {
+	return []ProblemDraftSubtaskFeedback{
+		ProblemDraftSubtaskFeedbackComplete,
+		ProblemDraftSubtaskFeedbackIcpc,
+		ProblemDraftSubtaskFeedbackPoints,
+		ProblemDraftSubtaskFeedbackNone,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftSubtaskFeedback) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftSubtaskFeedbackComplete:
+		return []byte(s), nil
+	case ProblemDraftSubtaskFeedbackIcpc:
+		return []byte(s), nil
+	case ProblemDraftSubtaskFeedbackPoints:
+		return []byte(s), nil
+	case ProblemDraftSubtaskFeedbackNone:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftSubtaskFeedback) UnmarshalText(data []byte) error {
+	switch ProblemDraftSubtaskFeedback(data) {
+	case ProblemDraftSubtaskFeedbackComplete:
+		*s = ProblemDraftSubtaskFeedbackComplete
+		return nil
+	case ProblemDraftSubtaskFeedbackIcpc:
+		*s = ProblemDraftSubtaskFeedbackIcpc
+		return nil
+	case ProblemDraftSubtaskFeedbackPoints:
+		*s = ProblemDraftSubtaskFeedbackPoints
+		return nil
+	case ProblemDraftSubtaskFeedbackNone:
+		*s = ProblemDraftSubtaskFeedbackNone
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type ProblemDraftSubtaskPolicy string
@@ -12553,6 +12623,7 @@ func (s *SubmissionSortOrderQuery) UnmarshalText(data []byte) error {
 type SubmissionTestDetailsModel struct {
 	CompilerOutput    OptNilString             `json:"compiler_output"`
 	Tests             []TestDetailItemModel    `json:"tests"`
+	Subtasks          []SubtaskResultModel     `json:"subtasks"`
 	FailedTestDetails OptFailedTestDetailModel `json:"failed_test_details"`
 }
 
@@ -12564,6 +12635,11 @@ func (s *SubmissionTestDetailsModel) GetCompilerOutput() OptNilString {
 // GetTests returns the value of Tests.
 func (s *SubmissionTestDetailsModel) GetTests() []TestDetailItemModel {
 	return s.Tests
+}
+
+// GetSubtasks returns the value of Subtasks.
+func (s *SubmissionTestDetailsModel) GetSubtasks() []SubtaskResultModel {
+	return s.Subtasks
 }
 
 // GetFailedTestDetails returns the value of FailedTestDetails.
@@ -12579,6 +12655,11 @@ func (s *SubmissionTestDetailsModel) SetCompilerOutput(val OptNilString) {
 // SetTests sets the value of Tests.
 func (s *SubmissionTestDetailsModel) SetTests(val []TestDetailItemModel) {
 	s.Tests = val
+}
+
+// SetSubtasks sets the value of Subtasks.
+func (s *SubmissionTestDetailsModel) SetSubtasks(val []SubtaskResultModel) {
+	s.Subtasks = val
 }
 
 // SetFailedTestDetails sets the value of FailedTestDetails.
@@ -12845,6 +12926,44 @@ func (s *SubmissionsListItemModel) SetUpdatedAt(val time.Time) {
 // SetCreatedAt sets the value of CreatedAt.
 func (s *SubmissionsListItemModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+// A subtask's score; pass-fail and interactive problems have none.
+// Ref: #/components/schemas/SubtaskResultModel
+type SubtaskResultModel struct {
+	Name   string     `json:"name"`
+	Score  OptFloat64 `json:"score"`
+	Points OptFloat64 `json:"points"`
+}
+
+// GetName returns the value of Name.
+func (s *SubtaskResultModel) GetName() string {
+	return s.Name
+}
+
+// GetScore returns the value of Score.
+func (s *SubtaskResultModel) GetScore() OptFloat64 {
+	return s.Score
+}
+
+// GetPoints returns the value of Points.
+func (s *SubtaskResultModel) GetPoints() OptFloat64 {
+	return s.Points
+}
+
+// SetName sets the value of Name.
+func (s *SubtaskResultModel) SetName(val string) {
+	s.Name = val
+}
+
+// SetScore sets the value of Score.
+func (s *SubtaskResultModel) SetScore(val OptFloat64) {
+	s.Score = val
+}
+
+// SetPoints sets the value of Points.
+func (s *SubtaskResultModel) SetPoints(val OptFloat64) {
+	s.Points = val
 }
 
 // A language configuration of the catalog: a concrete compiler or interpreter with its options.
@@ -13320,11 +13439,12 @@ func (s *TeamRoleQuery) UnmarshalText(data []byte) error {
 // Test detail item data.
 // Ref: #/components/schemas/TestDetailItemModel
 type TestDetailItemModel struct {
-	TestIndex int32   `json:"test_index"`
-	Verdict   string  `json:"verdict"`
-	TimeMs    int32   `json:"time_ms"`
-	MemoryKB  int32   `json:"memory_kb"`
-	Sample    OptBool `json:"sample"`
+	TestIndex int32     `json:"test_index"`
+	Verdict   string    `json:"verdict"`
+	TimeMs    int32     `json:"time_ms"`
+	MemoryKB  int32     `json:"memory_kb"`
+	Sample    OptBool   `json:"sample"`
+	Subtask   OptString `json:"subtask"`
 }
 
 // GetTestIndex returns the value of TestIndex.
@@ -13352,6 +13472,11 @@ func (s *TestDetailItemModel) GetSample() OptBool {
 	return s.Sample
 }
 
+// GetSubtask returns the value of Subtask.
+func (s *TestDetailItemModel) GetSubtask() OptString {
+	return s.Subtask
+}
+
 // SetTestIndex sets the value of TestIndex.
 func (s *TestDetailItemModel) SetTestIndex(val int32) {
 	s.TestIndex = val
@@ -13375,6 +13500,11 @@ func (s *TestDetailItemModel) SetMemoryKB(val int32) {
 // SetSample sets the value of Sample.
 func (s *TestDetailItemModel) SetSample(val OptBool) {
 	s.Sample = val
+}
+
+// SetSubtask sets the value of Subtask.
+func (s *TestDetailItemModel) SetSubtask(val OptString) {
+	s.Subtask = val
 }
 
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.
