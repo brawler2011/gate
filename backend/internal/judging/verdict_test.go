@@ -195,6 +195,15 @@ func TestScoringNestedGroups(t *testing.T) {
 	assert.Equal(t, 25*points.Unit, verdict.Score)
 }
 
+// Leaving out results after a failure never lifts an average above its maximum.
+func TestScoringStopKeepsMaximum(t *testing.T) {
+	p := &gfmt.Problem{Type: "scoring", Testset: gfmt.Group{Aggregate: "avg", StopOnFailure: true, Tests: []gfmt.Test{
+		{Ordinal: 1, Points: 100 * points.Unit}, {Ordinal: 2, Points: points.Unit}, {Ordinal: 3, Points: points.Unit},
+	}}}
+	verdict := NewVerdictCalculator("scoring", p).Calculate([]TestResult{{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "WA"}, {TestNumber: 3, Verdict: "OK"}})
+	assert.Equal(t, points.Value(3400), verdict.Score)
+}
+
 func TestPretestsScoreOnlyPretests(t *testing.T) {
 	p := testProblemWithGroups()
 	for g := range p.Testset.All() {

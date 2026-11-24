@@ -257,4 +257,3 @@ func packagePreview(root, path string) (string, error) {
 	data, err := io.ReadAll(io.LimitReader(f, maxTestDetailSize+1))
 	return string(data), err
 }
-

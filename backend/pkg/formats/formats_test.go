@@ -206,6 +206,12 @@ func TestICPCScoring(t *testing.T) {
 			{Name: "secret/group2", Aggregate: "min", Tests: []spec.Test{test("data/secret/group2/c.in", 4, 70, false)}},
 		}},
 	}}, p.Testset)
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom\ngrading:\n  on_reject: first_error\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	for g := range p.Testset.All() {
+		require.True(t, g.StopOnFailure, "problem.yaml grading overrides every group as on_reject: break")
+	}
 	for config, feature := range map[string]string{
 		"grading: custom\n":                     "grading \"custom\" is not supported",
 		"grader_flags: accept_if_any_accepted\n": "grader flag \"accept_if_any_accepted\" is not supported",

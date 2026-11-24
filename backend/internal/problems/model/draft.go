@@ -699,6 +699,8 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 			switch {
 			case d.Group(id) == nil:
 				v.fail(at, pkg.ErrUnknown, nil, "unknown group")
+			case id == d.Testset.ID:
+				v.fail(at, pkg.ErrInconsistent, nil, "an empty list checks the testset")
 			case seen[id]:
 				v.fail(at, pkg.ErrDuplicate, nil, "duplicate group")
 			}

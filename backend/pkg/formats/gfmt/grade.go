@@ -101,6 +101,8 @@ func (p *Problem) Grade(passed func(ordinal int) bool) (points.Value, []GroupRes
 			}
 		}
 		result := item{first: items[0].first, score: spec.Aggregate(g.Aggregate, scores), max: spec.Aggregate(g.Aggregate, maxes), passed: complete[g]}
+		// Leaving results out may raise a minimum or an average, but never above what passing everything gives.
+		result.score = min(result.score, result.max)
 		if !met(g) {
 			result.score = 0
 		}

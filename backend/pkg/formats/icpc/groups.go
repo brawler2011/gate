@@ -73,6 +73,12 @@ type testdata struct {
 }
 
 func (t *testdata) read() (spec.Group, error) {
+	// problem.yaml grading names on_reject values as problemtools translates them.
+	if v := t.legacy.OnReject; v != nil {
+		if alias, ok := map[string]string{"first_error": "break", "grade": "continue"}[*v]; ok {
+			t.legacy.OnReject = &alias
+		}
+	}
 	root, _, err := t.group("data", defaults, true)
 	return root, err
 }
