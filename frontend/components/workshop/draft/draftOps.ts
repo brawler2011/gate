@@ -239,6 +239,7 @@ export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
     name,
     points: 0,
     policy: "complete",
+    feedback: "complete",
     depends_on: [],
   };
   return {...draft, subtasks: [...draft.subtasks, subtask]};

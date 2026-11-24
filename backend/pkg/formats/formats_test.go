@@ -101,8 +101,8 @@ func TestPolygonGroups(t *testing.T) {
 	require.Equal(t, [2]string{"input.txt", "output.txt"}, [2]string{p.InputFile, p.OutputFile})
 	require.Equal(t, "gen.cpp", p.Generators[0].Path)
 	require.Len(t, p.Groups, 2)
-	require.Equal(t, spec.Group{Name: "samples", Policy: "each", Tests: []spec.Test{{Input: "tests/01", Sample: true}}}, p.Groups[0])
-	require.Equal(t, spec.Group{Name: "main", Policy: "complete", DependsOn: []string{"samples"}, Tests: []spec.Test{
+	require.Equal(t, spec.Group{Name: "samples", Policy: "each", Feedback: "complete", Tests: []spec.Test{{Input: "tests/01", Sample: true}}}, p.Groups[0])
+	require.Equal(t, spec.Group{Name: "main", Policy: "complete", Feedback: "points", DependsOn: []string{"samples"}, Tests: []spec.Test{
 		{Generator: "gen.cpp", Args: []string{"a b", "2"}},
 		{Generator: "gen.cpp", Args: []string{"3"}, Points: 100 * points.Unit},
 	}}, p.Groups[1])

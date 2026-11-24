@@ -194,7 +194,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 	dropped := ""
 	for _, name := range manifest.OrderedSubtaskNames() {
 		subtask := manifest.Subtasks[name]
-		group := spec.Group{Name: name, Policy: subtask.Policy, DependsOn: subtask.Dependencies}
+		group := spec.Group{Name: name, Policy: subtask.Policy, Feedback: subtask.Feedback, DependsOn: subtask.Dependencies}
 		for _, t := range subtask.Tests {
 			if name == "samples" && scored[key(t)] {
 				continue

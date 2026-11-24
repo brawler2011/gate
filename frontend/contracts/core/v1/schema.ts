@@ -1713,6 +1713,11 @@ export interface components {
             points: number;
             /** @enum {string} */
             policy: "complete" | "each";
+            /**
+             * @description What participants see of the group while the contest runs: every test, tests up to the first failure, the group's points, or nothing.
+             * @enum {string}
+             */
+            feedback: "complete" | "icpc" | "points" | "none";
             depends_on: string[];
         };
         ProblemDraftTest: {
@@ -2852,6 +2857,15 @@ export interface components {
              */
             memory_kb: number;
             sample?: boolean;
+            subtask?: string;
+        };
+        /** @description A subtask's score; pass-fail and interactive problems have none. */
+        SubtaskResultModel: {
+            name: string;
+            /** Format: double */
+            score?: number;
+            /** Format: double */
+            points?: number;
         };
         /**
          * @description Failed test detail data.
@@ -2913,6 +2927,7 @@ export interface components {
         SubmissionTestDetailsModel: {
             compiler_output?: string | null;
             tests?: components["schemas"]["TestDetailItemModel"][];
+            subtasks?: components["schemas"]["SubtaskResultModel"][];
             failed_test_details?: components["schemas"]["FailedTestDetailModel"];
         };
         /**
@@ -5214,6 +5229,7 @@ export type VirtualRunModel = components['schemas']['VirtualRunModel'];
 export type SubmissionKind = components['schemas']['SubmissionKind'];
 export type SubmissionsListItemModel = components['schemas']['SubmissionsListItemModel'];
 export type TestDetailItemModel = components['schemas']['TestDetailItemModel'];
+export type SubtaskResultModel = components['schemas']['SubtaskResultModel'];
 export type FailedTestDetailModel = components['schemas']['FailedTestDetailModel'];
 export type SubmissionTestDetailsModel = components['schemas']['SubmissionTestDetailsModel'];
 export type SubmissionModel = components['schemas']['SubmissionModel'];

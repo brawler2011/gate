@@ -165,7 +165,7 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 	names := map[uuid.UUID]string{}
 	for _, s := range d.Subtasks {
 		names[s.ID] = s.Name
-		m.Subtasks[s.Name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
+		m.Subtasks[s.Name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Feedback: s.Feedback, Tests: []gfmt.Test{}}
 	}
 	for _, s := range d.Subtasks {
 		subtask := m.Subtasks[names[s.ID]]

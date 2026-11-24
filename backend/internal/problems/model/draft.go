@@ -11,6 +11,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
@@ -123,6 +124,7 @@ type DraftSubtask struct {
 	Name      string       `json:"name"`
 	Points    points.Value `json:"points"`
 	Policy    string       `json:"policy"`
+	Feedback  string       `json:"feedback"`
 	DependsOn []uuid.UUID  `json:"depends_on"`
 }
 
@@ -335,6 +337,9 @@ func (d *Draft) Normalize() {
 	for i := range d.Subtasks {
 		if d.Subtasks[i].DependsOn == nil {
 			d.Subtasks[i].DependsOn = []uuid.UUID{}
+		}
+		if d.Subtasks[i].Feedback == "" {
+			d.Subtasks[i].Feedback = "complete"
 		}
 	}
 	if d.Tests == nil {
@@ -692,6 +697,9 @@ func (d *Draft) validateSubtasks(v *validation) {
 		}
 		if g.Policy != "complete" && g.Policy != "each" {
 			v.fail(at+"/policy", pkg.ErrUnknown, value(g.Policy), "invalid policy %q", g.Policy)
+		}
+		if !slices.Contains(spec.FeedbackPolicies, g.Feedback) {
+			v.fail(at+"/feedback", pkg.ErrUnknown, value(g.Feedback), "invalid feedback policy %q", g.Feedback)
 		}
 		index[g.ID] = i
 		orders[g.Ordinal] = true

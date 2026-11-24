@@ -1,4 +1,4 @@
-Polygon groups keep their policies and dependencies. The points of a
+Polygon groups keep their points and feedback policies and dependencies. The points of a
 complete group with no points on its tests go to its last test.
 
 -- problem.xml --
@@ -12,8 +12,8 @@ complete group with no points on its tests go to its last test.
       <test method="generated" cmd="gen 3" group="main"/>
     </tests>
     <groups>
-      <group name="samples" points-policy="each-test" points="0"/>
-      <group name="main" points-policy="complete-group" points="100">
+      <group name="samples" points-policy="each-test" points="0" feedback-policy="complete"/>
+      <group name="main" points-policy="complete-group" points="100" feedback-policy="points">
         <dependencies><dependency group="samples"/></dependencies>
       </group>
     </groups>

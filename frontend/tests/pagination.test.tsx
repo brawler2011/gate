@@ -49,7 +49,7 @@ const buildableDraft = {
   memory_limit_mb: 256, input_file: "", output_file: "", max_score: null,
   main_solution: null, files: {"checkers/check.cpp": ""}, assets: [],
   components: [{id: "checker", role: "checker", path: "checkers/check.cpp", dependencies: {}}],
-  subtasks: [{id: "s", ordinal: 1, name: "All", points: 1, policy: "complete", depends_on: []}],
+  subtasks: [{id: "s", ordinal: 1, name: "All", points: 1, policy: "complete", feedback: "complete", depends_on: []}],
   tests: [{
     id: "t", ordinal: 1, subtask_id: "s", sample: false, points: 1,
     input: {mode: "manual", object_id: "in", component_id: null, args: []},

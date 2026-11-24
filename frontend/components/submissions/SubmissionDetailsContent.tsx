@@ -145,6 +145,7 @@ export const SubmissionDetailsContent = ({
   const failedDetails = testDetails?.failed_test_details;
   const compilerOutput = testDetails?.compiler_output;
   const tests = testDetails?.tests;
+  const scoredSubtasks = testDetails?.subtasks?.filter((s) => s.score !== undefined) ?? [];
 
   const problemUrl =
     submission.organization_login && submission.contest_login
@@ -411,6 +412,32 @@ export const SubmissionDetailsContent = ({
               />
             )}
           </Stack>
+        </Card>
+      )}
+
+      {scoredSubtasks.length > 0 && (
+        <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
+          <Title order={4} mb="sm">
+            Подзадачи
+          </Title>
+          <Table striped withTableBorder verticalSpacing="xs">
+            <TableThead>
+              <TableTr>
+                <TableTh>Подзадача</TableTh>
+                <TableTh ta="center">Баллы</TableTh>
+              </TableTr>
+            </TableThead>
+            <TableTbody>
+              {scoredSubtasks.map((s) => (
+                <TableTr key={s.name}>
+                  <TableTd>{s.name || "Без группы"}</TableTd>
+                  <TableTd ta="center">
+                    {s.score} / {s.points}
+                  </TableTd>
+                </TableTr>
+              ))}
+            </TableTbody>
+          </Table>
         </Card>
       )}
 

@@ -43,6 +43,15 @@ type TestDetailItem struct {
 	TimeMs    int32  `json:"time_ms"`
 	MemoryKb  int32  `json:"memory_kb"`
 	Sample    bool   `json:"sample,omitempty"`
+	Subtask   string `json:"subtask,omitempty"`
+}
+
+// SubtaskResult scores of a pass-fail or interactive problem are nil.
+type SubtaskResult struct {
+	Name     string        `json:"name"`
+	Feedback string        `json:"feedback,omitempty"`
+	Score    *points.Value `json:"score,omitempty"`
+	Points   *points.Value `json:"points,omitempty"`
 }
 
 type FailedTestDetail struct {
@@ -61,6 +70,7 @@ type SubmissionTestDetails struct {
 	FailedTest        *int32            `json:"failed_test,omitempty"`
 	CompilerOutput    *string           `json:"compiler_output,omitempty"`
 	Tests             []TestDetailItem  `json:"tests,omitempty"`
+	Subtasks          []SubtaskResult   `json:"subtasks,omitempty"`
 	FailedTestDetails *FailedTestDetail `json:"failed_test_details,omitempty"`
 }
 
@@ -246,6 +256,8 @@ type SubmissionCompletedEvent struct {
 	TimeStat   int32        `json:"time_stat"`
 	MemoryStat int32        `json:"memory_stat"`
 	FailedTest *int32       `json:"failed_test,omitempty"`
+	// FailedTestFeedback is the feedback policy of the failed test's group, which may hide the number.
+	FailedTestFeedback string `json:"failed_test_feedback,omitempty"`
 }
 
 func (s Submission) EventMeta() SubmissionEventMeta {
@@ -253,7 +265,33 @@ func (s Submission) EventMeta() SubmissionEventMeta {
 }
 
 func (s Submission) CompletedEvent() SubmissionCompletedEvent {
-	return SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
+	e := SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
+	if s.FailedTest != nil {
+		e.FailedTestFeedback = s.TestDetails.Feedback(*s.FailedTest)
+	}
+	return e
+}
+
+// Feedback finds the feedback policy of the group holding a test; empty means complete.
+func (d *SubmissionTestDetails) Feedback(test int32) string {
+	if d == nil {
+		return ""
+	}
+	for _, t := range d.Tests {
+		if t.TestIndex == test {
+			for _, s := range d.Subtasks {
+				if s.Name == t.Subtask {
+					return s.Feedback
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// FeedbackShowsFailure reports whether a feedback policy shows which of its tests failed.
+func FeedbackShowsFailure(policy string) bool {
+	return policy == "" || policy == "complete" || policy == "icpc"
 }
 
 func (s Submission) CreatedEvent() SubmissionCreatedEvent {

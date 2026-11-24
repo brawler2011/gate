@@ -34,6 +34,7 @@ func truncateDetailString(s string) (string, bool) {
 type TestResult struct {
 	TestNumber    int
 	Sample        bool
+	Subtask       string
 	Verdict       string
 	Score         *float64
 	Time          int64 // nanoseconds
@@ -111,6 +112,7 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 			TimeMs:    timeMs,
 			MemoryKb:  memoryKb,
 			Sample:    result.Sample,
+			Subtask:   result.Subtask,
 		})
 
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && failedTestDetails == nil {
@@ -219,6 +221,7 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 		return true
 	}
 	var score points.Value
+	scores := map[string]points.Value{}
 	for name, group := range vc.problem.Subtasks {
 		allowed := true
 		for _, dep := range group.Dependencies {
@@ -230,21 +233,17 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 		if !allowed {
 			continue
 		}
-		if group.Policy == "complete" {
-			if groupPassed(name) {
-				for _, test := range group.Tests {
-					score += test.Points
-				}
-			}
-		} else {
-			for _, test := range group.Tests {
-				if passed(test.Ordinal) {
-					score += test.Points
-				}
+		for _, test := range group.Tests {
+			if group.Policy == "complete" && groupPassed(name) || group.Policy != "complete" && passed(test.Ordinal) {
+				scores[name] += test.Points
 			}
 		}
+		score += scores[name]
 	}
 	verdict := &FinalVerdict{State: submissionsmodel.Accepted, Score: score, MaxTime: safeInt32(maxTime / 1000000), MaxMemory: safeInt32(maxMemory / 1024 / 1024), Message: "Score: " + score.String(), TestDetails: buildSubmissionTestDetails(results)}
+	if verdict.TestDetails != nil {
+		verdict.TestDetails.Subtasks = vc.subtaskResults(scores)
+	}
 	for _, test := range collectFlatTests(vc.problem) {
 		if !passed(test.TestIndex) {
 			n := test.TestIndex
@@ -260,19 +259,33 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	return verdict
 }
 
-func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *FinalVerdict {
-	return vc.CalculateStandardVerdict(results)
+// subtaskResults carries feedback policies for the report; nil scores leave the results unscored.
+func (vc *VerdictCalculator) subtaskResults(scores map[string]points.Value) []submissionsmodel.SubtaskResult {
+	var results []submissionsmodel.SubtaskResult
+	for _, name := range vc.problem.OrderedSubtaskNames() {
+		group := vc.problem.Subtasks[name]
+		result := submissionsmodel.SubtaskResult{Name: name, Feedback: group.Feedback}
+		if scores != nil {
+			score, total := scores[name], points.Value(0)
+			for _, test := range group.Tests {
+				total += test.Points
+			}
+			result.Score, result.Points = &score, &total
+		}
+		results = append(results, result)
+	}
+	return results
 }
 
 func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
-	switch vc.problemType {
-	case "scoring":
+	if vc.problemType == "scoring" {
 		return vc.CalculateScoringVerdict(results)
-	case "interactive":
-		return vc.CalculateInteractiveVerdict(results)
-	default:
-		return vc.CalculateStandardVerdict(results)
 	}
+	verdict := vc.CalculateStandardVerdict(results)
+	if verdict.TestDetails != nil {
+		verdict.TestDetails.Subtasks = vc.subtaskResults(nil)
+	}
+	return verdict
 }
 
 func (vc *VerdictCalculator) maxScore() points.Value {

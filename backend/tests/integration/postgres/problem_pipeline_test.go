@@ -85,7 +85,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	d.Validators = []model.DraftValidator{{DraftNamedProgram: named(validator, "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}}
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
@@ -135,7 +135,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 		{DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
 	}
 	d.MainSolution = &solution
-	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete"}, {ID: large, Ordinal: 2, Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete", Feedback: "complete"}, {ID: large, Ordinal: 2, Policy: "complete", Feedback: "complete"}}
 	test := func(ordinal int, subtask uuid.UUID, a, b string) model.DraftTest {
 		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
@@ -192,7 +192,7 @@ func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
 		solutionProgram("skipped", "cpp17", "not C++"),
 	}
 	d.MainSolution = &main
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete", Feedback: "complete"}}
 	test := func(ordinal int, a, b string) model.DraftTest {
 		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
 	}

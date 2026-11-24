@@ -520,6 +520,39 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 	}
 }
 
+func TestGroupFeedbackHidesFailedTest(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		feedback string
+		end      time.Duration
+		shown    bool
+	}{
+		{"points during", "points", time.Hour, false},
+		{"icpc during", "icpc", time.Hour, true},
+		{"points after", "points", -time.Hour, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f := newWSFixture(t)
+			f.stub.permissions = contestPermissions{ListOwnSubmissions: true}
+			end := time.Now().Add(test.end)
+			f.stub.contest.EndTime = &end
+			f.stub.contest.Settings = contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen, Submissions: contestsmodel.Same(contestsmodel.ScopeModerator), Sources: contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator), Feedback: contestsmodel.Same(contestsmodel.FeedbackFull)}
+			meta := f.meta(f.stub.user.Id)
+			meta.CreatedAt = end.Add(-2 * time.Hour)
+			failed := int32(7)
+			conn := f.connect(t, f.path("submissions"))
+			f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: 106, FailedTest: &failed, FailedTestFeedback: test.feedback})
+			payload := readPayload(t, conn)
+			require.InDelta(t, 106, payload["state"], 0)
+			if test.shown {
+				require.InDelta(t, 7, payload["failed_test"], 0)
+			} else {
+				require.NotContains(t, payload, "failed_test")
+			}
+		})
+	}
+}
+
 func TestPublicGuestAudience(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = contestPermissions{GetContest: true, GetMonitor: true}

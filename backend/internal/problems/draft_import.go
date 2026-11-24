@@ -1,6 +1,7 @@
 package problems
 
 import (
+	"cmp"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -516,7 +517,7 @@ func (c *importConverter) addGroups(groups []spec.Group, generators, solutions m
 	}
 	var ordinals []int
 	for _, g := range groups {
-		subtask := model.DraftSubtask{ID: ids[g.Name], Ordinal: len(c.draft.Subtasks) + 1, Name: g.Name, Policy: g.Policy, DependsOn: []uuid.UUID{}}
+		subtask := model.DraftSubtask{ID: ids[g.Name], Ordinal: len(c.draft.Subtasks) + 1, Name: g.Name, Policy: g.Policy, Feedback: cmp.Or(g.Feedback, "complete"), DependsOn: []uuid.UUID{}}
 		for _, dep := range g.DependsOn {
 			did, ok := ids[dep]
 			if !ok {

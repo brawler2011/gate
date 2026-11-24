@@ -185,7 +185,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
 	run := func() (TestResult, string, error) {
-		result := TestResult{TestNumber: test.TestIndex, Sample: test.Test.Sample}
+		result := TestResult{TestNumber: test.TestIndex, Sample: test.Test.Sample, Subtask: test.SubtaskName}
 		if interactor != nil {
 			r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, j.Limits.Auxiliary)
 			if err != nil {

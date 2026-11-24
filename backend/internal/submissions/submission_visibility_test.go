@@ -90,6 +90,54 @@ func TestSubmissionReportLevels(t *testing.T) {
 	require.Len(t, details.Tests, 3, "trimming must not change the stored report")
 }
 
+func TestSubmissionReportGroupFeedback(t *testing.T) {
+	failed := int32(4)
+	sub := submissionsmodel.Submission{FailedTest: &failed, TestDetails: &submissionsmodel.SubmissionTestDetails{Tests: []submissionsmodel.TestDetailItem{
+		{TestIndex: 1, Verdict: "OK", Subtask: "complete"},
+		{TestIndex: 2, Verdict: "OK", Subtask: "icpc"}, {TestIndex: 3, Verdict: "WA", Subtask: "icpc"}, {TestIndex: 4, Verdict: "WA", Subtask: "icpc"},
+		{TestIndex: 5, Verdict: "WA", Subtask: "points"}, {TestIndex: 6, Verdict: "OK", Subtask: "none"},
+	}, Subtasks: []submissionsmodel.SubtaskResult{{Name: "complete", Feedback: "complete"}, {Name: "icpc", Feedback: "icpc"}, {Name: "points", Feedback: "points"}, {Name: "none", Feedback: "none"}},
+		FailedTestDetails: &submissionsmodel.FailedTestDetail{TestIndex: 3}}}
+	now := time.Now()
+	author := uuid.New()
+	for _, test := range []struct {
+		name      string
+		end       time.Duration
+		role      accessmodel.ContestRole
+		tests     []int32
+		subtasks  []string
+		failed    bool
+		failedNum *int32
+	}{
+		{"during", time.Hour, accessmodel.ContestParticipant, []int32{1, 2, 3}, []string{"complete", "icpc", "points"}, false, &failed},
+		{"after", -time.Hour, accessmodel.ContestParticipant, []int32{1, 2, 3, 4, 5, 6}, []string{"complete", "icpc", "points", "none"}, true, &failed},
+		{"moderator", time.Hour, accessmodel.ContestModerator, []int32{1, 2, 3, 4, 5, 6}, []string{"complete", "icpc", "points", "none"}, true, &failed},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			end := now.Add(test.end)
+			contest := contestsmodel.Contest{EndTime: &end, Settings: contestsmodel.ContestSettings{Feedback: contestsmodel.Same(contestsmodel.FeedbackFull)}}
+			visible := SubmissionView(viewerAccess(author, contest, test.role, now), &author, now.Add(-2*time.Hour), submissionsmodel.KindContest).Apply(sub)
+			var tests []int32
+			for _, item := range visible.TestDetails.Tests {
+				tests = append(tests, item.TestIndex)
+			}
+			var subtasks []string
+			for _, s := range visible.TestDetails.Subtasks {
+				subtasks = append(subtasks, s.Name)
+			}
+			require.Equal(t, test.tests, tests)
+			require.Equal(t, test.subtasks, subtasks)
+			require.Equal(t, test.failed, visible.TestDetails.FailedTestDetails != nil)
+			require.Equal(t, test.failedNum, visible.FailedTest)
+		})
+	}
+	sub.FailedTest = new(int32(5))
+	end := now.Add(time.Hour)
+	contest := contestsmodel.Contest{EndTime: &end, Settings: contestsmodel.ContestSettings{Feedback: contestsmodel.Same(contestsmodel.FeedbackFull)}}
+	require.Nil(t, SubmissionView(viewerAccess(author, contest, accessmodel.ContestParticipant, now), &author, now, submissionsmodel.KindContest).Apply(sub).FailedTest, "a points group hides which test failed")
+	require.Len(t, sub.TestDetails.Tests, 6, "trimming must not change the stored report")
+}
+
 func viewerAccess(viewer uuid.UUID, contest contestsmodel.Contest, role accessmodel.ContestRole, now time.Time) access.ContestAccess {
 	return access.ContestAccess{Actor: accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser}, Facts: access.ContestFacts{Contest: contest, Role: role, Now: now}}
 }

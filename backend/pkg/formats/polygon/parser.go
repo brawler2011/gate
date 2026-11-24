@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -288,6 +289,9 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 			}
 			g.Tests[len(g.Tests)-1].Points = value
 		}
+		if g.Feedback != "" && !slices.Contains(spec.FeedbackPolicies, g.Feedback) {
+			return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", g.Feedback, "group %s has unknown feedback policy %s", g.Name, g.Feedback)
+		}
 		for _, dep := range g.DependsOn {
 			if _, ok := index[dep]; !ok {
 				return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", dep, "group %s depends on unknown group %s", g.Name, dep)
@@ -307,7 +311,7 @@ func newGroup(name string, definitions map[string]Group, named bool) spec.Group 
 		}
 		return spec.Group{Name: name, Policy: policy}
 	}
-	g := spec.Group{Name: name, Policy: "complete"}
+	g := spec.Group{Name: name, Policy: "complete", Feedback: def.FeedbackPolicy}
 	if def.PointsPolicy == "each-test" {
 		g.Policy = "each"
 	}
