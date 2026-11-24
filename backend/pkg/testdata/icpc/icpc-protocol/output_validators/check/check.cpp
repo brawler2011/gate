@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
     FILE* answer = std::fopen(argv[2], "r");
     if (!answer || std::fscanf(answer, "%lld", &expected) != 1) return 1;
     bool ok = std::scanf("%lld", &got) == 1;
-    FILE* message = std::fopen((std::string(argv[3]) + "/judgemessage.txt").c_str(), "w");
+    FILE* message = std::fopen((std::string(argv[3]) + "judgemessage.txt").c_str(), "w");
     if (!ok || got != expected) {
         std::fprintf(message, "expected %lld\n", expected);
         return 43;

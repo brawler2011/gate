@@ -17,8 +17,8 @@ const (
 const (
 	icpcAccept   = 42
 	icpcReject   = 43
-	feedbackDir  = "feedback"
-	judgeMessage = feedbackDir + "/judgemessage.txt"
+	feedbackDir  = "feedback/"
+	judgeMessage = feedbackDir + "judgemessage.txt"
 )
 
 // Jury is a compiled checker, interactor or validator; Args follow the arguments of its protocol.
@@ -31,7 +31,7 @@ type Jury struct {
 
 // icpcFeedback lets an ICPC checker or interactor write the feedback directory it gets after input and answer.
 func icpcFeedback(c *cmd) {
-	c.CopyIn[feedbackDir+"/.keep"] = *memoryFile("")
+	c.CopyIn[feedbackDir+".keep"] = *memoryFile("")
 	c.CopyOut = append(c.CopyOut, judgeMessage+"?")
 }
 

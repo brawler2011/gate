@@ -8,7 +8,7 @@ int main(int argc, char** argv) {
     FILE* input = std::fopen(argv[1], "r");
     FILE* answer = std::fopen(argv[2], "r");
     if (!input || !answer || std::fscanf(input, "%lld", &n) != 1 || std::fscanf(answer, "%lld", &hidden) != 1) return 1;
-    FILE* message = std::fopen((std::string(argv[3]) + "/judgemessage.txt").c_str(), "w");
+    FILE* message = std::fopen((std::string(argv[3]) + "judgemessage.txt").c_str(), "w");
     std::printf("%lld\n", n);
     std::fflush(stdout);
     for (int queries = 0; queries <= 64; queries++) {

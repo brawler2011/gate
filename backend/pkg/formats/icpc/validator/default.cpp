@@ -12,7 +12,7 @@ static std::string feedback;
 
 [[noreturn]] static void verdict(int code, const std::string& message) {
     if (!message.empty()) {
-        std::ofstream(feedback + "/judgemessage.txt") << message << '\n';
+        std::ofstream(feedback + "judgemessage.txt") << message << '\n';
     }
     std::exit(code);
 }
@@ -32,10 +32,11 @@ struct Tokens {
     }
 };
 
+// Infinities and NaNs compare as text, as in the reference validator.
 static bool number(const std::string& s, long double& value) {
     char* end = nullptr;
     value = std::strtold(s.c_str(), &end);
-    return !s.empty() && *end == '\0';
+    return !s.empty() && *end == '\0' && std::isfinite(value);
 }
 
 static std::string lower(std::string s) {
