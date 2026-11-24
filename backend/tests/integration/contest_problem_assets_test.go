@@ -36,7 +36,7 @@ func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, imag
 			return err
 		}
 		if path == "problem.yaml" {
-			data = []byte(strings.Replace(string(data), `- generate: "echo 10 20"`, "- generate: \"echo 10 20\"\n          sample: true", 1))
+			data = []byte(strings.Replace(string(data), `- generate: "echo 10 20"`, "- generate: \"echo 10 20\"\n          sample: true\n          statement_output: shown.a", 1))
 		}
 		f, err := w.Create(path)
 		if err != nil {
@@ -45,7 +45,11 @@ func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, imag
 		_, err = f.Write(data)
 		return err
 	}))
-	f, err := w.Create("assets/pic.png")
+	f, err := w.Create("tests/shown.a")
+	s.Require().NoError(err)
+	_, err = f.Write([]byte("thirty\n"))
+	s.Require().NoError(err)
+	f, err = w.Create("assets/pic.png")
 	s.Require().NoError(err)
 	_, err = f.Write(image)
 	s.Require().NoError(err)
@@ -107,7 +111,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	got := problem()
 	s.Equal(corev1.ContestProblemModelAssets{"pic.png": sha256Hex(image)}, got.Assets)
 	s.Len(got.Samples, 4, "three manual samples and one generated")
-	s.Contains(got.Samples, corev1.ProblemSampleModel{Input: "10 20\n", Output: "30\n"}, "generated sample input")
+	s.Contains(got.Samples, corev1.ProblemSampleModel{Input: "10 20\n", Output: "thirty\n"}, "generated sample input with the output the statement shows")
 	s.Contains(got.Samples, corev1.ProblemSampleModel{Input: "7 8\n", Output: "15\n"}, "manual sample input")
 
 	resp, err := s.client.GetContestProblemAsset(ctx, params(sha256Hex(image)))

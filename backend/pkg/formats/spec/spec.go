@@ -10,6 +10,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -115,7 +116,12 @@ type Statement struct {
 	Charset  string
 	TeX      string
 	Markdown string
+	HTML     string
+	// PDF names an asset holding the whole statement.
+	PDF      string
 	Sections map[string]string
+	// Tutorial is a LaTeX or Markdown file, told apart by extension.
+	Tutorial string
 }
 
 // LanguageCode turns Polygon and PCMS2 language names into codes.
@@ -214,6 +220,8 @@ type Test struct {
 	Points         points.Value
 	Sample         bool
 	Pretest        bool
+	// StatementInput and StatementOutput name files the statement shows instead of a sample's own.
+	StatementInput, StatementOutput string
 	// Positive ordinals order tests across groups; zero keeps the group order.
 	Ordinal int
 }
@@ -252,16 +260,60 @@ func (p *Problem) SetStatementTitle(language, title string) {
 	}
 }
 
-// Interactive inputs are private interactor data and must not become public samples.
-func (p *Problem) KeepInteractiveInputsPrivate() {
-	if p.Type != "interactive" {
-		return
-	}
+// SetExamples reads dir/example.NN and example.NN.a, the statement versions of the samples in order as Polygon and PCMS2 write them,
+// keeping those that differ from the test files; files gives a sample's input and answer paths.
+func (p *Problem) SetExamples(fsys fs.FS, dir string, files func(Test) (input, answer string)) {
+	var samples []*Test
 	for g := range p.Testset.All() {
 		for j := range g.Tests {
-			g.Tests[j].Sample = false
+			if g.Tests[j].Sample {
+				samples = append(samples, &g.Tests[j])
+			}
 		}
 	}
+	slices.SortStableFunc(samples, func(a, b *Test) int { return a.Ordinal - b.Ordinal })
+	for n, t := range samples {
+		input, answer := files(*t)
+		example := path.Join(dir, fmt.Sprintf("example.%02d", n+1))
+		// The interactor's files are never what the participant sees.
+		if p.Type == "interactive" || differs(fsys, example, input) {
+			t.StatementInput = regularFile(fsys, example)
+		}
+		if p.Type == "interactive" || differs(fsys, example+".a", answer) {
+			t.StatementOutput = regularFile(fsys, example+".a")
+		}
+	}
+}
+
+// ExampleDir is the first language folder in root holding example.01.
+func ExampleDir(fsys fs.FS, root string) string {
+	languages, _ := fs.ReadDir(fsys, root)
+	for _, language := range languages {
+		if dir := path.Join(root, language.Name()); language.IsDir() && regularFile(fsys, path.Join(dir, "example.01")) != "" {
+			return dir
+		}
+	}
+	return ""
+}
+
+func regularFile(fsys fs.FS, name string) string {
+	if info, err := fs.Stat(fsys, name); err == nil && info.Mode().IsRegular() {
+		return name
+	}
+	return ""
+}
+
+// differs reports an example whose text is not that of the test file, which may be absent.
+func differs(fsys fs.FS, example, test string) bool {
+	a, err := fs.ReadFile(fsys, example)
+	if err != nil {
+		return false
+	}
+	b, err := fs.ReadFile(fsys, test)
+	normalize := func(data []byte) string {
+		return strings.TrimRightFunc(strings.ReplaceAll(string(data), "\r\n", "\n"), unicode.IsSpace)
+	}
+	return err != nil || normalize(a) != normalize(b)
 }
 
 // Generators run as argv, never through a shell; only quoting and escaping are supported.

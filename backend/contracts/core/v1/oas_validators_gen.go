@@ -344,6 +344,28 @@ func (s *ContestModel) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.TutorialsDuring.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tutorials_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.TutorialsAfter.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tutorials_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.FeedbackDuring.Validate(); err != nil {
 			return err
 		}
@@ -4069,6 +4091,42 @@ func (s *UpdateContestRequestModel) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "reports_after",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.TutorialsDuring.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tutorials_during",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.TutorialsAfter.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tutorials_after",
 			Error: err,
 		})
 	}

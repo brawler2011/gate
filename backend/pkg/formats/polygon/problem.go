@@ -10,6 +10,7 @@ type Problem struct {
 	Interactive bool        `xml:"interactive,attr"`
 	Names       []Name      `xml:"names>name"`
 	Statements  []Statement `xml:"statements>statement"`
+	Tutorials   []Statement `xml:"tutorials>tutorial"`
 	Judging     Judging     `xml:"judging"`
 	Files       *Files      `xml:"files"`
 	Assets      *Assets     `xml:"assets"`

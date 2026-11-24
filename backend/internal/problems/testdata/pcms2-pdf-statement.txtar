@@ -1,0 +1,39 @@
+A PCMS2 package with only a PDF statement.
+
+-- problem.xml --
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<problem id="pdf-statement" version="1.0">
+    <names>
+        <name language="english" value="A+B"/>
+    </names>
+    <statements>
+        <statement language="english" type="application/pdf" file="statements/.pdf/english/problem.pdf" />
+    </statements>
+    <judging>
+        <input-file></input-file>
+        <output-file></output-file>
+        <run>
+            <verifier type="testlib">
+                <binary executable="check.exe" />
+            </verifier>
+        </run>
+        <testset name="tests">
+            <time-limit>1000</time-limit>
+            <memory-limit>268435456</memory-limit>
+            <test-count>1</test-count>
+            <input-path-pattern>tests/%02d</input-path-pattern>
+            <answer-path-pattern>tests/%02d.a</answer-path-pattern>
+            <tests>
+                <test index="1" input="tests/01" outcome="tests/01.a" />
+            </tests>
+        </testset>
+    </judging>
+</problem>
+-- check.cpp --
+int main() {}
+-- tests/01 --
+1 2
+-- tests/01.a --
+3
+-- statements/.pdf/english/problem.pdf --
+%PDF-1.4

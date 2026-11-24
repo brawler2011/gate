@@ -49,7 +49,7 @@ type detailStatements struct {
 
 func (s *detailStatements) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent {
 	s.calls++
-	return problemsmodel.StatementContent{Statement: &problemsmodel.Statement{Legend: "Visible statement"}, Samples: []problemsmodel.Sample{{Input: "1", Output: "2"}}, Assets: map[string]string{"assets/pic.png": "abc"}}
+	return problemsmodel.StatementContent{Statement: &problemsmodel.Statement{Legend: "Visible statement", Tutorial: "Tutorial"}, Samples: []problemsmodel.Sample{{Input: "1", Output: "2"}}, Assets: map[string]string{"assets/pic.png": "abc"}}
 }
 
 func (s *detailStatements) OpenImage(_ context.Context, _ uuid.UUID, hash string) (io.ReadCloser, string, error) {
@@ -137,6 +137,35 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			_, err = booklets.Open(ctx, contest.ID, "ru")
 			require.ErrorIs(t, err, tc.booklet)
 			require.Equal(t, tc.booklet == nil, stored.downloads == 1)
+		})
+	}
+}
+
+func TestContestDetailsShowTutorialsToTheirAudience(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		ended    bool
+		role     accessmodel.ContestRole
+		tutorial bool
+	}{
+		{"participant during", false, accessmodel.ContestParticipant, false},
+		{"moderator during", false, accessmodel.ContestModerator, true},
+		{"participant after", true, accessmodel.ContestParticipant, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end := time.Now().Add(-2*time.Hour), time.Now().Add(time.Hour)
+			if tc.ended {
+				end = time.Now().Add(-time.Hour)
+			}
+			contest := contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start, EndTime: &end,
+				Settings: contestsmodel.ContestSettings{Tutorials: contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeModerator, After: contestsmodel.ScopeParticipant}}}
+			store := &detailStore{contest: contest, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
+			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+			reader := NewDetailsReader(store, &detailStatements{}, detailAccess(contest, actor.Id, tc.role))
+			result, err := reader.GetContestProblemDetails(accessmodel.WithUser(context.Background(), actor), contest.ID, store.link.ProblemID)
+			require.NoError(t, err)
+			require.Equal(t, "Visible statement", result.Statement.Legend)
+			require.Equal(t, tc.tutorial, result.Statement.Tutorial != "")
 		})
 	}
 }

@@ -214,6 +214,12 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 		case t.Answer.Mode == "provided" && t.Answer.ObjectID != nil:
 			test.Answer = p.object(name+".a", *t.Answer.ObjectID)
 		}
+		if t.StatementInput != nil {
+			test.StatementInput = p.test(name+".example", "example:"+name, file{text: *t.StatementInput})
+		}
+		if t.StatementOutput != nil {
+			test.StatementOutput = p.test(name+".example.a", "example.a:"+name, file{text: *t.StatementOutput})
+		}
 		group := groups[t.GroupID]
 		group.Tests = append(group.Tests, test)
 	}

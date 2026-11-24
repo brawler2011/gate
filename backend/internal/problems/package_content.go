@@ -71,6 +71,13 @@ func selectStatement(title string, statements []model.BuiltStatement, language s
 		if s.Title != "" {
 			statement.Title = s.Title
 		}
+		// A tutorial written in one language only serves every statement.
+		statement.Tutorial = s.HTML["tutorial"]
+		for _, other := range statements {
+			if statement.Tutorial == "" {
+				statement.Tutorial = other.HTML["tutorial"]
+			}
+		}
 	}
 	return &statement
 }

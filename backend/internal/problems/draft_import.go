@@ -497,18 +497,33 @@ func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) er
 		}
 		sections = statement.SplitTeX(text)
 	case s.Markdown != "":
-		text, err := c.readText(s.Markdown, s.Charset)
+		tex, err := c.latex(ctx, s.Markdown, s.Charset)
 		if err != nil {
 			return err
 		}
-		tex, _, err := c.uc.Typeset.LaTeX(ctx, text)
-		if errors.Is(err, sandbox.ErrUnavailable) {
-			return fmt.Errorf("convert %s: %w", s.Markdown, err)
-		}
-		if err != nil {
-			return spec.Fail(pkg.ErrFormat, s.Markdown, "", "pandoc cannot convert %s: %v", s.Markdown, err)
-		}
 		sections = statement.SplitTeX(tex)
+	case s.HTML != "":
+		page, err := c.readText(s.HTML, s.Charset)
+		if err != nil {
+			return err
+		}
+		fragments, err := statement.SplitHTML(page)
+		if err != nil {
+			return spec.Fail(pkg.ErrFormat, s.HTML, "", "%v", err)
+		}
+		for name, fragment := range fragments {
+			if sections[name], err = c.pandoc(ctx, s.HTML, "html", fragment); err != nil {
+				return err
+			}
+		}
+	case s.PDF != "":
+		sections["legend"] = fmt.Sprintf("\\includegraphics{%s}", s.PDF)
+	}
+	if s.Tutorial != "" {
+		var err error
+		if sections["tutorial"], err = c.latex(ctx, s.Tutorial, s.Charset); err != nil {
+			return err
+		}
 	}
 	for name, path := range s.Sections {
 		text, err := c.readText(path, s.Charset)
@@ -533,6 +548,29 @@ func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) er
 	}
 	c.draft.Statements = append(c.draft.Statements, st)
 	return nil
+}
+
+// latex reads a LaTeX file, or converts a Markdown one.
+func (c *importConverter) latex(ctx context.Context, path, charset string) (string, error) {
+	text, err := c.readText(path, charset)
+	if err != nil {
+		return "", err
+	}
+	if strings.ToLower(filepath.Ext(path)) != ".md" {
+		return text, nil
+	}
+	return c.pandoc(ctx, path, "markdown", text)
+}
+
+func (c *importConverter) pandoc(ctx context.Context, path, from, text string) (string, error) {
+	tex, _, err := c.uc.Typeset.LaTeX(ctx, from, text)
+	if errors.Is(err, sandbox.ErrUnavailable) {
+		return "", fmt.Errorf("convert %s: %w", path, err)
+	}
+	if err != nil {
+		return "", spec.Fail(pkg.ErrFormat, path, "", "pandoc cannot convert %s: %v", path, err)
+	}
+	return tex, nil
 }
 
 func (c *importConverter) addGroups(root spec.Group, generators, solutions map[string]string) error {
@@ -634,6 +672,23 @@ func (c *importConverter) test(test spec.Test, group uuid.UUID, generators, solu
 		t.Answer = model.DraftAnswer{Mode: "generated", Solution: &name}
 	default:
 		t.Answer = model.DraftAnswer{Mode: "generated", Solution: c.draft.MainSolution}
+	}
+	for _, example := range []struct {
+		path string
+		text **string
+	}{{test.StatementInput, &t.StatementInput}, {test.StatementOutput, &t.StatementOutput}} {
+		if example.path == "" {
+			continue
+		}
+		text, err := c.readText(example.path, "")
+		if err != nil {
+			return t, err
+		}
+		text = strings.ReplaceAll(text, "\r\n", "\n")
+		if err := c.charge(len(text)); err != nil {
+			return t, err
+		}
+		*example.text = &text
 	}
 	return t, nil
 }

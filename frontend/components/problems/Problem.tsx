@@ -28,6 +28,7 @@ type ProblemModelProps = {
   notes: string;
   interaction?: string;
   scoring: string;
+  tutorial?: string;
   created_at: string;
   updated_at: string;
   samples?: Array<{
@@ -114,6 +115,7 @@ const ProblemComponent = ({
             <ProblemSamples samples={problem.samples} />
           )}
           <Section title="Примечание" html={problem.notes} assetUrl={assetUrl} />
+          <Section title="Разбор" html={problem.tutorial} assetUrl={assetUrl} />
         </>
       )}
     </Stack>

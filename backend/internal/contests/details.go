@@ -70,23 +70,33 @@ func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string
 	return result, nil
 }
 func (r *DetailsReader) contestProblem(ctx context.Context, contestID, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
-	a, err := access.Contest(ctx, r.access, contestID, accessmodel.ContestViewProblems)
-	if err != nil {
-		return contestsmodel.ContestProblem{}, false, err
-	}
-	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: a.Facts.Contest.ID, ProblemId: id})
+	link, a, err := r.problemAccess(ctx, contestID, id)
 	return link, a.Can(accessmodel.ContestViewStatements), err
 }
+
+func (r *DetailsReader) problemAccess(ctx context.Context, contestID, id uuid.UUID) (contestsmodel.ContestProblem, access.ContestAccess, error) {
+	a, err := access.Contest(ctx, r.access, contestID, accessmodel.ContestViewProblems)
+	if err != nil {
+		return contestsmodel.ContestProblem{}, a, err
+	}
+	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: a.Facts.Contest.ID, ProblemId: id})
+	return link, a, err
+}
+
 func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, contestID, id uuid.UUID) (*ContestProblemDetails, error) {
-	link, statementVisible, err := r.contestProblem(ctx, contestID, id)
+	link, a, err := r.problemAccess(ctx, contestID, id)
 	if err != nil {
 		return nil, err
 	}
+	statementVisible := a.Can(accessmodel.ContestViewStatements)
 	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
 	result := &ContestProblemDetails{Link: link, ProblemDetails: problemsmodel.ProblemDetails{Problem: problem}, Assets: map[string]string{}}
 	if statementVisible {
 		content := r.statements.ReadStatement(ctx, id, link.PackageID, "")
 		result.Statement, result.Samples, result.Assets = content.Statement, content.Samples, content.Assets
+		if result.Statement != nil && !a.Can(accessmodel.ContestViewTutorials) {
+			result.Statement.Tutorial = ""
+		}
 	}
 	return result, nil
 }

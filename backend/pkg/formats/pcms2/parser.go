@@ -55,8 +55,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Type = problemType(run, &p.Testset)
-	p.KeepInteractiveInputsPrivate()
 	p.Statements = statements(fsys, p, prob.Statements)
+	p.SetExamples(fsys, spec.ExampleDir(fsys, "statements"), func(t spec.Test) (string, string) { return t.Input, t.Answer })
 	for _, name := range prob.Names {
 		p.SetStatementTitle(spec.LanguageCode(name.Language), name.Value)
 	}
@@ -245,12 +245,22 @@ func groups(fsys fs.FS, testset Testset, samples int) (spec.Group, error) {
 	return root, nil
 }
 
-// Packages listing only rendered statements still carry statements/<language>/problem.tex.
+// Packages listing only rendered statements usually still carry statements/<language>/problem.tex;
+// otherwise HTML is converted and a PDF is linked from the statement.
 func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement {
 	sources := map[string]string{}
+	rendered := map[string]Statement{}
 	for _, s := range list {
-		if s.Type == "application/x-tex" {
-			sources[spec.LanguageCode(s.Language)] = s.File
+		language := spec.LanguageCode(s.Language)
+		switch s.Type {
+		case "application/x-tex":
+			sources[language] = s.File
+		case "text/html":
+			rendered[language] = s
+		case "application/pdf":
+			if rendered[language].Type != "text/html" {
+				rendered[language] = s
+			}
 		}
 	}
 	if len(sources) == 0 {
@@ -262,9 +272,23 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 			}
 		}
 	}
+	for language, s := range rendered {
+		if _, ok := sources[language]; !ok && regular(fsys, s.File) {
+			sources[language] = s.File
+		}
+	}
 	var result []spec.Statement
 	for _, language := range slices.Sorted(maps.Keys(sources)) {
-		result = append(result, spec.Statement{Language: language, TeX: sources[language]})
+		s := spec.Statement{Language: language, TeX: sources[language]}
+		switch r := rendered[language]; {
+		case r.File != s.TeX:
+		case r.Type == "text/html":
+			s.TeX, s.HTML = "", s.TeX
+		default:
+			s.TeX, s.PDF = "", "statement-"+language+".pdf"
+			p.AddAsset(s.PDF, sources[language])
+		}
+		result = append(result, s)
 		dir := path.Dir(sources[language])
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {

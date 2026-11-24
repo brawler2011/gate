@@ -202,7 +202,7 @@ func (e *execution) typeset(ctx context.Context) ([]model.BuiltStatement, []mode
 	built := make([]model.BuiltStatement, 0, len(d.Statements))
 	var pdfs []model.StatementPDF
 	for _, s := range d.Statements {
-		html, err := statement.HTML(ctx, e.pipeline.Typeset, s.Sections())
+		html, err := statement.HTML(ctx, e.pipeline.Typeset, s.SiteSections())
 		if err != nil {
 			return nil, nil, fail("statements", 0, typesetKind(err), fmt.Errorf("%s statement: %w", s.Language, err))
 		}
@@ -586,14 +586,25 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 		tr.solutions[sol.Name] = result
 	}
-	if test.Sample {
-		sampleAnswer := files.Answer
-		if s.Draft.Type == "interactive" {
-			sampleAnswer = "" // the interactor's output is no sample output
+	// Interactive test files are interactor data, not what the participant sees.
+	interactive := s.Draft.Type == "interactive"
+	if test.Sample && (!interactive || test.StatementInput != nil) {
+		input, answer := files.Input, files.Answer
+		if test.StatementInput != nil {
+			input = ""
 		}
-		sample, err := e.sample(files.Input, sampleAnswer)
+		if test.StatementOutput != nil || interactive {
+			answer = ""
+		}
+		sample, err := e.sample(input, answer)
 		if err != nil {
 			return tr, fail("sample", test.Ordinal, "infrastructure", err)
+		}
+		if test.StatementInput != nil {
+			sample.Input = *test.StatementInput
+		}
+		if test.StatementOutput != nil {
+			sample.Output = *test.StatementOutput
 		}
 		tr.sample = &sample
 	}

@@ -17,7 +17,7 @@ func (uc *DraftUseCase) PreviewStatement(ctx context.Context, id uuid.UUID, s mo
 	if _, err := uc.preview(ctx, id, s); err != nil {
 		return nil, err
 	}
-	html, err := statement.HTML(ctx, uc.Typeset, s.Sections())
+	html, err := statement.HTML(ctx, uc.Typeset, s.SiteSections())
 	return html, previewError(err)
 }
 
@@ -43,7 +43,7 @@ func (uc *DraftUseCase) preview(ctx context.Context, id uuid.UUID, s model.Draft
 	if _, err := uc.authorize(ctx, id, false); err != nil {
 		return model.Draft{}, err
 	}
-	for _, section := range s.Sections() {
+	for _, section := range s.SiteSections() {
 		if len(section.Text) > int(uc.DraftQuotas.FileBytes) {
 			return model.Draft{}, pkg.ErrPayloadTooLarge
 		}

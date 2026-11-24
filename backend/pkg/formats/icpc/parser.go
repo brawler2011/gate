@@ -95,7 +95,6 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Testset, err = tree.read(); err != nil {
 		return nil, err
 	}
-	p.KeepInteractiveInputsPrivate()
 	p.Statements = statements(fsys, p)
 	return p, nil
 }
@@ -218,10 +217,12 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 }
 
 // Legacy packages keep LaTeX in problem_statement/, 2023-07 ones Markdown in statement/; other files there are images.
+// Tutorials are solution.<language> files there or in solution/.
 func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
-	for _, dir := range []string{"statement", "problem_statement"} {
+	tutorials := map[string]string{}
+	for _, dir := range []string{"statement", "problem_statement", "solution"} {
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {
 			name := e.Name()
@@ -233,6 +234,13 @@ func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 			language, named := strings.CutPrefix(base, "problem.")
 			if base == "problem" {
 				language, named = "en", true
+			}
+			tutorial, solution := strings.CutPrefix(base, "solution.")
+			if base == "solution" {
+				tutorial, solution = "en", true
+			}
+			if solution && (ext == ".tex" || ext == ".md") && tutorials[spec.LanguageCode(tutorial)] == "" {
+				tutorials[spec.LanguageCode(tutorial)] = path.Join(dir, name)
 			}
 			language = spec.LanguageCode(language)
 			switch {
@@ -249,6 +257,9 @@ func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 				p.AddAsset(name, path.Join(dir, name))
 			}
 		}
+	}
+	for i := range result {
+		result[i].Tutorial = tutorials[result[i].Language]
 	}
 	return result
 }

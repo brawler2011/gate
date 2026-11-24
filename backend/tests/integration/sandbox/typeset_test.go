@@ -65,8 +65,16 @@ func TestTypesetStatements(t *testing.T) {
 		require.Contains(t, e.Message, "Undefined control sequence")
 	})
 
+	t.Run("PCMS2 HTML keeps its math", func(t *testing.T) {
+		sections, err := statement.SplitHTML("<div class=\"legend\"><p>Print $$$a+b$$$.</p></div>")
+		require.NoError(t, err)
+		tex, _, err := ts.LaTeX(ctx, "html", sections["legend"])
+		require.NoError(t, err)
+		require.Equal(t, "Print \\(a+b\\).", strings.TrimSpace(tex))
+	})
+
 	t.Run("ICPC Markdown becomes LaTeX that both typesetters read", func(t *testing.T) {
-		tex, _, err := ts.LaTeX(ctx, "Add **two** numbers $a+b$:\n\n- one\n- two\n\n| a | b |\n|---|--:|\n| 1 | 2 |\n\n## Input\n\nTwo integers.\n\n## Output\n\nTheir sum.\n")
+		tex, _, err := ts.LaTeX(ctx, "markdown", "Add **two** numbers $a+b$:\n\n- one\n- two\n\n| a | b |\n|---|--:|\n| 1 | 2 |\n\n## Input\n\nTwo integers.\n\n## Output\n\nTheir sum.\n")
 		require.NoError(t, err)
 		split := statement.SplitTeX(tex)
 		require.Contains(t, split["legend"], "\\textbf{two}")

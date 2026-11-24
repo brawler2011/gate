@@ -326,9 +326,11 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
                   <Table.Td>
                     {test.ordinal}
                     {test.sample && (
-                      <Badge ml={4} size="xs" variant="light">
-                        пример
-                      </Badge>
+                      <Tooltip label="Не показывается в условии: задайте ввод для условия" disabled={!(draft.type === "interactive" && test.statement_input === null)}>
+                        <Badge ml={4} size="xs" variant="light" color={draft.type === "interactive" && test.statement_input === null ? "yellow" : undefined}>
+                          пример
+                        </Badge>
+                      </Tooltip>
                     )}
                     {test.pretest && (
                       <Badge ml={4} size="xs" variant="light" color="grape">
