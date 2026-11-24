@@ -21,9 +21,26 @@ var polygonClasses = map[string]string{
 // polygonMath is MathJax as Polygon configures it: $$$ inline, $$$$$$ display.
 var polygonMath = regexp.MustCompile(`(?s)\$\$\$\$\$\$(.+?)\$\$\$\$\$\$|\$\$\$(.+?)\$\$\$`)
 
-// SplitHTML cuts a Polygon HTML statement into section fragments that pandoc reads with their math;
-// a page without Polygon's sections becomes the legend.
-func SplitHTML(page string) (map[string]string, error) {
+// HTMLSection is a fragment of an HTML statement with its formulas held out as tokens,
+// since pandoc's HTML reader would escape them as text.
+type HTMLSection struct {
+	HTML string
+	Math []string
+}
+
+// LaTeX puts the formulas back into the fragment as pandoc converted it.
+func (s HTMLSection) LaTeX(tex string) string {
+	pairs := make([]string, 0, 2*len(s.Math))
+	for i, m := range s.Math {
+		pairs = append(pairs, mathToken(i), m)
+	}
+	return strings.NewReplacer(pairs...).Replace(tex)
+}
+
+func mathToken(i int) string { return fmt.Sprintf("GATEMATH%dEND", i) }
+
+// SplitHTML cuts a Polygon HTML statement into section fragments; a page without Polygon's sections becomes the legend.
+func SplitHTML(page string) (map[string]HTMLSection, error) {
 	root, err := html.Parse(strings.NewReader(page))
 	if err != nil {
 		return nil, fmt.Errorf("parse HTML statement: %w", err)
@@ -66,16 +83,21 @@ func SplitHTML(page string) (map[string]string, error) {
 		}
 		result["legend"] = buf.String()
 	}
+	sections := make(map[string]HTMLSection, len(result))
 	for name, fragment := range result {
-		result[name] = polygonMath.ReplaceAllStringFunc(fragment, func(m string) string {
+		var s HTMLSection
+		s.HTML = polygonMath.ReplaceAllStringFunc(fragment, func(m string) string {
 			parts := polygonMath.FindStringSubmatch(m)
+			formula := `\(` + html.UnescapeString(parts[2]) + `\)`
 			if parts[1] != "" {
-				return `<span class="math display">\[` + parts[1] + `\]</span>`
+				formula = `\[` + html.UnescapeString(parts[1]) + `\]`
 			}
-			return `<span class="math inline">\(` + parts[2] + `\)</span>`
+			s.Math = append(s.Math, formula)
+			return mathToken(len(s.Math) - 1)
 		})
+		sections[name] = s
 	}
-	return result, nil
+	return sections, nil
 }
 
 func polygonSection(n *html.Node) (string, bool) {

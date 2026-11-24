@@ -68,9 +68,9 @@ func TestTypesetStatements(t *testing.T) {
 	t.Run("PCMS2 HTML keeps its math", func(t *testing.T) {
 		sections, err := statement.SplitHTML("<div class=\"legend\"><p>Print $$$a+b$$$.</p></div>")
 		require.NoError(t, err)
-		tex, _, err := ts.LaTeX(ctx, "html", sections["legend"])
+		tex, _, err := ts.LaTeX(ctx, "html", sections["legend"].HTML)
 		require.NoError(t, err)
-		require.Equal(t, "Print \\(a+b\\).", strings.TrimSpace(tex))
+		require.Equal(t, "Print \\(a+b\\).", strings.TrimSpace(sections["legend"].LaTeX(tex)))
 	})
 
 	t.Run("ICPC Markdown becomes LaTeX that both typesetters read", func(t *testing.T) {

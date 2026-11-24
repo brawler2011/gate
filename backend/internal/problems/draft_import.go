@@ -512,9 +512,11 @@ func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) er
 			return spec.Fail(pkg.ErrFormat, s.HTML, "", "%v", err)
 		}
 		for name, fragment := range fragments {
-			if sections[name], err = c.pandoc(ctx, s.HTML, "html", fragment); err != nil {
+			tex, err := c.pandoc(ctx, s.HTML, "html", fragment.HTML)
+			if err != nil {
 				return err
 			}
+			sections[name] = fragment.LaTeX(tex)
 		}
 	case s.PDF != "":
 		sections["legend"] = fmt.Sprintf("\\includegraphics{%s}", s.PDF)

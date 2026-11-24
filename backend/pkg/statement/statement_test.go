@@ -64,16 +64,19 @@ func TestSplitHTMLReadsPolygonSections(t *testing.T) {
 	sections, err := SplitHTML(string(page))
 	require.NoError(t, err)
 	require.ElementsMatch(t, []string{"legend", "input", "output", "notes"}, slices.Collect(maps.Keys(sections)))
-	require.Contains(t, sections["legend"], `integers <span class="math inline">\(a\)</span> and`)
-	require.NotContains(t, sections["input"], "section-title")
+	legend := sections["legend"]
+	require.Contains(t, legend.HTML, "integers GATEMATH0END and")
+	require.Equal(t, `integers \(a\) and`, legend.LaTeX("integers GATEMATH0END and"))
+	require.Contains(t, sections["input"].Math, `\(-100 \le a,b \le 100\)`)
+	require.NotContains(t, sections["input"].HTML, "section-title")
 	for _, s := range sections {
-		require.NotContains(t, s, "time limit")
-		require.NotContains(t, s, "-106")
+		require.NotContains(t, s.HTML, "time limit")
+		require.NotContains(t, s.HTML, "-106")
 	}
 
 	plain, err := SplitHTML("<p>Just text</p>")
 	require.NoError(t, err)
-	require.Equal(t, map[string]string{"legend": "<p>Just text</p>"}, plain)
+	require.Equal(t, map[string]HTMLSection{"legend": {HTML: "<p>Just text</p>"}}, plain)
 }
 
 func TestHTMLSplitsSectionsAndSanitizes(t *testing.T) {
