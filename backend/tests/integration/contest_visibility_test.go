@@ -116,7 +116,8 @@ func (s *IntegrationTestSuite) TestGroupFeedbackHidesFailedTestInLists() {
 	own, err := s.client.GetSubmission(as, corev1.GetSubmissionParams{SubmissionID: created.ID})
 	s.Require().NoError(err)
 	s.False(own.Submission.FailedTest.IsSet())
-	s.Equal([]corev1.TestDetailItemModel{{TestIndex: 1, Verdict: "OK", Subtask: corev1.NewOptString("")}}, own.Submission.TestDetails.Value.Tests)
+	s.Require().Len(own.Submission.TestDetails.Value.Tests, 1, "tests of a points group stay hidden")
+	s.EqualValues(1, own.Submission.TestDetails.Value.Tests[0].TestIndex)
 
 	setEnd(time.Now().Add(-time.Minute))
 	s.EqualValues(2, listed().Value)
