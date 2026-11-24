@@ -2030,6 +2030,7 @@ type ContestProblemListItemModel struct {
 	ProblemID   uuid.UUID                      `json:"problem_id"`
 	Position    int32                          `json:"position"`
 	Title       string                         `json:"title"`
+	Type        ProblemType                    `json:"type"`
 	MemoryLimit int32                          `json:"memory_limit"`
 	TimeLimit   int32                          `json:"time_limit"`
 	CreatedAt   time.Time                      `json:"created_at"`
@@ -2054,6 +2055,11 @@ func (s *ContestProblemListItemModel) GetPosition() int32 {
 // GetTitle returns the value of Title.
 func (s *ContestProblemListItemModel) GetTitle() string {
 	return s.Title
+}
+
+// GetType returns the value of Type.
+func (s *ContestProblemListItemModel) GetType() ProblemType {
+	return s.Type
 }
 
 // GetMemoryLimit returns the value of MemoryLimit.
@@ -2096,6 +2102,11 @@ func (s *ContestProblemListItemModel) SetTitle(val string) {
 	s.Title = val
 }
 
+// SetType sets the value of Type.
+func (s *ContestProblemListItemModel) SetType(val ProblemType) {
+	s.Type = val
+}
+
 // SetMemoryLimit sets the value of MemoryLimit.
 func (s *ContestProblemListItemModel) SetMemoryLimit(val int32) {
 	s.MemoryLimit = val
@@ -2122,6 +2133,7 @@ type ContestProblemModel struct {
 	Permissions ContestProblemPermissionsModel `json:"permissions"`
 	ProblemID   uuid.UUID                      `json:"problem_id"`
 	Title       string                         `json:"title"`
+	Type        ProblemType                    `json:"type"`
 	TimeLimit   int32                          `json:"time_limit"`
 	MemoryLimit int32                          `json:"memory_limit"`
 	// File the solution reads instead of standard input; empty for standard input.
@@ -2158,6 +2170,11 @@ func (s *ContestProblemModel) GetProblemID() uuid.UUID {
 // GetTitle returns the value of Title.
 func (s *ContestProblemModel) GetTitle() string {
 	return s.Title
+}
+
+// GetType returns the value of Type.
+func (s *ContestProblemModel) GetType() ProblemType {
+	return s.Type
 }
 
 // GetTimeLimit returns the value of TimeLimit.
@@ -2253,6 +2270,11 @@ func (s *ContestProblemModel) SetProblemID(val uuid.UUID) {
 // SetTitle sets the value of Title.
 func (s *ContestProblemModel) SetTitle(val string) {
 	s.Title = val
+}
+
+// SetType sets the value of Type.
+func (s *ContestProblemModel) SetType(val ProblemType) {
+	s.Type = val
 }
 
 // SetTimeLimit sets the value of TimeLimit.
@@ -3018,6 +3040,20 @@ func (s *CreateOrganizationResponseModel) SetLogin(val string) {
 	s.Login = val
 }
 
+type CreateOutputsSubmissionReq struct {
+	Files []ht.MultipartFile `json:"files"`
+}
+
+// GetFiles returns the value of Files.
+func (s *CreateOutputsSubmissionReq) GetFiles() []ht.MultipartFile {
+	return s.Files
+}
+
+// SetFiles sets the value of Files.
+func (s *CreateOutputsSubmissionReq) SetFiles(val []ht.MultipartFile) {
+	s.Files = val
+}
+
 type CreatePostReq struct {
 	Title        string           `json:"title"`
 	Description  string           `json:"description"`
@@ -3249,6 +3285,20 @@ type DisableContestJoinLinkNoContent struct{}
 // DisableTeamJoinLinkNoContent is response for DisableTeamJoinLink operation.
 type DisableTeamJoinLinkNoContent struct{}
 
+type DownloadContestProblemInputsOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadContestProblemInputsOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 type DownloadContestProblemStatementPdfOK struct {
 	Data io.Reader
 }
@@ -3277,6 +3327,20 @@ func (s DownloadContestStatementsPdfOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+type DownloadProblemInputsOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadProblemInputsOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 type DownloadProblemPackageOK struct {
 	Data io.Reader
 }
@@ -3299,6 +3363,20 @@ type DownloadProblemStatementPdfOK struct {
 //
 // Kept to satisfy the io.Reader interface.
 func (s DownloadProblemStatementPdfOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+type DownloadSubmissionOutputsOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadSubmissionOutputsOK) Read(p []byte) (n int, err error) {
 	if s.Data == nil {
 		return 0, io.EOF
 	}
@@ -9464,7 +9542,7 @@ type ProblemDraft struct {
 	Revision      int64                      `json:"revision"`
 	Title         string                     `json:"title"`
 	ShortName     string                     `json:"short_name"`
-	Type          ProblemDraftType           `json:"type"`
+	Type          ProblemType                `json:"type"`
 	TimeLimitMs   int64                      `json:"time_limit_ms"`
 	MemoryLimitMB int64                      `json:"memory_limit_mb"`
 	MaxScore      NilFloat64                 `json:"max_score"`
@@ -9507,7 +9585,7 @@ func (s *ProblemDraft) GetShortName() string {
 }
 
 // GetType returns the value of Type.
-func (s *ProblemDraft) GetType() ProblemDraftType {
+func (s *ProblemDraft) GetType() ProblemType {
 	return s.Type
 }
 
@@ -9612,7 +9690,7 @@ func (s *ProblemDraft) SetShortName(val string) {
 }
 
 // SetType sets the value of Type.
-func (s *ProblemDraft) SetType(val ProblemDraftType) {
+func (s *ProblemDraft) SetType(val ProblemType) {
 	s.Type = val
 }
 
@@ -10806,54 +10884,6 @@ func (s *ProblemDraftTest) SetStatementOutput(val NilString) {
 	s.StatementOutput = val
 }
 
-type ProblemDraftType string
-
-const (
-	ProblemDraftTypePassFail    ProblemDraftType = "pass-fail"
-	ProblemDraftTypeScoring     ProblemDraftType = "scoring"
-	ProblemDraftTypeInteractive ProblemDraftType = "interactive"
-)
-
-// AllValues returns all ProblemDraftType values.
-func (ProblemDraftType) AllValues() []ProblemDraftType {
-	return []ProblemDraftType{
-		ProblemDraftTypePassFail,
-		ProblemDraftTypeScoring,
-		ProblemDraftTypeInteractive,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ProblemDraftType) MarshalText() ([]byte, error) {
-	switch s {
-	case ProblemDraftTypePassFail:
-		return []byte(s), nil
-	case ProblemDraftTypeScoring:
-		return []byte(s), nil
-	case ProblemDraftTypeInteractive:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemDraftType) UnmarshalText(data []byte) error {
-	switch ProblemDraftType(data) {
-	case ProblemDraftTypePassFail:
-		*s = ProblemDraftTypePassFail
-		return nil
-	case ProblemDraftTypeScoring:
-		*s = ProblemDraftTypeScoring
-		return nil
-	case ProblemDraftTypeInteractive:
-		*s = ProblemDraftTypeInteractive
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // A validator; the build fails when it rejects a test input. testlib validators receive --group with
 // the name of the test's group.
 // Ref: #/components/schemas/ProblemDraftValidator
@@ -11584,9 +11614,10 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 // StatementPreview.
 // Ref: #/components/schemas/ProblemStatementModel
 type ProblemStatementModel struct {
-	Title       string `json:"title"`
-	TimeLimit   int32  `json:"time_limit"`
-	MemoryLimit int32  `json:"memory_limit"`
+	Title       string      `json:"title"`
+	Type        ProblemType `json:"type"`
+	TimeLimit   int32       `json:"time_limit"`
+	MemoryLimit int32       `json:"memory_limit"`
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
@@ -11606,6 +11637,11 @@ type ProblemStatementModel struct {
 // GetTitle returns the value of Title.
 func (s *ProblemStatementModel) GetTitle() string {
 	return s.Title
+}
+
+// GetType returns the value of Type.
+func (s *ProblemStatementModel) GetType() ProblemType {
+	return s.Type
 }
 
 // GetTimeLimit returns the value of TimeLimit.
@@ -11676,6 +11712,11 @@ func (s *ProblemStatementModel) GetAssets() ProblemStatementModelAssets {
 // SetTitle sets the value of Title.
 func (s *ProblemStatementModel) SetTitle(val string) {
 	s.Title = val
+}
+
+// SetType sets the value of Type.
+func (s *ProblemStatementModel) SetType(val ProblemType) {
+	s.Type = val
 }
 
 // SetTimeLimit sets the value of TimeLimit.
@@ -11850,6 +11891,64 @@ func (s *ProblemTemplateModel) SetProblemType(val string) {
 // SetIsBuiltin sets the value of IsBuiltin.
 func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 	s.IsBuiltin = val
+}
+
+// An output-only problem judges the outputs participants submit, one file per test, instead of running
+// a program.
+// Ref: #/components/schemas/ProblemType
+type ProblemType string
+
+const (
+	ProblemTypePassFail    ProblemType = "pass-fail"
+	ProblemTypeScoring     ProblemType = "scoring"
+	ProblemTypeInteractive ProblemType = "interactive"
+	ProblemTypeOutputOnly  ProblemType = "output-only"
+)
+
+// AllValues returns all ProblemType values.
+func (ProblemType) AllValues() []ProblemType {
+	return []ProblemType{
+		ProblemTypePassFail,
+		ProblemTypeScoring,
+		ProblemTypeInteractive,
+		ProblemTypeOutputOnly,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemType) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemTypePassFail:
+		return []byte(s), nil
+	case ProblemTypeScoring:
+		return []byte(s), nil
+	case ProblemTypeInteractive:
+		return []byte(s), nil
+	case ProblemTypeOutputOnly:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemType) UnmarshalText(data []byte) error {
+	switch ProblemType(data) {
+	case ProblemTypePassFail:
+		*s = ProblemTypePassFail
+		return nil
+	case ProblemTypeScoring:
+		*s = ProblemTypeScoring
+		return nil
+	case ProblemTypeInteractive:
+		*s = ProblemTypeInteractive
+		return nil
+	case ProblemTypeOutputOnly:
+		*s = ProblemTypeOutputOnly
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Problems list item data.

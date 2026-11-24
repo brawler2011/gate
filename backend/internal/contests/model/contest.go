@@ -219,6 +219,7 @@ type ContestsList struct {
 }
 
 type ContestProblem struct {
+	Type          string
 	TimeLimitMs   int
 	MemoryLimitMb int
 	InputFile     string

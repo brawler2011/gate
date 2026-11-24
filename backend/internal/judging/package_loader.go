@@ -2,6 +2,7 @@ package judging
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,6 +11,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/brawler2011/gate/backend/pkg/outputs"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
@@ -59,6 +62,30 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (*LoadedP
 		return nil, err
 	}
 	return &LoadedPackage{Format: format, Descriptor: p, handle: h}, nil
+}
+
+// LoadOutputs extracts an output-only submission's outputs archive, named by test ordinal, into the cache.
+func (l *PackageLoader) LoadOutputs(ctx context.Context, sha string) (*diskcache.Handle, error) {
+	return l.Cache.Acquire(ctx, "outputs-"+sha, func(ctx context.Context, dir string) error { //nolint:wrapcheck // fetch errors keep their kind for the judge
+		r, _, err := l.Store.DownloadFile(ctx, l.Bucket, outputs.Key(sha), nil)
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		// Deflate never grows the archive much past the outputs it packs.
+		data, err := io.ReadAll(io.LimitReader(r, 2*outputs.MaxBytes))
+		if err != nil {
+			return fmt.Errorf("read outputs: %w", err)
+		}
+		if sum := sha256.Sum256(data); hex.EncodeToString(sum[:]) != sha {
+			return fmt.Errorf("outputs archive checksum mismatch")
+		}
+		z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		if err != nil {
+			return fmt.Errorf("open outputs: %w", err)
+		}
+		return ziputil.ExtractZipLimited(z, dir, outputs.MaxBytes, len(z.File)) //nolint:wrapcheck // describes the archive
+	})
 }
 
 func (l *PackageLoader) fetch(ctx context.Context, p model.PackageDescriptor, root string) error {

@@ -133,6 +133,7 @@ INSERT INTO submissions (
     penalty,
     state,
     ban_reason,
+    outputs,
     revision
   )
 VALUES (
@@ -146,6 +147,7 @@ VALUES (
     $7,
     COALESCE($8::integer, 1),
     $9,
+    $10,
     1
   )
 RETURNING id
@@ -161,6 +163,7 @@ type CreateSubmissionParams struct {
 	Penalty   int32                 `json:"penalty"`
 	State     *int32                `json:"state"`
 	BanReason *string               `json:"ban_reason"`
+	Outputs   *string               `json:"outputs"`
 }
 
 func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error) {
@@ -174,6 +177,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 		arg.Penalty,
 		arg.State,
 		arg.BanReason,
+		arg.Outputs,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -207,7 +211,8 @@ SELECT s.id,
   s.updated_at,
   s.revision,
   s.created_at,
-  s.pretests
+  s.pretests,
+  s.outputs
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id
@@ -248,6 +253,7 @@ type GetSubmissionRow struct {
 	Revision          int64                            `json:"revision"`
 	CreatedAt         time.Time                        `json:"created_at"`
 	Pretests          bool                             `json:"pretests"`
+	Outputs           *string                          `json:"outputs"`
 }
 
 func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error) {
@@ -281,6 +287,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.Revision,
 		&i.CreatedAt,
 		&i.Pretests,
+		&i.Outputs,
 	)
 	return i, err
 }

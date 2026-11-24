@@ -6,7 +6,7 @@ DELETE FROM stored_objects WHERE id IN (
  SELECT o.id FROM stored_objects o
  WHERE NOT EXISTS(SELECT 1 FROM problem_drafts d WHERE o.id=ANY(d.object_ids))
   AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
-  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id OR p.inputs_object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_pdfs f WHERE f.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM contest_booklets b WHERE b.object_id=o.id)
@@ -66,8 +66,8 @@ SELECT id FROM problem_packages WHERE build_id=$1;
 
 -- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16);
+ title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,inputs_object_id)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17);
 
 -- name: InsertPackageAssets :exec
 INSERT INTO problem_package_assets(package_id,name,object_id)
@@ -82,6 +82,9 @@ FROM jsonb_to_recordset(sqlc.arg(pdfs)::jsonb) f(language text,object_id uuid);
 -- name: FindPackagePDF :one
 SELECT o.key FROM problem_package_pdfs f JOIN stored_objects o ON o.id=f.object_id
 WHERE f.package_id=$1 AND f.language=$2;
+
+-- name: FindPackageInputs :one
+SELECT o.key FROM problem_packages p JOIN stored_objects o ON o.id=p.inputs_object_id WHERE p.id=$1;
 
 -- name: ReadPackageStatement :one
 SELECT p.problem_id,p.title,p.samples,p.statements,

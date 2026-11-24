@@ -178,6 +178,13 @@ type Invoker interface {
 	//
 	// POST /organizations/{login}/requests
 	CreateOrganizationJoinRequest(ctx context.Context, request OptCreateOrganizationJoinRequestModel, params CreateOrganizationJoinRequestParams) (*OrganizationJoinRequestResponseModel, error)
+	// CreateOutputsSubmission invokes CreateOutputsSubmission operation.
+	//
+	// Each file is the output of the test whose number ends its name, before or after the extension
+	// (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+	//
+	// POST /submissions/outputs
+	CreateOutputsSubmission(ctx context.Context, request *CreateOutputsSubmissionReq, params CreateOutputsSubmissionParams) (*CreationResponseModel, error)
 	// CreatePost invokes CreatePost operation.
 	//
 	// Create a new post.
@@ -292,6 +299,12 @@ type Invoker interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
+	// DownloadContestProblemInputs invokes DownloadContestProblemInputs operation.
+	//
+	// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+	//
+	// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
+	DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error)
 	// DownloadContestProblemStatementPdf invokes DownloadContestProblemStatementPdf operation.
 	//
 	// The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -304,6 +317,12 @@ type Invoker interface {
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
+	// DownloadProblemInputs invokes DownloadProblemInputs operation.
+	//
+	// Download the test inputs of an output-only problem's latest package.
+	//
+	// GET /problems/{id}/inputs.zip
+	DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error)
 	// DownloadProblemPackage invokes DownloadProblemPackage operation.
 	//
 	// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
@@ -317,6 +336,12 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/statement.pdf
 	DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (DownloadProblemStatementPdfOK, error)
+	// DownloadSubmissionOutputs invokes DownloadSubmissionOutputs operation.
+	//
+	// Visible where the submission's source would be; files are named by test number.
+	//
+	// GET /submissions/{submission_id}/outputs.zip
+	DownloadSubmissionOutputs(ctx context.Context, params DownloadSubmissionOutputsParams) (DownloadSubmissionOutputsOK, error)
 	// ExportProblemDraft invokes ExportProblemDraft operation.
 	//
 	// The archive imports back through ImportProblem.
@@ -2791,6 +2816,84 @@ func (c *Client) sendCreateOrganizationJoinRequest(ctx context.Context, request 
 	return result, nil
 }
 
+// CreateOutputsSubmission invokes CreateOutputsSubmission operation.
+//
+// Each file is the output of the test whose number ends its name, before or after the extension
+// (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+//
+// POST /submissions/outputs
+func (c *Client) CreateOutputsSubmission(ctx context.Context, request *CreateOutputsSubmissionReq, params CreateOutputsSubmissionParams) (*CreationResponseModel, error) {
+	res, err := c.sendCreateOutputsSubmission(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateOutputsSubmission(ctx context.Context, request *CreateOutputsSubmissionReq, params CreateOutputsSubmissionParams) (res *CreationResponseModel, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/submissions/outputs"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "problem_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "problem_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.UUIDToString(params.ProblemID))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "contest_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "contest_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.UUIDToString(params.ContestID))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateOutputsSubmissionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeCreateOutputsSubmissionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CreatePost invokes CreatePost operation.
 //
 // Create a new post.
@@ -4195,6 +4298,87 @@ func (c *Client) sendDisableTeamJoinLink(ctx context.Context, params DisableTeam
 	return result, nil
 }
 
+// DownloadContestProblemInputs invokes DownloadContestProblemInputs operation.
+//
+// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+//
+// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
+func (c *Client) DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error) {
+	res, err := c.sendDownloadContestProblemInputs(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (res DownloadContestProblemInputsOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/contests/"
+	{
+		// Encode "contest_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ContestID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/problems/"
+	{
+		// Encode "problem_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "problem_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ProblemID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/inputs.zip"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadContestProblemInputsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DownloadContestProblemStatementPdf invokes DownloadContestProblemStatementPdf operation.
 //
 // The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -4375,6 +4559,68 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 	return result, nil
 }
 
+// DownloadProblemInputs invokes DownloadProblemInputs operation.
+//
+// Download the test inputs of an output-only problem's latest package.
+//
+// GET /problems/{id}/inputs.zip
+func (c *Client) DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error) {
+	res, err := c.sendDownloadProblemInputs(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (res DownloadProblemInputsOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/inputs.zip"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadProblemInputsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DownloadProblemPackage invokes DownloadProblemPackage operation.
 //
 // A gfmt package with every test's input and answer as files. Importing it gives the draft it was
@@ -4532,6 +4778,68 @@ func (c *Client) sendDownloadProblemStatementPdf(ctx context.Context, params Dow
 	}()
 
 	result, err := decodeDownloadProblemStatementPdfResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadSubmissionOutputs invokes DownloadSubmissionOutputs operation.
+//
+// Visible where the submission's source would be; files are named by test number.
+//
+// GET /submissions/{submission_id}/outputs.zip
+func (c *Client) DownloadSubmissionOutputs(ctx context.Context, params DownloadSubmissionOutputsParams) (DownloadSubmissionOutputsOK, error) {
+	res, err := c.sendDownloadSubmissionOutputs(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadSubmissionOutputs(ctx context.Context, params DownloadSubmissionOutputsParams) (res DownloadSubmissionOutputsOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/submissions/"
+	{
+		// Encode "submission_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "submission_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.SubmissionID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/outputs.zip"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadSubmissionOutputsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

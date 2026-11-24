@@ -1,10 +1,14 @@
 package submissions
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+
+	"github.com/brawler2011/gate/backend/pkg/outputs"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -22,10 +26,45 @@ type SubmissionsUseCase struct {
 	submissionsRepo SubmissionsRepo
 	transactor      SubmissionTransactions
 	access          access.Loader
+	outputs         OutputsStore
 }
 
-func NewSubmissionsUseCase(submissionsRepo SubmissionsRepo, transactor SubmissionTransactions, loader access.Loader) *SubmissionsUseCase {
-	return &SubmissionsUseCase{submissionsRepo: submissionsRepo, transactor: transactor, access: loader}
+// OutputsStore keeps the outputs archives of output-only submissions.
+type OutputsStore struct {
+	Store interface {
+		UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error
+		DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error)
+	}
+	Bucket string
+}
+
+func NewSubmissionsUseCase(submissionsRepo SubmissionsRepo, transactor SubmissionTransactions, loader access.Loader, outputs OutputsStore) *SubmissionsUseCase {
+	return &SubmissionsUseCase{submissionsRepo: submissionsRepo, transactor: transactor, access: loader, outputs: outputs}
+}
+
+// OpenOutputs opens an output-only submission's outputs archive where its source would be visible.
+func (uc *SubmissionsUseCase) OpenOutputs(ctx context.Context, id uuid.UUID) (io.ReadCloser, error) {
+	sub, err := uc.GetSubmission(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if sub.SourceHidden {
+		return nil, pkg.ErrForbidden
+	}
+	if sub.Outputs == nil {
+		return nil, pkg.ErrNotFound
+	}
+	r, _, err := uc.outputs.Store.DownloadFile(ctx, uc.outputs.Bucket, outputs.Key(*sub.Outputs), nil)
+	return r, err //nolint:wrapcheck // storage errors carry their kind
+}
+
+// CreateOutputsSubmission submits outputs packed by outputs.Pack to an output-only problem.
+func (uc *SubmissionsUseCase) CreateOutputsSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation, archive []byte, sha string) (uuid.UUID, error) {
+	input := *creation
+	input.Solution, input.Language, input.Outputs = "", submissionsmodel.OutputsLanguage, &sha
+	return uc.create(ctx, &input, func(ctx context.Context) error {
+		return uc.outputs.Store.UploadFile(ctx, uc.outputs.Bucket, outputs.Key(sha), bytes.NewReader(archive), "application/zip") //nolint:wrapcheck // storage errors carry their kind
+	})
 }
 
 func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error) {
@@ -79,6 +118,11 @@ func (v *contestViews) apply(ctx context.Context, sub submissionsmodel.Submissio
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
+	return uc.create(ctx, creation, nil)
+}
+
+// create runs store, if given, once the submission is allowed and before it is recorded.
+func (uc *SubmissionsUseCase) create(ctx context.Context, creation *submissionsmodel.SubmissionCreation, store func(context.Context) error) (uuid.UUID, error) {
 	var id uuid.UUID
 	err := access.WithinContest(ctx, uc.transactor, creation.ContestId, accessmodel.ContestView, func(tx SubmissionTxStore, a access.ContestAccess) error {
 		kind, err := a.Submit()
@@ -92,8 +136,20 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 			return err
 		}
 
-		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
+		problem, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId})
+		if err != nil {
 			return pkg.OnNotFound(err, pkg.ErrNotFound, "problem does not belong to contest")
+		}
+		if outputOnly := problem.Type == "output-only"; outputOnly != (creation.Outputs != nil) {
+			if outputOnly {
+				return pkg.Invalid(pkg.ErrInconsistent, "an output-only problem takes outputs, not a program", nil)
+			}
+			return pkg.Invalid(pkg.ErrInconsistent, "this problem takes a program, not outputs", nil)
+		}
+		if store != nil {
+			if err := store(ctx); err != nil {
+				return err
+			}
 		}
 		input := *creation
 		input.Kind = kind

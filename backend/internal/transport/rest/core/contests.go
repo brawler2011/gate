@@ -347,6 +347,14 @@ func (h *CoreServer) ListContestBooklets(ctx context.Context, params corev1.List
 	return result, nil
 }
 
+func (h *CoreServer) DownloadContestProblemInputs(ctx context.Context, params corev1.DownloadContestProblemInputsParams) (corev1.DownloadContestProblemInputsOK, error) {
+	file, err := h.ContestDetails.OpenProblemInputs(ctx, params.ContestID, params.ProblemID)
+	if err != nil {
+		return corev1.DownloadContestProblemInputsOK{}, err
+	}
+	return corev1.DownloadContestProblemInputsOK{Data: file}, nil
+}
+
 func (h *CoreServer) DownloadContestProblemStatementPdf(ctx context.Context, params corev1.DownloadContestProblemStatementPdfParams) (corev1.DownloadContestProblemStatementPdfOK, error) {
 	file, err := h.ContestDetails.OpenProblemPDF(ctx, params.ContestID, params.ProblemID, params.Lang.Or(""))
 	if err != nil {

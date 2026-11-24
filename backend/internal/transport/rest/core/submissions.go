@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/pkg/outputs"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -53,6 +55,31 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 	}
 
 	return &corev1.CreationResponseModel{ID: solutionID}, nil
+}
+
+func (h *CoreServer) CreateOutputsSubmission(ctx context.Context, req *corev1.CreateOutputsSubmissionReq, params corev1.CreateOutputsSubmissionParams) (*corev1.CreationResponseModel, error) {
+	files := make([]outputs.File, len(req.Files))
+	for i, f := range req.Files {
+		files[i] = outputs.File{Name: f.Name, Data: f.File}
+	}
+	archive, sha, err := outputs.Pack(files)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // validation errors point at the field
+	}
+	creation := &submissionsmodel.SubmissionCreation{UserId: accessmodel.UserFromContext(ctx).Id, ProblemId: params.ProblemID, ContestId: params.ContestID, Penalty: 20}
+	id, err := h.Submissions.CreateOutputsSubmission(ctx, creation, archive, sha)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.CreationResponseModel{ID: id}, nil
+}
+
+func (h *CoreServer) DownloadSubmissionOutputs(ctx context.Context, params corev1.DownloadSubmissionOutputsParams) (corev1.DownloadSubmissionOutputsOK, error) {
+	file, err := h.Submissions.OpenOutputs(ctx, params.SubmissionID)
+	if err != nil {
+		return corev1.DownloadSubmissionOutputsOK{}, err
+	}
+	return corev1.DownloadSubmissionOutputsOK{Data: file}, nil
 }
 
 func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmissionParams) (*corev1.GetSubmissionResponseModel, error) {

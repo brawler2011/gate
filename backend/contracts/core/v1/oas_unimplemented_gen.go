@@ -247,6 +247,16 @@ func (UnimplementedHandler) CreateOrganizationJoinRequest(ctx context.Context, r
 	return r, ht.ErrNotImplemented
 }
 
+// CreateOutputsSubmission implements CreateOutputsSubmission operation.
+//
+// Each file is the output of the test whose number ends its name, before or after the extension
+// (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+//
+// POST /submissions/outputs
+func (UnimplementedHandler) CreateOutputsSubmission(ctx context.Context, req *CreateOutputsSubmissionReq, params CreateOutputsSubmissionParams) (r *CreationResponseModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreatePost implements CreatePost operation.
 //
 // Create a new post.
@@ -418,6 +428,15 @@ func (UnimplementedHandler) DisableTeamJoinLink(ctx context.Context, params Disa
 	return ht.ErrNotImplemented
 }
 
+// DownloadContestProblemInputs implements DownloadContestProblemInputs operation.
+//
+// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+//
+// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
+func (UnimplementedHandler) DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (r DownloadContestProblemInputsOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DownloadContestProblemStatementPdf implements DownloadContestProblemStatementPdf operation.
 //
 // The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -433,6 +452,15 @@ func (UnimplementedHandler) DownloadContestProblemStatementPdf(ctx context.Conte
 //
 // GET /contests/{contest_id}/statements.pdf
 func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (r DownloadContestStatementsPdfOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DownloadProblemInputs implements DownloadProblemInputs operation.
+//
+// Download the test inputs of an output-only problem's latest package.
+//
+// GET /problems/{id}/inputs.zip
+func (UnimplementedHandler) DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (r DownloadProblemInputsOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -452,6 +480,15 @@ func (UnimplementedHandler) DownloadProblemPackage(ctx context.Context, params D
 //
 // GET /problems/{id}/statement.pdf
 func (UnimplementedHandler) DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (r DownloadProblemStatementPdfOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DownloadSubmissionOutputs implements DownloadSubmissionOutputs operation.
+//
+// Visible where the submission's source would be; files are named by test number.
+//
+// GET /submissions/{submission_id}/outputs.zip
+func (UnimplementedHandler) DownloadSubmissionOutputs(ctx context.Context, params DownloadSubmissionOutputsParams) (r DownloadSubmissionOutputsOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

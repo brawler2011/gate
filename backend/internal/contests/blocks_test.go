@@ -137,7 +137,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 		eventdata.Writer
 		*scoreboardRepo
 		*accesstest.Loader
-	}{repo, notices, f.repo, loader}}, loader)
+	}{repo, notices, f.repo, loader}}, loader, submissions.OutputsStore{})
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Cheating"
 	require.NoError(t, uc.SetSubmissionBlocked(ctx, id, true, &reason))
@@ -176,7 +176,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 		eventdata.Writer
 		*scoreboardRepo
 		*accesstest.Loader
-	}{repo, notices, f.repo, loader}}, loader)
+	}{repo, notices, f.repo, loader}}, loader, submissions.OutputsStore{})
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID

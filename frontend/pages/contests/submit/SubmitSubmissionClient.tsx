@@ -3,6 +3,7 @@ import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
+import {OutputsSubmissionForm} from "@/components/submissions/OutputsSubmissionForm";
 import {api} from "@/lib/api";
 import {useContestLanguages} from "@/lib/languages";
 import {numberToLetters} from "@/lib/lib";
@@ -25,6 +26,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
     problems.find((problem) => problem.permissions.submit)?.problem_id ?? null,
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const mySubmissions = `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`;
 
   const problemOptions = problems.map((problem) => ({
     value: problem.problem_id,
@@ -68,13 +70,31 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
 
     if (result) {
       setIsSubmitted(true);
-      navigate(
-        `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
-      );
+      navigate(mySubmissions);
     }
 
     return result;
   };
+
+  const selectedProblem = problems.find((problem) => problem.problem_id === selectedProblemId);
+  const disabled = isSubmitted || !contest.permissions.submit || !selectedProblem?.permissions.submit;
+  const problemSelect = (
+    <Select
+      placeholder="Выберите задачу"
+      variant="subtle"
+      data={problemOptions}
+      value={selectedProblemId}
+      onChange={setSelectedProblemId}
+      allowDeselect={false}
+      disabled={isSubmitted}
+      classNames={{input: classes.problemSelectInput}}
+      style={{
+        width: `${(problemOptions.find((o) => o.value === selectedProblemId)?.label.length || 10) + 3}ch`,
+      }}
+      comboboxProps={{position: "bottom-start"}}
+      styles={{dropdown: {minWidth: "max-content"}}}
+    />
+  );
 
   if (problems.length === 0) {
     return (
@@ -99,30 +119,28 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
             "light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
         }}
       >
-        <CreateSubmissionForm
-          languages={languages}
-          onSubmit={handleSubmit}
-          large
-          disabled={isSubmitted || !contest.permissions.submit
-            || !problems.some((problem) => problem.problem_id === selectedProblemId && problem.permissions.submit)}
-          problemSelect={
-            <Select
-              placeholder="Выберите задачу"
-              variant="subtle"
-              data={problemOptions}
-              value={selectedProblemId}
-              onChange={setSelectedProblemId}
-              allowDeselect={false}
-              disabled={isSubmitted}
-              classNames={{input: classes.problemSelectInput}}
-              style={{
-                width: `${(problemOptions.find((o) => o.value === selectedProblemId)?.label.length || 10) + 3}ch`,
+        {selectedProblem?.type === "output-only" ? (
+          <Stack gap="sm">
+            {problemSelect}
+            <OutputsSubmissionForm
+              contestId={contest.id}
+              problemId={selectedProblem.problem_id}
+              disabled={disabled}
+              onSubmitted={() => {
+                setIsSubmitted(true);
+                navigate(mySubmissions);
               }}
-              comboboxProps={{position: "bottom-start"}}
-              styles={{dropdown: {minWidth: "max-content"}}}
             />
-          }
-        />
+          </Stack>
+        ) : (
+          <CreateSubmissionForm
+            languages={languages}
+            onSubmit={handleSubmit}
+            large
+            disabled={disabled}
+            problemSelect={problemSelect}
+          />
+        )}
       </Paper>
     </Box>
   );

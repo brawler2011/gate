@@ -48,6 +48,7 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *submis
 		Penalty:   int32(creation.Penalty),
 		State:     creation.State,
 		BanReason: creation.BanReason,
+		Outputs:   creation.Outputs,
 	})
 	if err != nil {
 		return uuid.Nil, dbError("create submission", err)
@@ -260,6 +261,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) submissionsmodel.Submission 
 		UpdatedAt:         row.UpdatedAt,
 		CreatedAt:         row.CreatedAt,
 		Pretests:          row.Pretests,
+		Outputs:           row.Outputs,
 	}
 }
 

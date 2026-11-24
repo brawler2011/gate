@@ -51,7 +51,7 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 				s.requirePolygonInputs(dir, pkg.Format)
 			}
 			role := "checker"
-			if draft.Type == corev1.ProblemDraftTypeInteractive {
+			if draft.Type == corev1.ProblemTypeInteractive {
 				role = "interactor"
 			}
 			_, _, ok := built.Program(role)

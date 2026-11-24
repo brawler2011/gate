@@ -922,23 +922,24 @@ type ProblemMember struct {
 }
 
 type ProblemPackage struct {
-	ID             uuid.UUID `json:"id"`
-	ProblemID      uuid.UUID `json:"problem_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	PackageHash    string    `json:"package_hash"`
-	CreatedAt      time.Time `json:"created_at"`
-	Title          string    `json:"title"`
-	ShortName      string    `json:"short_name"`
-	Type           string    `json:"type"`
-	TimeLimitMs    int32     `json:"time_limit_ms"`
-	MemoryLimitMb  int32     `json:"memory_limit_mb"`
-	InputFile      string    `json:"input_file"`
-	OutputFile     string    `json:"output_file"`
-	BuildID        uuid.UUID `json:"build_id"`
-	ObjectID       uuid.UUID `json:"object_id"`
-	Revision       int64     `json:"revision"`
-	Samples        []byte    `json:"samples"`
-	Statements     []byte    `json:"statements"`
+	ID             uuid.UUID  `json:"id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	PackageHash    string     `json:"package_hash"`
+	CreatedAt      time.Time  `json:"created_at"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	Type           string     `json:"type"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	InputFile      string     `json:"input_file"`
+	OutputFile     string     `json:"output_file"`
+	BuildID        uuid.UUID  `json:"build_id"`
+	ObjectID       uuid.UUID  `json:"object_id"`
+	Revision       int64      `json:"revision"`
+	Samples        []byte     `json:"samples"`
+	Statements     []byte     `json:"statements"`
+	InputsObjectID *uuid.UUID `json:"inputs_object_id"`
 }
 
 type ProblemPackageAsset struct {
@@ -997,6 +998,7 @@ type Submission struct {
 	Pretests       bool                   `json:"pretests"`
 	JudgeK         *float64               `json:"judge_k"`
 	JudgeBenchmark *string                `json:"judge_benchmark"`
+	Outputs        *string                `json:"outputs"`
 }
 
 type Team struct {

@@ -17,6 +17,15 @@ type PackagesReader interface {
 	Statement(ctx context.Context, problemID uuid.UUID) (problemsmodel.ProblemPackage, problemsmodel.StatementContent, bool, error)
 	OpenStatementImage(ctx context.Context, problemID uuid.UUID, sha256 string) (io.ReadCloser, string, error)
 	OpenStatementPDF(ctx context.Context, problemID uuid.UUID, language string) (io.ReadCloser, error)
+	OpenInputs(ctx context.Context, problemID uuid.UUID) (io.ReadCloser, error)
+}
+
+func (h *CoreServer) DownloadProblemInputs(ctx context.Context, params corev1.DownloadProblemInputsParams) (corev1.DownloadProblemInputsOK, error) {
+	file, err := h.Packages.OpenInputs(ctx, params.ID)
+	if err != nil {
+		return corev1.DownloadProblemInputsOK{}, err
+	}
+	return corev1.DownloadProblemInputsOK{Data: file}, nil
 }
 
 func (h *CoreServer) DownloadProblemStatementPdf(ctx context.Context, params corev1.DownloadProblemStatementPdfParams) (corev1.DownloadProblemStatementPdfOK, error) {

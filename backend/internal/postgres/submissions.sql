@@ -10,6 +10,7 @@ INSERT INTO submissions (
     penalty,
     state,
     ban_reason,
+    outputs,
     revision
   )
 VALUES (
@@ -23,6 +24,7 @@ VALUES (
     @penalty,
     COALESCE(sqlc.narg('state')::integer, 1),
     sqlc.narg('ban_reason'),
+    sqlc.narg('outputs'),
     1
   )
 RETURNING id;
@@ -54,7 +56,8 @@ SELECT s.id,
   s.updated_at,
   s.revision,
   s.created_at,
-  s.pretests
+  s.pretests,
+  s.outputs
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id

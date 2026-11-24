@@ -15,7 +15,7 @@ type Problem struct {
 	Title         string             `yaml:"title" json:"title"`
 	// Titles by statement language override Title for that statement.
 	Titles   map[string]string  `yaml:"titles,omitempty" json:"titles,omitempty"`
-	Type     string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
+	Type     string             `yaml:"type" json:"type"` // one of spec.ProblemTypes
 	Limits   Limits             `yaml:"limits" json:"limits"`
 	// Testset is the root group; only it is unnamed.
 	Testset Group `yaml:"testset" json:"testset"`

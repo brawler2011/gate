@@ -2335,6 +2335,109 @@ func decodeCreateOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 	return params, nil
 }
 
+// CreateOutputsSubmissionParams is parameters of CreateOutputsSubmission operation.
+type CreateOutputsSubmissionParams struct {
+	// UUID of the problem.
+	ProblemID uuid.UUID
+	// UUID of the contest.
+	ContestID uuid.UUID
+}
+
+func unpackCreateOutputsSubmissionParams(packed middleware.Parameters) (params CreateOutputsSubmissionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "problem_id",
+			In:   "query",
+		}
+		params.ProblemID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "query",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeCreateOutputsSubmissionParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateOutputsSubmissionParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: problem_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "problem_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProblemID = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "problem_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: contest_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "contest_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateProblemParams is parameters of CreateProblem operation.
 type CreateProblemParams struct {
 	// Title of the new problem.
@@ -4047,6 +4150,126 @@ func decodeDisableTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
+// DownloadContestProblemInputsParams is parameters of DownloadContestProblemInputs operation.
+type DownloadContestProblemInputsParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
+}
+
+func unpackDownloadContestProblemInputsParams(packed middleware.Parameters) (params DownloadContestProblemInputsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "path",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "problem_id",
+			In:   "path",
+		}
+		params.ProblemID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDownloadContestProblemInputsParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadContestProblemInputsParams, _ error) {
+	// Decode path: contest_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: problem_id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "problem_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProblemID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "problem_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DownloadContestProblemStatementPdfParams is parameters of DownloadContestProblemStatementPdf operation.
 type DownloadContestProblemStatementPdfParams struct {
 	// UUID of the contest.
@@ -4332,6 +4555,72 @@ func decodeDownloadContestStatementsPdfParams(args [1]string, argsEscaped bool, 
 	return params, nil
 }
 
+// DownloadProblemInputsParams is parameters of DownloadProblemInputs operation.
+type DownloadProblemInputsParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+}
+
+func unpackDownloadProblemInputsParams(packed middleware.Parameters) (params DownloadProblemInputsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDownloadProblemInputsParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadProblemInputsParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DownloadProblemPackageParams is parameters of DownloadProblemPackage operation.
 type DownloadProblemPackageParams struct {
 	// UUID of the problem.
@@ -4564,6 +4853,72 @@ func decodeDownloadProblemStatementPdfParams(args [1]string, argsEscaped bool, r
 		return params, &ogenerrors.DecodeParamError{
 			Name: "lang",
 			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// DownloadSubmissionOutputsParams is parameters of DownloadSubmissionOutputs operation.
+type DownloadSubmissionOutputsParams struct {
+	// UUID of the submission.
+	SubmissionID uuid.UUID
+}
+
+func unpackDownloadSubmissionOutputsParams(packed middleware.Parameters) (params DownloadSubmissionOutputsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "submission_id",
+			In:   "path",
+		}
+		params.SubmissionID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDownloadSubmissionOutputsParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadSubmissionOutputsParams, _ error) {
+	// Decode path: submission_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "submission_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.SubmissionID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "submission_id",
+			In:   "path",
 			Err:  err,
 		}
 	}

@@ -40,7 +40,7 @@ func Fail(code *pkg.Error, path, value, format string, args ...any) error {
 // Paths are slash-separated relative to the package root; names may repeat.
 type Problem struct {
 	Title         string
-	Type          string // "pass-fail", "scoring" or "interactive"
+	Type          string // one of ProblemTypes
 	TimeLimitMs   int
 	MemoryLimitMb int
 	Checker       *Program
@@ -189,6 +189,12 @@ func (g *Group) walk(yield func(*Group) bool) bool {
 
 // Aggregations combine the scores of a group's tests and subgroups.
 var Aggregations = []string{"sum", "min", "max", "avg"}
+
+// ProblemTypes lists every problem type; an output-only problem judges submitted outputs instead of running a program.
+var ProblemTypes = []string{"pass-fail", "scoring", "interactive", "output-only"}
+
+// Scored reports whether a problem type earns points per test rather than all or nothing.
+func Scored(problemType string) bool { return problemType == "scoring" || problemType == "output-only" }
 
 // Aggregate combines scores by an Aggregations entry, empty meaning sum; avg rounds down to hundredths.
 func Aggregate(kind string, scores []points.Value) points.Value {

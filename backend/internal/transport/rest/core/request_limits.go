@@ -1,5 +1,7 @@
 package core
 
+import "github.com/brawler2011/gate/backend/pkg/outputs"
+
 const (
 	MaxMediaFileSize        = 50 << 20
 	DefaultRequestBodyLimit = 1 << 20
@@ -12,6 +14,8 @@ func RequestBodyLimit(operationID string) int64 {
 	switch operationID {
 	case "UploadAvatar", "CreatePost", "PatchPostById":
 		return MaxMediaFileSize + multipartOverheadLimit
+	case "CreateOutputsSubmission":
+		return outputs.MaxBytes + multipartOverheadLimit
 	default:
 		return DefaultRequestBodyLimit
 	}

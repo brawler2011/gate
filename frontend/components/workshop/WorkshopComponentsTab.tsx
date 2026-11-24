@@ -17,6 +17,7 @@ import {
   customizeChecker,
   groupLabel,
   groupRows,
+  isScored,
   isSingleRole,
   programsOf,
   removeProgram,
@@ -274,7 +275,7 @@ const SolutionExpectation = ({draft, name, result, revision, onChange}: Expectat
           clearable
           w={420}
         />
-        {draft.type === "scoring" && (
+        {isScored(draft.type) && (
           <NumberInput
             label="Ожидаемые баллы"
             description="Пусто — любые"
