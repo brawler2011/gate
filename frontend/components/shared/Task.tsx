@@ -149,6 +149,7 @@ const Task = ({
                   const hash = task.assets[path];
                   return hash && `/api/contests/${contest.id}/problems/${task.problem_id}/assets/${hash}`;
                 }}
+                pdfUrl={`/api/contests/${contest.id}/problems/${task.problem_id}/statement.pdf`}
               />
             </Box>
           </Container>

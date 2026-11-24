@@ -292,6 +292,12 @@ type Invoker interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
+	// DownloadContestProblemStatementPdf invokes DownloadContestProblemStatementPdf operation.
+	//
+	// The PDF the build of the package the contest uses printed; it is visible with the statement.
+	//
+	// GET /contests/{contest_id}/problems/{problem_id}/statement.pdf
+	DownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (DownloadContestProblemStatementPdfOK, error)
 	// DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 	//
 	// Download PDF booklet with contest statements.
@@ -305,6 +311,12 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/packages/{packageId}/download
 	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
+	// DownloadProblemStatementPdf invokes DownloadProblemStatementPdf operation.
+	//
+	// Download the statement PDF of the problem's latest package.
+	//
+	// GET /problems/{id}/statement.pdf
+	DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (DownloadProblemStatementPdfOK, error)
 	// ExportProblemDraft invokes ExportProblemDraft operation.
 	//
 	// The archive imports back through ImportProblem.
@@ -685,6 +697,18 @@ type Invoker interface {
 	//
 	// PATCH /posts/{id}
 	PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) error
+	// PreviewProblemDraftStatement invokes PreviewProblemDraftStatement operation.
+	//
+	// Fails with a format error that names the section and line pandoc cannot show.
+	//
+	// POST /problems/{id}/draft/statement-preview
+	PreviewProblemDraftStatement(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementParams) (StatementPreview, error)
+	// PreviewProblemDraftStatementPdf invokes PreviewProblemDraftStatementPdf operation.
+	//
+	// Fails with a format error that names the section and line of the LaTeX error.
+	//
+	// POST /problems/{id}/draft/statement-preview.pdf
+	PreviewProblemDraftStatementPdf(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementPdfParams) (PreviewProblemDraftStatementPdfOK, error)
 	// Register invokes Register operation.
 	//
 	// Register.
@@ -4165,6 +4189,107 @@ func (c *Client) sendDisableTeamJoinLink(ctx context.Context, params DisableTeam
 	return result, nil
 }
 
+// DownloadContestProblemStatementPdf invokes DownloadContestProblemStatementPdf operation.
+//
+// The PDF the build of the package the contest uses printed; it is visible with the statement.
+//
+// GET /contests/{contest_id}/problems/{problem_id}/statement.pdf
+func (c *Client) DownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (DownloadContestProblemStatementPdfOK, error) {
+	res, err := c.sendDownloadContestProblemStatementPdf(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (res DownloadContestProblemStatementPdfOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/contests/"
+	{
+		// Encode "contest_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ContestID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/problems/"
+	{
+		// Encode "problem_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "problem_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ProblemID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/statement.pdf"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "lang" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "lang",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Lang.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadContestProblemStatementPdfResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 //
 // Download PDF booklet with contest statements.
@@ -4322,6 +4447,88 @@ func (c *Client) sendDownloadProblemPackage(ctx context.Context, params Download
 	}()
 
 	result, err := decodeDownloadProblemPackageResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadProblemStatementPdf invokes DownloadProblemStatementPdf operation.
+//
+// Download the statement PDF of the problem's latest package.
+//
+// GET /problems/{id}/statement.pdf
+func (c *Client) DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (DownloadProblemStatementPdfOK, error) {
+	res, err := c.sendDownloadProblemStatementPdf(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (res DownloadProblemStatementPdfOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/statement.pdf"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "lang" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "lang",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Lang.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadProblemStatementPdfResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9446,6 +9653,136 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 	}()
 
 	result, err := decodePatchPostByIdResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PreviewProblemDraftStatement invokes PreviewProblemDraftStatement operation.
+//
+// Fails with a format error that names the section and line pandoc cannot show.
+//
+// POST /problems/{id}/draft/statement-preview
+func (c *Client) PreviewProblemDraftStatement(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementParams) (StatementPreview, error) {
+	res, err := c.sendPreviewProblemDraftStatement(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPreviewProblemDraftStatement(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementParams) (res StatementPreview, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/draft/statement-preview"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePreviewProblemDraftStatementRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodePreviewProblemDraftStatementResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PreviewProblemDraftStatementPdf invokes PreviewProblemDraftStatementPdf operation.
+//
+// Fails with a format error that names the section and line of the LaTeX error.
+//
+// POST /problems/{id}/draft/statement-preview.pdf
+func (c *Client) PreviewProblemDraftStatementPdf(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementPdfParams) (PreviewProblemDraftStatementPdfOK, error) {
+	res, err := c.sendPreviewProblemDraftStatementPdf(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPreviewProblemDraftStatementPdf(ctx context.Context, request *ProblemDraftStatement, params PreviewProblemDraftStatementPdfParams) (res PreviewProblemDraftStatementPdfOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/draft/statement-preview.pdf"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePreviewProblemDraftStatementPdfRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodePreviewProblemDraftStatementPdfResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -511,6 +511,34 @@ func encodePatchPostByIdRequest(
 	return nil
 }
 
+func encodePreviewProblemDraftStatementRequest(
+	req *ProblemDraftStatement,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePreviewProblemDraftStatementPdfRequest(
+	req *ProblemDraftStatement,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeRegisterRequest(
 	req *RegisterRequestModel,
 	r *http.Request,

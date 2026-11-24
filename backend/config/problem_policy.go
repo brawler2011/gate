@@ -45,7 +45,7 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.Limits.WallFactor >= 1, "problems.limits.wall_factor", "must be at least 1")
 	validateRunLimits(v, "problems.limits.compile", p.Limits.Compile)
 	validateRunLimits(v, "problems.limits.auxiliary", p.Limits.Auxiliary)
-	validateRunLimits(v, "problems.limits.booklet", p.Limits.Booklet)
+	validateRunLimits(v, "problems.limits.typeset", p.Limits.Typeset)
 
 	v.check(p.Parallelism >= 1, "problems.parallelism", "must be at least 1")
 	v.check(p.Attempts >= 1, "problems.attempts", "must be at least 1")

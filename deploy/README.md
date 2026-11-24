@@ -92,7 +92,8 @@ the pod and service networks (10.42.0.0/16, 10.43.0.0/16), or cluster DNS breaks
 Passwords for both environments come from `local/.env`.
 
 - `task infra:up` installs `gate-infra` in the `gate-dev` namespace with a
-  standalone go-judge that reads `backend/data/problem-work` through hostPath.
+  standalone go-judge that reads `backend/data/problem-work` through hostPath
+  and a typeset go-judge.
   `task dev` then runs the backend and Vite on the host against the NodePorts in
   `local/gate-infra.yaml`. `task infra:down` keeps the data; delete the
   namespace to reset it.

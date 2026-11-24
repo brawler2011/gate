@@ -6,3 +6,5 @@ seaweedfs:
   nodePort: 30833
 judge:
   nodePort: 30050
+typeset:
+  nodePort: 30051

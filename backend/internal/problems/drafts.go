@@ -16,6 +16,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/google/uuid"
 )
 
@@ -51,6 +52,13 @@ type DraftUseCase struct {
 	UploadTTL    time.Duration
 	BuildOptions model.BuildOptions
 	Languages    *sandbox.Config
+	Typeset      Typesetter
+}
+
+type Typesetter interface {
+	statement.Converter
+	LaTeX(ctx context.Context, markdown string) (string, []sandbox.PandocMessage, error)
+	PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error)
 }
 
 // authorize fails fast before uploads; mutations authorize again inside their transaction.

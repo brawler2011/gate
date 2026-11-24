@@ -32,6 +32,8 @@ type pipelineServices struct {
 	client *sandbox.Client
 	files  *sandbox.FileTransport
 	langs  map[string]sandbox.Language
+	// typeset is shared by every test of the binary.
+	typeset *sandbox.Typesetter
 }
 
 func startPipelineServices(t *testing.T) pipelineServices {
@@ -69,7 +71,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	require.NoError(t, err)
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
-	return pipelineServices{store: store, client: client, files: files, langs: cfg.Langs}
+	return pipelineServices{store: store, client: client, files: files, langs: cfg.Langs, typeset: dbfixtures.Typesetter(t)}
 }
 
 func TestProblemPipelineRealServices(t *testing.T) {
@@ -102,7 +104,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Typeset: dbfixtures.Typesetter(t), Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)
@@ -160,7 +162,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, error) {
 	t.Helper()
 	limits := dbfixtures.BuildLimits(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
+	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Typeset: services.typeset, Files: services.files, Languages: cfg,
 		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	_, err := repo.SaveDraft(ctx, *d)
 	require.NoError(t, err)

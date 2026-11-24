@@ -22,7 +22,8 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
@@ -75,7 +76,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	if err != nil {
 		return nil, uncoded(err, pkg.ErrPackageLayout, "the package cannot be read")
 	}
-	if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
+	if err := uc.convertImport(ctx, result, packageRoot, problem, id, revision); err != nil {
 		return nil, err
 	}
 	if err := result.draft.ComputeScores(); err != nil {
@@ -131,12 +132,12 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 	return importObject{temporaryID: id, path: path, spec: model.UploadSpec{Purpose: purpose, SHA256: hex.EncodeToString(h.Sum(nil)), Size: n}}, nil
 }
 
-func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
+func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
 		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
 			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
-	if err := c.convert(p); err != nil {
+	if err := c.convert(ctx, p); err != nil {
 		return err
 	}
 	result.draft = c.draft
@@ -157,7 +158,7 @@ type importConverter struct {
 	converted []string
 }
 
-func (c *importConverter) convert(p *spec.Problem) error {
+func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 	if err := c.addLibrary(p); err != nil {
 		return err
 	}
@@ -215,7 +216,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		return spec.Fail(pkg.ErrUnknown, "", p.MainSolution, "main solution %s not found", p.MainSolution)
 	}
 	for _, s := range p.Statements {
-		if err := c.addStatement(s); err != nil {
+		if err := c.addStatement(ctx, s); err != nil {
 			return err
 		}
 	}
@@ -466,18 +467,32 @@ func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Pr
 	return name, nil
 }
 
-func (c *importConverter) addStatement(s spec.Statement) error {
+func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) error {
 	if c.draft.Statement(s.Language) != nil {
 		return spec.Fail(pkg.ErrDuplicate, "", s.Language, "several statements in %s", s.Language)
 	}
-	statement := model.DraftStatement{Language: s.Language, Title: strings.TrimSpace(s.Title)}
+	st := model.DraftStatement{Language: s.Language, Title: strings.TrimSpace(s.Title)}
 	sections := map[string]string{}
-	if s.TeX != "" {
+	switch {
+	case s.TeX != "":
 		text, err := c.readText(s.TeX, s.Charset)
 		if err != nil {
 			return err
 		}
-		sections = tex.ToSections(text)
+		sections = statement.SplitTeX(text)
+	case s.Markdown != "":
+		text, err := c.readText(s.Markdown, s.Charset)
+		if err != nil {
+			return err
+		}
+		tex, _, err := c.uc.Typeset.LaTeX(ctx, text)
+		if errors.Is(err, sandbox.ErrUnavailable) {
+			return fmt.Errorf("convert %s: %w", s.Markdown, err)
+		}
+		if err != nil {
+			return spec.Fail(pkg.ErrFormat, s.Markdown, "", "pandoc cannot convert %s: %v", s.Markdown, err)
+		}
+		sections = statement.SplitTeX(tex)
 	}
 	for name, path := range s.Sections {
 		text, err := c.readText(path, s.Charset)
@@ -488,7 +503,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 		sections[name] = strings.TrimRightFunc(text, unicode.IsSpace)
 	}
 	for name, text := range sections {
-		section := statement.Section(name)
+		section := st.Section(name)
 		if section == nil {
 			return spec.Fail(pkg.ErrUnknown, "", name, "unknown statement section %s in %s", name, s.Language)
 		}
@@ -500,7 +515,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 		}
 		*section = text
 	}
-	c.draft.Statements = append(c.draft.Statements, statement)
+	c.draft.Statements = append(c.draft.Statements, st)
 	return nil
 }
 

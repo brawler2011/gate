@@ -12,7 +12,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
@@ -120,9 +120,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.TextTests = true
 		}
 	}
-	p.Statements = statements(prob.Statements)
+	p.Statements = statements(fsys, p, prob.Statements)
 	for _, name := range prob.Names {
-		p.SetStatementTitle(tex.LanguageCode(name.Language), name.Value)
+		p.SetStatementTitle(spec.LanguageCode(name.Language), name.Value)
 	}
 	return p, nil
 }
@@ -359,15 +359,37 @@ func parsePoints(value float64) (points.Value, error) {
 	return v, nil
 }
 
-func statements(list []Statement) []spec.Statement {
+// Polygon keeps each section in statement-sections/<language>, with the images it shows; problem.tex is the fallback.
+func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
 	for _, s := range list {
-		language := tex.LanguageCode(s.Language)
-		if s.Type == "application/x-tex" && !seen[language] {
-			seen[language] = true
-			result = append(result, spec.Statement{Language: language, Charset: s.Charset, TeX: s.Path})
+		language := spec.LanguageCode(s.Language)
+		if s.Type != "application/x-tex" || seen[language] {
+			continue
 		}
+		seen[language] = true
+		st := spec.Statement{Language: language, Charset: s.Charset, TeX: s.Path}
+		dir := path.Join("statement-sections", s.Language)
+		entries, _ := fs.ReadDir(fsys, dir)
+		for _, e := range entries {
+			name := e.Name()
+			section, ok := strings.CutSuffix(name, ".tex")
+			switch {
+			case !e.Type().IsRegular():
+			case ok && slices.Contains(statement.Order, section):
+				if st.Sections == nil {
+					st.Sections = map[string]string{}
+				}
+				st.Sections[section] = path.Join(dir, name)
+			case spec.IsImage(name):
+				p.AddAsset(name, path.Join(dir, name))
+			}
+		}
+		if st.Sections != nil {
+			st.TeX = ""
+		}
+		result = append(result, st)
 	}
 	return result
 }

@@ -37,6 +37,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -165,7 +166,7 @@ func (s *IntegrationTestSuite) initApp() {
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}
-	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Access: loader, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T())}
+	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Access: loader, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, BuildOptions: testBuildOptions(s.T()), Languages: testLanguages(s.T()), Typeset: dbfixtures.Typesetter(s.T())}
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, loader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: loader}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), loader)
@@ -187,7 +188,7 @@ func (s *IntegrationTestSuite) initApp() {
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), announcementsRepo, loader)
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, loader)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, loader, nil)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, loader, dbfixtures.Typesetter(s.T()))
 
 	coreServer := handlers.NewCoreServer(handlers.Services{
 		Auth:              authUC,

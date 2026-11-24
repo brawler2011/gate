@@ -1,7 +1,6 @@
 package sandbox
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -9,7 +8,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/brawler2011/gate/backend/pkg/booklet"
 )
 
 func safeUint64[T ~int | ~int64](v T) uint64 {
@@ -229,43 +227,4 @@ func statusToString(status string) Status {
 	default:
 		return StatusFail
 	}
-}
-
-// CompilePDF limits the PDF by limits.Output and the reported log tail by limits.Diagnostic.
-func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileRunLimits) ([]byte, error) {
-	latex := "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex >/dev/null"
-	results, err := s.client.run(ctx, request{Cmd: []cmd{{
-		// The error is at the end of the log, so only its tail leaves the sandbox.
-		Args:          []string{"/bin/sh", "-c", fmt.Sprintf("{ %s && %s; } || { tail -c %d booklet.log; exit 1; }", latex, latex, int64(limits.Diagnostic))},
-		Files:         []*cmdFile{memoryFile(""), collector("stdout", int64(limits.Diagnostic), false), collector("stderr", int64(limits.Diagnostic), false)},
-		CopyIn:        map[string]cmdFile{"booklet.tex": *memoryFile(texSource), "olymp.sty": *memoryFile(string(booklet.OlympSty))},
-		CopyOutCached: []string{"booklet.pdf"},
-		CPULimit:      safeUint64(limits.CPU.Nanoseconds()),
-		ClockLimit:    safeUint64(limits.Wall.Nanoseconds()),
-		MemoryLimit:   limits.Memory.Uint64(),
-		ProcLimit:     limits.Processes,
-		Env:           []string{"PATH=/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
-	}}})
-	if err != nil {
-		return nil, fmt.Errorf("LaTeX compilation failed to dispatch: %w", err)
-	}
-
-	res := results[0]
-	pdfID := res.FileIDs["booklet.pdf"]
-	defer s.client.release(pdfID)
-	if res.Status != resultAccepted {
-		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nLog:\n%s\n%s",
-			res.Status, res.ExitStatus, res.Files["stdout"], res.Files["stderr"])
-	}
-	if pdfID == "" {
-		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")
-	}
-	var pdf bytes.Buffer
-	if _, err := s.client.get(ctx, pdfID, &pdf, int64(limits.Output)); err != nil {
-		return nil, fmt.Errorf("download booklet.pdf: %w", err)
-	}
-	if pdf.Len() == 0 {
-		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf is empty")
-	}
-	return pdf.Bytes(), nil
 }

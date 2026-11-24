@@ -12,7 +12,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
@@ -57,9 +56,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	p.Type = problemType(run, p.Groups)
 	p.KeepInteractiveInputsPrivate()
-	p.Statements = statements(fsys, prob.Statements)
+	p.Statements = statements(fsys, p, prob.Statements)
 	for _, name := range prob.Names {
-		p.SetStatementTitle(tex.LanguageCode(name.Language), name.Value)
+		p.SetStatementTitle(spec.LanguageCode(name.Language), name.Value)
 	}
 	return p, nil
 }
@@ -236,11 +235,11 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 }
 
 // Packages listing only rendered statements still carry statements/<language>/problem.tex.
-func statements(fsys fs.FS, list []Statement) []spec.Statement {
+func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement {
 	sources := map[string]string{}
 	for _, s := range list {
 		if s.Type == "application/x-tex" {
-			sources[tex.LanguageCode(s.Language)] = s.File
+			sources[spec.LanguageCode(s.Language)] = s.File
 		}
 	}
 	if len(sources) == 0 {
@@ -248,13 +247,20 @@ func statements(fsys fs.FS, list []Statement) []spec.Statement {
 		for _, language := range languages {
 			file := path.Join("statements", language.Name(), "problem.tex")
 			if regular(fsys, file) && !strings.HasPrefix(language.Name(), ".") {
-				sources[tex.LanguageCode(language.Name())] = file
+				sources[spec.LanguageCode(language.Name())] = file
 			}
 		}
 	}
 	var result []spec.Statement
 	for _, language := range slices.Sorted(maps.Keys(sources)) {
 		result = append(result, spec.Statement{Language: language, TeX: sources[language]})
+		dir := path.Dir(sources[language])
+		entries, _ := fs.ReadDir(fsys, dir)
+		for _, e := range entries {
+			if e.Type().IsRegular() && spec.IsImage(e.Name()) {
+				p.AddAsset(e.Name(), path.Join(dir, e.Name()))
+			}
+		}
 	}
 	return result
 }

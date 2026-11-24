@@ -8,6 +8,7 @@ DELETE FROM stored_objects WHERE id IN (
   AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
   AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_package_pdfs f WHERE f.object_id=o.id)
  ORDER BY o.id LIMIT 100)
 RETURNING key;
 
@@ -71,6 +72,15 @@ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16);
 INSERT INTO problem_package_assets(package_id,name,object_id)
 SELECT sqlc.arg(package_id)::uuid,a.name,a.object_id
 FROM jsonb_to_recordset(sqlc.arg(assets)::jsonb) a(name text,object_id uuid);
+
+-- name: InsertPackagePDFs :exec
+INSERT INTO problem_package_pdfs(package_id,language,object_id)
+SELECT sqlc.arg(package_id)::uuid,f.language,f.object_id
+FROM jsonb_to_recordset(sqlc.arg(pdfs)::jsonb) f(language text,object_id uuid);
+
+-- name: FindPackagePDF :one
+SELECT o.key FROM problem_package_pdfs f JOIN stored_objects o ON o.id=f.object_id
+WHERE f.package_id=$1 AND f.language=$2;
 
 -- name: ReadPackageStatement :one
 SELECT p.problem_id,p.title,p.samples,p.statements,

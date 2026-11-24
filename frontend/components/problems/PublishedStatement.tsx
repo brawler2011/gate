@@ -16,6 +16,7 @@ export const PublishedStatement = ({problem, statement}: GetProblemResponseModel
           const hash = statement.assets[path];
           return hash && `/api/problems/${problem.id}/assets/${hash}`;
         }}
+        pdfUrl={`/api/problems/${problem.id}/statement.pdf`}
       />
     ) : (
       <Alert color="gray">Условие ещё не опубликовано.</Alert>

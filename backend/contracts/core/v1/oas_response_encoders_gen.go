@@ -419,6 +419,21 @@ func encodeDisableTeamJoinLinkResponse(response *DisableTeamJoinLinkNoContent, w
 	return nil
 }
 
+func encodeDownloadContestProblemStatementPdfResponse(response DownloadContestProblemStatementPdfOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/pdf")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatementsPdfOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.WriteHeader(200)
@@ -436,6 +451,21 @@ func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatemen
 
 func encodeDownloadProblemPackageResponse(response DownloadProblemPackageOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/zip")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
+func encodeDownloadProblemStatementPdfResponse(response DownloadProblemStatementPdfOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/pdf")
 	w.WriteHeader(200)
 
 	writer := w
@@ -1500,6 +1530,34 @@ func encodeMarkNotificationAsReadResponse(response *MarkNotificationAsReadOK, w 
 
 func encodePatchPostByIdResponse(response *PatchPostByIdOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
+
+	return nil
+}
+
+func encodePreviewProblemDraftStatementResponse(response StatementPreview, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
+func encodePreviewProblemDraftStatementPdfResponse(response PreviewProblemDraftStatementPdfOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/pdf")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
 
 	return nil
 }

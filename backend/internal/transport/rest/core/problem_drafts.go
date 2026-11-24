@@ -26,6 +26,8 @@ type ProblemDraftUC interface {
 	Import(context.Context, uuid.UUID, int64, io.Reader) (model.Draft, error)
 	DownloadObject(context.Context, uuid.UUID, uuid.UUID) (io.ReadCloser, string, error)
 	Export(context.Context, uuid.UUID) (io.ReadCloser, error)
+	PreviewStatement(context.Context, uuid.UUID, model.DraftStatement) (map[string]string, error)
+	PreviewStatementPDF(context.Context, uuid.UUID, model.DraftStatement) ([]byte, error)
 }
 
 func draftContract[T any](source any) (*T, error) {
@@ -143,4 +145,25 @@ func (h *CoreServer) GetProblemDraftObject(ctx context.Context, p corev1.GetProb
 		return corev1.GetProblemDraftObjectOK{}, err
 	}
 	return corev1.GetProblemDraftObjectOK{Data: reader}, nil
+}
+
+func (h *CoreServer) PreviewProblemDraftStatement(ctx context.Context, req *corev1.ProblemDraftStatement, p corev1.PreviewProblemDraftStatementParams) (corev1.StatementPreview, error) {
+	s, err := draftContract[model.DraftStatement](req)
+	if err != nil {
+		return nil, err
+	}
+	html, err := h.ProblemDrafts.PreviewStatement(ctx, p.ID, *s)
+	return corev1.StatementPreview(html), err
+}
+
+func (h *CoreServer) PreviewProblemDraftStatementPdf(ctx context.Context, req *corev1.ProblemDraftStatement, p corev1.PreviewProblemDraftStatementPdfParams) (corev1.PreviewProblemDraftStatementPdfOK, error) {
+	s, err := draftContract[model.DraftStatement](req)
+	if err != nil {
+		return corev1.PreviewProblemDraftStatementPdfOK{}, err
+	}
+	pdf, err := h.ProblemDrafts.PreviewStatementPDF(ctx, p.ID, *s)
+	if err != nil {
+		return corev1.PreviewProblemDraftStatementPdfOK{}, err
+	}
+	return corev1.PreviewProblemDraftStatementPdfOK{Data: bytes.NewReader(pdf)}, nil
 }

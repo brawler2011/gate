@@ -553,41 +553,6 @@ public class Main {
 			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 		}
 	})
-
-	t.Run("compile latex booklet", func(t *testing.T) {
-		// Uncompressed PDF objects keep the font dictionaries readable below.
-		texSource := `\pdfobjcompresslevel=0 \pdfcompresslevel=0
-\documentclass[11pt,a4paper,oneside]{article}
-\usepackage[T2A]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage[russian,english]{babel}
-\usepackage{amsmath,amssymb}
-\usepackage{olymp}
-\contest{Test Contest}{Org}{2026}
-\begin{document}
-\begin{problem}{A. Test Problem}{stdin}{stdout}{1.0 сек}{256 МБ}
-Test legend. Условие задачи на русском языке.
-\end{problem}
-\end{document}`
-		pdfBytes, err := sb.CompilePDF(ctx, texSource, limits.Booklet)
-		if err != nil {
-			t.Fatalf("failed to compile PDF booklet in sandbox: %v", err)
-		}
-		if len(pdfBytes) < 4 || !strings.HasPrefix(string(pdfBytes[:4]), "%PDF") {
-			t.Fatalf("expected valid PDF header, got %q", string(pdfBytes[:4]))
-		}
-		// Cyrillic text uses outline fonts instead of falling back to bitmap fonts.
-		if strings.Contains(string(pdfBytes), "/Type3") {
-			t.Fatal("booklet uses bitmap Type 3 fonts")
-		}
-	})
-
-	t.Run("broken booklet reports the log tail", func(t *testing.T) {
-		_, err := sb.CompilePDF(ctx, "\\documentclass{article}\\begin{document}\\undefinedmacro\\end{document}", limits.Booklet)
-		if err == nil || !strings.Contains(err.Error(), "Undefined control sequence") || len(err.Error()) > 3*int(limits.Booklet.Diagnostic) {
-			t.Fatalf("got %v", err)
-		}
-	})
 }
 
 type program struct {

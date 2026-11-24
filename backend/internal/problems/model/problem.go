@@ -26,8 +26,10 @@ type ProblemManifest struct {
 	Statement Statement `json:"statement"`
 }
 
+// Statement sections are sanitized HTML.
 type Statement struct {
-	Title string `json:"title"`
+	Title    string `json:"title"`
+	Language string `json:"language"`
 
 	Legend       string `json:"legend"`
 	InputFormat  string `json:"input_format"`
@@ -118,7 +120,7 @@ type ProblemPackage struct {
 	PackageHash    string
 	CreatedAt      time.Time
 	Title, Type    string
-	Statements     []DraftStatement
+	Statements     []BuiltStatement
 	TimeLimitMs    int32
 	MemoryLimitMb  int32
 	InputFile      string
@@ -174,7 +176,7 @@ type Sample struct {
 type PackageStatement struct {
 	ProblemID  uuid.UUID
 	Title      string
-	Statements []DraftStatement
+	Statements []BuiltStatement
 	Samples    []Sample
 	// Assets maps each statement asset name to its content SHA-256.
 	Assets map[string]string

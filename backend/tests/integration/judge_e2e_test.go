@@ -120,7 +120,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Typeset: dbfixtures.Typesetter(t), Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
@@ -287,7 +287,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 
 	h.limits = dbfixtures.BuildLimits(t)
 	programs := sandbox.NewProgramCache(diskCache(t), client, files, image)
-	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Typeset: dbfixtures.Typesetter(t), Files: files, Languages: cfg, Programs: programs, Parallelism: judgeParallelism(t), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packages, workDir := judgeCache(t)
 	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Limits: h.limits, WorkDir: workDir, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,

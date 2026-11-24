@@ -128,6 +128,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/problems/{id}/draft/statement-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Typeset an edited draft statement as the site shows it
+         * @description Fails with a format error that names the section and line pandoc cannot show.
+         */
+        post: operations["PreviewProblemDraftStatement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/draft/statement-preview.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Typeset an edited draft statement as builds print it, without samples
+         * @description Fails with a format error that names the section and line of the LaTeX error.
+         */
+        post: operations["PreviewProblemDraftStatementPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/languages": {
         parameters: {
             query?: never;
@@ -424,6 +464,26 @@ export interface paths {
          * @description Serves a statement image of the problem package the contest currently uses, addressed by content hash, so the response never changes.
          */
         get: operations["GetContestProblemAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contests/{contest_id}/problems/{problem_id}/statement.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the statement PDF of a contest problem
+         * @description The PDF the build of the package the contest uses printed; it is visible with the statement.
+         */
+        get: operations["DownloadContestProblemStatementPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1032,6 +1092,23 @@ export interface paths {
          * @description Serves a statement image of the problem's latest package, addressed by content hash.
          */
         get: operations["GetProblemAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/statement.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the statement PDF of the problem's latest package */
+        get: operations["DownloadProblemStatementPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1691,7 +1768,11 @@ export interface components {
             /** @description The file is the system library file of its name from GET /lib, whose current text every build takes. Only an empty file named after a system library file can be auto-updated. */
             auto_update: boolean;
         };
-        /** @description The statement in one language as Markdown sections. */
+        /** @description Sanitized HTML by section name; math is left as \(...\) and \[...\] for KaTeX, and images name their assets. */
+        StatementPreview: {
+            [key: string]: string;
+        };
+        /** @description The statement in one language as LaTeX sections, as in Polygon. */
         ProblemDraftStatement: {
             language: string;
             /** @description Shown with this statement instead of the problem title; empty shows the problem title. */
@@ -1735,7 +1816,7 @@ export interface components {
             input: components["schemas"]["ProblemDraftInput"];
             answer: components["schemas"]["ProblemDraftAnswer"];
         };
-        /** @description A statement resource; sections show it as ![alt](name). */
+        /** @description A statement resource; sections show it with \includegraphics{name}. */
         ProblemDraftAsset: {
             name: string;
             /** Format: uuid */
@@ -2184,7 +2265,7 @@ export interface components {
             problem: components["schemas"]["ProblemModel"];
             statement?: components["schemas"]["ProblemStatementModel"];
         };
-        /** @description Statement of the problem's latest package; absent until a package is built. */
+        /** @description Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview. */
         ProblemStatementModel: {
             title: string;
             /** Format: int32 */
@@ -2199,6 +2280,7 @@ export interface components {
             input_format: string;
             output_format: string;
             notes: string;
+            interaction: string;
             scoring: string;
             samples: components["schemas"]["ProblemSampleModel"][];
             /** @description SHA-256 of each statement asset by package path, e.g. `assets/pic.png`. */
@@ -2207,7 +2289,7 @@ export interface components {
             };
         };
         /**
-         * @description Contest problem data.
+         * @description Contest problem data; statement sections are HTML as in StatementPreview.
          * @example {
          *       "permissions": {
          *         "submit": false,
@@ -2260,6 +2342,7 @@ export interface components {
             input_format: string;
             output_format: string;
             notes: string;
+            interaction: string;
             scoring: string;
             /** Format: date-time */
             created_at: string;
@@ -5193,6 +5276,7 @@ export type ProblemSolutionVerdict = components['schemas']['ProblemSolutionVerdi
 export type ProblemBuildSolution = components['schemas']['ProblemBuildSolution'];
 export type ProblemDraftValidator = components['schemas']['ProblemDraftValidator'];
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
+export type StatementPreview = components['schemas']['StatementPreview'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
 export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];
 export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
@@ -5652,6 +5736,62 @@ export interface operations {
                 };
                 content: {
                     "application/zip": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    PreviewProblemDraftStatement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProblemDraftStatement"];
+            };
+        };
+        responses: {
+            /** @description Sanitized HTML of each nonempty section, by section name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementPreview"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    PreviewProblemDraftStatementPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProblemDraftStatement"];
+            };
+        };
+        responses: {
+            /** @description Statement PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             default: components["responses"]["Problem"];
@@ -6287,6 +6427,35 @@ export interface operations {
                 };
                 content: {
                     "image/*": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DownloadContestProblemStatementPdf: {
+        parameters: {
+            query?: {
+                /** @description Statement language; a missing one falls back as the statement shown on the site does. */
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             default: components["responses"]["Problem"];
@@ -7947,6 +8116,33 @@ export interface operations {
                 };
                 content: {
                     "image/*": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DownloadProblemStatementPdf: {
+        parameters: {
+            query?: {
+                /** @description Statement language; a missing one falls back as the statement shown on the site does. */
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             default: components["responses"]["Problem"];

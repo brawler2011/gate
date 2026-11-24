@@ -28,6 +28,13 @@ goJudge:
     requests: {cpu: 500m, memory: 512Mi}
     limits: {memory: 4Gi}
 
+typeset:
+  image: ghcr.io/brawler2011/gate-typeset
+  parallelism: 1
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 1Gi}
+
 ingress:
   host: ""
   # An empty resolver uses Traefik's default certificate.

@@ -279,7 +279,7 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			require.NoError(t, err)
 			files, manifest := publishedFiles(t, h, pid)
 			require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend, string(files["statements/en/legend.md"]))
+			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend, string(files["statements/en/legend.tex"]))
 		})
 	}
 }
@@ -331,7 +331,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	require.NoError(t, r.err)
 	files, manifest := publishedFiles(t, h, r.id)
 	require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-	require.Equal(t, "Original statement", string(files["statements/en/legend.md"]))
+	require.Equal(t, "Original statement", string(files["statements/en/legend.tex"]))
 	test := builtTest(t, manifest, 1)
 	require.False(t, test.Sample)
 	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))

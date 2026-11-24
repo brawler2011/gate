@@ -20,7 +20,7 @@ func validDraft() Draft {
 			Solutions:    []DraftSolution{{DraftNamedProgram: DraftNamedProgram{Name: sol, DraftProgram: DraftProgram{Language: "cpp"}}, Verdicts: []string{"OK"}}},
 			MainSolution: &sol,
 			Library:      []DraftLibraryFile{{Name: "testlib.h"}},
-			Statements:   []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},
+			Statements:   []DraftStatement{{Language: "en", Legend: "\\includegraphics[width=3cm]{graph.png}"}},
 			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
 			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete", Feedback: "complete"}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
@@ -68,7 +68,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 		"validator of an unknown subtask": {func(d *Draft) {
 			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, Subtasks: []uuid.UUID{uuid.New()}}}
 		}, "/validators/0/subtasks/0", pkg.ErrUnknown.Code},
-		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See ![tree](tree.png)." }, "/statements/0/notes", pkg.ErrUnknown.Code},
+		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See \\includegraphics{tree.png}." }, "/statements/0/notes", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {
 			d := validDraft()
@@ -91,17 +91,10 @@ func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 	require.Equal(t, pkg.FieldErrors{{Pointer: "/statements/0/legend", Code: pkg.ErrUnknown.Code, Params: map[string]any{"value": "graph.png"}, Message: `legend section of the en statement shows missing asset "graph.png"`}}, fields)
 
 	typo := renamed
-	typo.Statements = []DraftStatement{{Language: "en", Legend: "![graph](plott.png)"}}
+	typo.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics{plott.png}"}}
 	require.Equal(t, "/statements/0/legend", fieldErrors(t, typo.Validate(testQuotas, &renamed))[0].Pointer)
 
 	fixed := renamed
-	fixed.Statements = []DraftStatement{{Language: "en", Legend: "![graph](plot.png)"}}
+	fixed.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics{plot.png}"}}
 	require.NoError(t, fixed.Validate(testQuotas, &renamed))
-}
-
-func TestImageReferencesReadAsTheStatementRenders(t *testing.T) {
-	markdown := "![a](./a.png#center) ![b](<my pic.png>) ![c](https://example.com/c.png) ![d](100%25.png)\n" +
-		"![e](/rooted.png) ![f](data:image/png;base64,AA) `![g](code.png)` ![h][ref]\n" +
-		"![i](a&amp;b.png) ![j](a\\(b\\).png) ![k](&#x433;.png) ![l](%D0%B3.png)\n\n[ref]: h.png\n"
-	require.Equal(t, []string{"a.png", "my pic.png", "100%.png", "h.png", "a&b.png", "a(b).png", "г.png", "г.png"}, ImageReferences(markdown))
 }

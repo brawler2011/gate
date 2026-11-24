@@ -7,6 +7,8 @@ Publication requires compiled components, materialized tests, successful validat
 and answer generation. The package is an ordinary gfmt archive, written like a draft
 export plus every test's input and answer, so it imports back as the draft. It holds
 sources and tests, not binaries; judging compiles against the running judge image.
+Each statement's HTML and PDF are made in the typeset sandbox and kept in the package
+index and as objects, outside the archive.
 
 Input objects are verified against their registered size and SHA-256. Archive
 uploads must enforce the expected SHA-256 at the storage server; acknowledging a

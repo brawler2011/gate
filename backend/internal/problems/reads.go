@@ -81,8 +81,8 @@ func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) (
 		}
 		if err == nil {
 			template.Title, template.ProblemType = ready.Title, ready.Type
-			if legend := selectStatement(ready.Title, ready.Statements, "").Legend; legend != "" {
-				template.Description = legend
+			if s := pickStatement(ready.Statements, ""); s != nil && s.Legend != "" {
+				template.Description = s.Legend
 			}
 		}
 		result = append(result, template)

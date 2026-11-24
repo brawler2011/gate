@@ -929,6 +929,12 @@ type ProblemPackageAsset struct {
 	ObjectID  uuid.UUID `json:"object_id"`
 }
 
+type ProblemPackagePdf struct {
+	PackageID uuid.UUID `json:"package_id"`
+	Language  string    `json:"language"`
+	ObjectID  uuid.UUID `json:"object_id"`
+}
+
 type RateLimit struct {
 	Key          string      `json:"key"`
 	Hits         []time.Time `json:"hits"`

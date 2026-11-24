@@ -6,6 +6,8 @@ go_judge:
   http_url: http://127.0.0.1:5050
   work_dir: /problem-work
   parallelism: 0
+typeset:
+  http_url: http://typeset:5050
 storage:
   s3_endpoint: http://s3:8333
 email:
@@ -15,7 +17,6 @@ email:
 judge:
   mode: dirty
   manifest_dir: /etc/judge
-  worker_url: http://worker:8080
   workers: 4
 problems:
   work_dir: /problem-work
@@ -45,7 +46,7 @@ problems:
       processes: 50
       output: 512MiB
       diagnostic: 64KiB
-    booklet:
+    typeset:
       cpu: 30s
       memory: 512MiB
       processes: 100

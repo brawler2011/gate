@@ -83,9 +83,25 @@ tasks:
         nix --extra-experimental-features "nix-command flakes" run .#default.copyTo --
         docker-daemon:"$(go run ./tools/judgeimage)"
 
+  typeset:image:
+    desc: Make the typeset image for the current typeset/ sources available locally (pull, else build)
+    cmds:
+      - |
+        ref="$(go run ./tools/judgeimage typeset)"
+        docker image inspect "$ref" > /dev/null 2>&1 || docker pull "$ref" || task typeset:build
+
+  typeset:build:
+    desc: Build the typeset image from typeset/flake.nix into the local Docker daemon without a local Nix install
+    cmds:
+      - >-
+        docker run --rm -v gate-judge-nix-2.35.6:/nix -v ./typeset:/src:ro -w /src
+        -v /var/run/docker.sock:/var/run/docker.sock nixos/nix:2.35.6
+        nix --extra-experimental-features "nix-command flakes" run .#default.copyTo --
+        docker-daemon:"$(go run ./tools/judgeimage typeset)"
+
   be:test:integration:
     desc: Run backend integration tests, which live in backend/tests/integration
-    deps: [judge:image]
+    deps: [judge:image, typeset:image]
     cmds:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
 
@@ -117,7 +133,7 @@ tasks:
         cmd: >-
           helm lint --strict deploy/charts/gate-infra -f deploy/{{.ITEM}}/gate-infra.yaml &&
           helm lint --strict deploy/charts/gate -f deploy/{{.ITEM}}/gate.yaml --set-file backend.config=deploy/{{.ITEM}}/config.yaml --set imageTag=lint
-      - helm lint --strict deploy/charts/gate-infra -f deploy/local/gate-infra.yaml --set judge.image=lint --set judge.problemWork=/lint
+      - helm lint --strict deploy/charts/gate-infra -f deploy/local/gate-infra.yaml --set judge.image=lint --set judge.problemWork=/lint --set typeset.image=lint
 
   fe:lint:
     desc: Run ESLint and Stylelint
@@ -250,21 +266,25 @@ tasks:
         sh deploy/secrets.sh {{.KUBECTL}} -n {{.NAMESPACE}}
 
   infra:up:
-    desc: Deploy PostgreSQL, SeaweedFS and go-judge for task dev to local k3s (namespace gate-dev)
-    deps: [k3s:up, judge:image]
+    desc: Deploy PostgreSQL, SeaweedFS, go-judge and typeset for task dev to local k3s (namespace gate-dev)
+    deps: [k3s:up, judge:image, typeset:image]
     vars:
       JUDGE_IMAGE:
         sh: go run ./tools/judgeimage
+      TYPESET_IMAGE:
+        sh: go run ./tools/judgeimage typeset
     cmds:
       - mkdir -p backend/data/problem-work
       - |
-        {{.KUBECTL}} get nodes -o jsonpath='{.items[*].status.images[*].names[*]}' | tr ' ' '\n' | grep -qxF '{{.JUDGE_IMAGE}}' \
-          || docker save '{{.JUDGE_IMAGE}}' | sudo k3s ctr images import -
+        for image in '{{.JUDGE_IMAGE}}' '{{.TYPESET_IMAGE}}'; do
+          {{.KUBECTL}} get nodes -o jsonpath='{.items[*].status.images[*].names[*]}' | tr ' ' '\n' | grep -qxF "$image" \
+            || docker save "$image" | sudo k3s ctr images import -
+        done
       - task: k3s:secrets
         vars: {NAMESPACE: gate-dev}
       - >-
         {{.HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate-dev -f deploy/local/gate-infra.yaml
-        --set judge.image={{.JUDGE_IMAGE}} --set judge.problemWork={{.ROOT_DIR}}/backend/data/problem-work
+        --set judge.image={{.JUDGE_IMAGE}} --set judge.problemWork={{.ROOT_DIR}}/backend/data/problem-work --set typeset.image={{.TYPESET_IMAGE}}
         --wait --timeout 5m
 
   infra:down:
@@ -274,15 +294,16 @@ tasks:
 
   cluster:deploy:
     desc: Build the images and deploy both charts to local k3s (namespace gate) at https://gate.localhost:30443
-    deps: [k3s:up, judge:image]
+    deps: [k3s:up, judge:image, typeset:image]
     vars:
       TAG:
         sh: echo "local-$(date +%s)"
     cmds:
       - docker build -t ghcr.io/brawler2011/gate-backend:{{.TAG}} .
       - docker tag "$(go run ./tools/judgeimage)" ghcr.io/brawler2011/gate-go-judge:{{.TAG}}
+      - docker tag "$(go run ./tools/judgeimage typeset)" ghcr.io/brawler2011/gate-typeset:{{.TAG}}
       # The k3s containerd socket is root-only.
-      - docker save ghcr.io/brawler2011/gate-backend:{{.TAG}} ghcr.io/brawler2011/gate-go-judge:{{.TAG}} | sudo k3s ctr images import -
+      - docker save ghcr.io/brawler2011/gate-backend:{{.TAG}} ghcr.io/brawler2011/gate-go-judge:{{.TAG}} ghcr.io/brawler2011/gate-typeset:{{.TAG}} | sudo k3s ctr images import -
       - task: k3s:secrets
         vars: {NAMESPACE: gate}
       - "{{.HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate -f deploy/cluster/gate-infra.yaml --wait --timeout 5m"

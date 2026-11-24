@@ -10,6 +10,10 @@ goJudge:
   resources:
     requests: {cpu: 100m, memory: 128Mi}
     limits: {memory: 1536Mi}
+typeset:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 768Mi}
 ingress:
   host: steins.ru
 appArmorProfile:

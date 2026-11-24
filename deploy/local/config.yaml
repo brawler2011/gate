@@ -7,6 +7,8 @@ go_judge:
   http_url: http://localhost:30050
   work_dir: /problem-work
   parallelism: 0
+typeset:
+  http_url: http://localhost:30051
 storage:
   s3_endpoint: http://localhost:30833
 email:
@@ -44,7 +46,7 @@ problems:
       processes: 50
       output: 512MiB
       diagnostic: 64KiB
-    booklet:
+    typeset:
       cpu: 30s
       memory: 512MiB
       processes: 100

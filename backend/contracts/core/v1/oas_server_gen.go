@@ -278,6 +278,12 @@ type Handler interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
+	// DownloadContestProblemStatementPdf implements DownloadContestProblemStatementPdf operation.
+	//
+	// The PDF the build of the package the contest uses printed; it is visible with the statement.
+	//
+	// GET /contests/{contest_id}/problems/{problem_id}/statement.pdf
+	DownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (DownloadContestProblemStatementPdfOK, error)
 	// DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 	//
 	// Download PDF booklet with contest statements.
@@ -291,6 +297,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}/packages/{packageId}/download
 	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
+	// DownloadProblemStatementPdf implements DownloadProblemStatementPdf operation.
+	//
+	// Download the statement PDF of the problem's latest package.
+	//
+	// GET /problems/{id}/statement.pdf
+	DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (DownloadProblemStatementPdfOK, error)
 	// ExportProblemDraft implements ExportProblemDraft operation.
 	//
 	// The archive imports back through ImportProblem.
@@ -671,6 +683,18 @@ type Handler interface {
 	//
 	// PATCH /posts/{id}
 	PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) error
+	// PreviewProblemDraftStatement implements PreviewProblemDraftStatement operation.
+	//
+	// Fails with a format error that names the section and line pandoc cannot show.
+	//
+	// POST /problems/{id}/draft/statement-preview
+	PreviewProblemDraftStatement(ctx context.Context, req *ProblemDraftStatement, params PreviewProblemDraftStatementParams) (StatementPreview, error)
+	// PreviewProblemDraftStatementPdf implements PreviewProblemDraftStatementPdf operation.
+	//
+	// Fails with a format error that names the section and line of the LaTeX error.
+	//
+	// POST /problems/{id}/draft/statement-preview.pdf
+	PreviewProblemDraftStatementPdf(ctx context.Context, req *ProblemDraftStatement, params PreviewProblemDraftStatementPdfParams) (PreviewProblemDraftStatementPdfOK, error)
 	// Register implements Register operation.
 	//
 	// Register.
