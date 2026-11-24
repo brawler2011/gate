@@ -1,4 +1,4 @@
-format_version: "1.0"
+format_version: "2.0"
 title: "Even or Odd Subtasks"
 type: "scoring"
 
@@ -9,18 +9,18 @@ limits:
 system_library:
   - testlib.h
 
-subtasks:
-  even_subtask:
-    points: 40
-    policy: "complete"
-    tests:
-      - input: "01.in"
-
-  odd_subtask:
-    points: 60
-    policy: "complete"
-    tests:
-      - input: "02.in"
+testset:
+  groups:
+    - name: even_subtask
+      aggregate: min
+      tests:
+        - input: "01.in"
+          points: 40
+    - name: odd_subtask
+      aggregate: min
+      tests:
+        - input: "02.in"
+          points: 60
 
 solutions:
   ok.cpp: "OK"

@@ -136,7 +136,7 @@ func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, 
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
 		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
-			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
+			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
 	if err := c.convert(ctx, p); err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 		if err != nil {
 			return err
 		}
-		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], DraftJury: jury(v), Subtasks: []uuid.UUID{}, Tests: tests})
+		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], DraftJury: jury(v), Groups: []uuid.UUID{}, Tests: tests})
 	}
 	generators := map[string]string{}
 	for _, g := range p.Generators {
@@ -235,7 +235,7 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 		}
 		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
 	}
-	if err := c.addGroups(p.Groups, generators, solutions); err != nil {
+	if err := c.addGroups(p.Testset, generators, solutions); err != nil {
 		return err
 	}
 	return c.scopeValidators(p.Validators)
@@ -274,16 +274,16 @@ func (c *importConverter) validatorTests(tests []spec.ValidatorTest) ([]model.Dr
 
 func (c *importConverter) scopeValidators(validators []spec.Program) error {
 	ids := map[string]uuid.UUID{}
-	for _, s := range c.draft.Subtasks {
-		ids[s.Name] = s.ID
+	for g := range c.draft.Testset.All() {
+		ids[g.Name] = g.ID
 	}
 	for i, v := range validators {
 		for _, group := range v.Groups {
 			id, ok := ids[group]
-			if !ok {
+			if !ok || group == "" {
 				return spec.Fail(pkg.ErrUnknown, v.Path, group, "validator %s checks unknown test group %s", v.Path, group)
 			}
-			c.draft.Validators[i].Subtasks = append(c.draft.Validators[i].Subtasks, id)
+			c.draft.Validators[i].Groups = append(c.draft.Validators[i].Groups, id)
 		}
 	}
 	return nil
@@ -535,36 +535,49 @@ func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) er
 	return nil
 }
 
-func (c *importConverter) addGroups(groups []spec.Group, generators, solutions map[string]string) error {
-	if len(groups) > c.uc.DraftQuotas.Subtasks {
-		return pkg.ErrPayloadTooLarge
-	}
+func (c *importConverter) addGroups(root spec.Group, generators, solutions map[string]string) error {
 	ids := map[string]uuid.UUID{}
-	for _, g := range groups {
+	for g := range root.All() {
 		if _, ok := ids[g.Name]; ok {
-			return spec.Fail(pkg.ErrDuplicate, "", g.Name, "several test groups named %s", g.Name)
+			return spec.Fail(pkg.ErrDuplicate, "", g.Name, "several test groups named %q", g.Name)
 		}
 		ids[g.Name] = uuid.New()
 	}
+	if len(ids) > c.uc.DraftQuotas.Groups {
+		return pkg.ErrPayloadTooLarge
+	}
 	var ordinals []int
-	for _, g := range groups {
-		subtask := model.DraftSubtask{ID: ids[g.Name], Ordinal: len(c.draft.Subtasks) + 1, Name: g.Name, Policy: g.Policy, Feedback: cmp.Or(g.Feedback, "complete"), DependsOn: []uuid.UUID{}}
-		for _, dep := range g.DependsOn {
-			did, ok := ids[dep]
-			if !ok {
-				return spec.Fail(pkg.ErrUnknown, "", dep, "test group %s depends on unknown group %s", g.Name, dep)
+	var convert func(spec.Group) (model.DraftGroup, error)
+	convert = func(g spec.Group) (model.DraftGroup, error) {
+		group := model.DraftGroup{ID: ids[g.Name], Name: g.Name, Aggregate: cmp.Or(g.Aggregate, "sum"), StopOnFailure: g.StopOnFailure, Feedback: cmp.Or(g.Feedback, "complete"),
+			Requires: []uuid.UUID{}, CheckerArgs: append([]string{}, g.CheckerArgs...), ValidatorArgs: append([]string{}, g.ValidatorArgs...), Groups: []model.DraftGroup{}}
+		for _, name := range g.Requires {
+			id, ok := ids[name]
+			if !ok || name == "" {
+				return group, spec.Fail(pkg.ErrUnknown, "", name, "test group %s requires unknown group %s", g.Name, name)
 			}
-			subtask.DependsOn = append(subtask.DependsOn, did)
+			group.Requires = append(group.Requires, id)
 		}
 		for _, test := range g.Tests {
-			t, err := c.test(test, subtask.ID, generators, solutions)
+			t, err := c.test(test, group.ID, generators, solutions)
 			if err != nil {
-				return err
+				return group, err
 			}
 			c.draft.Tests = append(c.draft.Tests, t)
 			ordinals = append(ordinals, test.Ordinal)
 		}
-		c.draft.Subtasks = append(c.draft.Subtasks, subtask)
+		for _, child := range g.Groups {
+			converted, err := convert(child)
+			if err != nil {
+				return group, err
+			}
+			group.Groups = append(group.Groups, converted)
+		}
+		return group, nil
+	}
+	var err error
+	if c.draft.Testset, err = convert(root); err != nil {
+		return err
 	}
 	if !slices.Contains(ordinals, 0) {
 		order := make([]int, len(ordinals))
@@ -582,11 +595,11 @@ func (c *importConverter) addGroups(groups []spec.Group, generators, solutions m
 	return nil
 }
 
-func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, solutions map[string]string) (model.DraftTest, error) {
+func (c *importConverter) test(test spec.Test, group uuid.UUID, generators, solutions map[string]string) (model.DraftTest, error) {
 	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
 		return model.DraftTest{}, pkg.ErrPayloadTooLarge
 	}
-	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, SubtaskID: subtask, Points: test.Points, Sample: test.Sample, Pretest: test.Pretest}
+	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, GroupID: group, Points: test.Points, Sample: test.Sample, Pretest: test.Pretest}
 	if test.Generator != "" {
 		gen, ok := generators[test.Generator]
 		if !ok {

@@ -1,4 +1,4 @@
-format_version: "1.0"
+format_version: "2.0"
 title: "Maximum Subarray Sum"
 type: "pass-fail"
 
@@ -9,25 +9,22 @@ limits:
 system_library:
   - testlib.h
 
-subtasks:
-  samples:
-    points: 0
-    policy: "complete"
-    tests:
-      - input: "01.in"
-      - input: "02.in"
-
-  secret:
-    points: 100
-    policy: "each"
-    dependencies:
-      - "samples"
-    tests:
-      - generate: "generator 10 100"
-      - generate: "generator 100 1000"
-      - generate: "generator 1000 10000"
-      - generate: "generator 10000 100000"
-      - generate: "generator 100000 1000000"
+testset:
+  groups:
+    - name: samples
+      tests:
+        - input: "01.in"
+          sample: true
+        - input: "02.in"
+          sample: true
+    - name: secret
+      requires: [samples]
+      tests:
+        - generate: "generator 10 100"
+        - generate: "generator 100 1000"
+        - generate: "generator 1000 10000"
+        - generate: "generator 10000 100000"
+        - generate: "generator 100000 1000000"
 
 solutions:
   ok.cpp: "OK"

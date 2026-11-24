@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -78,11 +77,11 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("python3", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
 		d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original statement"}}
-		d.Subtasks = []model.DraftSubtask{{ID: group, Ordinal: 1, Policy: "each", Feedback: "complete"}}
+		d.Testset = model.DraftGroup{ID: group, Aggregate: "sum", Feedback: "complete"}
 	})
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	test := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100,
+	test := model.DraftTest{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100,
 		Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
 	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, model.UploadChange{Test: &test}, map[string]io.Reader{"input": strings.NewReader("original input\n"), "answer": strings.NewReader("original answer\n")})
 	require.NoError(t, err)
@@ -117,11 +116,9 @@ func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string]
 // builtTest finds a test by ordinal; its files are under tests/.
 func builtTest(t *testing.T, manifest *gfmt.Problem, ordinal int) gfmt.Test {
 	t.Helper()
-	for _, s := range manifest.Subtasks {
-		for _, test := range s.Tests {
-			if test.Ordinal == ordinal {
-				return test
-			}
+	for _, gt := range manifest.Tests() {
+		if gt.Test.Ordinal == ordinal {
+			return gt.Test
 		}
 	}
 	t.Fatalf("package has no test %d", ordinal)
@@ -137,13 +134,17 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		{"library name taken", "/library/1/name: duplicate name", func(d *model.Draft) {
 			d.Library = []model.DraftLibraryFile{{Name: "a.h"}, {Name: "a.h"}}
 		}},
-		{"unknown group", "/tests/0/subtask_id: unknown subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
-		{"unknown dependency", "unknown subtask", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{uuid.New()} }},
-		{"dependency cycle", "subtask dependencies form a cycle", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[0].ID} }},
-		{"duplicate dependency", "duplicate dependency", func(d *model.Draft) {
-			g := uuid.New()
-			d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Name: "second", Policy: "each", Feedback: "complete"})
-			d.Subtasks[0].DependsOn = []uuid.UUID{g, g}
+		{"unknown group", "/tests/0/group_id: unknown group", func(d *model.Draft) { d.Tests[0].GroupID = uuid.New() }},
+		{"unknown requirement", "unknown group", func(d *model.Draft) {
+			d.Testset.Groups = []model.DraftGroup{{ID: uuid.New(), Name: "a", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{uuid.New()}}}
+		}},
+		{"requirement cycle", "group requirements form a cycle", func(d *model.Draft) {
+			a, b := uuid.New(), uuid.New()
+			d.Testset.Groups = []model.DraftGroup{{ID: a, Name: "a", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{b}}, {ID: b, Name: "b", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{a}}}
+		}},
+		{"duplicate requirement", "duplicate requirement", func(d *model.Draft) {
+			a, b := uuid.New(), uuid.New()
+			d.Testset.Groups = []model.DraftGroup{{ID: a, Name: "a", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{b, b}}, {ID: b, Name: "b", Aggregate: "sum", Feedback: "complete"}}
 		}},
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
 		{"missing generator", "/tests/0/input/generator: unknown generator", func(d *model.Draft) {
@@ -388,13 +389,15 @@ func TestPublicationSupportedTypes(t *testing.T) {
 			h.save(t, func(d *model.Draft) {
 				d.Type = kind
 				if kind == "scoring" {
-					// Publication preserves subtask dependencies and authored test membership.
-					g := uuid.New()
-					d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Name: "second", Policy: "complete", Feedback: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
+					// Publication preserves group requirements and authored test membership.
+					first, second := uuid.New(), uuid.New()
+					d.Testset.Groups = []model.DraftGroup{{ID: first, Name: "first", Aggregate: "sum", Feedback: "complete"},
+						{ID: second, Name: "second", Aggregate: "min", Feedback: "complete", Requires: []uuid.UUID{first}}}
+					d.Tests[0].GroupID = first
 					test := d.Tests[0]
 					test.ID = uuid.New()
 					test.Ordinal = 2
-					test.SubtaskID = g
+					test.GroupID = second
 					d.Tests = append(d.Tests, test)
 				}
 				if kind == "interactive" {
@@ -413,12 +416,16 @@ func TestPublicationSupportedTypes(t *testing.T) {
 			files, manifest := publishedFiles(t, h, pid)
 			require.Equal(t, kind, manifest.Type)
 			d := b.Snapshot.Draft
-			for _, g := range d.Subtasks {
-				built := manifest.Subtasks[g.Name]
-				require.Equal(t, g.Points, built.Points)
-				require.Len(t, built.Dependencies, len(g.DependsOn))
-				for i, dep := range g.DependsOn {
-					require.Equal(t, d.Subtask(dep).Name, built.Dependencies[i])
+			builtGroups := map[string]*gfmt.Group{}
+			for g := range manifest.Testset.All() {
+				builtGroups[g.Name] = g
+			}
+			for g := range d.Testset.All() {
+				built := builtGroups[g.Name]
+				require.Equal(t, g.Aggregate, built.Aggregate)
+				require.Len(t, built.Requires, len(g.Requires))
+				for i, id := range g.Requires {
+					require.Equal(t, d.Group(id).Name, built.Requires[i])
 				}
 				for _, test := range built.Tests {
 					require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
@@ -526,15 +533,12 @@ func TestPublicationReimportsPackage(t *testing.T) {
 	require.Equal(t, published.Draft.Checker, imported.Checker)
 	require.Equal(t, published.Draft.Library, imported.Library)
 	require.Equal(t, published.Draft.Statements, imported.Statements)
-	// An import names subtasks anew.
-	withoutIDs := func(subtasks []model.DraftSubtask) []model.DraftSubtask {
-		result := slices.Clone(subtasks)
-		for i := range result {
-			result[i].ID = uuid.Nil
-		}
-		return result
+	// An import identifies groups anew.
+	withoutIDs := func(g model.DraftGroup) model.DraftGroup {
+		g.ID = uuid.Nil
+		return g
 	}
-	require.Equal(t, withoutIDs(published.Draft.Subtasks), withoutIDs(imported.Subtasks))
+	require.Equal(t, withoutIDs(published.Draft.Testset), withoutIDs(imported.Testset))
 	require.Len(t, imported.Tests, 1)
 
 	rebuilt := h.enqueueAndClaim(t)

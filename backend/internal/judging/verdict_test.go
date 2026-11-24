@@ -1,7 +1,6 @@
 package judging
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
@@ -150,13 +149,14 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, 2, *verdict.FailedTest)
 		// A failed dependency blocks group points even when that group's own tests pass.
 		assert.Equal(t, points.Value(3333), verdict.Score)
-		assert.Equal(t, []points.Value{3333, 0}, []points.Value{*verdict.TestDetails.Subtasks[0].Score, *verdict.TestDetails.Subtasks[1].Score})
+		groups := verdict.TestDetails.Groups
+		assert.Equal(t, []points.Value{3333, 3333, 0}, []points.Value{*groups[0].Score, *groups[1].Score, *groups[2].Score})
 
 		verdict = calculator.Calculate([]TestResult{
 			{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "OK"},
 			{TestNumber: 3, Verdict: "OK"}, {TestNumber: 4, Verdict: "WA"},
 		})
-		// "complete" group2 awards nothing when one test fails; weights are not rescaled.
+		// The minimum of group2 is nothing when one test fails.
 		assert.Equal(t, points.Value(6666), verdict.Score)
 
 		verdict = calculator.Calculate([]TestResult{
@@ -168,27 +168,52 @@ func TestVerdictCalculation(t *testing.T) {
 	})
 }
 
+// Groups take their tests and subgroups in the order of the first tests; stop_on_failure drops what follows a failure.
+func TestScoringNestedGroups(t *testing.T) {
+	test := func(ordinal int, score points.Value) gfmt.Test {
+		return gfmt.Test{Ordinal: ordinal, Points: score * points.Unit}
+	}
+	p := &gfmt.Problem{Type: "scoring", Testset: gfmt.Group{Groups: []gfmt.Group{
+		{Name: "a", StopOnFailure: true, Tests: []gfmt.Test{test(1, 10), test(2, 10), test(5, 10)},
+			Groups: []gfmt.Group{{Name: "b", Aggregate: "min", Tests: []gfmt.Test{test(3, 5), test(4, 5)}}}},
+		{Name: "c", Aggregate: "avg", Tests: []gfmt.Test{test(6, 10), test(7, 20)}},
+		{Name: "empty", Aggregate: "max"},
+	}}}
+	verdicts := map[int]string{1: "OK", 2: "OK", 3: "WA", 4: "OK", 5: "OK", 6: "OK", 7: "TLE"}
+	var results []TestResult
+	for ordinal := 1; ordinal <= 7; ordinal++ {
+		results = append(results, TestResult{TestNumber: ordinal, Verdict: verdicts[ordinal]})
+	}
+	verdict := NewVerdictCalculator("scoring", p).Calculate(results)
+	assert.Equal(t, submissionsmodel.GotWA, verdict.State)
+	var report []string
+	for _, g := range verdict.TestDetails.Groups {
+		report = append(report, g.Name+" "+g.Score.String()+"/"+g.Points.String())
+	}
+	// a stops at b before test 5; c averages 10 and 0; the empty group neither scores nor counts.
+	assert.Equal(t, []string{" 25.00/50.00", "a 20.00/35.00", "b 0.00/5.00", "c 5.00/15.00"}, report)
+	assert.Equal(t, 25*points.Unit, verdict.Score)
+}
+
 func TestPretestsScoreOnlyPretests(t *testing.T) {
 	p := testProblemWithGroups()
-	for name, ordinals := range map[string][]int{"group1": {1}, "group2": {}} {
-		s := p.Subtasks[name]
-		for i := range s.Tests {
-			s.Tests[i].Pretest = slices.Contains(ordinals, s.Tests[i].Ordinal)
+	for g := range p.Testset.All() {
+		for i := range g.Tests {
+			g.Tests[i].Pretest = g.Tests[i].Ordinal == 1
 		}
-		p.Subtasks[name] = s
 	}
 	restricted, ok := p.Pretests()
 	require.True(t, ok)
-	require.Equal(t, []FlatTest{{SubtaskName: "group1", TestIndex: 1, Test: p.Subtasks["group1"].Tests[0]}}, collectFlatTests(restricted))
+	require.Len(t, restricted.Testset.Groups, 1, "group2 has no pretests")
+	require.Equal(t, []gfmt.GroupTest{{Group: &restricted.Testset.Groups[0], Test: p.Testset.Groups[0].Tests[0]}}, restricted.Tests())
 	verdict := NewVerdictCalculator("scoring", restricted).Calculate([]TestResult{{TestNumber: 1, Verdict: "OK"}})
 	assert.Equal(t, submissionsmodel.Accepted, verdict.State)
 	assert.Equal(t, points.Value(3333), verdict.Score)
 
-	for name, s := range p.Subtasks {
-		for i := range s.Tests {
-			s.Tests[i].Pretest = true
+	for g := range p.Testset.All() {
+		for i := range g.Tests {
+			g.Tests[i].Pretest = true
 		}
-		p.Subtasks[name] = s
 	}
 	_, ok = p.Pretests()
 	require.False(t, ok, "pretests covering every test judge like a full run")
@@ -197,37 +222,20 @@ func TestPretestsScoreOnlyPretests(t *testing.T) {
 func testProblem() *gfmt.Problem {
 	return &gfmt.Problem{
 		Type: "pass-fail",
-		Subtasks: map[string]gfmt.Subtask{
-			"samples": {
-				Policy: "complete",
-				Tests: []gfmt.Test{
-					{Ordinal: 1, Points: 40 * points.Unit, Input: "01.in"},
-					{Ordinal: 2, Points: 60 * points.Unit, Input: "02.in"},
-				},
-			},
-		},
+		Testset: gfmt.Group{Groups: []gfmt.Group{{Name: "samples", Tests: []gfmt.Test{
+			{Ordinal: 1, Points: 40 * points.Unit, Input: "01.in"},
+			{Ordinal: 2, Points: 60 * points.Unit, Input: "02.in"},
+		}}}},
 	}
 }
 
+// group2 scores 30 only when it and group1 pass completely.
 func testProblemWithGroups() *gfmt.Problem {
 	return &gfmt.Problem{
 		Type: "scoring",
-		Subtasks: map[string]gfmt.Subtask{
-			"group1": {
-				Policy: "each",
-				Tests: []gfmt.Test{
-					{Ordinal: 1, Points: 3333, Input: "01.in"},
-					{Ordinal: 2, Points: 3333, Input: "02.in"},
-				},
-			},
-			"group2": {
-				Policy:       "complete",
-				Dependencies: []string{"group1"},
-				Tests: []gfmt.Test{
-					{Ordinal: 3, Points: 1000, Input: "03.in"},
-					{Ordinal: 4, Points: 2000, Input: "04.in"},
-				},
-			},
-		},
+		Testset: gfmt.Group{Groups: []gfmt.Group{
+			{Name: "group1", Tests: []gfmt.Test{{Ordinal: 1, Points: 3333, Input: "01.in"}, {Ordinal: 2, Points: 3333, Input: "02.in"}}},
+			{Name: "group2", Aggregate: "min", Requires: []string{"group1"}, Tests: []gfmt.Test{{Ordinal: 3, Points: 3000, Input: "03.in"}, {Ordinal: 4, Points: 3000, Input: "04.in"}}},
+		}},
 	}
 }

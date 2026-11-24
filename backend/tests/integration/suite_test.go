@@ -162,7 +162,7 @@ func (s *IntegrationTestSuite) initApp() {
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService, s.limiter)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	loader := pgstore.NewAccess(s.dbPool)
-	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
+	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Groups: 100}
 	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas)
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts

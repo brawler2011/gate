@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"slices"
 )
 
 // Protocol is how a checker, interactor or validator is called and reports its verdict.
@@ -27,6 +28,12 @@ type Jury struct {
 	Language   string
 	Protocol   Protocol
 	Args       []string
+}
+
+// With appends arguments, such as those of a test group, after the jury's own.
+func (j Jury) With(args []string) Jury {
+	j.Args = append(slices.Clone(j.Args), args...)
+	return j
 }
 
 // icpcFeedback lets an ICPC checker or interactor write the feedback directory it gets after input and answer.

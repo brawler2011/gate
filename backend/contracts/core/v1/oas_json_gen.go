@@ -8501,6 +8501,136 @@ func (s *GetUserResponseModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *GroupResultModel) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GroupResultModel) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		if s.Score.Set {
+			e.FieldStart("score")
+			s.Score.Encode(e)
+		}
+	}
+	{
+		if s.Points.Set {
+			e.FieldStart("points")
+			s.Points.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfGroupResultModel = [3]string{
+	0: "name",
+	1: "score",
+	2: "points",
+}
+
+// Decode decodes GroupResultModel from json.
+func (s *GroupResultModel) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GroupResultModel to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "name":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "score":
+			if err := func() error {
+				s.Score.Reset()
+				if err := s.Score.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"score\"")
+			}
+		case "points":
+			if err := func() error {
+				s.Points.Reset()
+				if err := s.Points.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"points\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GroupResultModel")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGroupResultModel) {
+					name = jsonFieldsNameOfGroupResultModel[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GroupResultModel) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GroupResultModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes InvitationKind as json.
 func (s InvitationKind) Encode(e *jx.Encoder) {
 	e.Str(string(s))
@@ -16698,12 +16828,8 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		e.FieldStart("subtasks")
-		e.ArrStart()
-		for _, elem := range s.Subtasks {
-			elem.Encode(e)
-		}
-		e.ArrEnd()
+		e.FieldStart("testset")
+		s.Testset.Encode(e)
 	}
 	{
 		e.FieldStart("tests")
@@ -16735,7 +16861,7 @@ var jsonFieldsNameOfProblemDraft = [21]string{
 	16: "library",
 	17: "statements",
 	18: "assets",
-	19: "subtasks",
+	19: "testset",
 	20: "tests",
 }
 
@@ -17002,23 +17128,15 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"assets\"")
 			}
-		case "subtasks":
+		case "testset":
 			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
-				s.Subtasks = make([]ProblemDraftSubtask, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem ProblemDraftSubtask
-					if err := elem.Decode(d); err != nil {
-						return err
-					}
-					s.Subtasks = append(s.Subtasks, elem)
-					return nil
-				}); err != nil {
+				if err := s.Testset.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subtasks\"")
+				return errors.Wrap(err, "decode field \"testset\"")
 			}
 		case "tests":
 			requiredBitSet[2] |= 1 << 4
@@ -17795,6 +17913,369 @@ func (s ProblemDraftCheckerTestVerdict) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ProblemDraftCheckerTestVerdict) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ProblemDraftGroup) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ProblemDraftGroup) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		e.FieldStart("aggregate")
+		s.Aggregate.Encode(e)
+	}
+	{
+		e.FieldStart("stop_on_failure")
+		e.Bool(s.StopOnFailure)
+	}
+	{
+		e.FieldStart("requires")
+		e.ArrStart()
+		for _, elem := range s.Requires {
+			json.EncodeUUID(e, elem)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("feedback")
+		s.Feedback.Encode(e)
+	}
+	{
+		e.FieldStart("checker_args")
+		e.ArrStart()
+		for _, elem := range s.CheckerArgs {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("validator_args")
+		e.ArrStart()
+		for _, elem := range s.ValidatorArgs {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("groups")
+		e.ArrStart()
+		for _, elem := range s.Groups {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfProblemDraftGroup = [9]string{
+	0: "id",
+	1: "name",
+	2: "aggregate",
+	3: "stop_on_failure",
+	4: "requires",
+	5: "feedback",
+	6: "checker_args",
+	7: "validator_args",
+	8: "groups",
+}
+
+// Decode decodes ProblemDraftGroup from json.
+func (s *ProblemDraftGroup) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemDraftGroup to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "aggregate":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Aggregate.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"aggregate\"")
+			}
+		case "stop_on_failure":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.StopOnFailure = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stop_on_failure\"")
+			}
+		case "requires":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				s.Requires = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.Requires = append(s.Requires, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"requires\"")
+			}
+		case "feedback":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				if err := s.Feedback.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"feedback\"")
+			}
+		case "checker_args":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				s.CheckerArgs = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.CheckerArgs = append(s.CheckerArgs, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"checker_args\"")
+			}
+		case "validator_args":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				s.ValidatorArgs = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.ValidatorArgs = append(s.ValidatorArgs, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"validator_args\"")
+			}
+		case "groups":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.Groups = make([]ProblemDraftGroup, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ProblemDraftGroup
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Groups = append(s.Groups, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"groups\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ProblemDraftGroup")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfProblemDraftGroup) {
+					name = jsonFieldsNameOfProblemDraftGroup[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ProblemDraftGroup) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemDraftGroup) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ProblemDraftGroupAggregate as json.
+func (s ProblemDraftGroupAggregate) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ProblemDraftGroupAggregate from json.
+func (s *ProblemDraftGroupAggregate) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemDraftGroupAggregate to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ProblemDraftGroupAggregate(v) {
+	case ProblemDraftGroupAggregateSum:
+		*s = ProblemDraftGroupAggregateSum
+	case ProblemDraftGroupAggregateMin:
+		*s = ProblemDraftGroupAggregateMin
+	case ProblemDraftGroupAggregateMax:
+		*s = ProblemDraftGroupAggregateMax
+	case ProblemDraftGroupAggregateAvg:
+		*s = ProblemDraftGroupAggregateAvg
+	default:
+		*s = ProblemDraftGroupAggregate(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ProblemDraftGroupAggregate) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemDraftGroupAggregate) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ProblemDraftGroupFeedback as json.
+func (s ProblemDraftGroupFeedback) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ProblemDraftGroupFeedback from json.
+func (s *ProblemDraftGroupFeedback) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemDraftGroupFeedback to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ProblemDraftGroupFeedback(v) {
+	case ProblemDraftGroupFeedbackComplete:
+		*s = ProblemDraftGroupFeedbackComplete
+	case ProblemDraftGroupFeedbackIcpc:
+		*s = ProblemDraftGroupFeedbackIcpc
+	case ProblemDraftGroupFeedbackPoints:
+		*s = ProblemDraftGroupFeedbackPoints
+	case ProblemDraftGroupFeedbackNone:
+		*s = ProblemDraftGroupFeedbackNone
+	default:
+		*s = ProblemDraftGroupFeedback(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ProblemDraftGroupFeedback) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemDraftGroupFeedback) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -18837,296 +19318,6 @@ func (s *ProblemDraftStatement) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
-func (s *ProblemDraftSubtask) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *ProblemDraftSubtask) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("id")
-		json.EncodeUUID(e, s.ID)
-	}
-	{
-		e.FieldStart("ordinal")
-		e.Int64(s.Ordinal)
-	}
-	{
-		e.FieldStart("name")
-		e.Str(s.Name)
-	}
-	{
-		e.FieldStart("points")
-		e.Float64(s.Points)
-	}
-	{
-		e.FieldStart("policy")
-		s.Policy.Encode(e)
-	}
-	{
-		e.FieldStart("feedback")
-		s.Feedback.Encode(e)
-	}
-	{
-		e.FieldStart("depends_on")
-		e.ArrStart()
-		for _, elem := range s.DependsOn {
-			json.EncodeUUID(e, elem)
-		}
-		e.ArrEnd()
-	}
-}
-
-var jsonFieldsNameOfProblemDraftSubtask = [7]string{
-	0: "id",
-	1: "ordinal",
-	2: "name",
-	3: "points",
-	4: "policy",
-	5: "feedback",
-	6: "depends_on",
-}
-
-// Decode decodes ProblemDraftSubtask from json.
-func (s *ProblemDraftSubtask) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ProblemDraftSubtask to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "id":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
-			}
-		case "ordinal":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := d.Int64()
-				s.Ordinal = int64(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"ordinal\"")
-			}
-		case "name":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				v, err := d.Str()
-				s.Name = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"name\"")
-			}
-		case "points":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := d.Float64()
-				s.Points = float64(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"points\"")
-			}
-		case "policy":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				if err := s.Policy.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"policy\"")
-			}
-		case "feedback":
-			requiredBitSet[0] |= 1 << 5
-			if err := func() error {
-				if err := s.Feedback.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"feedback\"")
-			}
-		case "depends_on":
-			requiredBitSet[0] |= 1 << 6
-			if err := func() error {
-				s.DependsOn = make([]uuid.UUID, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem uuid.UUID
-					v, err := json.DecodeUUID(d)
-					elem = v
-					if err != nil {
-						return err
-					}
-					s.DependsOn = append(s.DependsOn, elem)
-					return nil
-				}); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"depends_on\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode ProblemDraftSubtask")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b01111111,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfProblemDraftSubtask) {
-					name = jsonFieldsNameOfProblemDraftSubtask[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ProblemDraftSubtask) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ProblemDraftSubtask) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ProblemDraftSubtaskFeedback as json.
-func (s ProblemDraftSubtaskFeedback) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes ProblemDraftSubtaskFeedback from json.
-func (s *ProblemDraftSubtaskFeedback) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ProblemDraftSubtaskFeedback to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch ProblemDraftSubtaskFeedback(v) {
-	case ProblemDraftSubtaskFeedbackComplete:
-		*s = ProblemDraftSubtaskFeedbackComplete
-	case ProblemDraftSubtaskFeedbackIcpc:
-		*s = ProblemDraftSubtaskFeedbackIcpc
-	case ProblemDraftSubtaskFeedbackPoints:
-		*s = ProblemDraftSubtaskFeedbackPoints
-	case ProblemDraftSubtaskFeedbackNone:
-		*s = ProblemDraftSubtaskFeedbackNone
-	default:
-		*s = ProblemDraftSubtaskFeedback(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s ProblemDraftSubtaskFeedback) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ProblemDraftSubtaskFeedback) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ProblemDraftSubtaskPolicy as json.
-func (s ProblemDraftSubtaskPolicy) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes ProblemDraftSubtaskPolicy from json.
-func (s *ProblemDraftSubtaskPolicy) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ProblemDraftSubtaskPolicy to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch ProblemDraftSubtaskPolicy(v) {
-	case ProblemDraftSubtaskPolicyComplete:
-		*s = ProblemDraftSubtaskPolicyComplete
-	case ProblemDraftSubtaskPolicyEach:
-		*s = ProblemDraftSubtaskPolicyEach
-	default:
-		*s = ProblemDraftSubtaskPolicy(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s ProblemDraftSubtaskPolicy) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ProblemDraftSubtaskPolicy) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
 func (s *ProblemDraftTest) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -19148,8 +19339,8 @@ func (s *ProblemDraftTest) encodeFields(e *jx.Encoder) {
 		e.Int64(s.Ordinal)
 	}
 	{
-		e.FieldStart("subtask_id")
-		json.EncodeUUID(e, s.SubtaskID)
+		e.FieldStart("group_id")
+		json.EncodeUUID(e, s.GroupID)
 	}
 	{
 		e.FieldStart("sample")
@@ -19173,7 +19364,7 @@ var jsonFieldsNameOfProblemDraftTest = [8]string{
 	0: "points",
 	1: "id",
 	2: "ordinal",
-	3: "subtask_id",
+	3: "group_id",
 	4: "sample",
 	5: "pretest",
 	6: "input",
@@ -19225,17 +19416,17 @@ func (s *ProblemDraftTest) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"ordinal\"")
 			}
-		case "subtask_id":
+		case "group_id":
 			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
-				s.SubtaskID = v
+				s.GroupID = v
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subtask_id\"")
+				return errors.Wrap(err, "decode field \"group_id\"")
 			}
 		case "sample":
 			requiredBitSet[0] |= 1 << 4
@@ -19413,9 +19604,9 @@ func (s *ProblemDraftValidator) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		e.FieldStart("subtasks")
+		e.FieldStart("groups")
 		e.ArrStart()
-		for _, elem := range s.Subtasks {
+		for _, elem := range s.Groups {
 			json.EncodeUUID(e, elem)
 		}
 		e.ArrEnd()
@@ -19436,7 +19627,7 @@ var jsonFieldsNameOfProblemDraftValidator = [7]string{
 	2: "source",
 	3: "protocol",
 	4: "args",
-	5: "subtasks",
+	5: "groups",
 	6: "tests",
 }
 
@@ -19515,10 +19706,10 @@ func (s *ProblemDraftValidator) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"args\"")
 			}
-		case "subtasks":
+		case "groups":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				s.Subtasks = make([]uuid.UUID, 0)
+				s.Groups = make([]uuid.UUID, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
 					var elem uuid.UUID
 					v, err := json.DecodeUUID(d)
@@ -19526,14 +19717,14 @@ func (s *ProblemDraftValidator) Decode(d *jx.Decoder) error {
 					if err != nil {
 						return err
 					}
-					s.Subtasks = append(s.Subtasks, elem)
+					s.Groups = append(s.Groups, elem)
 					return nil
 				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subtasks\"")
+				return errors.Wrap(err, "decode field \"groups\"")
 			}
 		case "tests":
 			requiredBitSet[0] |= 1 << 6
@@ -24143,10 +24334,10 @@ func (s *SubmissionTestDetailsModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Subtasks != nil {
-			e.FieldStart("subtasks")
+		if s.Groups != nil {
+			e.FieldStart("groups")
 			e.ArrStart()
-			for _, elem := range s.Subtasks {
+			for _, elem := range s.Groups {
 				elem.Encode(e)
 			}
 			e.ArrEnd()
@@ -24163,7 +24354,7 @@ func (s *SubmissionTestDetailsModel) encodeFields(e *jx.Encoder) {
 var jsonFieldsNameOfSubmissionTestDetailsModel = [4]string{
 	0: "compiler_output",
 	1: "tests",
-	2: "subtasks",
+	2: "groups",
 	3: "failed_test_details",
 }
 
@@ -24202,22 +24393,22 @@ func (s *SubmissionTestDetailsModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"tests\"")
 			}
-		case "subtasks":
+		case "groups":
 			if err := func() error {
-				s.Subtasks = make([]SubtaskResultModel, 0)
+				s.Groups = make([]GroupResultModel, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem SubtaskResultModel
+					var elem GroupResultModel
 					if err := elem.Decode(d); err != nil {
 						return err
 					}
-					s.Subtasks = append(s.Subtasks, elem)
+					s.Groups = append(s.Groups, elem)
 					return nil
 				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subtasks\"")
+				return errors.Wrap(err, "decode field \"groups\"")
 			}
 		case "failed_test_details":
 			if err := func() error {
@@ -24736,136 +24927,6 @@ func (s *SubmissionsListItemModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SubmissionsListItemModel) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *SubtaskResultModel) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *SubtaskResultModel) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("name")
-		e.Str(s.Name)
-	}
-	{
-		if s.Score.Set {
-			e.FieldStart("score")
-			s.Score.Encode(e)
-		}
-	}
-	{
-		if s.Points.Set {
-			e.FieldStart("points")
-			s.Points.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfSubtaskResultModel = [3]string{
-	0: "name",
-	1: "score",
-	2: "points",
-}
-
-// Decode decodes SubtaskResultModel from json.
-func (s *SubtaskResultModel) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SubtaskResultModel to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "name":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Str()
-				s.Name = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"name\"")
-			}
-		case "score":
-			if err := func() error {
-				s.Score.Reset()
-				if err := s.Score.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"score\"")
-			}
-		case "points":
-			if err := func() error {
-				s.Points.Reset()
-				if err := s.Points.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"points\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode SubtaskResultModel")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000001,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfSubtaskResultModel) {
-					name = jsonFieldsNameOfSubtaskResultModel[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *SubtaskResultModel) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SubtaskResultModel) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -26149,9 +26210,9 @@ func (s *TestDetailItemModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Subtask.Set {
-			e.FieldStart("subtask")
-			s.Subtask.Encode(e)
+		if s.Group.Set {
+			e.FieldStart("group")
+			s.Group.Encode(e)
 		}
 	}
 }
@@ -26162,7 +26223,7 @@ var jsonFieldsNameOfTestDetailItemModel = [6]string{
 	2: "time_ms",
 	3: "memory_kb",
 	4: "sample",
-	5: "subtask",
+	5: "group",
 }
 
 // Decode decodes TestDetailItemModel from json.
@@ -26232,15 +26293,15 @@ func (s *TestDetailItemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sample\"")
 			}
-		case "subtask":
+		case "group":
 			if err := func() error {
-				s.Subtask.Reset()
-				if err := s.Subtask.Decode(d); err != nil {
+				s.Group.Reset()
+				if err := s.Group.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subtask\"")
+				return errors.Wrap(err, "decode field \"group\"")
 			}
 		default:
 			return d.Skip()

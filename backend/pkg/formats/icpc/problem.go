@@ -11,6 +11,8 @@ type Problem struct {
 	Validation string `yaml:"validation"`
 	// ValidatorFlags are arguments of the output validator, the default one included.
 	ValidatorFlags string `yaml:"validator_flags"`
+	// Grading holds legacy settings that override every testdata.yaml.
+	Grading Grading `yaml:"grading"`
 }
 
 type Limits struct {

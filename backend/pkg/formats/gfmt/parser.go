@@ -120,7 +120,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 		generators[stem] = g.Path
 	}
-	if p.Groups, err = groups(manifest, generators, files); err != nil {
+	if p.Testset, err = convertGroup(manifest.Testset, generators, files); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -169,56 +169,25 @@ func mainSolution(main string, solutions []spec.Program) string {
 	return ""
 }
 
-// Samples in scored subtasks are numbered there, not duplicated under samples.
-func groups(manifest *Problem, generators map[string]string, files map[string]bool) ([]spec.Group, error) {
-	key := func(t Test) string {
-		if t.Generate != "" {
-			return "generator:" + t.Generate
+func convertGroup(g Group, generators map[string]string, files map[string]bool) (spec.Group, error) {
+	group := spec.Group{Name: g.Name, Aggregate: g.Aggregate, StopOnFailure: g.StopOnFailure, Requires: g.Requires, Feedback: g.Feedback,
+		CheckerArgs: g.CheckerArgs, ValidatorArgs: g.ValidatorArgs}
+	for _, t := range g.Tests {
+		test, err := convertTest(t, generators, files)
+		if err != nil {
+			return group, err
 		}
-		return "input:" + t.Input
+		test.Sample, test.Pretest = t.Sample, t.Pretest
+		group.Tests = append(group.Tests, test)
 	}
-	// Ordinals mark an exported draft, whose subtask named samples is an ordinary one.
-	legacy := !manifest.hasOrdinals()
-	samples, scored := map[string]bool{}, map[string]bool{}
-	for name, subtask := range manifest.Subtasks {
-		for _, t := range subtask.Tests {
-			if legacy && name == "samples" {
-				samples[key(t)] = true
-			}
-			if legacy && name != "samples" {
-				scored[key(t)] = true
-			}
+	for _, child := range g.Groups {
+		converted, err := convertGroup(child, generators, files)
+		if err != nil {
+			return group, err
 		}
+		group.Groups = append(group.Groups, converted)
 	}
-	var result []spec.Group
-	dropped := ""
-	for _, name := range manifest.OrderedSubtaskNames() {
-		subtask := manifest.Subtasks[name]
-		group := spec.Group{Name: name, Policy: subtask.Policy, Feedback: subtask.Feedback, DependsOn: subtask.Dependencies}
-		for _, t := range subtask.Tests {
-			if name == "samples" && scored[key(t)] {
-				continue
-			}
-			test, err := convertTest(t, generators, files)
-			if err != nil {
-				return nil, err
-			}
-			test.Sample = t.Sample || samples[key(t)]
-			test.Pretest = t.Pretest
-			group.Tests = append(group.Tests, test)
-		}
-		if name == "samples" && len(subtask.Tests) > 0 && len(group.Tests) == 0 {
-			dropped = name
-			continue
-		}
-		result = append(result, group)
-	}
-	if dropped != "" {
-		for i := range result {
-			result[i].DependsOn = slices.DeleteFunc(slices.Clone(result[i].DependsOn), func(dep string) bool { return dep == dropped })
-		}
-	}
-	return result, nil
+	return group, nil
 }
 
 func convertTest(t Test, generators map[string]string, files map[string]bool) (spec.Test, error) {

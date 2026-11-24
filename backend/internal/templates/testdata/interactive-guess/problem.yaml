@@ -1,4 +1,4 @@
-format_version: "1.0"
+format_version: "2.0"
 title: "Interactive Guessing"
 type: "interactive"
 
@@ -9,20 +9,16 @@ limits:
 system_library:
   - testlib.h
 
-subtasks:
-  samples:
-    points: 0
-    policy: "complete"
-    tests:
-      - input: "01.in"
-
-  secret:
-    points: 100
-    policy: "each"
-    dependencies:
-      - "samples"
-    tests:
-      - input: "02.in"
+testset:
+  groups:
+    - name: samples
+      tests:
+        - input: "01.in"
+          sample: true
+    - name: secret
+      requires: [samples]
+      tests:
+        - input: "02.in"
 
 solutions:
   ok.cpp: "OK"

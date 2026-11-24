@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, Tests: 10, Components: 10, Subtasks: 10}
+var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, Tests: 10, Components: 10, Groups: 10}
 
 func validDraft() Draft {
 	gen, sol, sub := "gen", "main", uuid.New()
@@ -22,8 +22,9 @@ func validDraft() Draft {
 			Library:      []DraftLibraryFile{{Name: "testlib.h"}},
 			Statements:   []DraftStatement{{Language: "en", Legend: "\\includegraphics[width=3cm]{graph.png}"}},
 			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
-			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete", Feedback: "complete"}},
-			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
+			Testset: DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete",
+				Groups: []DraftGroup{{ID: sub, Name: "main", Aggregate: "min", Feedback: "complete"}}},
+			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: sub,
 				Input:  DraftInput{Mode: "generator", Generator: &gen},
 				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
 		}}
@@ -53,21 +54,33 @@ func TestValidateLocatesViolations(t *testing.T) {
 			d.Library = append(d.Library, DraftLibraryFile{Name: "testlib.h"})
 		}, "/library/1/name", pkg.ErrDuplicate.Code},
 		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", pkg.ErrFormat.Code},
-		"subtask cycle": {func(d *Draft) {
+		"requirement cycle": {func(d *Draft) {
 			other := uuid.New()
-			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", Feedback: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
-			d.Subtasks[0].DependsOn = []uuid.UUID{other}
-		}, "/subtasks/1/depends_on/0", pkg.ErrCycle.Code},
+			d.Testset.Groups = append(d.Testset.Groups, DraftGroup{ID: other, Name: "other", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{d.Testset.Groups[0].ID}})
+			d.Testset.Groups[0].Requires = []uuid.UUID{other}
+		}, "/testset/groups/1/requires/0", pkg.ErrCycle.Code},
+		"requirement of a subgroup": {func(d *Draft) {
+			inner := uuid.New()
+			d.Testset.Groups[0].Groups = []DraftGroup{{ID: inner, Name: "inner", Aggregate: "sum", Feedback: "complete"}}
+			d.Testset.Groups[0].Requires = []uuid.UUID{inner}
+		}, "/testset/groups/0/requires/0", pkg.ErrInconsistent.Code},
+		"requirement of an ancestor": {func(d *Draft) {
+			d.Testset.Groups[0].Groups = []DraftGroup{{ID: uuid.New(), Name: "inner", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{d.Testset.Groups[0].ID}}}
+		}, "/testset/groups/0/groups/0/requires/0", pkg.ErrInconsistent.Code},
+		"testset with requirements": {func(d *Draft) {
+			d.Testset.Requires = []uuid.UUID{d.Testset.Groups[0].ID}
+		}, "/testset/requires/0", pkg.ErrInconsistent.Code},
 		"auto-updated file with own text": {func(d *Draft) {
 			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
 		}, "/library/0/auto_update", pkg.ErrInconsistent.Code},
-		"two unnamed subtasks": {func(d *Draft) {
-			d.Subtasks[0].Name = ""
-			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each", Feedback: "complete"})
-		}, "/subtasks/1/name", pkg.ErrDuplicate.Code},
-		"validator of an unknown subtask": {func(d *Draft) {
-			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}, Subtasks: []uuid.UUID{uuid.New()}}}
-		}, "/validators/0/subtasks/0", pkg.ErrUnknown.Code},
+		"unnamed subgroup": {func(d *Draft) { d.Testset.Groups[0].Name = "" }, "/testset/groups/0/name", pkg.ErrRequired.Code},
+		"two groups of one name": {func(d *Draft) {
+			d.Testset.Groups[0].Groups = []DraftGroup{{ID: uuid.New(), Name: "main", Aggregate: "sum", Feedback: "complete"}}
+		}, "/testset/groups/0/groups/0/name", pkg.ErrDuplicate.Code},
+		"validator of an unknown group": {func(d *Draft) {
+			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}, Groups: []uuid.UUID{uuid.New()}}}
+		}, "/validators/0/groups/0", pkg.ErrUnknown.Code},
+		"group arguments of a testlib checker": {func(d *Draft) { d.Testset.Groups[0].CheckerArgs = []string{"case_sensitive"} }, "/testset/groups/0/checker_args", pkg.ErrInconsistent.Code},
 		"arguments of a testlib checker": {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
 		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See \\includegraphics{tree.png}." }, "/statements/0/notes", pkg.ErrUnknown.Code},
 	} {

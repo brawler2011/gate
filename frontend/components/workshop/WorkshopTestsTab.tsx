@@ -1,6 +1,6 @@
 "use client";
 
-import {ActionIcon, Anchor, Badge, Box, Button, Group, MultiSelect, NumberInput, Select, Stack, Table, Text, TextInput, Tooltip} from "@mantine/core";
+import {ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, MultiSelect, NumberInput, Select, Stack, Table, Text, TextInput, Tooltip} from "@mantine/core";
 import {IconArrowDown, IconArrowUp, IconPencil, IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
 
@@ -8,22 +8,26 @@ import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
-  addSubtask,
+  addGroup,
   formatPoints,
+  groupLabel,
+  groupMaxPoints,
+  groupRows,
   moveTest,
   newGeneratedTest,
   newManualTest,
-  removeSubtask,
+  removeGroup,
   removeTest,
-  setSubtaskDependencies,
-  subtaskLabel,
+  requirableGroups,
+  setGroupTestPoints,
   sumPoints,
+  updateGroup,
   upsertTest,
 } from "./draft/draftOps";
 import {objectUrl, useSaveDraft, useUploadToDraft} from "./draft/useDraft";
 import {TestEditorModal, type TestFiles} from "./tests/TestEditorModal";
 
-import type {ProblemDraft, ProblemDraftSubtask, ProblemDraftTest} from "@/contracts/core/v1/schema";
+import type {ProblemDraft, ProblemDraftGroup, ProblemDraftTest} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type PanelProps = {
@@ -31,108 +35,187 @@ type PanelProps = {
   problemId: string;
 };
 
-const SubtasksSection = ({draft, problemId}: PanelProps): ReactNode => {
+const AGGREGATES = [
+  {value: "min", label: "Всё или ничего (минимум)"},
+  {value: "sum", label: "Сумма"},
+  {value: "max", label: "Максимум"},
+  {value: "avg", label: "Среднее"},
+];
+
+const FEEDBACK = [
+  {value: "complete", label: "Все тесты"},
+  {value: "icpc", label: "До первой ошибки"},
+  {value: "points", label: "Только баллы"},
+  {value: "none", label: "Ничего"},
+];
+
+// Arguments are passed as argv without shell expansion.
+const parseArgs = (text: string): string[] => text.split(/\s+/).filter((part) => part !== "");
+
+type ArgsInputProps = {label: string; value: string[]; onSave: (args: string[]) => void};
+
+const ArgsInput = ({label, value, onSave}: ArgsInputProps): ReactNode => (
+  <TextInput
+    size="xs"
+    label={label}
+    defaultValue={value.join(" ")}
+    onBlur={(e) => {
+      const args = parseArgs(e.currentTarget.value);
+      if (args.join(" ") !== value.join(" ")) {
+        onSave(args);
+      }
+    }}
+  />
+);
+
+const GroupsSection = ({draft, problemId}: PanelProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const [name, setName] = useState("");
+  const [parent, setParent] = useState<string | null>(null);
+  const rows = groupRows(draft);
+  const maxPoints = groupMaxPoints(draft);
+  const icpcChecker = [draft.checker, draft.interactor].some((p) => p?.protocol === "icpc");
+  const icpcValidators = draft.validators.some((v) => v.protocol === "icpc");
 
-  const update = (id: string, patch: Partial<ProblemDraftSubtask>) =>
-    save((current) => ({...current, subtasks: current.subtasks.map((s) => (s.id === id ? {...s, ...patch} : s))}));
+  const update = (id: string, patch: Parameters<typeof updateGroup>[2]) =>
+    save((current) => updateGroup(current, id, patch));
 
   return (
-    <SectionPaper title="Подзадачи">
+    <SectionPaper title="Группы тестов">
       <Stack gap="sm">
         <Text size="xs" c="dimmed">
-          «Все тесты» начисляет сумму весов группы только если пройдена вся группа; «Каждый тест» суммирует веса
-          пройденных тестов. Подзадача начисляет баллы, только если пройдены все подзадачи, от которых она зависит.
+          Группа складывает баллы своих тестов и подгрупп, взятых по порядку первых тестов: «всё или ничего» даёт
+          минимум, то есть баллы, только если пройдено всё. «До первой ошибки» не учитывает то, что идёт после первого
+          непройденного теста или подгруппы. Группа начисляет баллы, только если полностью пройдены группы, которые
+          она требует.
         </Text>
-        {draft.subtasks.length > 0 && (
-          <Table withTableBorder>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Название</Table.Th>
-                <Table.Th>Начисление</Table.Th>
-                <Table.Th>Видно на контесте</Table.Th>
-                <Table.Th>Зависит от</Table.Th>
-                <Table.Th>Баллы</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {draft.subtasks.map((subtask) => (
-                <Table.Tr key={subtask.id}>
-                  <Table.Td>
+        <Table withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Название</Table.Th>
+              <Table.Th>Начисление</Table.Th>
+              <Table.Th>До первой ошибки</Table.Th>
+              <Table.Th>Видно на контесте</Table.Th>
+              <Table.Th>Требует</Table.Th>
+              {(icpcChecker || icpcValidators) && <Table.Th>Аргументы</Table.Th>}
+              <Table.Th>Баллы</Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {rows.map(({group, depth}) => (
+              <Table.Tr key={group.id}>
+                <Table.Td pl={8 + depth * 20}>
+                  {depth === 0 ? (
+                    <Text size="sm" c="dimmed">
+                      {groupLabel(group)}
+                    </Text>
+                  ) : (
                     <TextInput
                       size="xs"
-                      defaultValue={subtask.name}
-                      placeholder={`${subtaskLabel(subtask)}, без группы`}
+                      defaultValue={group.name}
                       onBlur={(e) => {
                         const name = e.currentTarget.value.trim();
-                        if (name !== subtask.name) {
-                          void update(subtask.id, {name});
+                        if (name !== "" && name !== group.name) {
+                          void update(group.id, {name});
                         }
                       }}
                     />
-                  </Table.Td>
-                  <Table.Td>
-                    <Select
-                      size="xs"
-                      data={[
-                        {value: "complete", label: "Все тесты"},
-                        {value: "each", label: "Каждый тест"},
-                      ]}
-                      value={subtask.policy}
-                      allowDeselect={false}
-                      onChange={(value) => value && void update(subtask.id, {policy: value as ProblemDraftSubtask["policy"]})}
-                    />
-                  </Table.Td>
-                  <Table.Td>
-                    <Select
-                      size="xs"
-                      data={[
-                        {value: "complete", label: "Все тесты"},
-                        {value: "icpc", label: "До первой ошибки"},
-                        {value: "points", label: "Только баллы"},
-                        {value: "none", label: "Ничего"},
-                      ]}
-                      value={subtask.feedback}
-                      allowDeselect={false}
-                      onChange={(value) => value && void update(subtask.id, {feedback: value as ProblemDraftSubtask["feedback"]})}
-                    />
-                  </Table.Td>
-                  <Table.Td>
+                  )}
+                </Table.Td>
+                <Table.Td>
+                  <Select
+                    size="xs"
+                    data={AGGREGATES}
+                    value={group.aggregate}
+                    allowDeselect={false}
+                    onChange={(value) => value && void update(group.id, {aggregate: value as ProblemDraftGroup["aggregate"]})}
+                  />
+                </Table.Td>
+                <Table.Td>
+                  <Checkbox
+                    checked={group.stop_on_failure}
+                    onChange={(e) => void update(group.id, {stop_on_failure: e.currentTarget.checked})}
+                  />
+                </Table.Td>
+                <Table.Td>
+                  <Select
+                    size="xs"
+                    data={FEEDBACK}
+                    value={group.feedback}
+                    allowDeselect={false}
+                    onChange={(value) => value && void update(group.id, {feedback: value as ProblemDraftGroup["feedback"]})}
+                  />
+                </Table.Td>
+                <Table.Td>
+                  {depth > 0 && (
                     <MultiSelect
                       size="xs"
-                      data={draft.subtasks
-                        .filter((s) => s.id !== subtask.id)
-                        .map((s) => ({value: s.id, label: subtaskLabel(s)}))}
-                      value={subtask.depends_on}
+                      data={requirableGroups(draft, group.id).map((g) => ({value: g.id, label: groupLabel(g)}))}
+                      value={group.requires}
                       placeholder="—"
-                      onChange={(ids) => void save((current) => setSubtaskDependencies(current, subtask.id, ids))}
+                      onChange={(ids) => void update(group.id, {requires: ids})}
                     />
-                  </Table.Td>
+                  )}
+                </Table.Td>
+                {(icpcChecker || icpcValidators) && (
                   <Table.Td>
-                    <Text size="sm">{formatPoints(subtask.points)}</Text>
+                    <Stack gap={4}>
+                      {icpcChecker && <ArgsInput label="чекеру" value={group.checker_args} onSave={(args) => void update(group.id, {checker_args: args})} />}
+                      {icpcValidators && (
+                        <ArgsInput label="валидаторам" value={group.validator_args} onSave={(args) => void update(group.id, {validator_args: args})} />
+                      )}
+                    </Stack>
                   </Table.Td>
-                  <Table.Td>
-                    <Tooltip label="Удалить подзадачу">
-                      <ActionIcon variant="subtle" color="red" onClick={() => void save((current) => removeSubtask(current, subtask.id))}>
+                )}
+                <Table.Td>
+                  <Stack gap={4}>
+                    <Text size="sm">{formatPoints(maxPoints.get(group.id) ?? 0)}</Text>
+                    <NumberInput
+                      size="xs"
+                      w={110}
+                      placeholder="вес всех тестов"
+                      min={0}
+                      decimalScale={2}
+                      hideControls
+                      onBlur={(e) => {
+                        const value = Number(e.currentTarget.value.replace(",", "."));
+                        if (e.currentTarget.value !== "" && Number.isFinite(value) && value >= 0) {
+                          void save((current) => setGroupTestPoints(current, group.id, Math.round(value * 100) / 100));
+                          e.currentTarget.value = "";
+                        }
+                      }}
+                    />
+                  </Stack>
+                </Table.Td>
+                <Table.Td>
+                  {depth > 0 && (
+                    <Tooltip label="Удалить группу; её тесты перейдут в родительскую">
+                      <ActionIcon variant="subtle" color="red" onClick={() => void save((current) => removeGroup(current, group.id))}>
                         <IconTrash size={16} />
                       </ActionIcon>
                     </Tooltip>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
+                  )}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
         <Group align="flex-end">
-          <TextInput label="Новая подзадача" placeholder="Подзадача 1" value={name} onChange={(e) => setName(e.currentTarget.value)} />
+          <TextInput label="Новая группа" placeholder="Подзадача 1" value={name} onChange={(e) => setName(e.currentTarget.value)} />
+          <Select
+            label="Внутри"
+            data={rows.map(({group, depth}) => ({value: group.id, label: "\u2003".repeat(depth) + groupLabel(group)}))}
+            value={parent ?? draft.testset.id}
+            allowDeselect={false}
+            onChange={setParent}
+          />
           <Button
             variant="light"
             disabled={name.trim() === ""}
             loading={isSaving}
             onClick={async () => {
-              if (await save((current) => addSubtask(current, name.trim()))) {
+              if (await save((current) => addGroup(current, parent ?? current.testset.id, name.trim()))) {
                 setName("");
               }
             }}
@@ -186,14 +269,13 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const {upload, isUploading} = useUploadToDraft(problemId);
   const [editing, setEditing] = useState<{test: ProblemDraftTest; isNew: boolean} | null>(null);
-  const subtaskNames = new Map(draft.subtasks.map((s) => [s.id, subtaskLabel(s)]));
+  const rows = groupRows(draft);
+  const groupNames = new Map(rows.map(({group}) => [group.id, groupLabel(group)]));
 
   const create = (kind: "manual" | "generator") => {
-    const subtask = draft.subtasks.at(-1);
-    if (subtask) {
-      const test = kind === "manual" ? newManualTest(draft, subtask.id) : newGeneratedTest(draft, subtask.id);
-      setEditing({test, isNew: true});
-    }
+    const group = rows.at(-1)!.group;
+    const test = kind === "manual" ? newManualTest(draft, group.id) : newGeneratedTest(draft, group.id);
+    setEditing({test, isNew: true});
   };
 
   const submit = async (test: ProblemDraftTest, files: TestFiles) => {
@@ -218,25 +300,20 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
             {draft.max_score !== null && ` · максимальный балл задачи: ${formatPoints(draft.max_score)}`}
           </Text>
           <Group gap="xs">
-            <Button variant="light" disabled={draft.subtasks.length === 0} onClick={() => create("manual")}>
+            <Button variant="light" onClick={() => create("manual")}>
               Тест из файлов
             </Button>
-            <Button variant="light" disabled={draft.subtasks.length === 0} onClick={() => create("generator")}>
+            <Button variant="light" onClick={() => create("generator")}>
               Сгенерированный тест
             </Button>
           </Group>
         </Group>
-        {draft.subtasks.length === 0 && (
-          <Text size="sm" c="dimmed">
-            Сначала добавьте подзадачу: каждый тест принадлежит ровно одной подзадаче.
-          </Text>
-        )}
         {draft.tests.length > 0 && (
           <Table withTableBorder highlightOnHover>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th w={50}>№</Table.Th>
-                <Table.Th>Подзадача</Table.Th>
+                <Table.Th>Группа</Table.Th>
                 <Table.Th>Вход</Table.Th>
                 <Table.Th>Ответ</Table.Th>
                 <Table.Th>Вес</Table.Th>
@@ -259,7 +336,7 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
                       </Badge>
                     )}
                   </Table.Td>
-                  <Table.Td>{subtaskNames.get(test.subtask_id) ?? "?"}</Table.Td>
+                  <Table.Td>{groupNames.get(test.group_id) ?? "?"}</Table.Td>
                   <Table.Td>{describeInput(test, draft, problemId)}</Table.Td>
                   <Table.Td>{describeAnswer(test, problemId)}</Table.Td>
                   <Table.Td>
@@ -325,7 +402,7 @@ export const WorkshopTestsTab = ({problemId}: Props): ReactNode => (
       <DraftGate problemId={problemId}>
         {(draft) => (
           <>
-            <SubtasksSection draft={draft} problemId={problemId} />
+            <GroupsSection draft={draft} problemId={problemId} />
             <TestsSection draft={draft} problemId={problemId} />
           </>
         )}

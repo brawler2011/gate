@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Each data/secret subdirectory becomes a test group.
+// Each directory under data/ becomes a test group.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
@@ -29,15 +29,18 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
-	// ICPC group aggregation cannot be represented by per-test points without changing scores.
-	if prob.Type == "scoring" {
-		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "scoring", "ICPC scoring problems are not supported")
-	}
 	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
 	validation := strings.Fields(prob.Validation)
 	interactive := slices.Contains(validation, "interactive")
-	if interactive {
+	switch {
+	case slices.Contains(validation, "score"):
+		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "score", "output validators that score are not supported")
+	case interactive && prob.Type == "scoring":
+		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "scoring", "interactive scoring problems are not supported")
+	case interactive:
 		p.Type = "interactive"
+	case prob.Type == "scoring":
+		p.Type = "scoring"
 	}
 	custom := len(validation) > 0 && validation[0] == "custom"
 	if prob.Limits != nil {
@@ -88,10 +91,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Solutions, p.MainSolution, err = submissions(fsys, collect); err != nil {
 		return nil, err
 	}
-	if p.Groups, err = groups(fsys); err != nil {
-		return nil, err
-	}
-	if err := rejectGroupFlags(fsys); err != nil {
+	tree := testdata{fsys: fsys, scoring: p.Type == "scoring", legacy: prob.Grading}
+	if p.Testset, err = tree.read(); err != nil {
 		return nil, err
 	}
 	p.KeepInteractiveInputsPrivate()
@@ -214,84 +215,6 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 		result = append(result, list...)
 	}
 	return result, main, nil
-}
-
-func groups(fsys fs.FS) ([]spec.Group, error) {
-	var result []spec.Group
-	for _, top := range []string{"sample", "secret"} {
-		err := fs.WalkDir(fsys, path.Join("data", top), func(dir string, d fs.DirEntry, err error) error {
-			if errors.Is(err, fs.ErrNotExist) && dir == path.Join("data", top) {
-				return fs.SkipDir
-			}
-			if err != nil || !d.IsDir() {
-				return err
-			}
-			tests, err := testFiles(fsys, dir, top == "sample")
-			if err != nil || len(tests) == 0 {
-				return err
-			}
-			result = append(result, spec.Group{Name: strings.TrimPrefix(dir, "data/"), Policy: "each", Tests: tests})
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("read tests: %w", err)
-		}
-	}
-	return result, nil
-}
-
-// Gate gives each program one set of arguments, so flags cannot vary by group.
-func rejectGroupFlags(fsys fs.FS) error {
-	err := fs.WalkDir(fsys, "data", func(name string, d fs.DirEntry, err error) error {
-		if errors.Is(err, fs.ErrNotExist) && name == "data" {
-			return fs.SkipAll
-		}
-		if err != nil || d.Name() != "testdata.yaml" {
-			return err
-		}
-		data, err := spec.ReadFile(fsys, name)
-		if err != nil {
-			return err
-		}
-		var flags struct {
-			Input  any `yaml:"input_validator_flags"`
-			Output any `yaml:"output_validator_flags"`
-		}
-		if err := yaml.Unmarshal(data, &flags); err != nil {
-			return spec.Syntax(name, err)
-		}
-		if flags.Input != nil || flags.Output != nil {
-			return spec.Fail(pkg.ErrUnsupported, name, "", "validator flags in %s are not supported", name)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("read test groups: %w", err)
-	}
-	return nil
-}
-
-func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
-	entries, err := fs.ReadDir(fsys, dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", dir, err)
-	}
-	var tests []spec.Test
-	for _, e := range entries {
-		stem, ok := strings.CutSuffix(e.Name(), ".in")
-		if !e.Type().IsRegular() || !ok {
-			continue
-		}
-		test := spec.Test{Input: path.Join(dir, e.Name()), Sample: sample}
-		if answer := path.Join(dir, stem+".ans"); regular(fsys, answer) {
-			test.Answer = answer
-		}
-		tests = append(tests, test)
-	}
-	return tests, nil
 }
 
 // Legacy packages keep LaTeX in problem_statement/, 2023-07 ones Markdown in statement/; other files there are images.

@@ -300,7 +300,7 @@ SELECT s.id,
   COALESCE((
     SELECT g->>'feedback'
     FROM jsonb_array_elements(s.test_details->'tests') t
-      JOIN jsonb_array_elements(s.test_details->'subtasks') g ON g->>'name' = COALESCE(t->>'subtask', '')
+      JOIN jsonb_array_elements(s.test_details->'groups') g ON g->>'name' = COALESCE(t->>'group', '')
     WHERE (t->>'test_index')::integer = (s.test_details->>'failed_test')::integer
     LIMIT 1
   ), '')::text AS failed_test_feedback,

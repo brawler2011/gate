@@ -940,6 +940,54 @@ func (s *GetSubmissionResponseModel) Validate() error {
 	return nil
 }
 
+func (s *GroupResultModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Score.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "score",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Points.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "points",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s InvitationKind) Validate() error {
 	switch s {
 	case "organization":
@@ -2507,30 +2555,13 @@ func (s *ProblemDraft) Validate() error {
 		})
 	}
 	if err := func() error {
-		if s.Subtasks == nil {
-			return errors.New("nil is invalid value")
-		}
-		var failures []validate.FieldError
-		for i, elem := range s.Subtasks {
-			if err := func() error {
-				if err := elem.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				failures = append(failures, validate.FieldError{
-					Name:  fmt.Sprintf("[%d]", i),
-					Error: err,
-				})
-			}
-		}
-		if len(failures) > 0 {
-			return &validate.Error{Fields: failures}
+		if err := s.Testset.Validate(); err != nil {
+			return err
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "subtasks",
+			Name:  "testset",
 			Error: err,
 		})
 	}
@@ -2724,6 +2755,131 @@ func (s ProblemDraftCheckerTestVerdict) Validate() error {
 	}
 }
 
+func (s *ProblemDraftGroup) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Aggregate.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "aggregate",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Requires == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "requires",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Feedback.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feedback",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.CheckerArgs == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "checker_args",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.ValidatorArgs == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "validator_args",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Groups == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Groups {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "groups",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ProblemDraftGroupAggregate) Validate() error {
+	switch s {
+	case "sum":
+		return nil
+	case "min":
+		return nil
+	case "max":
+		return nil
+	case "avg":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ProblemDraftGroupFeedback) Validate() error {
+	switch s {
+	case "complete":
+		return nil
+	case "icpc":
+		return nil
+	case "points":
+		return nil
+	case "none":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *ProblemDraftInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -2907,88 +3063,6 @@ func (s *ProblemDraftStatement) Validate() error {
 	return nil
 }
 
-func (s *ProblemDraftSubtask) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := (validate.Float{}).Validate(float64(s.Points)); err != nil {
-			return errors.Wrap(err, "float")
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "points",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if err := s.Policy.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "policy",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if err := s.Feedback.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "feedback",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if s.DependsOn == nil {
-			return errors.New("nil is invalid value")
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "depends_on",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s ProblemDraftSubtaskFeedback) Validate() error {
-	switch s {
-	case "complete":
-		return nil
-	case "icpc":
-		return nil
-	case "points":
-		return nil
-	case "none":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s ProblemDraftSubtaskPolicy) Validate() error {
-	switch s {
-	case "complete":
-		return nil
-	case "each":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s *ProblemDraftTest) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -3086,13 +3160,13 @@ func (s *ProblemDraftValidator) Validate() error {
 		})
 	}
 	if err := func() error {
-		if s.Subtasks == nil {
+		if s.Groups == nil {
 			return errors.New("nil is invalid value")
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "subtasks",
+			Name:  "groups",
 			Error: err,
 		})
 	}
@@ -3575,7 +3649,7 @@ func (s *SubmissionTestDetailsModel) Validate() error {
 	var failures []validate.FieldError
 	if err := func() error {
 		var failures []validate.FieldError
-		for i, elem := range s.Subtasks {
+		for i, elem := range s.Groups {
 			if err := func() error {
 				if err := elem.Validate(); err != nil {
 					return err
@@ -3594,7 +3668,7 @@ func (s *SubmissionTestDetailsModel) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "subtasks",
+			Name:  "groups",
 			Error: err,
 		})
 	}
@@ -3657,54 +3731,6 @@ func (s *SubmissionsListItemModel) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "score",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *SubtaskResultModel) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Score.Get(); ok {
-			if err := func() error {
-				if err := (validate.Float{}).Validate(float64(value)); err != nil {
-					return errors.Wrap(err, "float")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "score",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.Points.Get(); ok {
-			if err := func() error {
-				if err := (validate.Float{}).Validate(float64(value)); err != nil {
-					return errors.Wrap(err, "float")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "points",
 			Error: err,
 		})
 	}

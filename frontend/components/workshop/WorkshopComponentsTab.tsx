@@ -15,6 +15,8 @@ import {
   addProgram,
   customChecker,
   customizeChecker,
+  groupLabel,
+  groupRows,
   isSingleRole,
   programsOf,
   removeProgram,
@@ -22,9 +24,8 @@ import {
   ROLE_LABELS,
   setSingleProgram,
   setSolutionExpectation,
-  setValidatorSubtasks,
+  setValidatorGroups,
   standardChecker,
-  subtaskLabel,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -488,12 +489,14 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
               />
               {role === "validator" && (
                 <MultiSelect
-                  label="Подзадачи"
-                  description="Пусто — проверяет все тесты"
-                  data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
-                  value={draft.validators.find((v) => v.name === selected.name)?.subtasks ?? []}
-                  onChange={(subtasks) =>
-                    void save((current) => setValidatorSubtasks(current, selected.name, subtasks))
+                  label="Группы"
+                  description="Проверяет тесты групп вместе с подгруппами; пусто — все тесты"
+                  data={groupRows(draft)
+                    .filter(({depth}) => depth > 0)
+                    .map(({group}) => ({value: group.id, label: groupLabel(group)}))}
+                  value={draft.validators.find((v) => v.name === selected.name)?.groups ?? []}
+                  onChange={(groups) =>
+                    void save((current) => setValidatorGroups(current, selected.name, groups))
                   }
                   clearable
                   w={320}

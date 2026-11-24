@@ -1,21 +1,24 @@
 import {describe, expect, test} from "bun:test";
 
 import {
+  addGroup,
   addProgram,
-  addSubtask,
   newGeneratedTest,
   describePointer,
   emptyStatement,
   formatPoints,
+  groupMaxPoints,
+  groupRows,
   moveTest,
   newManualTest,
+  removeGroup,
   removeProgram,
-  removeSubtask,
   removeTest,
   renameProgram,
-  setSubtaskDependencies,
-  setValidatorSubtasks,
+  requirableGroups,
+  setValidatorGroups,
   sumPoints,
+  updateGroup,
   upsertTest,
 } from "@/components/workshop/draft/draftOps";
 
@@ -40,9 +43,12 @@ const emptyDraft = (): ProblemDraft => ({
   library: [],
   statements: [],
   assets: [],
-  subtasks: [],
+  testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []},
   tests: [],
 });
+
+// groupIds lists the groups below the testset, parents first.
+const groupIds = (draft: ProblemDraft): string[] => groupRows(draft).slice(1).map((r) => r.group.id);
 
 const applied = (result: OpResult): ProblemDraft => {
   if ("error" in result) {
@@ -64,9 +70,8 @@ describe("programs", () => {
     let draft = applied(addProgram(emptyDraft(), "generator", "gen", "cpp", ""));
     draft = applied(addProgram(draft, "solution", "ok", "cpp", ""));
     draft = applied(addProgram(draft, "solution", "wa", "cpp", ""));
-    draft = addSubtask(draft, "All");
-    draft = upsertTest(draft, newGeneratedTest(draft, draft.subtasks[0].id));
-    draft = upsertTest(draft, {...newGeneratedTest(draft, draft.subtasks[0].id), answer: {mode: "generated", object_id: null, solution: "wa"}});
+    draft = upsertTest(draft, newGeneratedTest(draft, draft.testset.id));
+    draft = upsertTest(draft, {...newGeneratedTest(draft, draft.testset.id), answer: {mode: "generated", object_id: null, solution: "wa"}});
 
     draft = applied(renameProgram(draft, "generator", "gen", "random"));
     draft = applied(renameProgram(draft, "solution", "ok", "main"));
@@ -84,12 +89,11 @@ describe("programs", () => {
   });
 });
 
-describe("subtasks and tests", () => {
+describe("groups and tests", () => {
   test("removing a test closes ordinal gaps", () => {
-    let draft = addSubtask(emptyDraft(), "All");
-    const subtask = draft.subtasks[0].id;
+    let draft = emptyDraft();
     for (let i = 0; i < 3; i++) {
-      draft = upsertTest(draft, newManualTest(draft, subtask));
+      draft = upsertTest(draft, newManualTest(draft, draft.testset.id));
     }
     expect(draft.tests.map((t) => t.ordinal)).toEqual([1, 2, 3]);
     draft = removeTest(draft, draft.tests[0].id);
@@ -97,9 +101,9 @@ describe("subtasks and tests", () => {
   });
 
   test("moving a test swaps it with its neighbour and keeps ordinals dense", () => {
-    let draft = addSubtask(emptyDraft(), "All");
+    let draft = emptyDraft();
     for (let i = 0; i < 3; i++) {
-      draft = upsertTest(draft, {...newManualTest(draft, draft.subtasks[0].id), sample: i === 0});
+      draft = upsertTest(draft, {...newManualTest(draft, draft.testset.id), sample: i === 0});
     }
     const [first, second, third] = draft.tests.map((t) => t.id);
     draft = moveTest(draft, third, -1);
@@ -109,25 +113,48 @@ describe("subtasks and tests", () => {
     expect(moveTest(draft, second, 1)).toBe(draft);
   });
 
-  test("deleting a subtask drops dependencies and validator scopes on it", () => {
-    let draft = addSubtask(addSubtask(emptyDraft(), "A"), "B");
-    const [a, b] = draft.subtasks.map((s) => s.id);
-    draft = setSubtaskDependencies(draft, b, [a]);
-    draft = setValidatorSubtasks(applied(addProgram(draft, "validator", "v", "cpp", "")), "v", [a, b]);
-    const removed = removeSubtask(draft, a);
-    expect(removed.subtasks).toEqual([{...draft.subtasks[1], depends_on: []}]);
-    expect(removed.validators[0].subtasks).toEqual([b]);
-    expect(removeSubtask(removed, b).validators[0].subtasks).toEqual([b]);
+  test("deleting a group hands its subtree's tests to its parent and drops requirements and validator scopes on it", () => {
+    let draft = addGroup(addGroup(emptyDraft(), "root", "A"), "root", "B");
+    const [a, b] = groupIds(draft);
+    draft = addGroup(draft, a, "C");
+    const c = groupIds(draft)[1];
+    draft = upsertTest(updateGroup(draft, b, {requires: [c]}), newManualTest(draft, c));
+    draft = setValidatorGroups(applied(addProgram(draft, "validator", "v", "cpp", "")), "v", [a, b]);
+    const removed = removeGroup(draft, a);
+    expect(removed.testset.groups.map((g) => [g.name, g.requires])).toEqual([["B", []]]);
+    expect(removed.tests[0].group_id).toBe("root");
+    expect(removed.validators[0].groups).toEqual([b]);
+    expect(removeGroup(removed, b).validators[0].groups).toEqual([b]);
+    expect(removeGroup(removed, "root")).toBe(removed);
+  });
+
+  test("a group may require neither itself, its ancestors nor its subgroups", () => {
+    let draft = addGroup(addGroup(emptyDraft(), "root", "A"), "root", "B");
+    draft = addGroup(draft, groupIds(draft)[0], "C");
+    const [a, c, b] = groupIds(draft);
+    expect(requirableGroups(draft, a).map((g) => g.id)).toEqual([b]);
+    expect(requirableGroups(draft, c).map((g) => g.id)).toEqual([b]);
+    expect(requirableGroups(draft, b).map((g) => g.id)).toEqual([a, c]);
   });
 });
 
 describe("points", () => {
   test("weights are summed in exact hundredths", () => {
-    const base = addSubtask(emptyDraft(), "A");
-    const test = (points: number) => ({...newManualTest(base, base.subtasks[0].id), points});
+    const base = emptyDraft();
+    const test = (points: number) => ({...newManualTest(base, base.testset.id), points});
     // Point totals avoid floating-point rounding errors.
     expect(sumPoints([test(0.1), test(0.2)])).toBe(0.3);
     expect(sumPoints([test(33.33), test(33.33), test(33.34)])).toBe(100);
+  });
+
+  test("group maxima follow their aggregation, leaving out groups without tests", () => {
+    let draft = addGroup(addGroup(addGroup(emptyDraft(), "root", "A"), "root", "B"), "root", "C");
+    const [a, b, c] = groupIds(draft);
+    draft = updateGroup(updateGroup(draft, b, {aggregate: "sum"}), c, {aggregate: "avg"});
+    for (const [group, points] of [[a, 25], [a, 25], [b, 10], [b, 5.5]] as const) {
+      draft = upsertTest(draft, {...newManualTest(draft, group), points});
+    }
+    expect([...groupMaxPoints(draft)]).toEqual([[a, 25], [b, 15.5], [c, 0], ["root", 40.5]]);
   });
 
   test("formats without trailing zeros", () => {
@@ -141,13 +168,14 @@ describe("points", () => {
 describe("server error pointers", () => {
   test("name the entry an error points at", () => {
     let draft = applied(addProgram(emptyDraft(), "generator", "gen", "cpp", ""));
-    draft = addSubtask({...draft, statements: [emptyStatement("ru")]}, "A");
-    draft = upsertTest(draft, newManualTest(draft, draft.subtasks[0].id));
+    draft = addGroup({...draft, statements: [emptyStatement("ru")]}, "root", "A");
+    draft = upsertTest(draft, newManualTest(draft, groupIds(draft)[0]));
     expect(describePointer(draft, "/generators/0/source")).toBe("Генератор gen");
     expect(describePointer(draft, "/checker/language")).toBe("Чекер");
     expect(describePointer(draft, "/statements/0/legend")).toBe("Условие RU, легенда");
     expect(describePointer(draft, "/tests/0/input/object_id")).toBe("Тест 1");
-    expect(describePointer(draft, "/subtasks/0/depends_on/0")).toBe("Подзадача A");
+    expect(describePointer(draft, "/testset/groups/0/requires/0")).toBe("Группа «A»");
+    expect(describePointer(draft, "/testset/aggregate")).toBe("Группа «Все тесты»");
     // A pointer outside the sent draft still yields a readable label.
     expect(describePointer(draft, "/tests/9")).toBe("Тесты");
     expect(describePointer(draft, "")).toBe("Черновик");

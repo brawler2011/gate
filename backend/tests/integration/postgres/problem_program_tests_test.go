@@ -29,7 +29,7 @@ func (h *pipelineHarness) upload(t *testing.T, change model.UploadChange, files 
 func TestProblemPipelineRunsCheckerAndValidatorTests(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
-	generator, main, subtask := "gen", "main", uuid.New()
+	generator, main, group := "gen", "main", uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("python3", "import sys\nout, ans = (open(f).read().split() for f in sys.argv[2:4])\n"+
 			"sys.exit(2 if not all(t.isdigit() for t in out) else 0 if out == ans else 1)\n")
@@ -38,8 +38,8 @@ func TestProblemPipelineRunsCheckerAndValidatorTests(t *testing.T) {
 		d.Generators = []model.DraftNamedProgram{named(generator, "python3", "print(1, 2)\n")}
 		d.Solutions = []model.DraftSolution{solutionProgram(main, "python3", "print(sum(map(int, input().split())))\n")}
 		d.MainSolution = &main
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete", Feedback: "complete"}}
-		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}}
+		d.Testset = model.DraftGroup{ID: group, Aggregate: "min", Feedback: "complete"}
+		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}}
 	})
 	checkerTests := []struct{ output, verdict string }{{"3", "OK"}, {"4", "WA"}, {"three", "PE"}}
 	for _, c := range checkerTests {

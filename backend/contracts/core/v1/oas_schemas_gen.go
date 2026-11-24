@@ -4499,6 +4499,44 @@ func (s *GetUserResponseModel) SetUser(val UserModel) {
 	s.User = val
 }
 
+// A group's score; pass-fail and interactive problems have none. The unnamed group is the testset.
+// Ref: #/components/schemas/GroupResultModel
+type GroupResultModel struct {
+	Name   string     `json:"name"`
+	Score  OptFloat64 `json:"score"`
+	Points OptFloat64 `json:"points"`
+}
+
+// GetName returns the value of Name.
+func (s *GroupResultModel) GetName() string {
+	return s.Name
+}
+
+// GetScore returns the value of Score.
+func (s *GroupResultModel) GetScore() OptFloat64 {
+	return s.Score
+}
+
+// GetPoints returns the value of Points.
+func (s *GroupResultModel) GetPoints() OptFloat64 {
+	return s.Points
+}
+
+// SetName sets the value of Name.
+func (s *GroupResultModel) SetName(val string) {
+	s.Name = val
+}
+
+// SetScore sets the value of Score.
+func (s *GroupResultModel) SetScore(val OptFloat64) {
+	s.Score = val
+}
+
+// SetPoints sets the value of Points.
+func (s *GroupResultModel) SetPoints(val OptFloat64) {
+	s.Points = val
+}
+
 type ImportProblemReq struct {
 	// Problem package archive (zip).
 	Package ht.MultipartFile `json:"package"`
@@ -9384,7 +9422,7 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 }
 
 // The editable problem as typed entries without package paths. Programs are referred to by their
-// names, unique within a role, and library files are included by their names; subtasks and tests are
+// names, unique within a role, and library files are included by their names; groups and tests are
 // referred to by ID.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
@@ -9410,7 +9448,7 @@ type ProblemDraft struct {
 	Library    []ProblemDraftLibraryFile `json:"library"`
 	Statements []ProblemDraftStatement   `json:"statements"`
 	Assets     []ProblemDraftAsset       `json:"assets"`
-	Subtasks   []ProblemDraftSubtask     `json:"subtasks"`
+	Testset    ProblemDraftGroup         `json:"testset"`
 	Tests      []ProblemDraftTest        `json:"tests"`
 }
 
@@ -9509,9 +9547,9 @@ func (s *ProblemDraft) GetAssets() []ProblemDraftAsset {
 	return s.Assets
 }
 
-// GetSubtasks returns the value of Subtasks.
-func (s *ProblemDraft) GetSubtasks() []ProblemDraftSubtask {
-	return s.Subtasks
+// GetTestset returns the value of Testset.
+func (s *ProblemDraft) GetTestset() ProblemDraftGroup {
+	return s.Testset
 }
 
 // GetTests returns the value of Tests.
@@ -9614,9 +9652,9 @@ func (s *ProblemDraft) SetAssets(val []ProblemDraftAsset) {
 	s.Assets = val
 }
 
-// SetSubtasks sets the value of Subtasks.
-func (s *ProblemDraft) SetSubtasks(val []ProblemDraftSubtask) {
-	s.Subtasks = val
+// SetTestset sets the value of Testset.
+func (s *ProblemDraft) SetTestset(val ProblemDraftGroup) {
+	s.Testset = val
 }
 
 // SetTests sets the value of Tests.
@@ -9946,6 +9984,231 @@ func (s *ProblemDraftCheckerTestVerdict) UnmarshalText(data []byte) error {
 		return nil
 	case ProblemDraftCheckerTestVerdictPOINTS:
 		*s = ProblemDraftCheckerTestVerdictPOINTS
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// A test group scoring its tests and subgroups, taken in the order of their first tests. The testset
+// is the unnamed root group; other names are unique.
+// Ref: #/components/schemas/ProblemDraftGroup
+type ProblemDraftGroup struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// How the scores of the tests and subgroups combine into the group's score.
+	Aggregate ProblemDraftGroupAggregate `json:"aggregate"`
+	// Results after the first failed test or subgroup are left out of the score.
+	StopOnFailure bool `json:"stop_on_failure"`
+	// IDs of groups that must pass completely, their own requirements included, for this group to score.
+	Requires []uuid.UUID `json:"requires"`
+	// What participants see of the group's own tests while the contest runs: every test, tests up to the
+	// first failure, the group's points, or nothing.
+	Feedback ProblemDraftGroupFeedback `json:"feedback"`
+	// Passed after the ICPC checker's or interactor's own arguments on the group's own tests.
+	CheckerArgs []string `json:"checker_args"`
+	// Passed after the ICPC validators' own arguments on the group's own tests.
+	ValidatorArgs []string            `json:"validator_args"`
+	Groups        []ProblemDraftGroup `json:"groups"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftGroup) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftGroup) GetName() string {
+	return s.Name
+}
+
+// GetAggregate returns the value of Aggregate.
+func (s *ProblemDraftGroup) GetAggregate() ProblemDraftGroupAggregate {
+	return s.Aggregate
+}
+
+// GetStopOnFailure returns the value of StopOnFailure.
+func (s *ProblemDraftGroup) GetStopOnFailure() bool {
+	return s.StopOnFailure
+}
+
+// GetRequires returns the value of Requires.
+func (s *ProblemDraftGroup) GetRequires() []uuid.UUID {
+	return s.Requires
+}
+
+// GetFeedback returns the value of Feedback.
+func (s *ProblemDraftGroup) GetFeedback() ProblemDraftGroupFeedback {
+	return s.Feedback
+}
+
+// GetCheckerArgs returns the value of CheckerArgs.
+func (s *ProblemDraftGroup) GetCheckerArgs() []string {
+	return s.CheckerArgs
+}
+
+// GetValidatorArgs returns the value of ValidatorArgs.
+func (s *ProblemDraftGroup) GetValidatorArgs() []string {
+	return s.ValidatorArgs
+}
+
+// GetGroups returns the value of Groups.
+func (s *ProblemDraftGroup) GetGroups() []ProblemDraftGroup {
+	return s.Groups
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftGroup) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftGroup) SetName(val string) {
+	s.Name = val
+}
+
+// SetAggregate sets the value of Aggregate.
+func (s *ProblemDraftGroup) SetAggregate(val ProblemDraftGroupAggregate) {
+	s.Aggregate = val
+}
+
+// SetStopOnFailure sets the value of StopOnFailure.
+func (s *ProblemDraftGroup) SetStopOnFailure(val bool) {
+	s.StopOnFailure = val
+}
+
+// SetRequires sets the value of Requires.
+func (s *ProblemDraftGroup) SetRequires(val []uuid.UUID) {
+	s.Requires = val
+}
+
+// SetFeedback sets the value of Feedback.
+func (s *ProblemDraftGroup) SetFeedback(val ProblemDraftGroupFeedback) {
+	s.Feedback = val
+}
+
+// SetCheckerArgs sets the value of CheckerArgs.
+func (s *ProblemDraftGroup) SetCheckerArgs(val []string) {
+	s.CheckerArgs = val
+}
+
+// SetValidatorArgs sets the value of ValidatorArgs.
+func (s *ProblemDraftGroup) SetValidatorArgs(val []string) {
+	s.ValidatorArgs = val
+}
+
+// SetGroups sets the value of Groups.
+func (s *ProblemDraftGroup) SetGroups(val []ProblemDraftGroup) {
+	s.Groups = val
+}
+
+// How the scores of the tests and subgroups combine into the group's score.
+type ProblemDraftGroupAggregate string
+
+const (
+	ProblemDraftGroupAggregateSum ProblemDraftGroupAggregate = "sum"
+	ProblemDraftGroupAggregateMin ProblemDraftGroupAggregate = "min"
+	ProblemDraftGroupAggregateMax ProblemDraftGroupAggregate = "max"
+	ProblemDraftGroupAggregateAvg ProblemDraftGroupAggregate = "avg"
+)
+
+// AllValues returns all ProblemDraftGroupAggregate values.
+func (ProblemDraftGroupAggregate) AllValues() []ProblemDraftGroupAggregate {
+	return []ProblemDraftGroupAggregate{
+		ProblemDraftGroupAggregateSum,
+		ProblemDraftGroupAggregateMin,
+		ProblemDraftGroupAggregateMax,
+		ProblemDraftGroupAggregateAvg,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftGroupAggregate) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftGroupAggregateSum:
+		return []byte(s), nil
+	case ProblemDraftGroupAggregateMin:
+		return []byte(s), nil
+	case ProblemDraftGroupAggregateMax:
+		return []byte(s), nil
+	case ProblemDraftGroupAggregateAvg:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftGroupAggregate) UnmarshalText(data []byte) error {
+	switch ProblemDraftGroupAggregate(data) {
+	case ProblemDraftGroupAggregateSum:
+		*s = ProblemDraftGroupAggregateSum
+		return nil
+	case ProblemDraftGroupAggregateMin:
+		*s = ProblemDraftGroupAggregateMin
+		return nil
+	case ProblemDraftGroupAggregateMax:
+		*s = ProblemDraftGroupAggregateMax
+		return nil
+	case ProblemDraftGroupAggregateAvg:
+		*s = ProblemDraftGroupAggregateAvg
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// What participants see of the group's own tests while the contest runs: every test, tests up to the
+// first failure, the group's points, or nothing.
+type ProblemDraftGroupFeedback string
+
+const (
+	ProblemDraftGroupFeedbackComplete ProblemDraftGroupFeedback = "complete"
+	ProblemDraftGroupFeedbackIcpc     ProblemDraftGroupFeedback = "icpc"
+	ProblemDraftGroupFeedbackPoints   ProblemDraftGroupFeedback = "points"
+	ProblemDraftGroupFeedbackNone     ProblemDraftGroupFeedback = "none"
+)
+
+// AllValues returns all ProblemDraftGroupFeedback values.
+func (ProblemDraftGroupFeedback) AllValues() []ProblemDraftGroupFeedback {
+	return []ProblemDraftGroupFeedback{
+		ProblemDraftGroupFeedbackComplete,
+		ProblemDraftGroupFeedbackIcpc,
+		ProblemDraftGroupFeedbackPoints,
+		ProblemDraftGroupFeedbackNone,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftGroupFeedback) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftGroupFeedbackComplete:
+		return []byte(s), nil
+	case ProblemDraftGroupFeedbackIcpc:
+		return []byte(s), nil
+	case ProblemDraftGroupFeedbackPoints:
+		return []byte(s), nil
+	case ProblemDraftGroupFeedbackNone:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftGroupFeedback) UnmarshalText(data []byte) error {
+	switch ProblemDraftGroupFeedback(data) {
+	case ProblemDraftGroupFeedbackComplete:
+		*s = ProblemDraftGroupFeedbackComplete
+		return nil
+	case ProblemDraftGroupFeedbackIcpc:
+		*s = ProblemDraftGroupFeedbackIcpc
+		return nil
+	case ProblemDraftGroupFeedbackPoints:
+		*s = ProblemDraftGroupFeedbackPoints
+		return nil
+	case ProblemDraftGroupFeedbackNone:
+		*s = ProblemDraftGroupFeedbackNone
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -10379,194 +10642,14 @@ func (s *ProblemDraftStatement) SetScoring(val string) {
 	s.Scoring = val
 }
 
-// Ref: #/components/schemas/ProblemDraftSubtask
-type ProblemDraftSubtask struct {
-	ID      uuid.UUID                 `json:"id"`
-	Ordinal int64                     `json:"ordinal"`
-	Name    string                    `json:"name"`
-	Points  float64                   `json:"points"`
-	Policy  ProblemDraftSubtaskPolicy `json:"policy"`
-	// What participants see of the group while the contest runs: every test, tests up to the first
-	// failure, the group's points, or nothing.
-	Feedback  ProblemDraftSubtaskFeedback `json:"feedback"`
-	DependsOn []uuid.UUID                 `json:"depends_on"`
-}
-
-// GetID returns the value of ID.
-func (s *ProblemDraftSubtask) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetOrdinal returns the value of Ordinal.
-func (s *ProblemDraftSubtask) GetOrdinal() int64 {
-	return s.Ordinal
-}
-
-// GetName returns the value of Name.
-func (s *ProblemDraftSubtask) GetName() string {
-	return s.Name
-}
-
-// GetPoints returns the value of Points.
-func (s *ProblemDraftSubtask) GetPoints() float64 {
-	return s.Points
-}
-
-// GetPolicy returns the value of Policy.
-func (s *ProblemDraftSubtask) GetPolicy() ProblemDraftSubtaskPolicy {
-	return s.Policy
-}
-
-// GetFeedback returns the value of Feedback.
-func (s *ProblemDraftSubtask) GetFeedback() ProblemDraftSubtaskFeedback {
-	return s.Feedback
-}
-
-// GetDependsOn returns the value of DependsOn.
-func (s *ProblemDraftSubtask) GetDependsOn() []uuid.UUID {
-	return s.DependsOn
-}
-
-// SetID sets the value of ID.
-func (s *ProblemDraftSubtask) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetOrdinal sets the value of Ordinal.
-func (s *ProblemDraftSubtask) SetOrdinal(val int64) {
-	s.Ordinal = val
-}
-
-// SetName sets the value of Name.
-func (s *ProblemDraftSubtask) SetName(val string) {
-	s.Name = val
-}
-
-// SetPoints sets the value of Points.
-func (s *ProblemDraftSubtask) SetPoints(val float64) {
-	s.Points = val
-}
-
-// SetPolicy sets the value of Policy.
-func (s *ProblemDraftSubtask) SetPolicy(val ProblemDraftSubtaskPolicy) {
-	s.Policy = val
-}
-
-// SetFeedback sets the value of Feedback.
-func (s *ProblemDraftSubtask) SetFeedback(val ProblemDraftSubtaskFeedback) {
-	s.Feedback = val
-}
-
-// SetDependsOn sets the value of DependsOn.
-func (s *ProblemDraftSubtask) SetDependsOn(val []uuid.UUID) {
-	s.DependsOn = val
-}
-
-// What participants see of the group while the contest runs: every test, tests up to the first
-// failure, the group's points, or nothing.
-type ProblemDraftSubtaskFeedback string
-
-const (
-	ProblemDraftSubtaskFeedbackComplete ProblemDraftSubtaskFeedback = "complete"
-	ProblemDraftSubtaskFeedbackIcpc     ProblemDraftSubtaskFeedback = "icpc"
-	ProblemDraftSubtaskFeedbackPoints   ProblemDraftSubtaskFeedback = "points"
-	ProblemDraftSubtaskFeedbackNone     ProblemDraftSubtaskFeedback = "none"
-)
-
-// AllValues returns all ProblemDraftSubtaskFeedback values.
-func (ProblemDraftSubtaskFeedback) AllValues() []ProblemDraftSubtaskFeedback {
-	return []ProblemDraftSubtaskFeedback{
-		ProblemDraftSubtaskFeedbackComplete,
-		ProblemDraftSubtaskFeedbackIcpc,
-		ProblemDraftSubtaskFeedbackPoints,
-		ProblemDraftSubtaskFeedbackNone,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ProblemDraftSubtaskFeedback) MarshalText() ([]byte, error) {
-	switch s {
-	case ProblemDraftSubtaskFeedbackComplete:
-		return []byte(s), nil
-	case ProblemDraftSubtaskFeedbackIcpc:
-		return []byte(s), nil
-	case ProblemDraftSubtaskFeedbackPoints:
-		return []byte(s), nil
-	case ProblemDraftSubtaskFeedbackNone:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemDraftSubtaskFeedback) UnmarshalText(data []byte) error {
-	switch ProblemDraftSubtaskFeedback(data) {
-	case ProblemDraftSubtaskFeedbackComplete:
-		*s = ProblemDraftSubtaskFeedbackComplete
-		return nil
-	case ProblemDraftSubtaskFeedbackIcpc:
-		*s = ProblemDraftSubtaskFeedbackIcpc
-		return nil
-	case ProblemDraftSubtaskFeedbackPoints:
-		*s = ProblemDraftSubtaskFeedbackPoints
-		return nil
-	case ProblemDraftSubtaskFeedbackNone:
-		*s = ProblemDraftSubtaskFeedbackNone
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ProblemDraftSubtaskPolicy string
-
-const (
-	ProblemDraftSubtaskPolicyComplete ProblemDraftSubtaskPolicy = "complete"
-	ProblemDraftSubtaskPolicyEach     ProblemDraftSubtaskPolicy = "each"
-)
-
-// AllValues returns all ProblemDraftSubtaskPolicy values.
-func (ProblemDraftSubtaskPolicy) AllValues() []ProblemDraftSubtaskPolicy {
-	return []ProblemDraftSubtaskPolicy{
-		ProblemDraftSubtaskPolicyComplete,
-		ProblemDraftSubtaskPolicyEach,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ProblemDraftSubtaskPolicy) MarshalText() ([]byte, error) {
-	switch s {
-	case ProblemDraftSubtaskPolicyComplete:
-		return []byte(s), nil
-	case ProblemDraftSubtaskPolicyEach:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemDraftSubtaskPolicy) UnmarshalText(data []byte) error {
-	switch ProblemDraftSubtaskPolicy(data) {
-	case ProblemDraftSubtaskPolicyComplete:
-		*s = ProblemDraftSubtaskPolicyComplete
-		return nil
-	case ProblemDraftSubtaskPolicyEach:
-		*s = ProblemDraftSubtaskPolicyEach
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // Ref: #/components/schemas/ProblemDraftTest
 type ProblemDraftTest struct {
-	Points    float64   `json:"points"`
-	ID        uuid.UUID `json:"id"`
-	Ordinal   int64     `json:"ordinal"`
-	SubtaskID uuid.UUID `json:"subtask_id"`
-	Sample    bool      `json:"sample"`
+	Points  float64   `json:"points"`
+	ID      uuid.UUID `json:"id"`
+	Ordinal int64     `json:"ordinal"`
+	// The group holding the test directly.
+	GroupID uuid.UUID `json:"group_id"`
+	Sample  bool      `json:"sample"`
 	// Contests with pretests judge their submissions on these tests until the end.
 	Pretest bool               `json:"pretest"`
 	Input   ProblemDraftInput  `json:"input"`
@@ -10588,9 +10671,9 @@ func (s *ProblemDraftTest) GetOrdinal() int64 {
 	return s.Ordinal
 }
 
-// GetSubtaskID returns the value of SubtaskID.
-func (s *ProblemDraftTest) GetSubtaskID() uuid.UUID {
-	return s.SubtaskID
+// GetGroupID returns the value of GroupID.
+func (s *ProblemDraftTest) GetGroupID() uuid.UUID {
+	return s.GroupID
 }
 
 // GetSample returns the value of Sample.
@@ -10628,9 +10711,9 @@ func (s *ProblemDraftTest) SetOrdinal(val int64) {
 	s.Ordinal = val
 }
 
-// SetSubtaskID sets the value of SubtaskID.
-func (s *ProblemDraftTest) SetSubtaskID(val uuid.UUID) {
-	s.SubtaskID = val
+// SetGroupID sets the value of GroupID.
+func (s *ProblemDraftTest) SetGroupID(val uuid.UUID) {
+	s.GroupID = val
 }
 
 // SetSample sets the value of Sample.
@@ -10702,7 +10785,7 @@ func (s *ProblemDraftType) UnmarshalText(data []byte) error {
 }
 
 // A validator; the build fails when it rejects a test input. testlib validators receive --group with
-// the subtask name.
+// the name of the test's group.
 // Ref: #/components/schemas/ProblemDraftValidator
 type ProblemDraftValidator struct {
 	// Unique among the validators; the program's package file is the name with the extension of its
@@ -10714,8 +10797,8 @@ type ProblemDraftValidator struct {
 	Protocol ProblemDraftProtocol `json:"protocol"`
 	// Arguments after those of the protocol; only ICPC programs take them.
 	Args []string `json:"args"`
-	// IDs of the subtasks whose tests the validator checks; empty checks every test.
-	Subtasks []uuid.UUID `json:"subtasks"`
+	// IDs of the groups whose tests, subgroups included, the validator checks; empty checks every test.
+	Groups []uuid.UUID `json:"groups"`
 	// Run by every build after compiling the validator; a test it judges differently fails the build.
 	Tests []ProblemDraftValidatorTest `json:"tests"`
 }
@@ -10745,9 +10828,9 @@ func (s *ProblemDraftValidator) GetArgs() []string {
 	return s.Args
 }
 
-// GetSubtasks returns the value of Subtasks.
-func (s *ProblemDraftValidator) GetSubtasks() []uuid.UUID {
-	return s.Subtasks
+// GetGroups returns the value of Groups.
+func (s *ProblemDraftValidator) GetGroups() []uuid.UUID {
+	return s.Groups
 }
 
 // GetTests returns the value of Tests.
@@ -10780,9 +10863,9 @@ func (s *ProblemDraftValidator) SetArgs(val []string) {
 	s.Args = val
 }
 
-// SetSubtasks sets the value of Subtasks.
-func (s *ProblemDraftValidator) SetSubtasks(val []uuid.UUID) {
-	s.Subtasks = val
+// SetGroups sets the value of Groups.
+func (s *ProblemDraftValidator) SetGroups(val []uuid.UUID) {
+	s.Groups = val
 }
 
 // SetTests sets the value of Tests.
@@ -12985,7 +13068,7 @@ func (s *SubmissionSortOrderQuery) UnmarshalText(data []byte) error {
 type SubmissionTestDetailsModel struct {
 	CompilerOutput    OptNilString             `json:"compiler_output"`
 	Tests             []TestDetailItemModel    `json:"tests"`
-	Subtasks          []SubtaskResultModel     `json:"subtasks"`
+	Groups            []GroupResultModel       `json:"groups"`
 	FailedTestDetails OptFailedTestDetailModel `json:"failed_test_details"`
 }
 
@@ -12999,9 +13082,9 @@ func (s *SubmissionTestDetailsModel) GetTests() []TestDetailItemModel {
 	return s.Tests
 }
 
-// GetSubtasks returns the value of Subtasks.
-func (s *SubmissionTestDetailsModel) GetSubtasks() []SubtaskResultModel {
-	return s.Subtasks
+// GetGroups returns the value of Groups.
+func (s *SubmissionTestDetailsModel) GetGroups() []GroupResultModel {
+	return s.Groups
 }
 
 // GetFailedTestDetails returns the value of FailedTestDetails.
@@ -13019,9 +13102,9 @@ func (s *SubmissionTestDetailsModel) SetTests(val []TestDetailItemModel) {
 	s.Tests = val
 }
 
-// SetSubtasks sets the value of Subtasks.
-func (s *SubmissionTestDetailsModel) SetSubtasks(val []SubtaskResultModel) {
-	s.Subtasks = val
+// SetGroups sets the value of Groups.
+func (s *SubmissionTestDetailsModel) SetGroups(val []GroupResultModel) {
+	s.Groups = val
 }
 
 // SetFailedTestDetails sets the value of FailedTestDetails.
@@ -13300,44 +13383,6 @@ func (s *SubmissionsListItemModel) SetUpdatedAt(val time.Time) {
 // SetCreatedAt sets the value of CreatedAt.
 func (s *SubmissionsListItemModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
-}
-
-// A subtask's score; pass-fail and interactive problems have none.
-// Ref: #/components/schemas/SubtaskResultModel
-type SubtaskResultModel struct {
-	Name   string     `json:"name"`
-	Score  OptFloat64 `json:"score"`
-	Points OptFloat64 `json:"points"`
-}
-
-// GetName returns the value of Name.
-func (s *SubtaskResultModel) GetName() string {
-	return s.Name
-}
-
-// GetScore returns the value of Score.
-func (s *SubtaskResultModel) GetScore() OptFloat64 {
-	return s.Score
-}
-
-// GetPoints returns the value of Points.
-func (s *SubtaskResultModel) GetPoints() OptFloat64 {
-	return s.Points
-}
-
-// SetName sets the value of Name.
-func (s *SubtaskResultModel) SetName(val string) {
-	s.Name = val
-}
-
-// SetScore sets the value of Score.
-func (s *SubtaskResultModel) SetScore(val OptFloat64) {
-	s.Score = val
-}
-
-// SetPoints sets the value of Points.
-func (s *SubtaskResultModel) SetPoints(val OptFloat64) {
-	s.Points = val
 }
 
 // A language configuration of the catalog: a concrete compiler or interpreter with its options.
@@ -13818,7 +13863,7 @@ type TestDetailItemModel struct {
 	TimeMs    int32     `json:"time_ms"`
 	MemoryKB  int32     `json:"memory_kb"`
 	Sample    OptBool   `json:"sample"`
-	Subtask   OptString `json:"subtask"`
+	Group     OptString `json:"group"`
 }
 
 // GetTestIndex returns the value of TestIndex.
@@ -13846,9 +13891,9 @@ func (s *TestDetailItemModel) GetSample() OptBool {
 	return s.Sample
 }
 
-// GetSubtask returns the value of Subtask.
-func (s *TestDetailItemModel) GetSubtask() OptString {
-	return s.Subtask
+// GetGroup returns the value of Group.
+func (s *TestDetailItemModel) GetGroup() OptString {
+	return s.Group
 }
 
 // SetTestIndex sets the value of TestIndex.
@@ -13876,9 +13921,9 @@ func (s *TestDetailItemModel) SetSample(val OptBool) {
 	s.Sample = val
 }
 
-// SetSubtask sets the value of Subtask.
-func (s *TestDetailItemModel) SetSubtask(val OptString) {
-	s.Subtask = val
+// SetGroup sets the value of Group.
+func (s *TestDetailItemModel) SetGroup(val OptString) {
+	s.Group = val
 }
 
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.

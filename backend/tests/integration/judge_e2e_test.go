@@ -81,7 +81,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	usersRepo := pgstore.NewUsersRepo(dbPool)
 	contestsRepo := pgstore.NewContestsRepo(dbPool)
 	submissionsRepo := pgstore.NewSubmissionsRepo(dbPool)
-	drafts := pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
+	drafts := pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Groups: 10})
 
 	userID := uuid.New()
 	email := "test@example.com"
@@ -102,9 +102,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}, Verdicts: []string{}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
 	d.MainSolution = &solution
-	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
+	d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {
-		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: group, Points: weight,
+		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Points: weight,
 			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}},
 			Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
@@ -275,7 +275,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	usersRepo := pgstore.NewUsersRepo(dbPool)
 	h.contests = pgstore.NewContestsRepo(dbPool)
 	h.submissions = pgstore.NewSubmissionsRepo(dbPool)
-	h.drafts = pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
+	h.drafts = pgstore.NewProblemDraftsRepo(dbPool, problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Groups: 10})
 
 	email := "test@example.com"
 	require.NoError(t, usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{Id: h.userID, Username: "testuser", Email: &email, PasswordHash: "hashed_password", Role: accessmodel.UserRoleUser}))
@@ -359,8 +359,8 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
 			d.MainSolution = &solution
-			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
-			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100 * points.Unit,
+			d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100 * points.Unit,
 				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"5"}},
 				Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 		}
@@ -405,9 +405,9 @@ func TestStandardCheckerE2E(t *testing.T) {
 			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
 			d.MainSolution = &main
-			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
+			d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 			for i, args := range [][]string{{"1", "3"}, {"2", "7"}} {
-				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, SubtaskID: group, Points: 50 * points.Unit,
+				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 50 * points.Unit,
 					Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args},
 					Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 			}

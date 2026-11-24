@@ -1,5 +1,5 @@
-Polygon groups keep their points and feedback policies and dependencies. The points of a
-complete group with no points on its tests go to its last test.
+Polygon groups keep their feedback policies and dependencies. A complete group
+scores the minimum of tests each worth the group's points.
 
 -- problem.xml --
 <problem short-name="groups">

@@ -1,7 +1,7 @@
 import {Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 
-import {subtaskLabel, toHundredths} from "../draft/draftOps";
+import {groupLabel, groupRows, toHundredths} from "../draft/draftOps";
 
 import type {ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -21,7 +21,7 @@ type Props = {
 const parseArgs = (text: string): string[] => text.split(/\s+/).filter((part) => part !== "");
 
 export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}: Props): ReactNode => {
-  const [subtaskId, setSubtaskId] = useState(test.subtask_id);
+  const [groupId, setGroupId] = useState(test.group_id);
   const [sample, setSample] = useState(test.sample);
   const [pretest, setPretest] = useState(test.pretest);
   const [points, setPoints] = useState<number>(test.points);
@@ -56,7 +56,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const submit = () => {
     const next: ProblemDraftTest = {
       ...test,
-      subtask_id: subtaskId,
+      group_id: groupId,
       sample,
       pretest,
       points: toHundredths(points) / 100,
@@ -77,11 +77,11 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       <Stack gap="md">
         <Group grow align="flex-start">
           <Select
-            label="Подзадача"
-            data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
-            value={subtaskId}
+            label="Группа"
+            data={groupRows(draft).map(({group, depth}) => ({value: group.id, label: "\u2003".repeat(depth) + groupLabel(group)}))}
+            value={groupId}
             allowDeselect={false}
-            onChange={(value) => value && setSubtaskId(value)}
+            onChange={(value) => value && setGroupId(value)}
           />
           <NumberInput
             label="Вес (баллы)"

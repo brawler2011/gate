@@ -34,7 +34,7 @@ func truncateDetailString(s string) (string, bool) {
 type TestResult struct {
 	TestNumber    int
 	Sample        bool
-	Subtask       string
+	Group         string
 	Verdict       string
 	Score         *float64
 	Time          int64 // nanoseconds
@@ -113,7 +113,7 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 			TimeMs:    timeMs,
 			MemoryKb:  memoryKb,
 			Sample:    result.Sample,
-			Subtask:   result.Subtask,
+			Group:     result.Group,
 		})
 
 		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && failedTestDetails == nil {
@@ -179,75 +179,27 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 	}
 }
 
-// CalculateScoringVerdict awards authored weights only when group dependencies are fully passed.
+// CalculateScoringVerdict grades the testset; the state is that of the first failed test, whatever the score.
 func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *FinalVerdict {
 	byTest := make(map[int]TestResult, len(results))
 	var maxTime, maxMemory int64
 	for _, r := range results {
 		byTest[r.TestNumber] = r
-		if r.Time > maxTime {
-			maxTime = r.Time
-		}
-		if r.Memory > maxMemory {
-			maxMemory = r.Memory
-		}
+		maxTime = max(maxTime, r.Time)
+		maxMemory = max(maxMemory, r.Memory)
 	}
-	passed := func(index int) bool {
-		r, ok := byTest[index]
+	passed := func(ordinal int) bool {
+		r, ok := byTest[ordinal]
 		return ok && (r.Verdict == "OK" || r.Verdict == "AC" || r.Verdict == "Accepted")
 	}
-	full := map[string]bool{}
-	visited := map[string]bool{}
-	var groupPassed func(string) bool
-	groupPassed = func(name string) bool {
-		if visited[name] {
-			return full[name]
-		}
-		visited[name] = true
-		group, ok := vc.problem.Subtasks[name]
-		if !ok || len(group.Tests) == 0 {
-			return false
-		}
-		for _, dep := range group.Dependencies {
-			if !groupPassed(dep) {
-				return false
-			}
-		}
-		for _, test := range group.Tests {
-			if !passed(test.Ordinal) {
-				return false
-			}
-		}
-		full[name] = true
-		return true
-	}
-	var score points.Value
-	scores := map[string]points.Value{}
-	for name, group := range vc.problem.Subtasks {
-		allowed := true
-		for _, dep := range group.Dependencies {
-			if !groupPassed(dep) {
-				allowed = false
-				break
-			}
-		}
-		if !allowed {
-			continue
-		}
-		for _, test := range group.Tests {
-			if group.Policy == "complete" && groupPassed(name) || group.Policy != "complete" && passed(test.Ordinal) {
-				scores[name] += test.Points
-			}
-		}
-		score += scores[name]
-	}
+	score, groups := vc.problem.Grade(passed)
 	verdict := &FinalVerdict{State: submissionsmodel.Accepted, Score: score, MaxTime: safeInt32(maxTime / 1000000), MaxMemory: safeInt32(maxMemory / 1024 / 1024), Message: "Score: " + score.String(), TestDetails: buildSubmissionTestDetails(results)}
 	if verdict.TestDetails != nil {
-		verdict.TestDetails.Subtasks = vc.subtaskResults(scores)
+		verdict.TestDetails.Groups = groupResults(groups, true)
 	}
-	for _, test := range collectFlatTests(vc.problem) {
-		if !passed(test.TestIndex) {
-			n := test.TestIndex
+	for _, test := range vc.problem.Tests() {
+		if !passed(test.Test.Ordinal) {
+			n := test.Test.Ordinal
 			verdict.FailedTest = &n
 			if r, ok := byTest[n]; ok {
 				verdict.State = MapSandboxVerdict(r.Verdict)
@@ -260,18 +212,13 @@ func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *Fina
 	return verdict
 }
 
-// subtaskResults carries feedback policies for the report; nil scores leave the results unscored.
-func (vc *VerdictCalculator) subtaskResults(scores map[string]points.Value) []submissionsmodel.SubtaskResult {
-	var results []submissionsmodel.SubtaskResult
-	for _, name := range vc.problem.OrderedSubtaskNames() {
-		group := vc.problem.Subtasks[name]
-		result := submissionsmodel.SubtaskResult{Name: name, Feedback: group.Feedback}
-		if scores != nil {
-			score, total := scores[name], points.Value(0)
-			for _, test := range group.Tests {
-				total += test.Points
-			}
-			result.Score, result.Points = &score, &total
+// groupResults carries feedback policies for the report, and scores when scored is set.
+func groupResults(groups []gfmt.GroupResult, scored bool) []submissionsmodel.GroupResult {
+	results := make([]submissionsmodel.GroupResult, 0, len(groups))
+	for _, g := range groups {
+		result := submissionsmodel.GroupResult{Name: g.Group.Name, Feedback: g.Group.Feedback}
+		if scored {
+			result.Score, result.Points = &g.Score, &g.Max
 		}
 		results = append(results, result)
 	}
@@ -284,17 +231,13 @@ func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
 	}
 	verdict := vc.CalculateStandardVerdict(results)
 	if verdict.TestDetails != nil {
-		verdict.TestDetails.Subtasks = vc.subtaskResults(nil)
+		_, groups := vc.problem.Grade(func(int) bool { return true })
+		verdict.TestDetails.Groups = groupResults(groups, false)
 	}
 	return verdict
 }
 
 func (vc *VerdictCalculator) maxScore() points.Value {
-	var total points.Value
-	for _, group := range vc.problem.Subtasks {
-		for _, test := range group.Tests {
-			total += test.Points
-		}
-	}
-	return total
+	score, _ := vc.problem.Grade(func(int) bool { return true })
+	return score
 }

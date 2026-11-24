@@ -1,6 +1,7 @@
 package problemsmodel
 
 import (
+	"cmp"
 	"fmt"
 	"iter"
 	"regexp"
@@ -44,8 +45,9 @@ type DraftContent struct {
 	Library      []DraftLibraryFile  `json:"library"`
 	Statements   []DraftStatement    `json:"statements"`
 	Assets       []DraftAsset        `json:"assets"`
-	Subtasks     []DraftSubtask      `json:"subtasks"`
-	Tests        []DraftTest         `json:"tests"`
+	// Testset is the root group of every test.
+	Testset DraftGroup  `json:"testset"`
+	Tests   []DraftTest `json:"tests"`
 	// Solutions read InputFile and write OutputFile instead of a standard stream when the name is set.
 	InputFile  string `json:"input_file"`
 	OutputFile string `json:"output_file"`
@@ -93,16 +95,25 @@ type DraftNamedProgram struct {
 	DraftProgram
 }
 
-// DraftValidator checks the tests of the listed subtasks, or every test when the list is empty.
+// DraftValidator checks the tests of the listed groups and their subgroups, or every test when the list is empty.
 type DraftValidator struct {
 	DraftNamedProgram
 	DraftJury
-	Subtasks []uuid.UUID          `json:"subtasks"`
-	Tests    []DraftValidatorTest `json:"tests"`
+	Groups []uuid.UUID          `json:"groups"`
+	Tests  []DraftValidatorTest `json:"tests"`
 }
 
-func (v *DraftValidator) Applies(subtask uuid.UUID) bool {
-	return len(v.Subtasks) == 0 || slices.Contains(v.Subtasks, subtask)
+// Validates reports whether v checks the tests held directly by group.
+func (d *Draft) Validates(v *DraftValidator, group uuid.UUID) bool {
+	if len(v.Groups) == 0 {
+		return true
+	}
+	for _, g := range d.GroupPath(group) {
+		if slices.Contains(v.Groups, g.ID) {
+			return true
+		}
+	}
+	return false
 }
 
 // DraftLibraryFile stores no content when AutoUpdate selects the current system library.
@@ -136,26 +147,50 @@ type DraftAsset struct {
 	ObjectID uuid.UUID `json:"object_id"`
 }
 
-type DraftSubtask struct {
-	ID      uuid.UUID `json:"id"`
-	Ordinal int       `json:"ordinal"`
+// DraftGroup scores its tests and subgroups; tests name their group by ID. Only the testset root is unnamed.
+type DraftGroup struct {
+	ID uuid.UUID `json:"id"`
 	// Validators get --group with a non-empty name, as Polygon passes it only for grouped tests.
-	Name      string       `json:"name"`
-	Points    points.Value `json:"points"`
-	Policy    string       `json:"policy"`
-	Feedback  string       `json:"feedback"`
-	DependsOn []uuid.UUID  `json:"depends_on"`
+	Name string `json:"name"`
+	// Aggregate is a spec.Aggregations entry over the tests and subgroups, taken in the order of their first tests.
+	Aggregate string `json:"aggregate"`
+	// StopOnFailure leaves the results after the first failed test or subgroup out of the score.
+	StopOnFailure bool `json:"stop_on_failure"`
+	// Requires lists groups that must pass completely, their own requirements included, for this group to score.
+	Requires []uuid.UUID `json:"requires"`
+	Feedback string      `json:"feedback"`
+	// CheckerArgs follow those of the checker or interactor on the group's own tests; ValidatorArgs those of ICPC validators.
+	CheckerArgs   []string     `json:"checker_args"`
+	ValidatorArgs []string     `json:"validator_args"`
+	Groups        []DraftGroup `json:"groups"`
+}
+
+// All yields the group and its subgroups, parents first.
+func (g *DraftGroup) All() iter.Seq[*DraftGroup] {
+	return func(yield func(*DraftGroup) bool) { g.walk(yield) }
+}
+
+func (g *DraftGroup) walk(yield func(*DraftGroup) bool) bool {
+	if !yield(g) {
+		return false
+	}
+	for i := range g.Groups {
+		if !g.Groups[i].walk(yield) {
+			return false
+		}
+	}
+	return true
 }
 
 type DraftTest struct {
-	Points    points.Value `json:"points"`
-	ID        uuid.UUID    `json:"id"`
-	Ordinal   int          `json:"ordinal"`
-	SubtaskID uuid.UUID    `json:"subtask_id"`
-	Sample    bool         `json:"sample"`
-	Pretest   bool         `json:"pretest"`
-	Input     DraftInput   `json:"input"`
-	Answer    DraftAnswer  `json:"answer"`
+	Points  points.Value `json:"points"`
+	ID      uuid.UUID    `json:"id"`
+	Ordinal int          `json:"ordinal"`
+	GroupID uuid.UUID    `json:"group_id"`
+	Sample  bool         `json:"sample"`
+	Pretest bool         `json:"pretest"`
+	Input   DraftInput   `json:"input"`
+	Answer  DraftAnswer  `json:"answer"`
 }
 
 type DraftInput struct {
@@ -220,7 +255,7 @@ type DraftQuotas struct {
 	Files      int           `yaml:"files"`
 	Tests      int           `yaml:"tests"`
 	Components int           `yaml:"components"`
-	Subtasks   int           `yaml:"subtasks"`
+	Groups     int           `yaml:"groups"`
 }
 
 var StatementSections = []string{"legend", "input", "output", "notes", "interaction", "scoring"}
@@ -287,13 +322,29 @@ func (d *Draft) Solution(name string) *DraftSolution {
 	return nil
 }
 
-func (d *Draft) Subtask(id uuid.UUID) *DraftSubtask {
-	for i := range d.Subtasks {
-		if d.Subtasks[i].ID == id {
-			return &d.Subtasks[i]
-		}
+func (d *Draft) Group(id uuid.UUID) *DraftGroup {
+	path := d.GroupPath(id)
+	if len(path) == 0 {
+		return nil
 	}
-	return nil
+	return path[len(path)-1]
+}
+
+// GroupPath lists the groups from the root down to the one with id; it is empty for an unknown id.
+func (d *Draft) GroupPath(id uuid.UUID) []*DraftGroup {
+	var find func(*DraftGroup) []*DraftGroup
+	find = func(g *DraftGroup) []*DraftGroup {
+		if g.ID == id {
+			return []*DraftGroup{g}
+		}
+		for i := range g.Groups {
+			if path := find(&g.Groups[i]); path != nil {
+				return append([]*DraftGroup{g}, path...)
+			}
+		}
+		return nil
+	}
+	return find(&d.Testset)
 }
 
 func (d *Draft) ValidatorPrograms() []DraftNamedProgram {
@@ -323,8 +374,8 @@ func (d *Draft) Normalize() {
 		d.Validators = []DraftValidator{}
 	}
 	for i := range d.Validators {
-		if d.Validators[i].Subtasks == nil {
-			d.Validators[i].Subtasks = []uuid.UUID{}
+		if d.Validators[i].Groups == nil {
+			d.Validators[i].Groups = []uuid.UUID{}
 		}
 		if d.Validators[i].Tests == nil {
 			d.Validators[i].Tests = []DraftValidatorTest{}
@@ -360,16 +411,20 @@ func (d *Draft) Normalize() {
 	if d.Assets == nil {
 		d.Assets = []DraftAsset{}
 	}
-	if d.Subtasks == nil {
-		d.Subtasks = []DraftSubtask{}
-	}
-	for i := range d.Subtasks {
-		if d.Subtasks[i].DependsOn == nil {
-			d.Subtasks[i].DependsOn = []uuid.UUID{}
+	for g := range d.Testset.All() {
+		for _, list := range []*[]string{&g.CheckerArgs, &g.ValidatorArgs} {
+			if *list == nil {
+				*list = []string{}
+			}
 		}
-		if d.Subtasks[i].Feedback == "" {
-			d.Subtasks[i].Feedback = "complete"
+		if g.Requires == nil {
+			g.Requires = []uuid.UUID{}
 		}
+		if g.Groups == nil {
+			g.Groups = []DraftGroup{}
+		}
+		g.Aggregate = cmp.Or(g.Aggregate, "sum")
+		g.Feedback = cmp.Or(g.Feedback, "complete")
 	}
 	if d.Tests == nil {
 		d.Tests = []DraftTest{}
@@ -450,7 +505,7 @@ func with(pointer string) map[string]any { return map[string]any{"with": pointer
 
 func maximum(n any) map[string]any { return map[string]any{"max": n} }
 
-func minimum(n any) map[string]any { return map[string]any{"min": n} }
+func positive() map[string]any { return map[string]any{"min": 1} }
 
 // name reports an invalid or repeated file or program name.
 func (v *validation) name(pointer, name string, valid bool, seen map[string]bool) {
@@ -472,7 +527,7 @@ func (v *validation) title(pointer, title string) {
 	}
 }
 
-// identity checks the ID and ordinal of a subtask or test.
+// identity checks the ID and ordinal of a test.
 func (v *validation) identity(at string, id uuid.UUID, seenID bool, ordinal int, seenOrdinal bool) {
 	switch {
 	case id == uuid.Nil:
@@ -482,7 +537,7 @@ func (v *validation) identity(at string, id uuid.UUID, seenID bool, ordinal int,
 	}
 	switch {
 	case ordinal <= 0:
-		v.fail(at+"/ordinal", pkg.ErrRange, minimum(1), "ordinal must be positive")
+		v.fail(at+"/ordinal", pkg.ErrRange, positive(), "ordinal must be positive")
 	case seenOrdinal:
 		v.fail(at+"/ordinal", pkg.ErrDuplicate, value(ordinal), "ordinal is not unique")
 	}
@@ -540,7 +595,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		v.fail("/problem_id", pkg.ErrRequired, nil, "problem ID is required")
 	}
 	if d.Revision < 1 {
-		v.fail("/revision", pkg.ErrRange, minimum(1), "revision must be positive")
+		v.fail("/revision", pkg.ErrRange, positive(), "revision must be positive")
 	}
 	v.title("/title", d.Title)
 	if d.ShortName == "" {
@@ -553,10 +608,10 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		v.fail("/type", pkg.ErrUnknown, value(d.Type), "invalid problem type %q", d.Type)
 	}
 	if d.TimeLimitMs <= 0 {
-		v.fail("/time_limit_ms", pkg.ErrRange, minimum(1), "time limit must be positive")
+		v.fail("/time_limit_ms", pkg.ErrRange, positive(), "time limit must be positive")
 	}
 	if d.MemoryLimitMb <= 0 {
-		v.fail("/memory_limit_mb", pkg.ErrRange, minimum(1), "memory limit must be positive")
+		v.fail("/memory_limit_mb", pkg.ErrRange, positive(), "memory limit must be positive")
 	}
 	programs := len(d.Validators) + len(d.Generators) + len(d.Solutions)
 	if d.Checker != nil {
@@ -573,9 +628,6 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	if len(d.Tests) > q.Tests {
 		v.fail("/tests", pkg.ErrTooMany, maximum(q.Tests), "more than %d tests", q.Tests)
-	}
-	if len(d.Subtasks) > q.Subtasks {
-		v.fail("/subtasks", pkg.ErrTooMany, maximum(q.Subtasks), "more than %d subtasks", q.Subtasks)
 	}
 
 	var total int64
@@ -642,13 +694,13 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	for i, validator := range d.Validators {
 		seen := make(map[uuid.UUID]bool)
-		for j, id := range validator.Subtasks {
-			at := fmt.Sprintf("/validators/%d/subtasks/%d", i, j)
+		for j, id := range validator.Groups {
+			at := fmt.Sprintf("/validators/%d/groups/%d", i, j)
 			switch {
-			case d.Subtask(id) == nil:
-				v.fail(at, pkg.ErrUnknown, nil, "unknown subtask")
+			case d.Group(id) == nil:
+				v.fail(at, pkg.ErrUnknown, nil, "unknown group")
 			case seen[id]:
-				v.fail(at, pkg.ErrDuplicate, nil, "duplicate subtask")
+				v.fail(at, pkg.ErrDuplicate, nil, "duplicate group")
 			}
 			seen[id] = true
 		}
@@ -714,80 +766,133 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		}
 	}
 
-	d.validateSubtasks(v)
+	d.validateGroups(v, q)
 	d.validateTests(v)
 	d.validateProgramTests(v, q)
 }
 
-func (d *Draft) validateSubtasks(v *validation) {
-	index := make(map[uuid.UUID]int)
-	orders := make(map[int]bool)
-	names := make(map[string]bool)
-	totalPoints := points.Value(0)
-	for i, g := range d.Subtasks {
-		at := fmt.Sprintf("/subtasks/%d", i)
-		_, seen := index[g.ID]
-		v.identity(at, g.ID, seen, g.Ordinal, orders[g.Ordinal])
-		// Names are gfmt subtask keys and validator --group values, so an export keeps them exact.
-		if names[g.Name] {
-			v.fail(at+"/name", pkg.ErrDuplicate, value(g.Name), "duplicate subtask name %q", g.Name)
+// validateGroups checks the testset tree; requirements may not point to the group itself, its ancestors or descendants, or form a cycle.
+func (d *Draft) validateGroups(v *validation, q DraftQuotas) {
+	type node struct {
+		at    string
+		group *DraftGroup
+		path  []uuid.UUID
+	}
+	nodes := map[uuid.UUID]node{}
+	names := map[string]bool{}
+	var order []uuid.UUID
+	var visit func(g *DraftGroup, at string, path []uuid.UUID)
+	visit = func(g *DraftGroup, at string, path []uuid.UUID) {
+		_, seen := nodes[g.ID]
+		switch {
+		case g.ID == uuid.Nil:
+			v.fail(at+"/id", pkg.ErrRequired, nil, "ID is missing")
+		case seen:
+			v.fail(at+"/id", pkg.ErrDuplicate, nil, "ID is not unique")
+		}
+		root := len(path) == 0
+		switch {
+		case root && g.Name != "":
+			v.fail(at+"/name", pkg.ErrInconsistent, nil, "the testset is unnamed")
+		case !root && g.Name == "":
+			v.fail(at+"/name", pkg.ErrRequired, nil, "group name is required")
+		case names[g.Name]:
+			// Names are gfmt group names and validator --group values, so an export keeps them exact.
+			v.fail(at+"/name", pkg.ErrDuplicate, value(g.Name), "duplicate group name %q", g.Name)
 		}
 		names[g.Name] = true
-		if g.Points < 0 {
-			v.fail(at+"/points", pkg.ErrRange, minimum(0), "points must not be negative")
-		}
-		if g.Policy != "complete" && g.Policy != "each" {
-			v.fail(at+"/policy", pkg.ErrUnknown, value(g.Policy), "invalid policy %q", g.Policy)
+		if !slices.Contains(spec.Aggregations, g.Aggregate) {
+			v.fail(at+"/aggregate", pkg.ErrUnknown, value(g.Aggregate), "invalid aggregation %q", g.Aggregate)
 		}
 		if !slices.Contains(spec.FeedbackPolicies, g.Feedback) {
 			v.fail(at+"/feedback", pkg.ErrUnknown, value(g.Feedback), "invalid feedback policy %q", g.Feedback)
 		}
-		index[g.ID] = i
-		orders[g.Ordinal] = true
-		totalPoints += g.Points
+		d.validateGroupArgs(v, g, at)
+		path = append(slices.Clone(path), g.ID)
+		if !seen {
+			nodes[g.ID] = node{at: at, group: g, path: path}
+			order = append(order, g.ID)
+		}
+		for i := range g.Groups {
+			visit(&g.Groups[i], fmt.Sprintf("%s/groups/%d", at, i), path)
+		}
 	}
-	state := make(map[uuid.UUID]int)
-	var visit func(int) bool
-	visit = func(i int) bool {
-		g := d.Subtasks[i]
-		state[g.ID] = 1
-		seen := make(map[uuid.UUID]bool)
-		for j, dep := range g.DependsOn {
-			at := fmt.Sprintf("/subtasks/%d/depends_on/%d", i, j)
-			k, ok := index[dep]
+	visit(&d.Testset, "/testset", nil)
+	if len(order) > q.Groups {
+		v.fail("/testset", pkg.ErrTooMany, maximum(q.Groups), "more than %d groups", q.Groups)
+	}
+	state := map[uuid.UUID]int{}
+	var requires func(uuid.UUID) bool
+	requires = func(id uuid.UUID) bool {
+		n := nodes[id]
+		state[id] = 1
+		seen := map[uuid.UUID]bool{}
+		for j, required := range n.group.Requires {
+			at := fmt.Sprintf("%s/requires/%d", n.at, j)
+			other, ok := nodes[required]
 			switch {
 			case !ok:
-				v.fail(at, pkg.ErrUnknown, nil, "unknown subtask")
-			case seen[dep]:
-				v.fail(at, pkg.ErrDuplicate, nil, "duplicate dependency")
-			case state[dep] == 1:
-				v.fail(at, pkg.ErrCycle, nil, "subtask dependencies form a cycle")
+				v.fail(at, pkg.ErrUnknown, nil, "unknown group")
+			case seen[required]:
+				v.fail(at, pkg.ErrDuplicate, nil, "duplicate requirement")
+			case slices.Contains(n.path, required) || slices.Contains(other.path, id):
+				v.fail(at, pkg.ErrInconsistent, nil, "a group cannot require itself, its ancestor or its subgroup")
+			case state[required] == 1:
+				v.fail(at, pkg.ErrCycle, nil, "group requirements form a cycle")
 				return false
-			case state[dep] == 0 && !visit(k):
+			case state[required] == 0 && !requires(required):
 				return false
 			}
-			seen[dep] = true
+			seen[required] = true
 		}
-		state[g.ID] = 2
+		state[id] = 2
 		return true
 	}
-	for i, g := range d.Subtasks {
-		if state[g.ID] == 0 && !visit(i) {
+	for _, id := range order {
+		if state[id] == 0 && !requires(id) {
 			break
 		}
 	}
-	if d.Type == "scoring" && (d.MaxScore == nil || *d.MaxScore < 0 || *d.MaxScore != totalPoints) {
-		v.fail("/max_score", pkg.ErrInconsistent, with("/subtasks"), "max score must equal subtask points")
-	}
-	if d.Type != "scoring" && d.MaxScore != nil {
+	max, err := d.maxScore()
+	switch {
+	case err != nil:
+		v.fail("/tests", pkg.ErrRange, maximum(points.Max), "test points exceed the score limit")
+	case d.Type == "scoring" && (d.MaxScore == nil || *d.MaxScore != max):
+		v.fail("/max_score", pkg.ErrInconsistent, with("/testset"), "max score must equal the testset score")
+	case d.Type != "scoring" && d.MaxScore != nil:
 		v.fail("/max_score", pkg.ErrInconsistent, with("/type"), "max score requires scoring type")
 	}
 }
 
+// validateGroupArgs allows arguments only where the programs that take them speak the ICPC protocol.
+func (d *Draft) validateGroupArgs(v *validation, g *DraftGroup, at string) {
+	for name, args := range map[string][]string{"checker_args": g.CheckerArgs, "validator_args": g.ValidatorArgs} {
+		for j, arg := range args {
+			if len(arg) > 4096 || strings.ContainsRune(arg, 0) || !utf8.ValidString(arg) {
+				v.fail(fmt.Sprintf("%s/%s/%d", at, name, j), pkg.ErrFormat, nil, "invalid argument")
+			}
+		}
+	}
+	if len(g.CheckerArgs) > 0 {
+		for pointer, j := range d.juries() {
+			if (pointer == "/checker" || pointer == "/interactor") && j.Protocol != sandbox.ProtocolICPC {
+				v.fail(at+"/checker_args", pkg.ErrInconsistent, with(pointer+"/protocol"), "only ICPC programs take arguments")
+			}
+		}
+	}
+	if len(g.ValidatorArgs) > 0 {
+		for i := range d.Validators {
+			if d.Validators[i].Protocol != sandbox.ProtocolICPC && d.Validates(&d.Validators[i], g.ID) {
+				v.fail(at+"/validator_args", pkg.ErrInconsistent, with(fmt.Sprintf("/validators/%d/protocol", i)), "only ICPC programs take arguments")
+			}
+		}
+	}
+}
+
 func (d *Draft) validateTests(v *validation) {
-	subtasks := make(map[uuid.UUID]bool)
-	for _, g := range d.Subtasks {
-		subtasks[g.ID] = true
+	groups := make(map[uuid.UUID]bool)
+	for g := range d.Testset.All() {
+		groups[g.ID] = true
 	}
 	orders := make(map[int]bool)
 	ids := make(map[uuid.UUID]bool)
@@ -797,8 +902,8 @@ func (d *Draft) validateTests(v *validation) {
 			v.fail(at+"/points", pkg.ErrRange, map[string]any{"min": 0, "max": points.Max}, "invalid test weight")
 		}
 		v.identity(at, test.ID, ids[test.ID], test.Ordinal, orders[test.Ordinal])
-		if !subtasks[test.SubtaskID] {
-			v.fail(at+"/subtask_id", pkg.ErrUnknown, nil, "unknown subtask")
+		if !groups[test.GroupID] {
+			v.fail(at+"/group_id", pkg.ErrUnknown, nil, "unknown group")
 		}
 		ids[test.ID] = true
 		orders[test.Ordinal] = true
@@ -916,24 +1021,45 @@ func (d *Draft) validateImages(v *validation, previous *Draft) {
 	}
 }
 
-// ComputeScores preserves authored test weights without rescaling group totals.
+// ComputeScores sets the max score from the testset.
 func (d *Draft) ComputeScores() error {
-	sums := make(map[uuid.UUID]points.Value)
-	var total points.Value
-	for _, test := range d.Tests {
-		if test.Points < 0 || test.Points > points.Max || total > points.Max-test.Points {
-			return fmt.Errorf("test weights exceed score limit")
-		}
-		sums[test.SubtaskID] += test.Points
-		total += test.Points
+	max, err := d.maxScore()
+	if err != nil {
+		return err
 	}
-	for i := range d.Subtasks {
-		d.Subtasks[i].Points = sums[d.Subtasks[i].ID]
-	}
+	d.MaxScore = nil
 	if d.Type == "scoring" {
-		d.MaxScore = &total
-	} else {
-		d.MaxScore = nil
+		d.MaxScore = &max
 	}
 	return nil
+}
+
+// maxScore aggregates test points up the testset, leaving out groups without tests as grading does.
+func (d *Draft) maxScore() (points.Value, error) {
+	tests := map[uuid.UUID][]points.Value{}
+	for _, t := range d.Tests {
+		if t.Points < 0 || t.Points > points.Max {
+			return 0, fmt.Errorf("test weights exceed score limit")
+		}
+		tests[t.GroupID] = append(tests[t.GroupID], t.Points)
+	}
+	var grade func(*DraftGroup) (points.Value, bool)
+	grade = func(g *DraftGroup) (points.Value, bool) {
+		scores := slices.Clone(tests[g.ID])
+		for i := range g.Groups {
+			if score, ok := grade(&g.Groups[i]); ok {
+				scores = append(scores, score)
+			}
+		}
+		return spec.Aggregate(g.Aggregate, scores), len(scores) > 0
+	}
+	var total points.Value
+	for _, t := range d.Tests {
+		if total > points.Max-t.Points {
+			return 0, fmt.Errorf("test weights exceed score limit")
+		}
+		total += t.Points
+	}
+	max, _ := grade(&d.Testset)
+	return max, nil
 }

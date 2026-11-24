@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -153,11 +152,11 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestingStarted, ID: submissionID}); err != nil {
 		return nil, err
 	}
-	tests := collectFlatTests(p)
+	tests := p.Tests()
 	results := make([]TestResult, 0, len(tests))
 	hasFailureDetails := false
 	for _, test := range tests {
-		if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestStarted, ID: submissionID, Number: safeInt32(test.TestIndex)}); err != nil {
+		if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestStarted, ID: submissionID, Number: safeInt32(test.Test.Ordinal)}); err != nil {
 			return nil, err
 		}
 		result, err := j.test(ctx, sb, pkg, sol, lang, checker, interactor, test, calib, !hasFailureDetails)
@@ -177,7 +176,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	verdict.Pretests = pretests
 	return verdict, nil
 }
-func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *sandbox.Jury, test FlatTest, calib calibration.Calibration, details bool) (TestResult, error) {
+func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *sandbox.Jury, test gfmt.GroupTest, calib calibration.Calibration, details bool) (TestResult, error) {
 	p := pkg.Format.Problem
 	limits := j.Limits.Solution(calib.Limit(time.Duration(p.Limits.TimeMs)*time.Millisecond), bytesize.Size(p.Limits.MemoryMb)*bytesize.MiB)
 	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
@@ -190,9 +189,9 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
 	run := func() (TestResult, string, error) {
-		result := TestResult{TestNumber: test.TestIndex, Sample: test.Test.Sample, Subtask: test.SubtaskName}
+		result := TestResult{TestNumber: test.Test.Ordinal, Sample: test.Test.Sample, Group: test.Group.Name}
 		if interactor != nil {
-			r, err := sb.InteractFiles(ctx, sol, lang, *interactor, input, answer, limits, j.Limits.Auxiliary)
+			r, err := sb.InteractFiles(ctx, sol, lang, interactor.With(test.Group.CheckerArgs), input, answer, limits, j.Limits.Auxiliary)
 			if err != nil {
 				return result, "", err
 			}
@@ -217,7 +216,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	}
 	defer j.release(output)
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
-		check, err := sb.CheckFiles(ctx, *checker, input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
+		check, err := sb.CheckFiles(ctx, checker.With(test.Group.CheckerArgs), input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}
@@ -259,20 +258,3 @@ func packagePreview(root, path string) (string, error) {
 	return string(data), err
 }
 
-// Manifest order controls test numbering and sample scoring independently of filesystem or group order.
-func collectFlatTests(prob *gfmt.Problem) []FlatTest {
-	result := []FlatTest{}
-	for name, group := range prob.Subtasks {
-		for _, test := range group.Tests {
-			result = append(result, FlatTest{SubtaskName: name, TestIndex: test.Ordinal, Test: test})
-		}
-	}
-	sort.Slice(result, func(i, k int) bool { return result[i].TestIndex < result[k].TestIndex })
-	return result
-}
-
-type FlatTest struct {
-	SubtaskName string
-	TestIndex   int
-	Test        gfmt.Test
-}

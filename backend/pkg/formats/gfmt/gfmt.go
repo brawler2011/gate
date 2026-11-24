@@ -6,7 +6,7 @@ import (
 )
 
 // FormatVersion is written by Gate; author packages may omit it.
-const FormatVersion = "1.0"
+const FormatVersion = "2.0"
 
 func TestOutputNames(name string) []string {
 	var candidates []string

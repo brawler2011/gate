@@ -141,8 +141,8 @@ func TestArchiveWritesSharedTestFilesOnce(t *testing.T) {
 			require.NoError(t, yaml.NewDecoder(r).Decode(&manifest))
 			referenced := map[string]bool{}
 			inputs := map[int]string{}
-			for _, s := range manifest.Subtasks {
-				for _, test := range s.Tests {
+			for g := range manifest.Testset.All() {
+				for _, test := range g.Tests {
 					inputs[test.Ordinal] = test.Input
 					for _, f := range []string{test.Input, test.Answer} {
 						if f != "" {
@@ -181,19 +181,21 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	}}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
 	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}}, DraftJury: model.DraftJury{Protocol: sandbox.ProtocolICPC, Args: []string{"--max", "9"}},
-		Subtasks: []uuid.UUID{d.Subtasks[1].ID}, Tests: []model.DraftValidatorTest{{ID: uuid.New(), Input: object, Valid: true, Group: "a b"}, {ID: uuid.New(), Input: object}}})
+		Groups: []uuid.UUID{d.Testset.Groups[1].ID}, Tests: []model.DraftValidatorTest{{ID: uuid.New(), Input: object, Valid: true, Group: "a b"}, {ID: uuid.New(), Input: object}}})
 	gen, other := "gen", d.Solutions[1].Name
 	partial := points.Value(5)
 	d.Solutions[0].Verdicts = []string{"TLE", "OK"}
 	d.Solutions[1].Verdicts, d.Solutions[1].Points = []string{"WA"}, &partial
 	d.Solutions = append(d.Solutions, model.DraftSolution{DraftNamedProgram: model.DraftNamedProgram{Name: "slow", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}}, Verdicts: []string{}})
-	// gfmt otherwise treats a subtask named samples as the sample group.
-	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", ""
-	d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[1].ID}
-	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, SubtaskID: d.Subtasks[0].ID, Points: 5, Sample: true,
+	d.Validators[0].Groups = []uuid.UUID{d.Testset.Groups[0].ID}
+	first, second := &d.Testset.Groups[0], &d.Testset.Groups[1]
+	first.Requires, first.Feedback = []uuid.UUID{second.ID}, "icpc"
+	second.ValidatorArgs = []string{"--n", "5"}
+	second.Groups = []model.DraftGroup{{ID: uuid.New(), Name: "nested", Aggregate: "avg", StopOnFailure: true, Feedback: "points"}}
+	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, GroupID: second.Groups[0].ID, Points: 5, Sample: true,
 		Input:  model.DraftInput{Mode: "generator", Generator: &gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}},
 		Answer: model.DraftAnswer{Mode: "generated", Solution: &other}})
-	// Interleave the subtasks' tests.
+	// Interleave the groups' tests.
 	d.Tests[0].Ordinal, d.Tests[1].Ordinal = 2, 1
 	d.Tests[0], d.Tests[1] = d.Tests[1], d.Tests[0]
 	require.NoError(t, d.ComputeScores())
@@ -202,13 +204,15 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 
-// Ungrouped Polygon tests stay in an unnamed subtask, so validators get no --group after a round trip.
-func TestExportRoundTripKeepsUngroupedSubtaskUnnamed(t *testing.T) {
+// Ungrouped Polygon tests stay in the unnamed testset, so validators get no --group after a round trip.
+func TestExportRoundTripKeepsUngroupedTestsInTestset(t *testing.T) {
 	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Empty(t, plan.draft.Subtasks[0].Name)
-	require.Empty(t, exportAndImport(t, plan).draft.Subtasks[0].Name)
+	for _, d := range []model.Draft{plan.draft, exportAndImport(t, plan).draft} {
+		require.Empty(t, d.Testset.Groups)
+		require.Equal(t, d.Testset.ID, d.Tests[0].GroupID)
+	}
 }
 
 // Library files survive even when no judge program selects them yet.
@@ -329,24 +333,32 @@ func normalized(i *draftImport) model.Draft {
 	for _, o := range i.objects {
 		hashes[o.temporaryID] = uuid.NewSHA1(uuid.Nil, []byte(o.spec.SHA256))
 	}
-	subtasks := map[uuid.UUID]uuid.UUID{}
-	d.Subtasks = append([]model.DraftSubtask(nil), d.Subtasks...)
-	for n := range d.Subtasks {
-		subtasks[d.Subtasks[n].ID] = uuid.NewSHA1(uuid.Nil, []byte(strconv.Itoa(d.Subtasks[n].Ordinal)))
+	groups := map[uuid.UUID]uuid.UUID{}
+	n := 0
+	for g := range d.Testset.All() {
+		n++
+		groups[g.ID] = uuid.NewSHA1(uuid.Nil, []byte(strconv.Itoa(n)))
 	}
-	for n := range d.Subtasks {
-		s := &d.Subtasks[n]
-		s.ID = subtasks[s.ID]
-		deps := make([]uuid.UUID, len(s.DependsOn))
-		for k, dep := range s.DependsOn {
-			deps[k] = subtasks[dep]
+	var clone func(model.DraftGroup) model.DraftGroup
+	clone = func(g model.DraftGroup) model.DraftGroup {
+		g.ID = groups[g.ID]
+		requires := make([]uuid.UUID, len(g.Requires))
+		for k, id := range g.Requires {
+			requires[k] = groups[id]
 		}
-		s.DependsOn = deps
+		g.Requires = requires
+		children := make([]model.DraftGroup, len(g.Groups))
+		for k, child := range g.Groups {
+			children[k] = clone(child)
+		}
+		g.Groups = children
+		return g
 	}
+	d.Testset = clone(d.Testset)
 	d.Tests = append([]model.DraftTest(nil), d.Tests...)
 	for n := range d.Tests {
 		t := &d.Tests[n]
-		t.ID, t.SubtaskID = uuid.Nil, subtasks[t.SubtaskID]
+		t.ID, t.GroupID = uuid.Nil, groups[t.GroupID]
 		t.Input.ObjectID, t.Answer.ObjectID = clonePointer(t.Input.ObjectID), clonePointer(t.Answer.ObjectID)
 	}
 	d.Assets = slices.Clone(d.Assets)
@@ -371,11 +383,11 @@ func normalized(i *draftImport) model.Draft {
 	d.Validators = slices.SortedFunc(slices.Values(d.Validators), func(a, b model.DraftValidator) int { return strings.Compare(a.Name, b.Name) })
 	for n := range d.Validators {
 		v := &d.Validators[n]
-		ids := make([]uuid.UUID, len(v.Subtasks))
-		for k, id := range v.Subtasks {
-			ids[k] = subtasks[id]
+		ids := make([]uuid.UUID, len(v.Groups))
+		for k, id := range v.Groups {
+			ids[k] = groups[id]
 		}
-		v.Subtasks = ids
+		v.Groups = ids
 	}
 	d.Generators = slices.SortedFunc(slices.Values(d.Generators), func(a, b model.DraftNamedProgram) int { return strings.Compare(a.Name, b.Name) })
 	d.Solutions = slices.SortedFunc(slices.Values(d.Solutions), func(a, b model.DraftSolution) int { return strings.Compare(a.Name, b.Name) })

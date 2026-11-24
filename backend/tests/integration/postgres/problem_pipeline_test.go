@@ -80,15 +80,15 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	services := startPipelineServices(t)
 	store, client, files := services.store, services.client, services.files
 	cfg := &sandbox.Config{Langs: services.langs}
-	generator, solution, validator, subtask := "gen", "main", "validate", uuid.New()
+	generator, solution, validator, group := "gen", "main", "validate", uuid.New()
 	d.Checker = checker("cpp17", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftSolution{solutionProgram(solution, "cpp17", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
 	d.Validators = []model.DraftValidator{{DraftJury: testlib, DraftNamedProgram: named(validator, "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}}
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
+	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "min", Feedback: "complete"}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -122,7 +122,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "the retry records no second object")
 }
 
-// Every validator that applies to a test checks it; a group validator sees only its group; an unnamed subtask passes no --group.
+// Every validator that applies to a test checks it; a group validator sees only its group; testset tests pass no --group.
 func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	t.Parallel()
 	ctx, _, repo, org, d := draftFixture(t)
@@ -134,12 +134,12 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	d.Solutions = []model.DraftSolution{solutionProgram(solution, "python3", "print(sum(map(int, input().split())))\n")}
 	d.Validators = []model.DraftValidator{
 		{DraftJury: testlib, DraftNamedProgram: named("nonneg", "python3", "import sys\nassert sys.argv[1:] in ([], ['--group', 'small']), sys.argv\na, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
-		{DraftJury: testlib, DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
+		{DraftJury: testlib, DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Groups: []uuid.UUID{small}},
 	}
 	d.MainSolution = &solution
-	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete", Feedback: "complete"}, {ID: large, Ordinal: 2, Policy: "complete", Feedback: "complete"}}
-	test := func(ordinal int, subtask uuid.UUID, a, b string) model.DraftTest {
-		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
+	d.Testset = model.DraftGroup{ID: large, Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: small, Name: "small", Aggregate: "min", Feedback: "complete"}}}
+	test := func(ordinal int, group uuid.UUID, a, b string) model.DraftTest {
+		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	build := func(tests ...model.DraftTest) error {
 		d.Tests = tests
@@ -147,7 +147,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 		return err
 	}
 
-	// The small validator would reject 50 50, so it must not run on the large group.
+	// The small validator would reject 50 50, so it must not run on the testset's own tests.
 	require.NoError(t, build(test(1, small, "1", "2"), test(2, large, "50", "50")))
 	for _, tc := range []struct{ a, validator string }{{"-1", "nonneg"}, {"12", "small"}} {
 		var failure *builder.Failure
@@ -182,7 +182,7 @@ func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
 	ctx, _, repo, org, d := draftFixture(t)
 	services := startPipelineServices(t)
 	cfg := &sandbox.Config{Langs: services.langs}
-	generator, main, subtask := "gen", "main", uuid.New()
+	generator, main, group := "gen", "main", uuid.New()
 	d.TimeLimitMs = 1000
 	d.Checker = checker("python3", "import sys\nout, ans = (open(f).read().split() for f in sys.argv[2:4])\nsys.exit(0 if out == ans else 1)\n")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
@@ -194,9 +194,9 @@ func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
 		solutionProgram("skipped", "cpp17", "not C++"),
 	}
 	d.MainSolution = &main
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete", Feedback: "complete"}}
+	d.Testset = model.DraftGroup{ID: group, Aggregate: "min", Feedback: "complete"}
 	test := func(ordinal int, a, b string) model.DraftTest {
-		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
+		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
 	}
 
 	for _, slow := range []string{"OK", "TLE"} {

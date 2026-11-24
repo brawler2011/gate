@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"path"
 	"slices"
@@ -65,7 +66,7 @@ func ProgramPath(languages *sandbox.Config, role, name, language string) string 
 func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltTest) (*Package, error) {
 	p := &Package{Manifest: &gfmt.Problem{FormatVersion: gfmt.FormatVersion, Title: d.Title, Type: d.Type, MaxScore: d.MaxScore,
 		Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, InputFile: d.InputFile, OutputFile: d.OutputFile,
-		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]gfmt.Expectation{}}}
+		Sources: map[string]gfmt.Source{}, Solutions: map[string]gfmt.Expectation{}}}
 	p.names = map[string]string{}
 	m := p.Manifest
 	program := func(role, name string, prog model.DraftProgram, source gfmt.Source) string {
@@ -93,8 +94,8 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 	}
 	for _, v := range d.Validators {
 		source := gfmt.Source{Protocol: string(v.Protocol), Args: v.Args}
-		for _, id := range v.Subtasks {
-			source.Groups = append(source.Groups, d.Subtask(id).Name)
+		for _, id := range v.Groups {
+			source.Groups = append(source.Groups, d.Group(id).Name)
 		}
 		for i, t := range v.Tests {
 			test := gfmt.ProgramTest{Input: p.object(fmt.Sprintf("validators/%s/%02d", v.Name, i+1), t.Input), Verdict: map[bool]string{true: "valid", false: "invalid"}[t.Valid], Group: t.Group}
@@ -163,16 +164,28 @@ func (p *Package) test(name, source string, f file) string {
 func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uuid.UUID]BuiltTest) error {
 	m := p.Manifest
 	names := map[uuid.UUID]string{}
-	for _, s := range d.Subtasks {
-		names[s.ID] = s.Name
-		m.Subtasks[s.Name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Feedback: s.Feedback, Tests: []gfmt.Test{}}
+	for g := range d.Testset.All() {
+		names[g.ID] = g.Name
 	}
-	for _, s := range d.Subtasks {
-		subtask := m.Subtasks[names[s.ID]]
-		for _, dep := range s.DependsOn {
-			subtask.Dependencies = append(subtask.Dependencies, names[dep])
+	var convert func(g model.DraftGroup) gfmt.Group
+	convert = func(g model.DraftGroup) gfmt.Group {
+		group := gfmt.Group{Name: g.Name, Aggregate: g.Aggregate, StopOnFailure: g.StopOnFailure, Feedback: g.Feedback,
+			CheckerArgs: g.CheckerArgs, ValidatorArgs: g.ValidatorArgs}
+		for _, id := range g.Requires {
+			group.Requires = append(group.Requires, names[id])
 		}
-		m.Subtasks[names[s.ID]] = subtask
+		for _, child := range g.Groups {
+			group.Groups = append(group.Groups, convert(child))
+		}
+		return group
+	}
+	m.Testset = convert(d.Testset)
+	// Both trees are walked in the same order, so the n-th draft group is the n-th package group.
+	groups := map[uuid.UUID]*gfmt.Group{}
+	next, stop := iter.Pull(m.Testset.All())
+	defer stop()
+	for g := range d.Testset.All() {
+		groups[g.ID], _ = next()
 	}
 	tests := slices.Clone(d.Tests)
 	slices.SortFunc(tests, func(a, b model.DraftTest) int { return a.Ordinal - b.Ordinal })
@@ -201,9 +214,8 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 		case t.Answer.Mode == "provided" && t.Answer.ObjectID != nil:
 			test.Answer = p.object(name+".a", *t.Answer.ObjectID)
 		}
-		subtask := m.Subtasks[names[t.SubtaskID]]
-		subtask.Tests = append(subtask.Tests, test)
-		m.Subtasks[names[t.SubtaskID]] = subtask
+		group := groups[t.GroupID]
+		group.Tests = append(group.Tests, test)
 	}
 	return nil
 }

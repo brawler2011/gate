@@ -1785,7 +1785,7 @@ export interface components {
             /** @description How the result misses the expected verdicts or points; empty when it matches. */
             mismatch: string;
         };
-        /** @description A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name. */
+        /** @description A validator; the build fails when it rejects a test input. testlib validators receive --group with the name of the test's group. */
         ProblemDraftValidator: {
             /** @description Unique among the validators; the program's package file is the name with the extension of its language. */
             name: string;
@@ -1795,8 +1795,8 @@ export interface components {
             protocol: components["schemas"]["ProblemDraftProtocol"];
             /** @description Arguments after those of the protocol; only ICPC programs take them. */
             args: string[];
-            /** @description IDs of the subtasks whose tests the validator checks; empty checks every test. */
-            subtasks: string[];
+            /** @description IDs of the groups whose tests, subgroups included, the validator checks; empty checks every test. */
+            groups: string[];
             /** @description Run by every build after compiling the validator; a test it judges differently fails the build. */
             tests: components["schemas"]["ProblemDraftValidatorTest"][];
         };
@@ -1824,22 +1824,30 @@ export interface components {
             interaction: string;
             scoring: string;
         };
-        ProblemDraftSubtask: {
+        /** @description A test group scoring its tests and subgroups, taken in the order of their first tests. The testset is the unnamed root group; other names are unique. */
+        ProblemDraftGroup: {
             /** Format: uuid */
             id: string;
-            /** Format: int64 */
-            ordinal: number;
             name: string;
-            /** Format: double */
-            points: number;
-            /** @enum {string} */
-            policy: "complete" | "each";
             /**
-             * @description What participants see of the group while the contest runs: every test, tests up to the first failure, the group's points, or nothing.
+             * @description How the scores of the tests and subgroups combine into the group's score.
+             * @enum {string}
+             */
+            aggregate: "sum" | "min" | "max" | "avg";
+            /** @description Results after the first failed test or subgroup are left out of the score. */
+            stop_on_failure: boolean;
+            /** @description IDs of groups that must pass completely, their own requirements included, for this group to score. */
+            requires: string[];
+            /**
+             * @description What participants see of the group's own tests while the contest runs: every test, tests up to the first failure, the group's points, or nothing.
              * @enum {string}
              */
             feedback: "complete" | "icpc" | "points" | "none";
-            depends_on: string[];
+            /** @description Passed after the ICPC checker's or interactor's own arguments on the group's own tests. */
+            checker_args: string[];
+            /** @description Passed after the ICPC validators' own arguments on the group's own tests. */
+            validator_args: string[];
+            groups: components["schemas"]["ProblemDraftGroup"][];
         };
         ProblemDraftTest: {
             /** Format: double */
@@ -1848,8 +1856,11 @@ export interface components {
             id: string;
             /** Format: int64 */
             ordinal: number;
-            /** Format: uuid */
-            subtask_id: string;
+            /**
+             * Format: uuid
+             * @description The group holding the test directly.
+             */
+            group_id: string;
             sample: boolean;
             /** @description Contests with pretests judge their submissions on these tests until the end. */
             pretest: boolean;
@@ -1862,7 +1873,7 @@ export interface components {
             /** Format: uuid */
             object_id: string;
         };
-        /** @description The editable problem as typed entries without package paths. Programs are referred to by their names, unique within a role, and library files are included by their names; subtasks and tests are referred to by ID. */
+        /** @description The editable problem as typed entries without package paths. Programs are referred to by their names, unique within a role, and library files are included by their names; groups and tests are referred to by ID. */
         ProblemDraft: {
             /** Format: uuid */
             problem_id: string;
@@ -1892,7 +1903,7 @@ export interface components {
             library: components["schemas"]["ProblemDraftLibraryFile"][];
             statements: components["schemas"]["ProblemDraftStatement"][];
             assets: components["schemas"]["ProblemDraftAsset"][];
-            subtasks: components["schemas"]["ProblemDraftSubtask"][];
+            testset: components["schemas"]["ProblemDraftGroup"];
             tests: components["schemas"]["ProblemDraftTest"][];
         };
         ProblemPackage: {
@@ -3005,10 +3016,10 @@ export interface components {
              */
             memory_kb: number;
             sample?: boolean;
-            subtask?: string;
+            group?: string;
         };
-        /** @description A subtask's score; pass-fail and interactive problems have none. */
-        SubtaskResultModel: {
+        /** @description A group's score; pass-fail and interactive problems have none. The unnamed group is the testset. */
+        GroupResultModel: {
             name: string;
             /** Format: double */
             score?: number;
@@ -3075,7 +3086,7 @@ export interface components {
         SubmissionTestDetailsModel: {
             compiler_output?: string | null;
             tests?: components["schemas"]["TestDetailItemModel"][];
-            subtasks?: components["schemas"]["SubtaskResultModel"][];
+            groups?: components["schemas"]["GroupResultModel"][];
             failed_test_details?: components["schemas"]["FailedTestDetailModel"];
         };
         /**
@@ -5341,7 +5352,7 @@ export type ProblemDraftValidator = components['schemas']['ProblemDraftValidator
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
 export type StatementPreview = components['schemas']['StatementPreview'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
-export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];
+export type ProblemDraftGroup = components['schemas']['ProblemDraftGroup'];
 export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
 export type ProblemDraftAsset = components['schemas']['ProblemDraftAsset'];
 export type ProblemDraft = components['schemas']['ProblemDraft'];
@@ -5388,7 +5399,7 @@ export type VirtualRunModel = components['schemas']['VirtualRunModel'];
 export type SubmissionKind = components['schemas']['SubmissionKind'];
 export type SubmissionsListItemModel = components['schemas']['SubmissionsListItemModel'];
 export type TestDetailItemModel = components['schemas']['TestDetailItemModel'];
-export type SubtaskResultModel = components['schemas']['SubtaskResultModel'];
+export type GroupResultModel = components['schemas']['GroupResultModel'];
 export type FailedTestDetailModel = components['schemas']['FailedTestDetailModel'];
 export type SubmissionTestDetailsModel = components['schemas']['SubmissionTestDetailsModel'];
 export type SubmissionModel = components['schemas']['SubmissionModel'];

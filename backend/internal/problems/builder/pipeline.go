@@ -486,16 +486,17 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 			return tr, fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
-	var group string
-	if g := s.Draft.Subtask(test.SubtaskID); g != nil {
-		group = g.Name
+	group := s.Draft.Group(test.GroupID)
+	if group == nil {
+		return tr, fail("validate", test.Ordinal, "infrastructure", errors.New("test has no group"))
 	}
-	for _, validator := range s.Draft.Validators {
-		if !validator.Applies(test.SubtaskID) {
+	for i := range s.Draft.Validators {
+		validator := &s.Draft.Validators[i]
+		if !s.Draft.Validates(validator, test.GroupID) {
 			continue
 		}
 		v := e.compiled[programKey("validator", validator.Name)]
-		result, err := e.sandbox.ValidateFiles(ctx, validator.Jury(v.executable, v.language), sandbox.FileID(inputID), group, aux)
+		result, err := e.sandbox.ValidateFiles(ctx, validator.Jury(v.executable, v.language).With(group.ValidatorArgs), sandbox.FileID(inputID), group.Name, aux)
 		if err != nil {
 			return tr, fail("validate", test.Ordinal, "infrastructure", fmt.Errorf("validator %s: %w", validator.Name, err))
 		}
@@ -516,7 +517,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language), sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(group.CheckerArgs), sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
 		if err != nil {
 			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -567,7 +568,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 	}
 	if s.Draft.Checker != nil {
 		checker := e.compiled["checker"]
-		result, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
+		result, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language).With(group.CheckerArgs), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
 			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
@@ -579,7 +580,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		if !sol.Runs() || e.uncompiled[sol.Name] {
 			continue
 		}
-		result, err := e.judge(ctx, sol.Name, test.Ordinal, inputID, answerID)
+		result, err := e.judge(ctx, sol.Name, test.Ordinal, group.CheckerArgs, inputID, answerID)
 		if err != nil {
 			return tr, fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
 		}
@@ -601,15 +602,17 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 
 // judge runs a solution on a test as the judge runs submissions. A TLE runs again before it counts,
 // since concurrent steps contend for the CPU.
-func (e *execution) judge(ctx context.Context, name string, ordinal int, inputID, answerID string) (judging.TestResult, error) {
+func (e *execution) judge(ctx context.Context, name string, ordinal int, args []string, inputID, answerID string) (judging.TestResult, error) {
 	for rerun := true; ; rerun = false {
-		result, err := e.judgeOnce(ctx, name, ordinal, inputID, answerID)
+		result, err := e.judgeOnce(ctx, name, ordinal, args, inputID, answerID)
 		if err != nil || !rerun || result.Verdict != string(sandbox.StatusTLE) {
 			return result, err
 		}
 	}
 }
-func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inputID, answerID string) (judging.TestResult, error) {
+
+// judgeOnce passes args, those of the test's group, to the checker or interactor.
+func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, args []string, inputID, answerID string) (judging.TestResult, error) {
 	s := e.build.Snapshot
 	aux := s.Limits.Auxiliary
 	sol := e.compiled[programKey("solution", name)]
@@ -617,7 +620,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inp
 	var outputID string
 	if s.Draft.Type == "interactive" {
 		intr := e.compiled["interactor"]
-		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language), sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
+		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(args), sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
 		if err != nil {
 			return result, err
 		}
@@ -633,7 +636,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, inp
 	}
 	if s.Draft.Checker != nil && result.Verdict == string(sandbox.StatusOK) {
 		checker := e.compiled["checker"]
-		r, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
+		r, err := e.sandbox.CheckFiles(ctx, s.Draft.Checker.Jury(checker.executable, checker.language).With(args), sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
 			return result, err
 		}
