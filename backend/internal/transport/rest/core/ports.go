@@ -171,7 +171,7 @@ type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, uuid.UUID, uuid.UUID) (*contests.ContestProblemDetails, error)
 	OpenProblemPDF(ctx context.Context, contestID, problemID uuid.UUID, language string) (io.ReadCloser, error)
-	OpenProblemInputs(ctx context.Context, contestID, problemID uuid.UUID) (io.ReadCloser, error)
+	OpenProblemFiles(ctx context.Context, contestID, problemID uuid.UUID) (io.ReadCloser, error)
 	OpenProblemAsset(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, string, error)
 }
 

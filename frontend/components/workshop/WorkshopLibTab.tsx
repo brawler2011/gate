@@ -9,27 +9,31 @@ import {useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
+  addDraftFile,
   addLibraryFile,
   addSystemFile,
+  removeDraftFile,
   removeLibraryFile,
   startAutoUpdate,
   stopAutoUpdate,
+  updateDraftFile,
   updateLibraryFile,
 } from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {useSaveDraft} from "./draft/useDraft";
 
+import type {FileList} from "./draft/draftOps";
 import type {ProblemDraft, ProblemDraftLibraryFile} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-type RenameProps = {name: string; saving: boolean; onRename: (name: string) => void};
+type RenameProps = {name: string; description?: string; saving: boolean; onRename: (name: string) => void};
 
-const RenameFile = ({name, saving, onRename}: RenameProps): ReactNode => {
+const RenameFile = ({name, description = "Под этим именем программы жюри подключают файл", saving, onRename}: RenameProps): ReactNode => {
   const [value, setValue] = useState(name);
   return (
     <Grid gutter="xs" align="flex-end">
       <Grid.Col span="auto">
-        <TextInput label="Имя файла" description="Под этим именем программы жюри подключают файл" value={value} onChange={(e) => setValue(e.currentTarget.value)} />
+        <TextInput label="Имя файла" description={description} value={value} onChange={(e) => setValue(e.currentTarget.value)} />
       </Grid.Col>
       <Grid.Col span="content">
         <Button variant="default" disabled={value.trim() === "" || value.trim() === name} loading={saving} onClick={() => onRename(value.trim())}>
@@ -234,6 +238,102 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
   );
 };
 
+const FILE_LISTS: Record<FileList, {title: string; empty: string; placeholder: string; rename: string}> = {
+  graders: {
+    title: "Грейдеры",
+    empty: "Грейдеров нет: решение — отдельная программа. Грейдеры компилируются вместе с каждым решением, "
+      + "и отправить можно только на языках, исходник грейдера которых есть среди файлов.",
+    placeholder: "grader.cpp",
+    rename: "Под этим именем решение подключает файл",
+  },
+  attachments: {
+    title: "Файлы для участников",
+    empty: "Файлов нет. Участники скачивают их вместе с условием, например упрощённый грейдер и заголовок.",
+    placeholder: "grader.cpp",
+    rename: "Под этим именем участники получат файл",
+  },
+};
+
+const FilesPanel = ({draft, problemId, list}: {draft: ProblemDraft; problemId: string; list: FileList}): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const [params, setParams] = useSearchParams();
+  const [newName, setNewName] = useState("");
+  const files = draft[list];
+  const selected = files.find((file) => file.name === params.get(list)) ?? files[0];
+  const text = FILE_LISTS[list];
+
+  const open = (name: string) => {
+    const next = new URLSearchParams(params);
+    next.set(list, name);
+    setParams(next, {replace: true});
+  };
+
+  const handleCreate = async () => {
+    const name = newName.trim();
+    if (await save((current) => addDraftFile(current, list, name))) {
+      setNewName("");
+      open(name);
+    }
+  };
+
+  const handleRename = async (from: string, to: string) => {
+    if (await save((current) => updateDraftFile(current, list, from, {name: to}))) {
+      open(to);
+    }
+  };
+
+  return (
+    <Grid gutter="lg">
+      <Grid.Col span={{base: 12, md: 4}}>
+        <SectionPaper title={text.title}>
+          <Stack gap="xs">
+            {files.length === 0 && (
+              <Text size="sm" c="dimmed">
+                {text.empty}
+              </Text>
+            )}
+            {files.map((file) => (
+              <NavLink
+                key={file.name}
+                active={file.name === selected?.name}
+                label={file.name}
+                onClick={() => open(file.name)}
+              />
+            ))}
+            <TextInput label="Новый файл" placeholder={text.placeholder} value={newName} onChange={(e) => setNewName(e.currentTarget.value)} />
+            <Button variant="light" disabled={newName.trim() === ""} loading={isSaving} onClick={() => void handleCreate()}>
+              Создать
+            </Button>
+          </Stack>
+        </SectionPaper>
+      </Grid.Col>
+      <Grid.Col span={{base: 12, md: 8}}>
+        {selected && (
+          <SectionPaper>
+            <Stack gap="md">
+              <RenameFile
+                key={`rename:${selected.name}`}
+                name={selected.name}
+                description={text.rename}
+                saving={isSaving}
+                onRename={(name) => void handleRename(selected.name, name)}
+              />
+              <SourceEditor
+                key={`source:${selected.name}`}
+                label={selected.name}
+                content={selected.content}
+                saving={isSaving}
+                onSave={(content) => void save((current) => updateDraftFile(current, list, selected.name, {content}))}
+                onDelete={() => void save((current) => removeDraftFile(current, list, selected.name))}
+              />
+            </Stack>
+          </SectionPaper>
+        )}
+      </Grid.Col>
+    </Grid>
+  );
+};
+
 type Props = {
   problemId: string;
 };
@@ -241,7 +341,15 @@ type Props = {
 export const WorkshopLibTab = ({problemId}: Props): ReactNode => (
   <Box p="lg">
     <Stack gap="lg" maw={1200} mx="auto">
-      <DraftGate problemId={problemId}>{(draft) => <LibraryPanel draft={draft} problemId={problemId} />}</DraftGate>
+      <DraftGate problemId={problemId}>
+        {(draft) => (
+          <>
+            <LibraryPanel draft={draft} problemId={problemId} />
+            <FilesPanel draft={draft} problemId={problemId} list="graders" />
+            <FilesPanel draft={draft} problemId={problemId} list="attachments" />
+          </>
+        )}
+      </DraftGate>
     </Stack>
   </Box>
 );

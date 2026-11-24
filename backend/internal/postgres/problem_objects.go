@@ -55,13 +55,13 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	if index.Assets == nil {
 		index.Assets = []model.DraftAsset{}
 	}
-	var inputs *uuid.UUID
-	if index.Inputs != nil {
-		if index.Inputs.OrganizationID != object.OrganizationID || index.Inputs.Purpose != "inputs" {
+	var files *uuid.UUID
+	if index.Files != nil {
+		if index.Files.OrganizationID != object.OrganizationID || index.Files.Purpose != "files" {
 			return uuid.Nil, pkg.ErrInvalid
 		}
-		objects = append(objects, *index.Inputs)
-		inputs = &index.Inputs.ID
+		objects = append(objects, *index.Files)
+		files = &index.Files.ID
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
 		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision,
 		Title: index.Title, ShortName: index.ShortName, Type: index.Type, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
-		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples), InputsObjectID: inputs,
+		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples), FilesObjectID: files, Languages: index.Languages,
 	}); err != nil {
 		return uuid.Nil, dbError("insert package", err)
 	}
@@ -168,10 +168,10 @@ func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID,
 	return assets, nil
 }
 
-func (r *ProblemDraftsRepo) FindPackageInputs(ctx context.Context, id uuid.UUID) (string, error) {
-	key, err := sqlc.New(r.pool).FindPackageInputs(ctx, id)
+func (r *ProblemDraftsRepo) FindPackageFiles(ctx context.Context, id uuid.UUID) (string, error) {
+	key, err := sqlc.New(r.pool).FindPackageFiles(ctx, id)
 	if err != nil {
-		return "", dbError("find package inputs", err)
+		return "", dbError("find package files", err)
 	}
 	return key, nil
 }

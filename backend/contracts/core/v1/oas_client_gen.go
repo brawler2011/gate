@@ -299,12 +299,13 @@ type Invoker interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
-	// DownloadContestProblemInputs invokes DownloadContestProblemInputs operation.
+	// DownloadContestProblemFiles invokes DownloadContestProblemFiles operation.
 	//
-	// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+	// Attachments and, for an output-only problem, every test input named .in, from the package the
+	// contest uses; visible with the statement.
 	//
-	// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
-	DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error)
+	// GET /contests/{contest_id}/problems/{problem_id}/files.zip
+	DownloadContestProblemFiles(ctx context.Context, params DownloadContestProblemFilesParams) (DownloadContestProblemFilesOK, error)
 	// DownloadContestProblemStatementPdf invokes DownloadContestProblemStatementPdf operation.
 	//
 	// The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -317,12 +318,12 @@ type Invoker interface {
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
-	// DownloadProblemInputs invokes DownloadProblemInputs operation.
+	// DownloadProblemFiles invokes DownloadProblemFiles operation.
 	//
-	// Download the test inputs of an output-only problem's latest package.
+	// Download the participants' files of a problem's latest package.
 	//
-	// GET /problems/{id}/inputs.zip
-	DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error)
+	// GET /problems/{id}/files.zip
+	DownloadProblemFiles(ctx context.Context, params DownloadProblemFilesParams) (DownloadProblemFilesOK, error)
 	// DownloadProblemPackage invokes DownloadProblemPackage operation.
 	//
 	// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
@@ -4298,17 +4299,18 @@ func (c *Client) sendDisableTeamJoinLink(ctx context.Context, params DisableTeam
 	return result, nil
 }
 
-// DownloadContestProblemInputs invokes DownloadContestProblemInputs operation.
+// DownloadContestProblemFiles invokes DownloadContestProblemFiles operation.
 //
-// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+// Attachments and, for an output-only problem, every test input named .in, from the package the
+// contest uses; visible with the statement.
 //
-// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
-func (c *Client) DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error) {
-	res, err := c.sendDownloadContestProblemInputs(ctx, params)
+// GET /contests/{contest_id}/problems/{problem_id}/files.zip
+func (c *Client) DownloadContestProblemFiles(ctx context.Context, params DownloadContestProblemFilesParams) (DownloadContestProblemFilesOK, error) {
+	res, err := c.sendDownloadContestProblemFiles(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendDownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (res DownloadContestProblemInputsOK, err error) {
+func (c *Client) sendDownloadContestProblemFiles(ctx context.Context, params DownloadContestProblemFilesParams) (res DownloadContestProblemFilesOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
@@ -4350,7 +4352,7 @@ func (c *Client) sendDownloadContestProblemInputs(ctx context.Context, params Do
 		}
 		pathParts[3] = encoded
 	}
-	pathParts[4] = "/inputs.zip"
+	pathParts[4] = "/files.zip"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	r, err := ht.NewRequest(ctx, "GET", u)
@@ -4371,7 +4373,7 @@ func (c *Client) sendDownloadContestProblemInputs(ctx context.Context, params Do
 		_ = body.Close()
 	}()
 
-	result, err := decodeDownloadContestProblemInputsResponse(resp)
+	result, err := decodeDownloadContestProblemFilesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4559,17 +4561,17 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 	return result, nil
 }
 
-// DownloadProblemInputs invokes DownloadProblemInputs operation.
+// DownloadProblemFiles invokes DownloadProblemFiles operation.
 //
-// Download the test inputs of an output-only problem's latest package.
+// Download the participants' files of a problem's latest package.
 //
-// GET /problems/{id}/inputs.zip
-func (c *Client) DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error) {
-	res, err := c.sendDownloadProblemInputs(ctx, params)
+// GET /problems/{id}/files.zip
+func (c *Client) DownloadProblemFiles(ctx context.Context, params DownloadProblemFilesParams) (DownloadProblemFilesOK, error) {
+	res, err := c.sendDownloadProblemFiles(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendDownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (res DownloadProblemInputsOK, err error) {
+func (c *Client) sendDownloadProblemFiles(ctx context.Context, params DownloadProblemFilesParams) (res DownloadProblemFilesOK, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -4592,7 +4594,7 @@ func (c *Client) sendDownloadProblemInputs(ctx context.Context, params DownloadP
 		}
 		pathParts[1] = encoded
 	}
-	pathParts[2] = "/inputs.zip"
+	pathParts[2] = "/files.zip"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	r, err := ht.NewRequest(ctx, "GET", u)
@@ -4613,7 +4615,7 @@ func (c *Client) sendDownloadProblemInputs(ctx context.Context, params DownloadP
 		_ = body.Close()
 	}()
 
-	result, err := decodeDownloadProblemInputsResponse(resp)
+	result, err := decodeDownloadProblemFilesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

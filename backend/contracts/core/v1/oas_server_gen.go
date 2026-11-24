@@ -285,12 +285,13 @@ type Handler interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
-	// DownloadContestProblemInputs implements DownloadContestProblemInputs operation.
+	// DownloadContestProblemFiles implements DownloadContestProblemFiles operation.
 	//
-	// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+	// Attachments and, for an output-only problem, every test input named .in, from the package the
+	// contest uses; visible with the statement.
 	//
-	// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
-	DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error)
+	// GET /contests/{contest_id}/problems/{problem_id}/files.zip
+	DownloadContestProblemFiles(ctx context.Context, params DownloadContestProblemFilesParams) (DownloadContestProblemFilesOK, error)
 	// DownloadContestProblemStatementPdf implements DownloadContestProblemStatementPdf operation.
 	//
 	// The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -303,12 +304,12 @@ type Handler interface {
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
-	// DownloadProblemInputs implements DownloadProblemInputs operation.
+	// DownloadProblemFiles implements DownloadProblemFiles operation.
 	//
-	// Download the test inputs of an output-only problem's latest package.
+	// Download the participants' files of a problem's latest package.
 	//
-	// GET /problems/{id}/inputs.zip
-	DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error)
+	// GET /problems/{id}/files.zip
+	DownloadProblemFiles(ctx context.Context, params DownloadProblemFilesParams) (DownloadProblemFilesOK, error)
 	// DownloadProblemPackage implements DownloadProblemPackage operation.
 	//
 	// A gfmt package with every test's input and answer as files. Importing it gives the draft it was

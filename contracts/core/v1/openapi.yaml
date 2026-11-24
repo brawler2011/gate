@@ -804,12 +804,12 @@ paths:
               schema:
                 type: string
                 format: binary
-  /contests/{contest_id}/problems/{problem_id}/inputs.zip:
+  /contests/{contest_id}/problems/{problem_id}/files.zip:
     get:
-      summary: "Download the test inputs of an output-only contest problem"
-      description: "Inputs of every test, named <ordinal>.in, from the package the contest uses; visible with the statement."
+      summary: "Download the participants' files of a contest problem"
+      description: "Attachments and, for an output-only problem, every test input named <ordinal>.in, from the package the contest uses; visible with the statement."
       tags: [contests]
-      operationId: DownloadContestProblemInputs
+      operationId: DownloadContestProblemFiles
       parameters:
         - $ref: "#/components/parameters/ContestIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
@@ -817,7 +817,7 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
         "200":
-          description: Zip of test inputs
+          description: Zip of participants' files
           content:
             application/zip:
               schema:
@@ -2058,18 +2058,18 @@ paths:
               schema:
                 type: string
                 format: binary
-  /problems/{id}/inputs.zip:
+  /problems/{id}/files.zip:
     get:
       tags: [problems]
-      operationId: DownloadProblemInputs
-      summary: "Download the test inputs of an output-only problem's latest package"
+      operationId: DownloadProblemFiles
+      summary: "Download the participants' files of a problem's latest package"
       parameters:
         - $ref: '#/components/parameters/ProblemIDPath'
       responses:
         default:
           $ref: "#/components/responses/Problem"
         "200":
-          description: Zip of test inputs, named <ordinal>.in
+          description: Zip of attachments and output-only test inputs, named <ordinal>.in
           content:
             application/zip:
               schema:
@@ -3678,6 +3678,16 @@ components:
           description: Run by every build after compiling the validator; a test it judges differently fails the build.
           items:
             $ref: '#/components/schemas/ProblemDraftValidatorTest'
+    ProblemDraftFile:
+      type: object
+      required:
+      - name
+      - content
+      properties:
+        name:
+          type: string
+        content:
+          type: string
     ProblemDraftLibraryFile:
       description: A source file judge programs include by its name; names are unique in a draft and identify the file.
       type: object
@@ -3879,6 +3889,8 @@ components:
       - input_file
       - output_file
       - library
+      - graders
+      - attachments
       - statements
       - assets
       - testset
@@ -3940,6 +3952,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemDraftLibraryFile'
+        graders:
+          description: Files linked with every solution; only languages that compile one of them can be submitted.
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftFile'
+        attachments:
+          description: Files participants download with the statement.
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftFile'
         statements:
           type: array
           items:
@@ -4624,6 +4646,7 @@ components:
         - memory_limit
         - input_file
         - output_file
+        - files
         - legend
         - input_format
         - output_format
@@ -4650,6 +4673,9 @@ components:
         output_file:
           type: string
           description: File the solution writes instead of standard output; empty for standard output.
+        files:
+          type: boolean
+          description: The participants' files archive (files.zip) exists.
         legend:
           type: string
         input_format:
@@ -4702,6 +4728,8 @@ components:
         - memory_limit
         - input_file
         - output_file
+        - files
+        - languages
         - position
         - legend
         - input_format
@@ -4739,6 +4767,14 @@ components:
         output_file:
           type: string
           description: File the solution writes instead of standard output; empty for standard output.
+        files:
+          type: boolean
+          description: The participants' files archive (files.zip) exists.
+        languages:
+          type: array
+          description: Languages the problem accepts, within the contest's; empty accepts every language.
+          items:
+            type: string
         position:
           type: integer
           format: int32
@@ -5080,6 +5116,7 @@ components:
         - position
         - title
         - type
+        - languages
         - memory_limit
         - time_limit
         - created_at
@@ -5098,6 +5135,11 @@ components:
           example: Test task
         type:
           $ref: "#/components/schemas/ProblemType"
+        languages:
+          type: array
+          description: Languages the problem accepts, within the contest's; empty accepts every language.
+          items:
+            type: string
         memory_limit:
           type: integer
           format: int32

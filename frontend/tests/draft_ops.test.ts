@@ -40,7 +40,7 @@ const emptyDraft = (): ProblemDraft => ({
   generators: [],
   solutions: [],
   main_solution: null,
-  library: [],
+  library: [], graders: [], attachments: [],
   statements: [],
   assets: [],
   testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []},

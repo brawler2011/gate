@@ -5155,7 +5155,7 @@ func decodeDisableTeamJoinLinkResponse(resp *http.Response) (res *DisableTeamJoi
 	return res, errors.Wrap(defRes, "error")
 }
 
-func decodeDownloadContestProblemInputsResponse(resp *http.Response) (res DownloadContestProblemInputsOK, _ error) {
+func decodeDownloadContestProblemFilesResponse(resp *http.Response) (res DownloadContestProblemFilesOK, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -5171,7 +5171,7 @@ func decodeDownloadContestProblemInputsResponse(resp *http.Response) (res Downlo
 				return res, err
 			}
 
-			response := DownloadContestProblemInputsOK{Data: bytes.NewReader(b)}
+			response := DownloadContestProblemFilesOK{Data: bytes.NewReader(b)}
 			return response, nil
 		default:
 			return res, validate.InvalidContentType(ct)
@@ -5497,7 +5497,7 @@ func decodeDownloadContestStatementsPdfResponse(resp *http.Response) (res Downlo
 	return res, errors.Wrap(defRes, "error")
 }
 
-func decodeDownloadProblemInputsResponse(resp *http.Response) (res DownloadProblemInputsOK, _ error) {
+func decodeDownloadProblemFilesResponse(resp *http.Response) (res DownloadProblemFilesOK, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -5513,7 +5513,7 @@ func decodeDownloadProblemInputsResponse(resp *http.Response) (res DownloadProbl
 				return res, err
 			}
 
-			response := DownloadProblemInputsOK{Data: bytes.NewReader(b)}
+			response := DownloadProblemFilesOK{Data: bytes.NewReader(b)}
 			return response, nil
 		default:
 			return res, validate.InvalidContentType(ct)

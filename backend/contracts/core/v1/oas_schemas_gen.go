@@ -2031,10 +2031,12 @@ type ContestProblemListItemModel struct {
 	Position    int32                          `json:"position"`
 	Title       string                         `json:"title"`
 	Type        ProblemType                    `json:"type"`
-	MemoryLimit int32                          `json:"memory_limit"`
-	TimeLimit   int32                          `json:"time_limit"`
-	CreatedAt   time.Time                      `json:"created_at"`
-	UpdatedAt   time.Time                      `json:"updated_at"`
+	// Languages the problem accepts, within the contest's; empty accepts every language.
+	Languages   []string  `json:"languages"`
+	MemoryLimit int32     `json:"memory_limit"`
+	TimeLimit   int32     `json:"time_limit"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // GetPermissions returns the value of Permissions.
@@ -2060,6 +2062,11 @@ func (s *ContestProblemListItemModel) GetTitle() string {
 // GetType returns the value of Type.
 func (s *ContestProblemListItemModel) GetType() ProblemType {
 	return s.Type
+}
+
+// GetLanguages returns the value of Languages.
+func (s *ContestProblemListItemModel) GetLanguages() []string {
+	return s.Languages
 }
 
 // GetMemoryLimit returns the value of MemoryLimit.
@@ -2107,6 +2114,11 @@ func (s *ContestProblemListItemModel) SetType(val ProblemType) {
 	s.Type = val
 }
 
+// SetLanguages sets the value of Languages.
+func (s *ContestProblemListItemModel) SetLanguages(val []string) {
+	s.Languages = val
+}
+
 // SetMemoryLimit sets the value of MemoryLimit.
 func (s *ContestProblemListItemModel) SetMemoryLimit(val int32) {
 	s.MemoryLimit = val
@@ -2139,14 +2151,18 @@ type ContestProblemModel struct {
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
-	OutputFile   string `json:"output_file"`
-	Position     int32  `json:"position"`
-	Legend       string `json:"legend"`
-	InputFormat  string `json:"input_format"`
-	OutputFormat string `json:"output_format"`
-	Notes        string `json:"notes"`
-	Interaction  string `json:"interaction"`
-	Scoring      string `json:"scoring"`
+	OutputFile string `json:"output_file"`
+	// The participants' files archive (files.zip) exists.
+	Files bool `json:"files"`
+	// Languages the problem accepts, within the contest's; empty accepts every language.
+	Languages    []string `json:"languages"`
+	Position     int32    `json:"position"`
+	Legend       string   `json:"legend"`
+	InputFormat  string   `json:"input_format"`
+	OutputFormat string   `json:"output_format"`
+	Notes        string   `json:"notes"`
+	Interaction  string   `json:"interaction"`
+	Scoring      string   `json:"scoring"`
 	// Empty unless the contest settings show tutorials to the caller.
 	Tutorial  string               `json:"tutorial"`
 	CreatedAt time.Time            `json:"created_at"`
@@ -2195,6 +2211,16 @@ func (s *ContestProblemModel) GetInputFile() string {
 // GetOutputFile returns the value of OutputFile.
 func (s *ContestProblemModel) GetOutputFile() string {
 	return s.OutputFile
+}
+
+// GetFiles returns the value of Files.
+func (s *ContestProblemModel) GetFiles() bool {
+	return s.Files
+}
+
+// GetLanguages returns the value of Languages.
+func (s *ContestProblemModel) GetLanguages() []string {
+	return s.Languages
 }
 
 // GetPosition returns the value of Position.
@@ -2295,6 +2321,16 @@ func (s *ContestProblemModel) SetInputFile(val string) {
 // SetOutputFile sets the value of OutputFile.
 func (s *ContestProblemModel) SetOutputFile(val string) {
 	s.OutputFile = val
+}
+
+// SetFiles sets the value of Files.
+func (s *ContestProblemModel) SetFiles(val bool) {
+	s.Files = val
+}
+
+// SetLanguages sets the value of Languages.
+func (s *ContestProblemModel) SetLanguages(val []string) {
+	s.Languages = val
 }
 
 // SetPosition sets the value of Position.
@@ -3285,14 +3321,14 @@ type DisableContestJoinLinkNoContent struct{}
 // DisableTeamJoinLinkNoContent is response for DisableTeamJoinLink operation.
 type DisableTeamJoinLinkNoContent struct{}
 
-type DownloadContestProblemInputsOK struct {
+type DownloadContestProblemFilesOK struct {
 	Data io.Reader
 }
 
 // Read reads data from the Data reader.
 //
 // Kept to satisfy the io.Reader interface.
-func (s DownloadContestProblemInputsOK) Read(p []byte) (n int, err error) {
+func (s DownloadContestProblemFilesOK) Read(p []byte) (n int, err error) {
 	if s.Data == nil {
 		return 0, io.EOF
 	}
@@ -3327,14 +3363,14 @@ func (s DownloadContestStatementsPdfOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
-type DownloadProblemInputsOK struct {
+type DownloadProblemFilesOK struct {
 	Data io.Reader
 }
 
 // Read reads data from the Data reader.
 //
 // Kept to satisfy the io.Reader interface.
-func (s DownloadProblemInputsOK) Read(p []byte) (n int, err error) {
+func (s DownloadProblemFilesOK) Read(p []byte) (n int, err error) {
 	if s.Data == nil {
 		return 0, io.EOF
 	}
@@ -9558,10 +9594,14 @@ type ProblemDraft struct {
 	// File the solution writes instead of standard output; empty for standard output.
 	OutputFile string                    `json:"output_file"`
 	Library    []ProblemDraftLibraryFile `json:"library"`
-	Statements []ProblemDraftStatement   `json:"statements"`
-	Assets     []ProblemDraftAsset       `json:"assets"`
-	Testset    ProblemDraftGroup         `json:"testset"`
-	Tests      []ProblemDraftTest        `json:"tests"`
+	// Files linked with every solution; only languages that compile one of them can be submitted.
+	Graders []ProblemDraftFile `json:"graders"`
+	// Files participants download with the statement.
+	Attachments []ProblemDraftFile      `json:"attachments"`
+	Statements  []ProblemDraftStatement `json:"statements"`
+	Assets      []ProblemDraftAsset     `json:"assets"`
+	Testset     ProblemDraftGroup       `json:"testset"`
+	Tests       []ProblemDraftTest      `json:"tests"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -9647,6 +9687,16 @@ func (s *ProblemDraft) GetOutputFile() string {
 // GetLibrary returns the value of Library.
 func (s *ProblemDraft) GetLibrary() []ProblemDraftLibraryFile {
 	return s.Library
+}
+
+// GetGraders returns the value of Graders.
+func (s *ProblemDraft) GetGraders() []ProblemDraftFile {
+	return s.Graders
+}
+
+// GetAttachments returns the value of Attachments.
+func (s *ProblemDraft) GetAttachments() []ProblemDraftFile {
+	return s.Attachments
 }
 
 // GetStatements returns the value of Statements.
@@ -9752,6 +9802,16 @@ func (s *ProblemDraft) SetOutputFile(val string) {
 // SetLibrary sets the value of Library.
 func (s *ProblemDraft) SetLibrary(val []ProblemDraftLibraryFile) {
 	s.Library = val
+}
+
+// SetGraders sets the value of Graders.
+func (s *ProblemDraft) SetGraders(val []ProblemDraftFile) {
+	s.Graders = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *ProblemDraft) SetAttachments(val []ProblemDraftFile) {
+	s.Attachments = val
 }
 
 // SetStatements sets the value of Statements.
@@ -10100,6 +10160,32 @@ func (s *ProblemDraftCheckerTestVerdict) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Ref: #/components/schemas/ProblemDraftFile
+type ProblemDraftFile struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftFile) GetName() string {
+	return s.Name
+}
+
+// GetContent returns the value of Content.
+func (s *ProblemDraftFile) GetContent() string {
+	return s.Content
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftFile) SetName(val string) {
+	s.Name = val
+}
+
+// SetContent sets the value of Content.
+func (s *ProblemDraftFile) SetContent(val string) {
+	s.Content = val
 }
 
 // A test group scoring its tests and subgroups, taken in the order of their first tests. The testset
@@ -11621,7 +11707,9 @@ type ProblemStatementModel struct {
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
-	OutputFile   string               `json:"output_file"`
+	OutputFile string `json:"output_file"`
+	// The participants' files archive (files.zip) exists.
+	Files        bool                 `json:"files"`
 	Legend       string               `json:"legend"`
 	InputFormat  string               `json:"input_format"`
 	OutputFormat string               `json:"output_format"`
@@ -11662,6 +11750,11 @@ func (s *ProblemStatementModel) GetInputFile() string {
 // GetOutputFile returns the value of OutputFile.
 func (s *ProblemStatementModel) GetOutputFile() string {
 	return s.OutputFile
+}
+
+// GetFiles returns the value of Files.
+func (s *ProblemStatementModel) GetFiles() bool {
+	return s.Files
 }
 
 // GetLegend returns the value of Legend.
@@ -11737,6 +11830,11 @@ func (s *ProblemStatementModel) SetInputFile(val string) {
 // SetOutputFile sets the value of OutputFile.
 func (s *ProblemStatementModel) SetOutputFile(val string) {
 	s.OutputFile = val
+}
+
+// SetFiles sets the value of Files.
+func (s *ProblemStatementModel) SetFiles(val bool) {
+	s.Files = val
 }
 
 // SetLegend sets the value of Legend.

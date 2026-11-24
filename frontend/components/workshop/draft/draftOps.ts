@@ -2,6 +2,7 @@ import type {
   ProblemDraft,
   ProblemDraftChecker,
   ProblemDraftCheckerTest,
+  ProblemDraftFile,
   ProblemDraftLibraryFile,
   ProblemDraftNamedProgram,
   ProblemDraftSolution,
@@ -201,6 +202,28 @@ export const updateLibraryFile = (
 export const removeLibraryFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
   library: draft.library.filter((f) => f.name !== name),
+});
+
+export type FileList = "graders" | "attachments";
+
+export const addDraftFile = (draft: ProblemDraft, list: FileList, name: string): ProblemDraft => ({
+  ...draft,
+  [list]: [...draft[list], {name, content: ""}],
+});
+
+export const updateDraftFile = (
+  draft: ProblemDraft,
+  list: FileList,
+  name: string,
+  patch: Partial<ProblemDraftFile>,
+): ProblemDraft => ({
+  ...draft,
+  [list]: draft[list].map((f) => (f.name === name ? {...f, ...patch} : f)),
+});
+
+export const removeDraftFile = (draft: ProblemDraft, list: FileList, name: string): ProblemDraft => ({
+  ...draft,
+  [list]: draft[list].filter((f) => f.name !== name),
 });
 
 export const STATEMENT_SECTIONS = ["legend", "input", "output", "interaction", "notes", "scoring", "tutorial"] as const;
@@ -446,6 +469,10 @@ export const describePointer = (draft: ProblemDraft, pointer: string): string =>
     }
     case "library":
       return `Библиотека ${draft.library[at]?.name ?? ""}`.trim();
+    case "graders":
+      return `Грейдер ${draft.graders[at]?.name ?? ""}`.trim();
+    case "attachments":
+      return `Файл для участников ${draft.attachments[at]?.name ?? ""}`.trim();
     case "statements": {
       const statement = draft.statements[at];
       const section = sub ? SECTION_LABELS[sub] ?? sub : "";

@@ -100,11 +100,13 @@ type PackageIndex struct {
 	PDFs                       []StatementPDF
 	Samples                    []Sample
 	Assets                     []DraftAsset
-	// Inputs is the archive of test inputs an output-only problem gives participants.
-	Inputs *StoredObject
+	// Files is the archive given to participants: attachments and an output-only problem's test inputs.
+	Files *StoredObject
+	// Languages a submission may use; nil allows every language.
+	Languages []string
 }
 
-func NewPackageIndex(d Draft, statements []BuiltStatement, pdfs []StatementPDF, samples []Sample, inputs *StoredObject) PackageIndex {
+func NewPackageIndex(d Draft, statements []BuiltStatement, pdfs []StatementPDF, samples []Sample, files *StoredObject) PackageIndex {
 	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb,
-		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: statements, PDFs: pdfs, Samples: samples, Assets: d.Assets, Inputs: inputs}
+		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: statements, PDFs: pdfs, Samples: samples, Assets: d.Assets, Files: files}
 }

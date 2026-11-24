@@ -52,6 +52,8 @@ type Problem struct {
 	// Identifies a solution by path; empty means none.
 	MainSolution string
 	Library      []File
+	Graders      []File
+	Attachments  []File
 	Statements   []Statement
 	Assets       []File
 	// Testset is the root group of every test.

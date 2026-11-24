@@ -192,57 +192,74 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	var inputs *model.StoredObject
-	if s.Draft.Type == "output-only" {
-		if inputs, err = e.uploadInputs(ctx, filepath.Join(root, "inputs.zip")); err != nil {
+	var files *model.StoredObject
+	if s.Draft.Type == "output-only" || len(s.Draft.Attachments) > 0 {
+		if files, err = e.uploadFiles(ctx, filepath.Join(root, "files.zip")); err != nil {
 			return uuid.Nil, err
 		}
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, statements, pdfs, e.samples, inputs))
+	index := model.NewPackageIndex(s.Draft, statements, pdfs, e.samples, files)
+	if len(s.Draft.Graders) > 0 {
+		index.Languages = p.Languages.Graded(s.Draft.GraderNames())
+	}
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, index)
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
 }
 
-// uploadInputs packs every test input as <ordinal>.in, zero-padded so the names sort.
-func (e *execution) uploadInputs(ctx context.Context, path string) (*model.StoredObject, error) {
+// uploadFiles packs the attachments and an output-only problem's test inputs as <ordinal>.in, zero-padded so the names sort.
+func (e *execution) uploadFiles(ctx context.Context, path string) (*model.StoredObject, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
-		return nil, fail("inputs", 0, "infrastructure", err)
+		return nil, fail("files", 0, "infrastructure", err)
 	}
 	defer f.Close()
-	tests := e.build.Snapshot.Draft.Tests
+	d := e.build.Snapshot.Draft
+	hash := sha256.New()
+	w := zip.NewWriter(io.MultiWriter(f, hash))
+	for _, a := range d.Attachments {
+		entry, err := w.CreateHeader(&zip.FileHeader{Name: a.Name, Method: zip.Deflate})
+		if err == nil {
+			_, err = io.WriteString(entry, a.Content)
+		}
+		if err != nil {
+			return nil, fail("files", 0, "infrastructure", err)
+		}
+	}
+	var tests []model.DraftTest
+	if d.Type == "output-only" {
+		tests = d.Tests
+	}
 	width := 0
 	for _, t := range tests {
 		width = max(width, len(strconv.Itoa(t.Ordinal)))
 	}
-	hash := sha256.New()
-	w := zip.NewWriter(io.MultiWriter(f, hash))
 	for _, t := range tests {
 		entry, err := w.CreateHeader(&zip.FileHeader{Name: fmt.Sprintf("%0*d.in", width, t.Ordinal), Method: zip.Deflate})
 		if err != nil {
-			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+			return nil, fail("files", t.Ordinal, "infrastructure", err)
 		}
 		in, err := os.Open(filepath.Join(e.dir.root, e.tests[t.ID].Input))
 		if err != nil {
-			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+			return nil, fail("files", t.Ordinal, "infrastructure", err)
 		}
 		_, err = io.Copy(entry, in)
 		in.Close()
 		if err != nil {
-			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+			return nil, fail("files", t.Ordinal, "infrastructure", err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		return nil, fail("inputs", 0, "infrastructure", err)
+		return nil, fail("files", 0, "infrastructure", err)
 	}
 	size, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {
-		return nil, fail("inputs", 0, "infrastructure", err)
+		return nil, fail("files", 0, "infrastructure", err)
 	}
 	digest := hex.EncodeToString(hash.Sum(nil))
-	object := model.NewStoredObject(e.build.OrganizationID, model.UploadSpec{Purpose: "inputs", SHA256: digest, Size: size})
+	object := model.NewStoredObject(e.build.OrganizationID, model.UploadSpec{Purpose: "files", SHA256: digest, Size: size})
 	if err := e.pipeline.Store.UploadFileWithSHA256(ctx, e.pipeline.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/zip", digest); err != nil {
 		return nil, fail("upload", 0, "infrastructure", err)
 	}
@@ -446,14 +463,16 @@ func (e *execution) compile(ctx context.Context) error {
 	var mu sync.Mutex
 	return ordered(ctx, len(needed), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
 		p := needed[i]
-		// Judge programs compile with the whole library; solutions alone.
-		deps := map[string][]byte{}
-		if p.role != "solution" {
+		// Judge programs compile with the whole library; solutions with the graders, as submissions do.
+		program := sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: map[string][]byte{}}
+		if p.role == "solution" {
+			program.Graders = d.GraderFiles()
+		} else {
 			for i := range d.Library {
-				deps[d.Library[i].Name] = []byte(d.Library[i].Text())
+				program.Deps[d.Library[i].Name] = []byte(d.Library[i].Text())
 			}
 		}
-		compiled, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
+		compiled, err := e.pipeline.Programs.Get(ctx, program, s.Limits.Compile)
 		if err != nil && judged[p.key] && processKind(err) == "author" {
 			mu.Lock()
 			e.uncompiled[strings.TrimPrefix(p.key, "solution/")] = true

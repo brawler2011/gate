@@ -46,8 +46,8 @@ export type ProblemProps = {
   hideStatements?: boolean;
   assetUrl?: AssetUrl;
   pdfUrl?: string;
-  // Output-only problems give participants every test input.
-  inputsUrl?: string;
+  // Attachments and, for output-only problems, every test input.
+  filesUrl?: string;
 };
 
 const Section = ({title, html, assetUrl}: {title: string; html?: string; assetUrl?: AssetUrl}): ReactNode =>
@@ -67,7 +67,7 @@ const ProblemComponent = ({
   hideStatements,
   assetUrl,
   pdfUrl,
-  inputsUrl,
+  filesUrl,
 }: ProblemProps): ReactNode => {
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
@@ -99,13 +99,13 @@ const ProblemComponent = ({
         </Alert>
       ) : (
         <>
-          {(pdfUrl || inputsUrl) && (
+          {(pdfUrl || filesUrl) && (
             <Group justify="flex-end">
-              {inputsUrl && (
-                <Anchor href={inputsUrl} download size="sm">
+              {filesUrl && (
+                <Anchor href={filesUrl} download size="sm">
                   <Group gap={4}>
                     <IconFileZip size={16} />
-                    Входные данные тестов
+                    Файлы задачи
                   </Group>
                 </Anchor>
               )}

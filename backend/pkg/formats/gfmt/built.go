@@ -52,13 +52,15 @@ func OpenBuilt(dir string) (*Built, error) {
 		}
 		return nil
 	}
-	library, err := os.ReadDir(filepath.Join(dir, LibraryFolder))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("readdir: %w", err)
-	}
-	for _, f := range library {
-		if err := regular(LibraryFolder + "/" + f.Name()); err != nil {
-			return nil, err
+	for _, folder := range []string{LibraryFolder, GraderFolder} {
+		files, err := os.ReadDir(filepath.Join(dir, folder))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("readdir: %w", err)
+		}
+		for _, f := range files {
+			if err := regular(folder + "/" + f.Name()); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if err := p.CheckBuilt(regular); err != nil {

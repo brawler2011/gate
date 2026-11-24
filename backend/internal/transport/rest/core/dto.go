@@ -147,6 +147,8 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 			MemoryLimit:  safeInt32(problem.MemoryLimitMb),
 			InputFile:    contestProblem.InputFile,
 			OutputFile:   contestProblem.OutputFile,
+			Files:        contestProblem.Files,
+			Languages:    append([]string{}, contestProblem.Languages...),
 			Position:     safeInt32(contestProblem.Ordinal),
 			Legend:       statementField(statement, func(s problemsmodel.Statement) string { return s.Legend }),
 			InputFormat:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),
@@ -225,7 +227,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
-	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), Languages: append([]string{}, t.Languages...), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 }
 func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
 	result := make([]corev1.ProblemSampleModel, len(samples))

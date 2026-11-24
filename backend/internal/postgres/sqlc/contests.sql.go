@@ -452,7 +452,7 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.created_at AS problem_updated_at
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2
@@ -477,6 +477,8 @@ type GetContestProblemRow struct {
 	MemoryLimitMb    int32     `json:"memory_limit_mb"`
 	InputFile        string    `json:"input_file"`
 	OutputFile       string    `json:"output_file"`
+	Languages        []string  `json:"languages"`
+	Files            bool      `json:"files"`
 	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
 }
 
@@ -497,6 +499,8 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 		&i.MemoryLimitMb,
 		&i.InputFile,
 		&i.OutputFile,
+		&i.Languages,
+		&i.Files,
 		&i.ProblemUpdatedAt,
 	)
 	return i, err
@@ -773,7 +777,7 @@ func (q *Queries) ListContestParticipants(ctx context.Context, contestID uuid.UU
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.created_at AS problem_updated_at
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
@@ -794,6 +798,8 @@ type ListContestProblemsRow struct {
 	MemoryLimitMb    int32     `json:"memory_limit_mb"`
 	InputFile        string    `json:"input_file"`
 	OutputFile       string    `json:"output_file"`
+	Languages        []string  `json:"languages"`
+	Files            bool      `json:"files"`
 	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
 }
 
@@ -820,6 +826,8 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.MemoryLimitMb,
 			&i.InputFile,
 			&i.OutputFile,
+			&i.Languages,
+			&i.Files,
 			&i.ProblemUpdatedAt,
 		); err != nil {
 			return nil, err

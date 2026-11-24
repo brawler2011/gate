@@ -136,7 +136,7 @@ func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, 
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
 		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
-			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
+			Library: []model.DraftLibraryFile{}, Graders: []model.DraftFile{}, Attachments: []model.DraftFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
 	if err := c.convert(ctx, p); err != nil {
 		return err
 	}
@@ -220,6 +220,21 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 	for _, s := range p.Statements {
 		if err := c.addStatement(ctx, s); err != nil {
 			return err
+		}
+	}
+	for _, list := range []struct {
+		files []spec.File
+		draft *[]model.DraftFile
+	}{{p.Graders, &c.draft.Graders}, {p.Attachments, &c.draft.Attachments}} {
+		for _, f := range list.files {
+			text, err := c.readText(f.Path, "")
+			if err != nil {
+				return err
+			}
+			if err := c.charge(len(text)); err != nil {
+				return err
+			}
+			*list.draft = append(*list.draft, model.DraftFile{Name: f.Name, Content: text})
 		}
 	}
 	for _, a := range p.Assets {

@@ -3,6 +3,9 @@ package gfmt
 // Draft entries have no paths; readers, builders and exporters share this package layout.
 const (
 	LibraryFolder   = "lib"
+	GraderFolder    = "graders"
+	// Attachments are given to participants.
+	AttachmentFolder = "attachments"
 	AssetFolder     = "assets"
 	StatementFolder = "statements"
 	TestFolder      = "tests"

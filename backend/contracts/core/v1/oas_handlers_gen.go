@@ -4817,12 +4817,13 @@ func (s *Server) handleDisableTeamJoinLinkRequest(args [1]string, argsEscaped bo
 	}
 }
 
-// handleDownloadContestProblemInputsRequest handles DownloadContestProblemInputs operation.
+// handleDownloadContestProblemFilesRequest handles DownloadContestProblemFiles operation.
 //
-// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+// Attachments and, for an output-only problem, every test input named .in, from the package the
+// contest uses; visible with the statement.
 //
-// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
-func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /contests/{contest_id}/problems/{problem_id}/files.zip
+func (s *Server) handleDownloadContestProblemFilesRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -4830,11 +4831,11 @@ func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsE
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: DownloadContestProblemInputsOperation,
-			ID:   "DownloadContestProblemInputs",
+			Name: DownloadContestProblemFilesOperation,
+			ID:   "DownloadContestProblemFiles",
 		}
 	)
-	params, err := decodeDownloadContestProblemInputsParams(args, argsEscaped, r)
+	params, err := decodeDownloadContestProblemFilesParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -4847,13 +4848,13 @@ func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsE
 
 	var rawBody []byte
 
-	var response DownloadContestProblemInputsOK
+	var response DownloadContestProblemFilesOK
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    DownloadContestProblemInputsOperation,
-			OperationSummary: "Download the test inputs of an output-only contest problem",
-			OperationID:      "DownloadContestProblemInputs",
+			OperationName:    DownloadContestProblemFilesOperation,
+			OperationSummary: "Download the participants' files of a contest problem",
+			OperationID:      "DownloadContestProblemFiles",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -4871,8 +4872,8 @@ func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsE
 
 		type (
 			Request  = struct{}
-			Params   = DownloadContestProblemInputsParams
-			Response = DownloadContestProblemInputsOK
+			Params   = DownloadContestProblemFilesParams
+			Response = DownloadContestProblemFilesOK
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -4881,14 +4882,14 @@ func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsE
 		](
 			m,
 			mreq,
-			unpackDownloadContestProblemInputsParams,
+			unpackDownloadContestProblemFilesParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DownloadContestProblemInputs(ctx, params)
+				response, err = s.h.DownloadContestProblemFiles(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.DownloadContestProblemInputs(ctx, params)
+		response, err = s.h.DownloadContestProblemFiles(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
@@ -4907,7 +4908,7 @@ func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsE
 		return
 	}
 
-	if err := encodeDownloadContestProblemInputsResponse(response, w); err != nil {
+	if err := encodeDownloadContestProblemFilesResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -5118,12 +5119,12 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [1]string, argsE
 	}
 }
 
-// handleDownloadProblemInputsRequest handles DownloadProblemInputs operation.
+// handleDownloadProblemFilesRequest handles DownloadProblemFiles operation.
 //
-// Download the test inputs of an output-only problem's latest package.
+// Download the participants' files of a problem's latest package.
 //
-// GET /problems/{id}/inputs.zip
-func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /problems/{id}/files.zip
+func (s *Server) handleDownloadProblemFilesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -5131,11 +5132,11 @@ func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: DownloadProblemInputsOperation,
-			ID:   "DownloadProblemInputs",
+			Name: DownloadProblemFilesOperation,
+			ID:   "DownloadProblemFiles",
 		}
 	)
-	params, err := decodeDownloadProblemInputsParams(args, argsEscaped, r)
+	params, err := decodeDownloadProblemFilesParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -5148,13 +5149,13 @@ func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped 
 
 	var rawBody []byte
 
-	var response DownloadProblemInputsOK
+	var response DownloadProblemFilesOK
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    DownloadProblemInputsOperation,
-			OperationSummary: "Download the test inputs of an output-only problem's latest package",
-			OperationID:      "DownloadProblemInputs",
+			OperationName:    DownloadProblemFilesOperation,
+			OperationSummary: "Download the participants' files of a problem's latest package",
+			OperationID:      "DownloadProblemFiles",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -5168,8 +5169,8 @@ func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped 
 
 		type (
 			Request  = struct{}
-			Params   = DownloadProblemInputsParams
-			Response = DownloadProblemInputsOK
+			Params   = DownloadProblemFilesParams
+			Response = DownloadProblemFilesOK
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -5178,14 +5179,14 @@ func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped 
 		](
 			m,
 			mreq,
-			unpackDownloadProblemInputsParams,
+			unpackDownloadProblemFilesParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DownloadProblemInputs(ctx, params)
+				response, err = s.h.DownloadProblemFiles(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.DownloadProblemInputs(ctx, params)
+		response, err = s.h.DownloadProblemFiles(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
@@ -5204,7 +5205,7 @@ func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped 
 		return
 	}
 
-	if err := encodeDownloadProblemInputsResponse(response, w); err != nil {
+	if err := encodeDownloadProblemFilesResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

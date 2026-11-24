@@ -428,12 +428,13 @@ func (UnimplementedHandler) DisableTeamJoinLink(ctx context.Context, params Disa
 	return ht.ErrNotImplemented
 }
 
-// DownloadContestProblemInputs implements DownloadContestProblemInputs operation.
+// DownloadContestProblemFiles implements DownloadContestProblemFiles operation.
 //
-// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+// Attachments and, for an output-only problem, every test input named .in, from the package the
+// contest uses; visible with the statement.
 //
-// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
-func (UnimplementedHandler) DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (r DownloadContestProblemInputsOK, _ error) {
+// GET /contests/{contest_id}/problems/{problem_id}/files.zip
+func (UnimplementedHandler) DownloadContestProblemFiles(ctx context.Context, params DownloadContestProblemFilesParams) (r DownloadContestProblemFilesOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -455,12 +456,12 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 	return r, ht.ErrNotImplemented
 }
 
-// DownloadProblemInputs implements DownloadProblemInputs operation.
+// DownloadProblemFiles implements DownloadProblemFiles operation.
 //
-// Download the test inputs of an output-only problem's latest package.
+// Download the participants' files of a problem's latest package.
 //
-// GET /problems/{id}/inputs.zip
-func (UnimplementedHandler) DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (r DownloadProblemInputsOK, _ error) {
+// GET /problems/{id}/files.zip
+func (UnimplementedHandler) DownloadProblemFiles(ctx context.Context, params DownloadProblemFilesParams) (r DownloadProblemFilesOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

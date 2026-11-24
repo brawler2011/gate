@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,13 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-var ErrUnknownLanguage = errors.New("unknown language configuration")
+var (
+	ErrUnknownLanguage    = errors.New("unknown language configuration")
+	ErrGradersUnsupported = errors.New("language does not compile with these graders")
+)
+
+// gradersArg in a compile command stands for the grader sources of a problem with graders, and for nothing otherwise.
+const gradersArg = "${graders}"
 
 type Language struct {
 	Name string `toml:"name" json:"name"`
@@ -74,6 +81,27 @@ func ParseConfig(data []byte) (*Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// Graded reports whether the language links a solution with these grader files: one of them must be its source, and none may replace the solution's own files.
+func (l Language) Graded(graders []string) bool {
+	clash := func(name string) bool { return name == l.CodeFile || name == cmp.Or(l.CompileFile, "solution") }
+	return slices.Contains(strings.Fields(l.Compile), gradersArg) && slices.ContainsFunc(graders, l.compiles) && !slices.ContainsFunc(graders, clash)
+}
+
+func (l Language) compiles(file string) bool {
+	return slices.Contains(l.Extensions, strings.ToLower(strings.TrimPrefix(path.Ext(file), ".")))
+}
+
+// Graded lists, in catalog order, the languages that link solutions with these grader files.
+func (c *Config) Graded(graders []string) []string {
+	langs := []string{}
+	for _, id := range c.Order {
+		if c.Langs[id].Graded(graders) {
+			langs = append(langs, id)
+		}
+	}
+	return langs
 }
 
 func (c *Config) ForPath(file string) string {
