@@ -113,7 +113,7 @@ func NewDocument(c Contest) Document {
 		if strings.TrimSpace(c.Place) != "" {
 			header += "\\par\\thecontestlocation"
 		}
-		w.text("\\DeclareRobustCommand{\\contestname}{" + header + "}\n")
+		w.text("\\DeclareRobustCommand{\\contestname}{" + header + "\\strut}\n")
 	}
 	w.text("\\binoppenalty=10000\n\\relpenalty=10000\n\\begin{document}\n")
 	for i, p := range c.Problems {
