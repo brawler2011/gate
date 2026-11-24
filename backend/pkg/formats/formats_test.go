@@ -144,6 +144,32 @@ func TestPolygonPretestMatching(t *testing.T) {
 	require.ErrorContains(t, err, "pretest 3 is not one of the tests")
 }
 
+func TestPolygonTutorialKeepsProblemTeX(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "p")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("..", "testdata", "polygon", "interactive-guess"))))
+	for _, name := range []string{"legend", "input", "output", "notes"} {
+		require.NoError(t, os.Remove(filepath.Join(dir, "statement-sections", "english", name+".tex")))
+	}
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "statements/english/problem.tex", p.Statements[0].TeX)
+	require.Equal(t, "statement-sections/english/tutorial.tex", p.Statements[0].Sections["tutorial"])
+}
+
+// A tutorial in a language without a statement still reaches the site.
+func TestICPCTutorialWithoutItsStatement(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "p")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("..", "testdata", "icpc", "a-plus-b"))))
+	write(t, dir, "problem_statement/solution.de.tex", "Lösung\n")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	var tutorials []string
+	for _, s := range p.Statements {
+		tutorials = append(tutorials, s.Tutorial)
+	}
+	require.Contains(t, tutorials, "problem_statement/solution.de.tex")
+}
+
 func TestPolygonResources(t *testing.T) {
 	p, err := Read(unpack(t, "polygon-resources"))
 	require.NoError(t, err)

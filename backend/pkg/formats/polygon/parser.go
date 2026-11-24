@@ -385,16 +385,19 @@ func statements(fsys fs.FS, p *spec.Problem, list, tutorials []Statement) []spec
 			}
 		}
 		images(fsys, p, dir)
-		if st.Sections != nil {
+		// A folder with only the tutorial leaves the statement to problem.tex.
+		if slices.ContainsFunc(statement.Order, func(name string) bool { return st.Sections[name] != "" }) {
 			st.TeX = ""
 		} else {
 			images(fsys, p, path.Dir(s.Path))
 		}
-		if i := slices.IndexFunc(tutorials, func(t Statement) bool { return t.Language == s.Language && t.Type == "application/x-tex" }); i >= 0 && st.Sections["tutorial"] == "" {
-			st.Tutorial = tutorials[i].Path
-			images(fsys, p, path.Dir(st.Tutorial))
-		}
 		result = append(result, st)
+	}
+	for _, t := range tutorials {
+		if t.Type == "application/x-tex" {
+			images(fsys, p, path.Dir(t.Path))
+			spec.AddTutorial(result, spec.LanguageCode(t.Language), t.Path)
+		}
 	}
 	return result
 }

@@ -39,7 +39,7 @@ func (s *assetStore) DownloadFile(_ context.Context, _, key string, _ *string) (
 	return io.NopCloser(strings.NewReader("image")), "", nil
 }
 
-func TestPackageContentServesOnlyImages(t *testing.T) {
+func TestPackageContentServesOnlyImagesAndPDFs(t *testing.T) {
 	for _, path := range []string{"notes.txt", "page.html", "noext"} {
 		store := &assetStore{}
 		content := &PackageContent{Repo: packageAssets{assets: []model.PackageAsset{{Name: path, Key: "k"}}}, Store: store}
@@ -54,6 +54,11 @@ func TestPackageContentServesOnlyImages(t *testing.T) {
 	require.NoError(t, file.Close())
 	require.Equal(t, "image/svg+xml", contentType)
 	require.Equal(t, []string{"svg"}, store.keys)
+
+	content.Repo = packageAssets{assets: []model.PackageAsset{{Name: "statement-en.pdf", Key: "pdf"}}}
+	_, contentType, err = content.OpenImage(context.Background(), uuid.New(), "hash")
+	require.NoError(t, err)
+	require.Equal(t, "application/pdf", contentType, "statements link PDF images")
 }
 
 type storedStatement struct{ p model.PackageStatement }

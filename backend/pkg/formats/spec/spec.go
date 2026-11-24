@@ -260,6 +260,19 @@ func (p *Problem) SetStatementTitle(language, title string) {
 	}
 }
 
+// AddTutorial gives a tutorial to the statement in its language, or else to the first one without a tutorial,
+// since the site shows a tutorial with statements in every language.
+func AddTutorial(statements []Statement, language, path string) {
+	has := func(s Statement) bool { return s.Tutorial != "" || s.Sections["tutorial"] != "" }
+	i := slices.IndexFunc(statements, func(s Statement) bool { return s.Language == language })
+	if i < 0 {
+		i = slices.IndexFunc(statements, func(s Statement) bool { return !has(s) })
+	}
+	if i >= 0 && !has(statements[i]) {
+		statements[i].Tutorial = path
+	}
+}
+
 // SetExamples reads dir/example.NN and example.NN.a, the statement versions of the samples in order as Polygon and PCMS2 write them,
 // keeping those that differ from the test files; files gives a sample's input and answer paths.
 func (p *Problem) SetExamples(fsys fs.FS, dir string, files func(Test) (input, answer string)) {

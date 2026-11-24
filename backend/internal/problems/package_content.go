@@ -36,7 +36,8 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	}
 	for _, a := range assets {
 		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(a.Name)))
-		if !strings.HasPrefix(contentType, "image/") {
+		// Statements show PDF images as links.
+		if !strings.HasPrefix(contentType, "image/") && contentType != "application/pdf" {
 			continue
 		}
 		r, _, err := c.Store.DownloadFile(ctx, c.Bucket, a.Key, nil)

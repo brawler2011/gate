@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"path"
 	"regexp"
 	"slices"
@@ -258,8 +259,8 @@ func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 			}
 		}
 	}
-	for i := range result {
-		result[i].Tutorial = tutorials[result[i].Language]
+	for _, language := range slices.Sorted(maps.Keys(tutorials)) {
+		spec.AddTutorial(result, language, tutorials[language])
 	}
 	return result
 }
