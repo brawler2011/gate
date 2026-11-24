@@ -373,21 +373,19 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 		dir := path.Join("statement-sections", s.Language)
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {
-			name := e.Name()
-			section, ok := strings.CutSuffix(name, ".tex")
-			switch {
-			case !e.Type().IsRegular():
-			case ok && slices.Contains(statement.Order, section):
+			section, ok := strings.CutSuffix(e.Name(), ".tex")
+			if e.Type().IsRegular() && ok && slices.Contains(statement.Order, section) {
 				if st.Sections == nil {
 					st.Sections = map[string]string{}
 				}
-				st.Sections[section] = path.Join(dir, name)
-			case spec.IsImage(name):
-				p.AddAsset(name, path.Join(dir, name))
+				st.Sections[section] = path.Join(dir, e.Name())
 			}
 		}
+		images(fsys, p, dir)
 		if st.Sections != nil {
 			st.TeX = ""
+		} else {
+			images(fsys, p, path.Dir(s.Path))
 		}
 		result = append(result, st)
 	}
@@ -448,4 +446,13 @@ func markPretests(fsys fs.FS, main Testset, testsets []Testset, groups []spec.Gr
 func exists(fsys fs.FS, name string) bool {
 	info, err := fs.Stat(fsys, name)
 	return err == nil && info.Mode().IsRegular()
+}
+
+func images(fsys fs.FS, p *spec.Problem, dir string) {
+	entries, _ := fs.ReadDir(fsys, dir)
+	for _, e := range entries {
+		if e.Type().IsRegular() && spec.IsImage(e.Name()) {
+			p.AddAsset(e.Name(), path.Join(dir, e.Name()))
+		}
+	}
 }

@@ -99,13 +99,14 @@ describe("Problem Component DOM baseline test", () => {
   });
 
   it("shows only package images, by asset name", () => {
-    const hashes: Record<string, string> = {"pic.png": "aa", "my pic.png": "bb", "a&b.png": "cc"};
+    const hashes: Record<string, string> = {"pic.png": "aa", "my pic.png": "bb", "a&b.png": "cc", "plot.png": "dd", "tree.pdf": "ee"};
     const view = renderWithProviders(<Problem
-      problem={{...sampleProblem, legend: '<p><img src="pic.png" alt="a"/><img src="my pic.png"/><img src="a&amp;b.png"/><img src="missing.png" alt="d"/></p>'}}
+      problem={{...sampleProblem, legend: '<p><img src="pic.png" alt="a"/><img src="my pic.png"/><img src="a&amp;b.png"/><img src="plot"/><img src="missing.png" alt="d"/><img src="tree.pdf"/></p>'}}
       assetUrl={(name) => hashes[name] && `/assets/${hashes[name]}`}
     />);
     const sources = Array.from(view.container.querySelectorAll("img")).map((img) => img.getAttribute("src"));
-    expect(sources).toEqual(["/assets/aa", "/assets/bb", "/assets/cc", null]);
+    expect(sources).toEqual(["/assets/aa", "/assets/bb", "/assets/cc", "/assets/dd", null]);
+    expect(view.getByRole("link", {name: "tree.pdf"}).getAttribute("href")).toBe("/assets/ee");
   });
 
 });

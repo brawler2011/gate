@@ -65,12 +65,23 @@ func TestTypesetStatements(t *testing.T) {
 		require.Contains(t, e.Message, "Undefined control sequence")
 	})
 
-	t.Run("ICPC Markdown becomes LaTeX sections", func(t *testing.T) {
-		tex, _, err := ts.LaTeX(ctx, "Add **two** numbers $a+b$.\n\n## Input\n\nTwo integers.\n\n## Output\n\nTheir sum.\n")
+	t.Run("ICPC Markdown becomes LaTeX that both typesetters read", func(t *testing.T) {
+		tex, _, err := ts.LaTeX(ctx, "Add **two** numbers $a+b$:\n\n- one\n- two\n\n| a | b |\n|---|--:|\n| 1 | 2 |\n\n## Input\n\nTwo integers.\n\n## Output\n\nTheir sum.\n")
 		require.NoError(t, err)
-		sections := statement.SplitTeX(tex)
-		require.Contains(t, sections["legend"], "\\textbf{two}")
-		require.Equal(t, "Two integers.", sections["input"])
-		require.Equal(t, "Their sum.", sections["output"])
+		split := statement.SplitTeX(tex)
+		require.Contains(t, split["legend"], "\\textbf{two}")
+		require.Equal(t, "Two integers.", split["input"])
+		require.Equal(t, "Their sum.", split["output"])
+
+		var sections []statement.Section
+		for _, name := range statement.Order {
+			sections = append(sections, statement.Section{Name: name, Text: split[name]})
+		}
+		html, err := statement.HTML(ctx, ts, sections)
+		require.NoError(t, err)
+		require.Contains(t, html["legend"], "<td style=\"text-align: right\">2</td>")
+		doc := statement.NewDocument(statement.Contest{Language: "en", Problems: []statement.Problem{{Title: "Sum", Sections: sections}}})
+		_, err = ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty})
+		require.NoError(t, err)
 	})
 }

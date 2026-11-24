@@ -102,3 +102,16 @@ func Images(tex string) []string {
 	}
 	return names
 }
+
+// graphicx tries these extensions after the name as given.
+var imageExtensions = []string{"", ".pdf", ".png", ".jpg", ".jpeg"}
+
+// ImageFile finds the file \includegraphics{ref} shows among those exists reports.
+func ImageFile(ref string, exists func(name string) bool) (string, bool) {
+	for _, ext := range imageExtensions {
+		if exists(ref + ext) {
+			return ref + ext, true
+		}
+	}
+	return "", false
+}

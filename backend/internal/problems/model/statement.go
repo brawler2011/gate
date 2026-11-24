@@ -1,6 +1,8 @@
 package problemsmodel
 
 import (
+	"slices"
+
 	"github.com/brawler2011/gate/backend/pkg/statement"
 )
 
@@ -47,10 +49,13 @@ type PrintedLimits struct {
 
 // StatementImages lists the assets the statement shows that exist.
 func StatementImages(s DraftStatement, assets []DraftAsset) []DraftAsset {
+	exists := func(name string) bool { return slices.ContainsFunc(assets, func(a DraftAsset) bool { return a.Name == name }) }
 	shown := map[string]bool{}
 	for _, name := range statement.Order {
 		for _, ref := range ImageReferences(*s.Section(name)) {
-			shown[ref] = true
+			if file, ok := statement.ImageFile(ref, exists); ok {
+				shown[file] = true
+			}
 		}
 	}
 	var result []DraftAsset

@@ -14,6 +14,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 )
@@ -851,7 +852,7 @@ func (d *Draft) validateImages(v *validation, previous *Draft) {
 				continue
 			}
 			for _, ref := range ImageReferences(body) {
-				if !assets[ref] {
+				if _, ok := statement.ImageFile(ref, func(name string) bool { return assets[name] }); !ok {
 					v.fail(fmt.Sprintf("/statements/%d/%s", i, name), pkg.ErrUnknown, value(ref), "%s section of the %s statement shows missing asset %q", name, s.Language, ref)
 				}
 			}

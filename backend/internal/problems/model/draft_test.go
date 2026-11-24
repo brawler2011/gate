@@ -97,4 +97,9 @@ func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 	fixed := renamed
 	fixed.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics{plot.png}"}}
 	require.NoError(t, fixed.Validate(testQuotas, &renamed))
+
+	// graphicx finds plot.png for a name without an extension.
+	bare := renamed
+	bare.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics[width=2cm]{plot}"}}
+	require.NoError(t, bare.Validate(testQuotas, &renamed))
 }

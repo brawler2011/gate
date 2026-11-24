@@ -3,6 +3,7 @@ package sandbox
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,7 +68,8 @@ func (t *Typesetter) PDF(ctx context.Context, doc string, files map[string][]byt
 		copyIn[name] = *cachedFile(id)
 	}
 	latex := "pdflatex -no-shell-escape -file-line-error -interaction=nonstopmode -halt-on-error doc.tex >/dev/null"
-	script := `find . -name '*.svg' -type f -exec sh -c 'rsvg-convert -f pdf -o "$1.pdf" "$1" && mv "$1.pdf" "$1"' sh {} \; || exit 2
+	script := `shopt -s globstar nullglob
+for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" || exit 2; done
 { ` + latex + " && " + latex + fmt.Sprintf("; } || { tail -c %d doc.log; exit 1; }", int64(t.limits.Diagnostic))
 	res, err := t.run(ctx, script, copyIn, nil, nil, []string{"doc.pdf"})
 	if err != nil {
@@ -107,14 +109,18 @@ func (t *Typesetter) HTML(ctx context.Context, tex string) (string, []PandocMess
 	return t.pandoc(ctx, tex, "-f", "latex", "-t", "html", "--mathjax")
 }
 
-// LaTeX converts Markdown with pandoc.
+//go:embed plain.lua
+var plainLaTeX string
+
+// LaTeX converts Markdown with pandoc into LaTeX that HTML and PDF typesetting read back.
 func (t *Typesetter) LaTeX(ctx context.Context, markdown string) (string, []PandocMessage, error) {
-	return t.pandoc(ctx, markdown, "-f", "markdown", "-t", "latex")
+	return t.pandoc(ctx, markdown, "-f", "markdown", "-t", "latex", "--lua-filter=plain.lua")
 }
 
 func (t *Typesetter) pandoc(ctx context.Context, input string, args ...string) (string, []PandocMessage, error) {
 	args = append([]string{"pandoc", "--wrap=none", "--log=log.json", "-o", "out", "in"}, args...)
-	res, err := t.run(ctx, `exec "$@"`, map[string]cmdFile{"in": *memoryFile(input)}, args, []string{"out?", "log.json?"}, nil)
+	files := map[string]cmdFile{"in": *memoryFile(input), "plain.lua": *memoryFile(plainLaTeX)}
+	res, err := t.run(ctx, `exec "$@"`, files, args, []string{"out?", "log.json?"}, nil)
 	if err != nil {
 		return "", nil, err
 	}

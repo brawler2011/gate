@@ -129,10 +129,11 @@ func (c *PackageContent) ReadPrinted(ctx context.Context, problemID, packageID u
 	}
 	for _, name := range statement.Order {
 		for _, ref := range model.ImageReferences(*s.Section(name)) {
-			if _, done := printed.Images[ref]; done || p.Assets[ref] == "" {
+			file, ok := statement.ImageFile(ref, func(name string) bool { return p.Assets[name] != "" })
+			if _, done := printed.Images[file]; done || !ok {
 				continue
 			}
-			if printed.Images[ref], err = c.readAsset(ctx, packageID, ref, p.Assets[ref]); err != nil {
+			if printed.Images[file], err = c.readAsset(ctx, packageID, file, p.Assets[file]); err != nil {
 				return Printed{}, err
 			}
 		}
