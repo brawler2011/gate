@@ -43,7 +43,7 @@ type templatePackages struct{ id uuid.UUID }
 
 func (r *templatePackages) GetReadyPackage(_ context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error) {
 	r.id = id
-	return problemsmodel.ProblemPackage{Title: "Organization template", Type: "interactive", Statements: []problemsmodel.DraftStatement{{Language: "en", Legend: "Template description"}}}, nil
+	return problemsmodel.ProblemPackage{Title: "Organization template", Type: "interactive", Statements: []problemsmodel.BuiltStatement{{DraftStatement: problemsmodel.DraftStatement{Language: "en", Legend: "Template description"}}}}, nil
 }
 
 func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {

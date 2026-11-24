@@ -70,7 +70,10 @@ jobs:
 
   # Use content tags so deploy promotes the exact images CI tested.
   judge-image:
-    name: Judge Image
+    name: Image (${{ matrix.image }})
+    strategy:
+      matrix:
+        image: [judge, typeset]
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -87,7 +90,7 @@ jobs:
 
       - name: Compute image name
         id: tag
-        run: echo "image=$(go run ./tools/judgeimage)" >> "$GITHUB_OUTPUT"
+        run: echo "image=$(go run ./tools/judgeimage ${{ matrix.image }})" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         if: env.PUSH_IMAGES == 'true'
@@ -124,11 +127,11 @@ jobs:
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: judge-nix-store-${{ hashFiles('judge/**') }}
-          restore-prefixes-first-match: judge-nix-store-
+          primary-key: ${{ matrix.image }}-nix-store-${{ hashFiles(format('{0}/**', matrix.image)) }}
+          restore-prefixes-first-match: ${{ matrix.image }}-nix-store-
           gc-max-store-size-linux: 8G
           purge: true
-          purge-prefixes: judge-nix-store-
+          purge-prefixes: ${{ matrix.image }}-nix-store-
           purge-created: 0
           purge-primary-key: never
 
@@ -137,18 +140,21 @@ jobs:
         if: env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
         run: |
           started=$SECONDS
-          nix build --no-link ./judge#default ./judge#default.copyTo
-          echo "Judge cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
+          nix build --no-link ./$SOURCE#default ./$SOURCE#default.copyTo
+          echo "$SOURCE cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SOURCE: ${{ matrix.image }}
 
       # Fixed compression keeps digests reproducible; changed images still recompress every layer.
-      - name: Build and push judge image
+      - name: Build and push image
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         run: |
           started=$SECONDS
-          nix run ./judge#default.copyTo -- --dest-compress-format zstd --dest-compress-level 3 "docker://$IMAGE"
-          echo "Judge image build and push: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
+          nix run ./$SOURCE#default.copyTo -- --dest-compress-format zstd --dest-compress-level 3 "docker://$IMAGE"
+          echo "$SOURCE image build and push: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
+          SOURCE: ${{ matrix.image }}
 
   backend-image:
     name: Backend Image

@@ -256,6 +256,53 @@ paths:
               schema:
                 type: string
                 format: binary
+  /problems/{id}/draft/statement-preview:
+    post:
+      tags: [problems]
+      operationId: PreviewProblemDraftStatement
+      summary: Typeset an edited draft statement as the site shows it
+      description: "Fails with a format error that names the section and line pandoc cannot show."
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDraftStatement'
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        '200':
+          description: Sanitized HTML of each nonempty section, by section name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementPreview'
+  /problems/{id}/draft/statement-preview.pdf:
+    post:
+      tags: [problems]
+      operationId: PreviewProblemDraftStatementPdf
+      summary: Typeset an edited draft statement as builds print it, without samples
+      description: "Fails with a format error that names the section and line of the LaTeX error."
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDraftStatement'
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Statement PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
   /languages:
     get:
       tags: [system]
@@ -713,6 +760,30 @@ paths:
                 type: string
           content:
             image/*:
+              schema:
+                type: string
+                format: binary
+  /contests/{contest_id}/problems/{problem_id}/statement.pdf:
+    get:
+      summary: "Download the statement PDF of a contest problem"
+      description: "The PDF the build of the package the contest uses printed; it is visible with the statement."
+      tags: [contests]
+      operationId: DownloadContestProblemStatementPdf
+      parameters:
+        - $ref: "#/components/parameters/ContestIDPath"
+        - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
+        - name: lang
+          description: "Statement language; a missing one falls back as the statement shown on the site does."
+          in: query
+          schema:
+            type: string
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Statement PDF
+          content:
+            application/pdf:
               schema:
                 type: string
                 format: binary
@@ -1870,6 +1941,28 @@ paths:
                 type: string
           content:
             image/*:
+              schema:
+                type: string
+                format: binary
+  /problems/{id}/statement.pdf:
+    get:
+      tags: [problems]
+      operationId: DownloadProblemStatementPdf
+      summary: "Download the statement PDF of the problem's latest package"
+      parameters:
+        - $ref: '#/components/parameters/ProblemIDPath'
+        - name: lang
+          description: "Statement language; a missing one falls back as the statement shown on the site does."
+          in: query
+          schema:
+            type: string
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Statement PDF
+          content:
+            application/pdf:
               schema:
                 type: string
                 format: binary
@@ -3447,8 +3540,13 @@ components:
         auto_update:
           type: boolean
           description: The file is the system library file of its name from GET /lib, whose current text every build takes. Only an empty file named after a system library file can be auto-updated.
+    StatementPreview:
+      description: Sanitized HTML by section name; math is left as \(...\) and \[...\] for KaTeX, and images name their assets.
+      type: object
+      additionalProperties:
+        type: string
     ProblemDraftStatement:
-      description: The statement in one language as Markdown sections.
+      description: The statement in one language as LaTeX sections, as in Polygon.
       type: object
       required:
       - language
@@ -3555,7 +3653,7 @@ components:
         answer:
           $ref: '#/components/schemas/ProblemDraftAnswer'
     ProblemDraftAsset:
-      description: A statement resource; sections show it as ![alt](name).
+      description: A statement resource; sections show it with \includegraphics{name}.
       type: object
       required:
       - name
@@ -4324,7 +4422,7 @@ components:
         statement:
           $ref: "#/components/schemas/ProblemStatementModel"
     ProblemStatementModel:
-      description: "Statement of the problem's latest package; absent until a package is built."
+      description: "Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview."
       type: object
       required:
         - title
@@ -4336,6 +4434,7 @@ components:
         - input_format
         - output_format
         - notes
+        - interaction
         - scoring
         - samples
         - assets
@@ -4362,6 +4461,8 @@ components:
           type: string
         notes:
           type: string
+        interaction:
+          type: string
         scoring:
           type: string
         samples:
@@ -4374,7 +4475,7 @@ components:
           additionalProperties:
             type: string
     ContestProblemModel:
-      description: "Contest problem data."
+      description: "Contest problem data; statement sections are HTML as in StatementPreview."
       example:
         permissions: {submit: false, manage: false, edit_problem: false}
         problem_id: 123e4567-e89b-42d3-a456-426614174000
@@ -4406,6 +4507,7 @@ components:
         - input_format
         - output_format
         - notes
+        - interaction
         - scoring
         - created_at
         - updated_at
@@ -4444,6 +4546,8 @@ components:
         output_format:
           type: string
         notes:
+          type: string
+        interaction:
           type: string
         scoring:
           type: string

@@ -12,17 +12,21 @@ import (
 	"strings"
 )
 
-const repo = "ghcr.io/brawler2011/gate-go-judge"
+// Ref names the judge image built from judge/.
+func Ref() (string, error) { return ref("judge", "ghcr.io/brawler2011/gate-go-judge") }
 
-// Hash tracked and unignored working-tree contents so uncommitted judge changes get a distinct image.
-func Ref() (string, error) {
+// TypesetRef names the typeset image built from typeset/.
+func TypesetRef() (string, error) { return ref("typeset", "ghcr.io/brawler2011/gate-typeset") }
+
+// Hash tracked and unignored working-tree contents so uncommitted changes get a distinct image.
+func ref(source, repo string) (string, error) {
 	_, file, _, _ := runtime.Caller(0)
-	dir := filepath.Join(filepath.Dir(file), "..", "..", "..", "judge")
+	dir := filepath.Join(filepath.Dir(file), "..", "..", "..", source)
 	cmd := exec.Command("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--deduplicate")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("list judge sources: %w", err)
+		return "", fmt.Errorf("list %s sources: %w", source, err)
 	}
 	var paths []string
 	for _, p := range strings.Split(string(out), "\x00") {
@@ -36,13 +40,13 @@ func Ref() (string, error) {
 	for _, p := range paths {
 		f, err := os.Open(filepath.Join(dir, p))
 		if err != nil {
-			return "", fmt.Errorf("open judge source: %w", err)
+			return "", fmt.Errorf("open %s source: %w", source, err)
 		}
 		h := sha256.New()
 		_, err = io.Copy(h, f)
 		_ = f.Close()
 		if err != nil {
-			return "", fmt.Errorf("read judge source %s: %w", p, err)
+			return "", fmt.Errorf("read %s source %s: %w", source, p, err)
 		}
 		fmt.Fprintf(sum, "%s %x\n", p, h.Sum(nil))
 	}

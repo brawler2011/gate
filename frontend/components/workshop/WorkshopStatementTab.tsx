@@ -1,13 +1,16 @@
 "use client";
 
-import {ActionIcon, Anchor, Box, Button, FileInput, Group, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip} from "@mantine/core";
+import {ActionIcon, Alert, Anchor, Box, Button, FileInput, Group, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCopy, IconPencil, IconTrash, IconUpload} from "@tabler/icons-react";
-import {useDeferredValue, useState} from "react";
+import {useMutation} from "@tanstack/react-query";
+import {useState} from "react";
 
-import {ProblemStatement} from "@/components/problems/ProblemStatement";
+import {StatementHtml} from "@/components/problems/StatementHtml";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {api, unwrap, type Problem} from "@/lib/api";
+import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
 import {emptyStatement, removeAsset, renameAsset, setStatement, STATEMENT_SECTIONS, type StatementSection} from "./draft/draftOps";
@@ -29,28 +32,57 @@ const SECTION_TITLES: Record<StatementSection, string> = {
 
 type StatementProps = {draft: ProblemDraft; problemId: string; statement: ProblemDraftStatement};
 
+// Typesetting diagnostics name the section, line and command; their English text says more than the code.
+const previewError = (error: unknown): string => {
+  const problem = error as Partial<Problem>;
+  return problem.code === "format" && problem.detail ? problem.detail : problemMessage(error, "Не удалось построить предпросмотр");
+};
+
 const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
-  const deferred = useDeferredValue(statement);
+  const path = {params: {path: {id: problemId}}, body: statement};
+  const html = useMutation({mutationFn: () => unwrap(api.POST("/problems/{id}/draft/statement-preview", path))});
+  const pdf = useMutation({
+    mutationFn: () => unwrap(api.POST("/problems/{id}/draft/statement-preview.pdf", {...path, parseAs: "blob"})),
+    onSuccess: (blob) => {
+      const link = Object.assign(document.createElement("a"), {href: URL.createObjectURL(blob), download: `statement-${statement.language}.pdf`});
+      link.click();
+      URL.revokeObjectURL(link.href);
+    },
+  });
   // Sections refer to assets by name, read as participants' statements read them.
   const assetUrl = (name: string): string | undefined => {
     const asset = draft.assets.find((a) => a.name === name);
     return asset && objectUrl(problemId, asset.object_id);
   };
+  const error = html.error ?? pdf.error;
   return (
     <Stack gap="md" className="problem-statement">
-      <Text fw={700} size="xl">
-        {statement.title.trim() || draft.title}
-      </Text>
-      {STATEMENT_SECTIONS.filter((key) => deferred[key].trim() !== "").map((key) => (
-        <Box key={key}>
-          {key !== "legend" && (
-            <Text fw={600} mb={4}>
-              {SECTION_TITLES[key]}
-            </Text>
-          )}
-          <ProblemStatement value={deferred[key]} assetUrl={assetUrl} />
-        </Box>
-      ))}
+      <Group gap="xs">
+        <Button size="xs" variant="light" loading={html.isPending} onClick={() => html.mutate()}>
+          Обновить предпросмотр
+        </Button>
+        <Button size="xs" variant="default" loading={pdf.isPending} onClick={() => pdf.mutate()}>
+          Скачать PDF
+        </Button>
+      </Group>
+      {error && <Alert color="red" style={{whiteSpace: "pre-wrap"}}>{previewError(error)}</Alert>}
+      {html.data && (
+        <>
+          <Text fw={700} size="xl">
+            {statement.title.trim() || draft.title}
+          </Text>
+          {STATEMENT_SECTIONS.filter((key) => html.data[key]).map((key) => (
+            <Box key={key}>
+              {key !== "legend" && (
+                <Text fw={600} mb={4}>
+                  {SECTION_TITLES[key]}
+                </Text>
+              )}
+              <StatementHtml html={html.data[key]} assetUrl={assetUrl} />
+            </Box>
+          ))}
+        </>
+      )}
     </Stack>
   );
 };
@@ -136,7 +168,7 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
           </Button>
         </Group>
         <Text size="xs" c="dimmed">
-          Пустое название — название задачи. Изображения подключаются по имени ресурса: ![](pic.png).
+          Разделы пишутся на LaTeX, как в Polygon; пустое название — название задачи. Изображения подключаются по имени ресурса: <code>{"\\includegraphics{pic.png}"}</code>.
         </Text>
         <StatementForm key={language} draft={draft} problemId={problemId} statement={stored} />
       </Stack>
@@ -208,8 +240,8 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
                   </Table.Td>
                   <Table.Td w={120}>
                     <Group gap={4} wrap="nowrap">
-                      <Tooltip label="Копировать Markdown-ссылку">
-                        <ActionIcon variant="subtle" aria-label={`Копировать ссылку на ${asset.name}`} onClick={() => clipboard.copy(`![](${asset.name})`)}>
+                      <Tooltip label="Копировать команду LaTeX">
+                        <ActionIcon variant="subtle" aria-label={`Копировать ссылку на ${asset.name}`} onClick={() => clipboard.copy(`\\includegraphics{${asset.name}}`)}>
                           <IconCopy size={16} />
                         </ActionIcon>
                       </Tooltip>

@@ -4047,6 +4047,179 @@ func decodeDisableTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
+// DownloadContestProblemStatementPdfParams is parameters of DownloadContestProblemStatementPdf operation.
+type DownloadContestProblemStatementPdfParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
+	// Statement language; a missing one falls back as the statement shown on the site does.
+	Lang OptString `json:",omitempty,omitzero"`
+}
+
+func unpackDownloadContestProblemStatementPdfParams(packed middleware.Parameters) (params DownloadContestProblemStatementPdfParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "path",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "problem_id",
+			In:   "path",
+		}
+		params.ProblemID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "lang",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Lang = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeDownloadContestProblemStatementPdfParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadContestProblemStatementPdfParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: contest_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: problem_id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "problem_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProblemID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "problem_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: lang.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "lang",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLangVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLangVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Lang.SetTo(paramsDotLangVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "lang",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DownloadContestStatementsPdfParams is parameters of DownloadContestStatementsPdf operation.
 type DownloadContestStatementsPdfParams struct {
 	// UUID of the contest.
@@ -4284,6 +4457,125 @@ func decodeDownloadProblemPackageParams(args [2]string, argsEscaped bool, r *htt
 		return params, &ogenerrors.DecodeParamError{
 			Name: "packageId",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// DownloadProblemStatementPdfParams is parameters of DownloadProblemStatementPdf operation.
+type DownloadProblemStatementPdfParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+	// Statement language; a missing one falls back as the statement shown on the site does.
+	Lang OptString `json:",omitempty,omitzero"`
+}
+
+func unpackDownloadProblemStatementPdfParams(packed middleware.Parameters) (params DownloadProblemStatementPdfParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "lang",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Lang = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeDownloadProblemStatementPdfParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadProblemStatementPdfParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: lang.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "lang",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLangVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLangVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Lang.SetTo(paramsDotLangVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "lang",
+			In:   "query",
 			Err:  err,
 		}
 	}
@@ -13009,6 +13301,138 @@ func unpackPatchPostByIdParams(packed middleware.Parameters) (params PatchPostBy
 }
 
 func decodePatchPostByIdParams(args [1]string, argsEscaped bool, r *http.Request) (params PatchPostByIdParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// PreviewProblemDraftStatementParams is parameters of PreviewProblemDraftStatement operation.
+type PreviewProblemDraftStatementParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+}
+
+func unpackPreviewProblemDraftStatementParams(packed middleware.Parameters) (params PreviewProblemDraftStatementParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodePreviewProblemDraftStatementParams(args [1]string, argsEscaped bool, r *http.Request) (params PreviewProblemDraftStatementParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// PreviewProblemDraftStatementPdfParams is parameters of PreviewProblemDraftStatementPdf operation.
+type PreviewProblemDraftStatementPdfParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+}
+
+func unpackPreviewProblemDraftStatementPdfParams(packed middleware.Parameters) (params PreviewProblemDraftStatementPdfParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodePreviewProblemDraftStatementPdfParams(args [1]string, argsEscaped bool, r *http.Request) (params PreviewProblemDraftStatementPdfParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

@@ -1,15 +1,14 @@
 "use client";
 
-import {Alert, Stack, Title} from "@mantine/core";
-import {IconEyeOff} from "@tabler/icons-react";
-import katex from "katex";
-import {useEffect, useRef, type ReactNode} from "react";
+import {Alert, Anchor, Group, Stack, Title} from "@mantine/core";
+import {IconEyeOff, IconFileTypePdf} from "@tabler/icons-react";
+import {type ReactNode} from "react";
 
 import {ProblemCopyableBlock} from "./ProblemCopyableBlock";
 import {ProblemHeader} from "./ProblemHeader";
 import {ProblemLimits} from "./ProblemLimits";
 import {ProblemSamples} from "./ProblemSamples";
-import {type AssetUrl, ProblemStatement} from "./ProblemStatement";
+import {type AssetUrl, StatementHtml} from "./StatementHtml";
 
 import "./Problem.css";
 
@@ -27,6 +26,7 @@ type ProblemModelProps = {
   input_format: string;
   output_format: string;
   notes: string;
+  interaction?: string;
   scoring: string;
   created_at: string;
   updated_at: string;
@@ -44,7 +44,16 @@ export type ProblemProps = {
   isManager?: boolean;
   hideStatements?: boolean;
   assetUrl?: AssetUrl;
+  pdfUrl?: string;
 };
+
+const Section = ({title, html, assetUrl}: {title: string; html?: string; assetUrl?: AssetUrl}): ReactNode =>
+  html ? (
+    <Stack gap="xs">
+      <Title order={3}>{title}</Title>
+      <StatementHtml html={html} assetUrl={assetUrl} />
+    </Stack>
+  ) : null;
 
 const ProblemComponent = ({
   problem,
@@ -54,42 +63,13 @@ const ProblemComponent = ({
   orgLogin,
   hideStatements,
   assetUrl,
+  pdfUrl,
 }: ProblemProps): ReactNode => {
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
 
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const containerNode = ref.current;
-    if (containerNode) {
-      const mathElements = containerNode.querySelectorAll(".math");
-      mathElements.forEach((element) => {
-        if (
-          element instanceof HTMLElement &&
-          !element.hasAttribute("data-rendered")
-        ) {
-          katex.render(element.textContent || "", element, {
-            throwOnError: false,
-            displayMode: element.classList.contains("display"),
-          });
-
-          element.setAttribute("data-rendered", "true");
-        }
-      });
-    }
-
-    return () => {
-      if (containerNode) {
-        containerNode.querySelectorAll(".math").forEach((element) => {
-          element.removeAttribute("data-rendered");
-        });
-      }
-    };
-  }, [problem, letter]);
-
   return (
-    <Stack className="container" ref={ref} gap="md">
+    <Stack className="container" gap="md">
       <ProblemHeader
         title={problem.title}
         letter={letter}
@@ -115,34 +95,25 @@ const ProblemComponent = ({
         </Alert>
       ) : (
         <>
-          {problem.legend && (
-            <ProblemStatement value={problem.legend} assetUrl={assetUrl} />
+          {pdfUrl && (
+            <Group justify="flex-end">
+              <Anchor href={pdfUrl} target="_blank" rel="noreferrer" size="sm">
+                <Group gap={4}>
+                  <IconFileTypePdf size={16} />
+                  PDF
+                </Group>
+              </Anchor>
+            </Group>
           )}
-
-          {problem.input_format && (
-            <Stack gap="xs">
-              <Title order={3}>Входные данные</Title>
-              <ProblemStatement value={problem.input_format} assetUrl={assetUrl} />
-            </Stack>
-          )}
-
-          {problem.output_format && (
-            <Stack gap="xs">
-              <Title order={3}>Выходные данные</Title>
-              <ProblemStatement value={problem.output_format} assetUrl={assetUrl} />
-            </Stack>
-          )}
-
+          {problem.legend && <StatementHtml html={problem.legend} assetUrl={assetUrl} />}
+          <Section title="Входные данные" html={problem.input_format} assetUrl={assetUrl} />
+          <Section title="Выходные данные" html={problem.output_format} assetUrl={assetUrl} />
+          <Section title="Протокол взаимодействия" html={problem.interaction} assetUrl={assetUrl} />
+          <Section title="Система оценки" html={problem.scoring} assetUrl={assetUrl} />
           {problem.samples && problem.samples.length > 0 && (
             <ProblemSamples samples={problem.samples} />
           )}
-
-          {problem.notes && (
-            <Stack gap="xs">
-              <Title order={3}>Примечание</Title>
-              <ProblemStatement value={problem.notes} assetUrl={assetUrl} />
-            </Stack>
-          )}
+          <Section title="Примечание" html={problem.notes} assetUrl={assetUrl} />
         </>
       )}
     </Stack>
@@ -152,7 +123,6 @@ const ProblemComponent = ({
 export const Problem = Object.assign(ProblemComponent, {
   Header: ProblemHeader,
   Limits: ProblemLimits,
-  Statement: ProblemStatement,
   Samples: ProblemSamples,
   CopyableBlock: ProblemCopyableBlock,
 });

@@ -254,7 +254,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
@@ -420,6 +420,17 @@ CREATE TABLE problem_package_assets (
     CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE CASCADE
 );
 CREATE INDEX problem_package_assets_object ON problem_package_assets USING btree (object_id);
+
+-- The PDF of each statement language a build typeset.
+CREATE TABLE problem_package_pdfs (
+    package_id uuid NOT NULL,
+    language text NOT NULL,
+    object_id uuid NOT NULL,
+    CONSTRAINT problem_package_pdfs_pkey PRIMARY KEY (package_id, language),
+    CONSTRAINT problem_package_pdfs_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_package_pdfs_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE CASCADE
+);
+CREATE INDEX problem_package_pdfs_object ON problem_package_pdfs USING btree (object_id);
 
 
 CREATE TABLE contests (

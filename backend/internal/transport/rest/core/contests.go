@@ -323,6 +323,14 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 	return corev1.DownloadContestStatementsPdfOK{Data: bytes.NewReader(data)}, nil
 }
 
+func (h *CoreServer) DownloadContestProblemStatementPdf(ctx context.Context, params corev1.DownloadContestProblemStatementPdfParams) (corev1.DownloadContestProblemStatementPdfOK, error) {
+	file, err := h.ContestDetails.OpenProblemPDF(ctx, params.ContestID, params.ProblemID, params.Lang.Or(""))
+	if err != nil {
+		return corev1.DownloadContestProblemStatementPdfOK{}, err
+	}
+	return corev1.DownloadContestProblemStatementPdfOK{Data: file}, nil
+}
+
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.DeleteContestProblemParams) error {
 	err := h.Contests.DeleteContestProblem(ctx, contestsmodel.ContestProblemDeletion{
 		ContestId: params.ContestID,

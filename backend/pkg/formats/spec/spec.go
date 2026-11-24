@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
+	"slices"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -97,7 +99,7 @@ type ValidatorTest struct {
 	Group string
 }
 
-// Statements contain either one LaTeX file or Markdown files per section.
+// Statements are a whole-problem LaTeX or Markdown file, or LaTeX files per section.
 type Statement struct {
 	Language string
 	// Empty uses the problem title.
@@ -105,7 +107,39 @@ type Statement struct {
 	// Charset names the encoding of the statement files; empty means detect.
 	Charset  string
 	TeX      string
+	Markdown string
 	Sections map[string]string
+}
+
+// LanguageCode turns Polygon and PCMS2 language names into codes.
+func LanguageCode(lang string) string {
+	switch strings.ToLower(lang) {
+	case "english":
+		return "en"
+	case "russian":
+		return "ru"
+	default:
+		if len(lang) > 2 {
+			return lang[:2]
+		}
+		return lang
+	}
+}
+
+// IsImage reports a file \includegraphics can show.
+func IsImage(name string) bool {
+	switch strings.ToLower(path.Ext(name)) {
+	case ".png", ".jpg", ".jpeg", ".pdf", ".svg":
+		return true
+	}
+	return false
+}
+
+// AddAsset keeps the first file of each name, since statements in several languages often share images.
+func (p *Problem) AddAsset(name, rel string) {
+	if !slices.ContainsFunc(p.Assets, func(f File) bool { return f.Name == name }) {
+		p.Assets = append(p.Assets, File{Name: name, Path: rel})
+	}
 }
 
 type Group struct {

@@ -19,6 +19,7 @@ import (
 type Config struct {
 	HTTP     HTTP          `yaml:"http"`
 	GoJudge  GoJudge       `yaml:"go_judge"`
+	Typeset  Typeset       `yaml:"typeset"`
 	Storage  Storage       `yaml:"storage"`
 	Email    Email         `yaml:"email"`
 	Judge    Judge         `yaml:"judge"`
@@ -41,6 +42,11 @@ type GoJudge struct {
 	// Programs go-judge runs at once, and one build's concurrent steps; 0 means the physical cores available.
 	// Strict mode requires 0: judge.cpus decides.
 	Parallelism *int `yaml:"parallelism"`
+}
+
+// Typeset is the go-judge of the typeset image, which API instances and workers share.
+type Typeset struct {
+	HTTPURL string `yaml:"http_url"`
 }
 
 // Parallelism is how many programs go-judge runs at once.
@@ -114,8 +120,6 @@ type Judge struct {
 	Workers   int                  `yaml:"workers"`
 	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
-	// API instances compile booklets on a worker reached here.
-	WorkerURL string `yaml:"worker_url"`
 }
 
 func (j Judge) Cores() ([]int, error) {
@@ -217,8 +221,8 @@ func (c Config) Validate(mode Mode) error {
 	}
 	if mode == ModeAPI {
 		v.required("judge.manifest_dir", c.Judge.ManifestDir)
-		v.url("judge.worker_url", c.Judge.WorkerURL)
 	}
+	v.url("typeset.http_url", c.Typeset.HTTPURL)
 	v.url("storage.s3_endpoint", c.Storage.S3Endpoint)
 	switch c.Email.Provider {
 	case EmailProviderResend:

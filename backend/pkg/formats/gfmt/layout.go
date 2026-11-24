@@ -24,5 +24,5 @@ func folderRole(folder string) string {
 }
 
 func StatementPath(language, section string) string {
-	return StatementFolder + "/" + language + "/" + section + ".md"
+	return StatementFolder + "/" + language + "/" + section + ".tex"
 }

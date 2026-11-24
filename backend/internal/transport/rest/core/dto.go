@@ -151,6 +151,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 			InputFormat:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),
 			OutputFormat: statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat }),
 			Notes:        statementField(statement, func(s problemsmodel.Statement) string { return s.Notes }),
+			Interaction:  statementField(statement, func(s problemsmodel.Statement) string { return s.Interaction }),
 			Scoring:      statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring }),
 			CreatedAt:    problem.CreatedAt,
 			UpdatedAt:    problem.UpdatedAt,

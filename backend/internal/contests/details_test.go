@@ -11,6 +11,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -44,6 +45,7 @@ type detailStatements struct {
 	calls     int
 	fileCalls int
 	fileHash  string
+	pdfCalls  int
 }
 
 func (s *detailStatements) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent {
@@ -57,9 +59,18 @@ func (s *detailStatements) OpenImage(_ context.Context, _ uuid.UUID, hash string
 	return io.NopCloser(strings.NewReader("png")), "image/png", nil
 }
 
+func (s *detailStatements) OpenPDF(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, error) {
+	s.pdfCalls++
+	return io.NopCloser(strings.NewReader("pdf")), nil
+}
+
+func (s *detailStatements) ReadPrinted(context.Context, uuid.UUID, uuid.UUID, string) (problems.Printed, error) {
+	return problems.Printed{Statement: problemsmodel.DraftStatement{Legend: "Visible statement"}}, nil
+}
+
 type detailCompiler struct{ calls int }
 
-func (c *detailCompiler) CompilePDF(context.Context, string) ([]byte, error) {
+func (c *detailCompiler) PDF(context.Context, string, map[string][]byte) ([]byte, error) {
 	c.calls++
 	return []byte("pdf"), nil
 }
@@ -115,6 +126,10 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.Error(t, err)
 				require.Zero(t, statements.fileCalls)
 			}
+
+			_, err = reader.OpenProblemPDF(ctx, contest.ID, store.link.ProblemID, "")
+			require.Equal(t, tc.statement, err == nil)
+			require.Equal(t, tc.statement, statements.pdfCalls == 1)
 
 			_, err = reader.ReadBooklet(ctx, contest.ID, "ru")
 			require.ErrorIs(t, err, tc.booklet)

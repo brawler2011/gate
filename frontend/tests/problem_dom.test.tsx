@@ -91,33 +91,22 @@ describe("Problem Component DOM baseline test", () => {
   });
 
   it("renders and replaces statement math after client updates", () => {
-    const view = renderWithProviders(<Problem problem={{...sampleProblem, legend: "$x^2$"}} />);
+    const view = renderWithProviders(<Problem problem={{...sampleProblem, legend: '<p><span class="math inline">\\(x^2\\)</span></p>'}} />);
     expect(view.container.querySelector(".katex")).toBeTruthy();
-    view.rerender(<Problem problem={{...sampleProblem, legend: "$y^3$"}} />);
+    view.rerender(<Problem problem={{...sampleProblem, legend: '<p><span class="math inline">\\(y^3\\)</span></p>'}} />);
     expect(view.container.querySelector(".katex")).toBeTruthy();
     expect(view.container.querySelector(".katex")?.textContent).toContain("y");
   });
 
-  it("loads relative statement images by content hash", () => {
-    const hashes: Record<string, string> = {"assets/pic.png": "aa", "assets/b.svg": "bb"};
+  it("shows only package images, by asset name", () => {
+    const hashes: Record<string, string> = {"pic.png": "aa", "my pic.png": "bb", "a&b.png": "cc", "plot.png": "dd", "tree.pdf": "ee"};
     const view = renderWithProviders(<Problem
-      problem={{...sampleProblem, legend: "![a](assets/pic.png) ![b](./assets/b.svg#center) ![c](https://example.com/c.png) ![d](assets/missing.png)"}}
-      assetUrl={(path) => hashes[path] && `/assets/${hashes[path]}`}
+      problem={{...sampleProblem, legend: '<p><img src="pic.png" alt="a"/><img src="my pic.png"/><img src="a&amp;b.png"/><img src="plot"/><img src="missing.png" alt="d"/><img src="tree.pdf"/></p>'}}
+      assetUrl={(name) => hashes[name] && `/assets/${hashes[name]}`}
     />);
     const sources = Array.from(view.container.querySelectorAll("img")).map((img) => img.getAttribute("src"));
-    expect(sources).toEqual(["/assets/aa", "/assets/bb", "https://example.com/c.png", null]);
-  });
-
-  it("resolves non-ASCII and spaced image names by their package path", () => {
-    const paths: string[] = [];
-    renderWithProviders(<Problem
-      problem={{...sampleProblem, legend: "![a](assets/рисунок.png) ![b](<assets/my pic.png>) ![c](assets/100%.png)"}}
-      assetUrl={(path) => {
-        paths.push(path);
-        return undefined;
-      }}
-    />);
-    expect(paths).toEqual(["assets/рисунок.png", "assets/my pic.png", "assets/100%.png"]);
+    expect(sources).toEqual(["/assets/aa", "/assets/bb", "/assets/cc", "/assets/dd", null]);
+    expect(view.getByRole("link", {name: "tree.pdf"}).getAttribute("href")).toBe("/assets/ee");
   });
 
 });

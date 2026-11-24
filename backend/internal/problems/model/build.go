@@ -96,12 +96,13 @@ type PackageIndex struct {
 	Title, ShortName, Type     string
 	TimeLimitMs, MemoryLimitMb int
 	InputFile, OutputFile      string
-	Statements                 []DraftStatement
+	Statements                 []BuiltStatement
+	PDFs                       []StatementPDF
 	Samples                    []Sample
 	Assets                     []DraftAsset
 }
 
-func NewPackageIndex(d Draft, samples []Sample) PackageIndex {
+func NewPackageIndex(d Draft, statements []BuiltStatement, pdfs []StatementPDF, samples []Sample) PackageIndex {
 	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb,
-		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: d.Statements, Samples: samples, Assets: d.Assets}
+		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: statements, PDFs: pdfs, Samples: samples, Assets: d.Assets}
 }

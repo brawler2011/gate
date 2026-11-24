@@ -122,7 +122,7 @@ func TestExpiredLeaseCannotPublish(t *testing.T) {
 	require.NoError(t, err)
 	expireLease(t, ctx, pool, build.ID)
 	output := packageObject(org)
-	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, output.ID))
@@ -144,16 +144,16 @@ func TestStaleAttemptCannotPublish(t *testing.T) {
 
 	stale := packageObject(org)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, first.ID, *first.LeaseToken, []byte(`{"message":"late"}`), false), pkg.ErrConflict)
-	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, model.NewPackageIndex(d, nil))
+	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, model.NewPackageIndex(d, built(d), nil, nil))
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
 
 	output := packageObject(org)
-	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, model.NewPackageIndex(d, nil))
+	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
 	require.NoError(t, err)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1 AND object_id=$2`, packageID, output.ID))
 	// A retry after a lost commit response resolves to the same Package and records nothing.
-	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), model.NewPackageIndex(d, nil))
+	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), model.NewPackageIndex(d, built(d), nil, nil))
 	require.NoError(t, err)
 	require.Equal(t, packageID, again)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
@@ -181,7 +181,7 @@ func TestGCKeepsReferencedObjects(t *testing.T) {
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	output := packageObject(org)
-	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, nil))
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -356,14 +356,18 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, build, output, asset := claimedBuildWithAsset(t)
 	samples := []model.Sample{{Input: "1 2\n", Output: "3\n"}}
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, samples))
+	pdf := model.NewStoredObject(org, model.UploadSpec{Purpose: "statement", SHA256: strings.Repeat("1", 64), Size: 3})
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), []model.StatementPDF{{Language: "ru", Object: pdf}}, samples))
 	require.NoError(t, err)
 
 	statement, err := repo.GetPackageStatement(ctx, packageID)
 	require.NoError(t, err)
 	require.Equal(t, samples, statement.Samples)
 	require.Equal(t, d.Title, statement.Title)
-	require.Equal(t, d.Statements, statement.Statements)
+	require.Equal(t, built(d), statement.Statements)
+	key, err := repo.FindPackagePDF(ctx, packageID, "ru")
+	require.NoError(t, err)
+	require.Equal(t, pdf.Key, key)
 	require.Equal(t, map[string]string{"pic.png": strings.Repeat("0", 64)}, statement.Assets)
 	found, err := repo.FindPackageAssets(ctx, packageID, strings.Repeat("0", 64))
 	require.NoError(t, err)
@@ -380,9 +384,19 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
 	require.True(t, objectExists(t, ctx, pool, repo, asset), "an asset of a live Package is not collected")
+	require.True(t, objectExists(t, ctx, pool, repo, pdf.ID), "a statement PDF of a live Package is not collected")
 
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_package_assets WHERE package_id=$1`, packageID))
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
 	require.False(t, objectExists(t, ctx, pool, repo, asset), "the asset of a pruned Package becomes collectable")
+	require.False(t, objectExists(t, ctx, pool, repo, pdf.ID), "the statement PDF of a pruned Package becomes collectable")
+}
+
+func built(d model.Draft) []model.BuiltStatement {
+	statements := []model.BuiltStatement{}
+	for _, s := range d.Statements {
+		statements = append(statements, model.BuiltStatement{DraftStatement: s, HTML: map[string]string{"legend": "<p>" + s.Legend + "</p>"}})
+	}
+	return statements
 }

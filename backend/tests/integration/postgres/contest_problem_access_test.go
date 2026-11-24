@@ -13,6 +13,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/postgres"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -186,6 +187,14 @@ type pinnedContestStatement struct{ problem, pack uuid.UUID }
 func (s *pinnedContestStatement) ReadStatement(_ context.Context, problem, pack uuid.UUID, _ string) problemsmodel.StatementContent {
 	s.problem, s.pack = problem, pack
 	return problemsmodel.StatementContent{Statement: &problemsmodel.Statement{Legend: "Pinned statement"}}
+}
+
+func (s *pinnedContestStatement) OpenPDF(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, error) {
+	return nil, pkg.ErrNotFound
+}
+
+func (s *pinnedContestStatement) ReadPrinted(context.Context, uuid.UUID, uuid.UUID, string) (problems.Printed, error) {
+	return problems.Printed{}, pkg.ErrNotFound
 }
 
 func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {

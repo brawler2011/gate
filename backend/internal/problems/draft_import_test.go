@@ -495,16 +495,20 @@ func TestImportConvertsWindows1251Text(t *testing.T) {
 		return string(data)
 	}
 	const polygonDir = "../../pkg/testdata/polygon/a-plus-b"
-	statement := read(polygonDir + "/statements/russian/problem.tex")
 	xml := strings.Replace(read(polygonDir+"/problem.xml"), `charset="UTF-8" language="russian"`, `charset="windows-1251" language="russian"`, 1)
 	input := "7 8 " + encode("Привет") + "\n"
-	plan, err := importDir(t, polygonDir, map[string]string{
-		"problem.xml": xml, "statements/russian/problem.tex": encode(statement), "tests/01": input,
-	})
+	files := map[string]string{"problem.xml": xml, "tests/01": input}
+	var sections []string
+	for _, name := range []string{"legend", "input", "output", "notes"} {
+		path := "statement-sections/russian/" + name + ".tex"
+		files[path] = encode(read(polygonDir + "/" + path))
+		sections = append(sections, path)
+	}
+	plan, err := importDir(t, polygonDir, files)
 	require.NoError(t, err)
 	defer plan.Close()
 	require.Contains(t, plan.draft.Statement("ru").Legend, "Вам заданы два целых числа")
-	require.Equal(t, []string{"statements/russian/problem.tex"}, plan.converted)
+	require.ElementsMatch(t, sections, plan.converted)
 	data, err := os.ReadFile(objectPath(t, plan, *plan.draft.Tests[0].Input.ObjectID))
 	require.NoError(t, err)
 	require.Equal(t, input, string(data))
@@ -532,7 +536,7 @@ func objectPath(t *testing.T, plan *draftImport, id uuid.UUID) string {
 }
 
 func TestImportRejectsUnknownStatementSection(t *testing.T) {
-	_, err := importAPlusB(t, map[string]string{"statements/en/story.md": "x\n"})
+	_, err := importAPlusB(t, map[string]string{"statements/en/story.tex": "x\n"})
 	require.ErrorContains(t, err, "unknown statement section story in en")
 }
 

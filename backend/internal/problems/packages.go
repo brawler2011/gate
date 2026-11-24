@@ -61,6 +61,18 @@ func (uc *PackageUseCase) OpenStatementImage(ctx context.Context, id uuid.UUID, 
 	return uc.Content.OpenImage(ctx, ready.ID, sha256)
 }
 
+// OpenStatementPDF opens the latest package's statement PDF, which the statement's visibility exposes.
+func (uc *PackageUseCase) OpenStatementPDF(ctx context.Context, id uuid.UUID, language string) (io.ReadCloser, error) {
+	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemView); err != nil {
+		return nil, err
+	}
+	ready, err := uc.Repo.GetReadyPackage(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return uc.Content.OpenPDF(ctx, id, ready.ID, language)
+}
+
 func (uc *PackageUseCase) DownloadPackage(ctx context.Context, id, pid uuid.UUID) (io.ReadCloser, error) {
 	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemRead); err != nil {
 		return nil, err

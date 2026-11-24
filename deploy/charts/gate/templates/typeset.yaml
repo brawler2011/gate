@@ -1,0 +1,44 @@
+# go-judge with the typeset image; API instances and workers share it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: typeset
+spec:
+  selector: {app.kubernetes.io/name: typeset}
+  ports:
+    - {name: http, port: 5050, targetPort: http}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: typeset
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: typeset}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: typeset}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: go-judge
+          image: {{ .Values.typeset.image }}:{{ include "gate.tag" . }}
+          args: [-http-addr=0.0.0.0:5050, -dir=/data, -parallelism={{ .Values.typeset.parallelism }}]
+          # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
+          securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
+          ports:
+            - {name: http, containerPort: 5050}
+          readinessProbe:
+            httpGet: {path: /version, port: http}
+            periodSeconds: 10
+          resources: {{- toYaml .Values.typeset.resources | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: data
+          emptyDir: {}

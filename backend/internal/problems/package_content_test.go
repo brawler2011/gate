@@ -25,6 +25,9 @@ func (packageAssets) GetPackageStatement(context.Context, uuid.UUID) (model.Pack
 func (r packageAssets) FindPackageAssets(context.Context, uuid.UUID, string) ([]model.PackageAsset, error) {
 	return r.assets, nil
 }
+func (packageAssets) FindPackagePDF(context.Context, uuid.UUID, string) (string, error) {
+	return "", pkg.ErrNotFound
+}
 
 type assetStore struct{ keys []string }
 
@@ -64,10 +67,13 @@ func (s storedStatement) GetPackageStatement(context.Context, uuid.UUID) (model.
 func (storedStatement) FindPackageAssets(context.Context, uuid.UUID, string) ([]model.PackageAsset, error) {
 	return nil, nil
 }
+func (storedStatement) FindPackagePDF(context.Context, uuid.UUID, string) (string, error) {
+	return "", pkg.ErrNotFound
+}
 
 func TestReadStatementShowsItsTitle(t *testing.T) {
 	problemID := uuid.New()
-	statements := []model.DraftStatement{{Language: "en"}, {Language: "ru", Title: "Сумма"}}
+	statements := []model.BuiltStatement{{DraftStatement: model.DraftStatement{Language: "en"}}, {DraftStatement: model.DraftStatement{Language: "ru", Title: "Сумма"}}}
 	content := &PackageContent{Repo: storedStatement{p: model.PackageStatement{ProblemID: problemID, Title: "Sum", Statements: statements}}}
 	title := func(language string) string {
 		return content.ReadStatement(context.Background(), problemID, uuid.New(), language).Statement.Title
@@ -78,15 +84,16 @@ func TestReadStatementShowsItsTitle(t *testing.T) {
 
 func TestReadStatementFallsBackToEnglishThenFirstLanguage(t *testing.T) {
 	problemID := uuid.New()
-	read := func(language string, statements ...model.DraftStatement) string {
+	read := func(language string, statements ...model.BuiltStatement) string {
 		content := &PackageContent{Repo: storedStatement{p: model.PackageStatement{ProblemID: problemID, Title: "Sum", Statements: statements}}}
 		s := content.ReadStatement(context.Background(), problemID, uuid.New(), language).Statement
 		require.Equal(t, "Sum", s.Title)
 		return s.Legend
 	}
-	ru := model.DraftStatement{Language: "ru", Legend: "ru"}
-	en := model.DraftStatement{Language: "en", Legend: "en"}
-	de := model.DraftStatement{Language: "de", Legend: "de"}
+	built := func(language string) model.BuiltStatement {
+		return model.BuiltStatement{DraftStatement: model.DraftStatement{Language: language}, HTML: map[string]string{"legend": language}}
+	}
+	ru, en, de := built("ru"), built("en"), built("de")
 	require.Equal(t, "ru", read("ru", en, ru))
 	require.Equal(t, "en", read("fr", ru, en, de))
 	require.Equal(t, "de", read("fr", ru, de))

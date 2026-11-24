@@ -50,14 +50,14 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
-		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".md":
+		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".tex":
 			language, file, _ := strings.Cut(name, "/")
 			s := statements[language]
 			if s == nil {
 				s = &spec.Statement{Language: language, Sections: map[string]string{}}
 				statements[language] = s
 			}
-			s.Sections[strings.TrimSuffix(file, ".md")] = rel
+			s.Sections[strings.TrimSuffix(file, ".tex")] = rel
 		default:
 			return spec.Fail(pkg.ErrPackageLayout, rel, "", "unexpected file %s", rel)
 		}

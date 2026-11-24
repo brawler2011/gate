@@ -1979,7 +1979,7 @@ func (s *ContestProblemListItemModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
-// Contest problem data.
+// Contest problem data; statement sections are HTML as in StatementPreview.
 // Ref: #/components/schemas/ContestProblemModel
 type ContestProblemModel struct {
 	Permissions ContestProblemPermissionsModel `json:"permissions"`
@@ -1996,6 +1996,7 @@ type ContestProblemModel struct {
 	InputFormat  string               `json:"input_format"`
 	OutputFormat string               `json:"output_format"`
 	Notes        string               `json:"notes"`
+	Interaction  string               `json:"interaction"`
 	Scoring      string               `json:"scoring"`
 	CreatedAt    time.Time            `json:"created_at"`
 	UpdatedAt    time.Time            `json:"updated_at"`
@@ -2063,6 +2064,11 @@ func (s *ContestProblemModel) GetOutputFormat() string {
 // GetNotes returns the value of Notes.
 func (s *ContestProblemModel) GetNotes() string {
 	return s.Notes
+}
+
+// GetInteraction returns the value of Interaction.
+func (s *ContestProblemModel) GetInteraction() string {
+	return s.Interaction
 }
 
 // GetScoring returns the value of Scoring.
@@ -2148,6 +2154,11 @@ func (s *ContestProblemModel) SetOutputFormat(val string) {
 // SetNotes sets the value of Notes.
 func (s *ContestProblemModel) SetNotes(val string) {
 	s.Notes = val
+}
+
+// SetInteraction sets the value of Interaction.
+func (s *ContestProblemModel) SetInteraction(val string) {
+	s.Interaction = val
 }
 
 // SetScoring sets the value of Scoring.
@@ -3089,6 +3100,20 @@ type DisableContestJoinLinkNoContent struct{}
 // DisableTeamJoinLinkNoContent is response for DisableTeamJoinLink operation.
 type DisableTeamJoinLinkNoContent struct{}
 
+type DownloadContestProblemStatementPdfOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadContestProblemStatementPdfOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 type DownloadContestStatementsPdfOK struct {
 	Data io.Reader
 }
@@ -3111,6 +3136,20 @@ type DownloadProblemPackageOK struct {
 //
 // Kept to satisfy the io.Reader interface.
 func (s DownloadProblemPackageOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+type DownloadProblemStatementPdfOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadProblemStatementPdfOK) Read(p []byte) (n int, err error) {
 	if s.Data == nil {
 		return 0, io.EOF
 	}
@@ -8629,6 +8668,20 @@ func (s *PostModel) SetAuthorUsername(val string) {
 	s.AuthorUsername = val
 }
 
+type PreviewProblemDraftStatementPdfOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s PreviewProblemDraftStatementPdfOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 // RFC 9457 problem details. Clients branch and translate on `code` and `params`; `detail` is English
 // text for debugging.
 // Ref: #/components/schemas/Problem
@@ -9523,9 +9576,7 @@ func (s *ProblemDraftAnswerMode) UnmarshalText(data []byte) error {
 	}
 }
 
-// A statement resource; sections show it as [alt].
-//
-// [alt]: name
+// A statement resource; sections show it with \includegraphics{name}.
 // Ref: #/components/schemas/ProblemDraftAsset
 type ProblemDraftAsset struct {
 	Name     string    `json:"name"`
@@ -10008,7 +10059,7 @@ func (s *ProblemDraftSolution) SetPoints(val NilFloat64) {
 	s.Points = val
 }
 
-// The statement in one language as Markdown sections.
+// The statement in one language as LaTeX sections, as in Polygon.
 // Ref: #/components/schemas/ProblemDraftStatement
 type ProblemDraftStatement struct {
 	Language string `json:"language"`
@@ -11127,7 +11178,8 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 	}
 }
 
-// Statement of the problem's latest package; absent until a package is built.
+// Statement of the problem's latest package; absent until a package is built. Sections are HTML as in
+// StatementPreview.
 // Ref: #/components/schemas/ProblemStatementModel
 type ProblemStatementModel struct {
 	Title       string `json:"title"`
@@ -11141,6 +11193,7 @@ type ProblemStatementModel struct {
 	InputFormat  string               `json:"input_format"`
 	OutputFormat string               `json:"output_format"`
 	Notes        string               `json:"notes"`
+	Interaction  string               `json:"interaction"`
 	Scoring      string               `json:"scoring"`
 	Samples      []ProblemSampleModel `json:"samples"`
 	// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`.
@@ -11190,6 +11243,11 @@ func (s *ProblemStatementModel) GetOutputFormat() string {
 // GetNotes returns the value of Notes.
 func (s *ProblemStatementModel) GetNotes() string {
 	return s.Notes
+}
+
+// GetInteraction returns the value of Interaction.
+func (s *ProblemStatementModel) GetInteraction() string {
+	return s.Interaction
 }
 
 // GetScoring returns the value of Scoring.
@@ -11250,6 +11308,11 @@ func (s *ProblemStatementModel) SetOutputFormat(val string) {
 // SetNotes sets the value of Notes.
 func (s *ProblemStatementModel) SetNotes(val string) {
 	s.Notes = val
+}
+
+// SetInteraction sets the value of Interaction.
+func (s *ProblemStatementModel) SetInteraction(val string) {
+	s.Interaction = val
 }
 
 // SetScoring sets the value of Scoring.
@@ -12278,6 +12341,20 @@ func (s *SortByQuery) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Sanitized HTML by section name; math is left as \(...\) and \[...\] for KaTeX, and images name their
+// assets.
+// Ref: #/components/schemas/StatementPreview
+type StatementPreview map[string]string
+
+func (s *StatementPreview) init() StatementPreview {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 // How the author took part; only contest submissions count toward the standings.

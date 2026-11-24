@@ -11,6 +11,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -279,7 +280,7 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			require.NoError(t, err)
 			files, manifest := publishedFiles(t, h, pid)
 			require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend, string(files["statements/en/legend.md"]))
+			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend, string(files["statements/en/legend.tex"]))
 		})
 	}
 }
@@ -288,9 +289,15 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)
 	uploading, release := make(chan struct{}), make(chan struct{})
+	// Statement PDFs upload before the package; the edit happens while the first upload waits.
+	var started sync.Once
 	pipeline := h.pipeline()
 	pipeline.Store = publicationStore{S3Storage: h.services.store, afterUpload: func(ctx context.Context, _, _ string) error {
-		close(uploading)
+		first := false
+		started.Do(func() { close(uploading); first = true })
+		if !first {
+			return nil
+		}
 		select {
 		case <-release:
 			return nil
@@ -331,7 +338,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	require.NoError(t, r.err)
 	files, manifest := publishedFiles(t, h, r.id)
 	require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-	require.Equal(t, "Original statement", string(files["statements/en/legend.md"]))
+	require.Equal(t, "Original statement", string(files["statements/en/legend.tex"]))
 	test := builtTest(t, manifest, 1)
 	require.False(t, test.Sample)
 	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))

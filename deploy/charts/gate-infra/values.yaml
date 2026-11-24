@@ -28,4 +28,9 @@ judge:
   problemWork: ""
   nodePort: null
 
+# Development only: the typeset go-judge for a backend running on the host.
+typeset:
+  image: ""
+  nodePort: null
+
 appArmorProfile: {}

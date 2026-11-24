@@ -12,7 +12,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
@@ -120,9 +120,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.TextTests = true
 		}
 	}
-	p.Statements = statements(prob.Statements)
+	p.Statements = statements(fsys, p, prob.Statements)
 	for _, name := range prob.Names {
-		p.SetStatementTitle(tex.LanguageCode(name.Language), name.Value)
+		p.SetStatementTitle(spec.LanguageCode(name.Language), name.Value)
 	}
 	return p, nil
 }
@@ -359,15 +359,35 @@ func parsePoints(value float64) (points.Value, error) {
 	return v, nil
 }
 
-func statements(list []Statement) []spec.Statement {
+// Polygon keeps each section in statement-sections/<language>, with the images it shows; problem.tex is the fallback.
+func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
 	for _, s := range list {
-		language := tex.LanguageCode(s.Language)
-		if s.Type == "application/x-tex" && !seen[language] {
-			seen[language] = true
-			result = append(result, spec.Statement{Language: language, Charset: s.Charset, TeX: s.Path})
+		language := spec.LanguageCode(s.Language)
+		if s.Type != "application/x-tex" || seen[language] {
+			continue
 		}
+		seen[language] = true
+		st := spec.Statement{Language: language, Charset: s.Charset, TeX: s.Path}
+		dir := path.Join("statement-sections", s.Language)
+		entries, _ := fs.ReadDir(fsys, dir)
+		for _, e := range entries {
+			section, ok := strings.CutSuffix(e.Name(), ".tex")
+			if e.Type().IsRegular() && ok && slices.Contains(statement.Order, section) {
+				if st.Sections == nil {
+					st.Sections = map[string]string{}
+				}
+				st.Sections[section] = path.Join(dir, e.Name())
+			}
+		}
+		images(fsys, p, dir)
+		if st.Sections != nil {
+			st.TeX = ""
+		} else {
+			images(fsys, p, path.Dir(s.Path))
+		}
+		result = append(result, st)
 	}
 	return result
 }
@@ -426,4 +446,13 @@ func markPretests(fsys fs.FS, main Testset, testsets []Testset, groups []spec.Gr
 func exists(fsys fs.FS, name string) bool {
 	info, err := fs.Stat(fsys, name)
 	return err == nil && info.Mode().IsRegular()
+}
+
+func images(fsys fs.FS, p *spec.Problem, dir string) {
+	entries, _ := fs.ReadDir(fsys, dir)
+	for _, e := range entries {
+		if e.Type().IsRegular() && spec.IsImage(e.Name()) {
+			p.AddAsset(e.Name(), path.Join(dir, e.Name()))
+		}
+	}
 }

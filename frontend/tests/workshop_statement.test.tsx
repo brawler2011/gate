@@ -18,18 +18,40 @@ const draft = {
   memory_limit_mb: 256, input_file: "", output_file: "", max_score: null, checker: null, interactor: null, validators: [], generators: [],
   solutions: [], main_solution: null, library: [], subtasks: [], tests: [],
   assets: [{name: "график.png", object_id: "graph"}],
-  statements: [{language: "ru", title: "", legend: "![граф](./график.png#center)", input: "", output: "", notes: "", interaction: "", scoring: ""}],
+  statements: [{language: "ru", title: "", legend: "\\includegraphics{график.png}", input: "", output: "", notes: "", interaction: "", scoring: ""}],
+};
+
+const respond = (handler: (url: string, init?: RequestInit) => Response) => {
+  const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
+    (input: unknown, init?: RequestInit) => Promise.resolve(handler(String(input), init)),
+    {preconnect: () => {}},
+  ));
+  restore = () => fetch.mockRestore();
 };
 
 describe("workshop statement tab", () => {
-  it("previews an asset referenced by its Unicode name as participants see it", async () => {
-    const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
-      () => Promise.resolve(Response.json(draft)),
-      {preconnect: () => {}},
-    ));
-    restore = () => fetch.mockRestore();
+  it("previews the edited statement as the server typesets it, with draft images", async () => {
+    let previewed: unknown;
+    respond((url, init) => {
+      if (!url.endsWith("/statement-preview")) {
+        return Response.json(draft);
+      }
+      previewed = JSON.parse(String(init?.body));
+      return Response.json({legend: '<p><img src="график.png" alt="граф"/></p>'});
+    });
     const view = renderWithProviders(<WorkshopStatementTab problemId="problem" />);
+    (await view.findByRole("button", {name: "Обновить предпросмотр"})).click();
     const image = await waitFor(() => view.container.querySelector("img[alt='граф']") ?? Promise.reject(new Error("no image")));
     expect(image.getAttribute("src")).toBe("/api/problems/problem/draft/objects/graph");
+    expect(previewed).toEqual(draft.statements[0]);
+  });
+
+  it("shows where typesetting failed", async () => {
+    respond((url) => url.endsWith("/statement-preview")
+      ? Response.json({type: "about:blank", title: "Bad Request", status: 400, code: "format", request_id: "r", detail: "legend section, line 2: \\foo is not supported on the site"}, {status: 400})
+      : Response.json(draft));
+    const view = renderWithProviders(<WorkshopStatementTab problemId="problem" />);
+    (await view.findByRole("button", {name: "Обновить предпросмотр"})).click();
+    expect(await view.findByText("legend section, line 2: \\foo is not supported on the site")).toBeTruthy();
   });
 });

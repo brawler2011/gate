@@ -11,7 +11,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"gopkg.in/yaml.v3"
 )
 
@@ -78,7 +77,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.KeepInteractiveInputsPrivate()
-	p.Statements = statements(fsys)
+	p.Statements = statements(fsys, p)
 	return p, nil
 }
 
@@ -223,22 +222,38 @@ func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 	return tests, nil
 }
 
-func statements(fsys fs.FS) []spec.Statement {
-	entries, _ := fs.ReadDir(fsys, "problem_statement")
+// Legacy packages keep LaTeX in problem_statement/, 2023-07 ones Markdown in statement/; other files there are images.
+func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
-	for _, e := range entries {
-		base, ok := strings.CutSuffix(e.Name(), ".tex")
-		language, named := strings.CutPrefix(base, "problem.")
-		if base == "problem" {
-			language, named = "en", true
+	for _, dir := range []string{"statement", "problem_statement"} {
+		entries, _ := fs.ReadDir(fsys, dir)
+		for _, e := range entries {
+			name := e.Name()
+			if !e.Type().IsRegular() {
+				continue
+			}
+			ext := path.Ext(name)
+			base := strings.TrimSuffix(name, ext)
+			language, named := strings.CutPrefix(base, "problem.")
+			if base == "problem" {
+				language, named = "en", true
+			}
+			language = spec.LanguageCode(language)
+			switch {
+			case named && (ext == ".tex" || ext == ".md") && !seen[language]:
+				seen[language] = true
+				s := spec.Statement{Language: language}
+				if ext == ".tex" {
+					s.TeX = path.Join(dir, name)
+				} else {
+					s.Markdown = path.Join(dir, name)
+				}
+				result = append(result, s)
+			case spec.IsImage(name):
+				p.AddAsset(name, path.Join(dir, name))
+			}
 		}
-		language = tex.LanguageCode(language)
-		if !ok || !named || !e.Type().IsRegular() || seen[language] {
-			continue
-		}
-		seen[language] = true
-		result = append(result, spec.Statement{Language: language, TeX: path.Join("problem_statement", e.Name())})
 	}
 	return result
 }

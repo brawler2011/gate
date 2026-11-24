@@ -418,6 +418,15 @@ func (UnimplementedHandler) DisableTeamJoinLink(ctx context.Context, params Disa
 	return ht.ErrNotImplemented
 }
 
+// DownloadContestProblemStatementPdf implements DownloadContestProblemStatementPdf operation.
+//
+// The PDF the build of the package the contest uses printed; it is visible with the statement.
+//
+// GET /contests/{contest_id}/problems/{problem_id}/statement.pdf
+func (UnimplementedHandler) DownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (r DownloadContestProblemStatementPdfOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 //
 // Download PDF booklet with contest statements.
@@ -434,6 +443,15 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 //
 // GET /problems/{id}/packages/{packageId}/download
 func (UnimplementedHandler) DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (r DownloadProblemPackageOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DownloadProblemStatementPdf implements DownloadProblemStatementPdf operation.
+//
+// Download the statement PDF of the problem's latest package.
+//
+// GET /problems/{id}/statement.pdf
+func (UnimplementedHandler) DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (r DownloadProblemStatementPdfOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1004,6 +1022,24 @@ func (UnimplementedHandler) MarkNotificationAsRead(ctx context.Context, params M
 // PATCH /posts/{id}
 func (UnimplementedHandler) PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) error {
 	return ht.ErrNotImplemented
+}
+
+// PreviewProblemDraftStatement implements PreviewProblemDraftStatement operation.
+//
+// Fails with a format error that names the section and line pandoc cannot show.
+//
+// POST /problems/{id}/draft/statement-preview
+func (UnimplementedHandler) PreviewProblemDraftStatement(ctx context.Context, req *ProblemDraftStatement, params PreviewProblemDraftStatementParams) (r StatementPreview, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PreviewProblemDraftStatementPdf implements PreviewProblemDraftStatementPdf operation.
+//
+// Fails with a format error that names the section and line of the LaTeX error.
+//
+// POST /problems/{id}/draft/statement-preview.pdf
+func (UnimplementedHandler) PreviewProblemDraftStatementPdf(ctx context.Context, req *ProblemDraftStatement, params PreviewProblemDraftStatementPdfParams) (r PreviewProblemDraftStatementPdfOK, _ error) {
+	return r, ht.ErrNotImplemented
 }
 
 // Register implements Register operation.

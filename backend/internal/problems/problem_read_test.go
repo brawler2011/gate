@@ -37,7 +37,7 @@ func (r latestPackage) GetReadyPackage(context.Context, uuid.UUID) (model.Proble
 func TestPublicProblemShowsOnlyItsStatement(t *testing.T) {
 	id := uuid.New()
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
-	statement := storedStatement{p: model.PackageStatement{ProblemID: id, Title: "Sum", Statements: []model.DraftStatement{{Language: "en", Legend: "Add"}}}}
+	statement := storedStatement{p: model.PackageStatement{ProblemID: id, Title: "Sum", Statements: []model.BuiltStatement{{DraftStatement: model.DraftStatement{Language: "en"}, HTML: map[string]string{"legend": "Add"}}}}}
 	packages := &PackageUseCase{Repo: latestPackage{id: uuid.New()}, Content: &PackageContent{Repo: statement}, Access: publicProblems{}}
 	drafts := &DraftUseCase{Access: publicProblems{}}
 

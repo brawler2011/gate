@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -22,6 +23,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/google/uuid"
 	"golang.org/x/sys/unix"
 )
@@ -46,6 +48,7 @@ type Pipeline struct {
 	Bucket    string
 	TempDir   string
 	Client    *sandbox.Client
+	Typeset   Typesetter
 	Files     *sandbox.FileTransport
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
@@ -55,6 +58,11 @@ type Pipeline struct {
 	Calibration func() calibration.Calibration
 	Logger      *slog.Logger
 }
+type Typesetter interface {
+	statement.Converter
+	PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error)
+}
+
 type Failure struct {
 	Stage     string `json:"stage"`
 	Test      int    `json:"test,omitempty"`
@@ -163,6 +171,10 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.checkSolutions(ctx); err != nil {
 		return uuid.Nil, err
 	}
+	statements, pdfs, err := e.typeset(ctx)
+	if err != nil {
+		return uuid.Nil, err
+	}
 	f, err := os.OpenFile(filepath.Join(root, "package.zip"), os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return uuid.Nil, fail("archive", 0, "infrastructure", err)
@@ -176,11 +188,54 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, e.samples))
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, statements, pdfs, e.samples))
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
+}
+
+// typeset makes the site's HTML and the PDF of each statement, so authors, not participants, meet LaTeX errors.
+func (e *execution) typeset(ctx context.Context) ([]model.BuiltStatement, []model.StatementPDF, error) {
+	d := e.build.Snapshot.Draft
+	limits := model.PrintedLimits{TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb, InputFile: d.InputFile, OutputFile: d.OutputFile}
+	built := make([]model.BuiltStatement, 0, len(d.Statements))
+	var pdfs []model.StatementPDF
+	for _, s := range d.Statements {
+		html, err := statement.HTML(ctx, e.pipeline.Typeset, s.Sections())
+		if err != nil {
+			return nil, nil, fail("statements", 0, typesetKind(err), fmt.Errorf("%s statement: %w", s.Language, err))
+		}
+		built = append(built, model.BuiltStatement{DraftStatement: s, HTML: html})
+		files := map[string][]byte{"olymp.sty": statement.OlympSty}
+		for _, a := range model.StatementImages(s, d.Assets) {
+			data, err := os.ReadFile(filepath.Join(e.dir.root, "objects", a.ObjectID.String()))
+			if err != nil {
+				return nil, nil, fail("statements", 0, "infrastructure", err)
+			}
+			files["assets/"+a.Name] = data
+		}
+		doc := statement.NewDocument(statement.Contest{Title: d.Title, Language: s.Language, Problems: []statement.Problem{model.PrintedProblem(d.Title, limits, s, e.samples)}})
+		pdf, err := e.pipeline.Typeset.PDF(ctx, doc.Source, files)
+		if err != nil {
+			return nil, nil, fail("statements", 0, typesetKind(err), fmt.Errorf("%s statement: %w", s.Language, doc.Explain(err)))
+		}
+		sum := sha256.Sum256(pdf)
+		digest := hex.EncodeToString(sum[:])
+		object := model.NewStoredObject(e.build.OrganizationID, model.UploadSpec{Purpose: "statement", SHA256: digest, Size: int64(len(pdf))})
+		if err := e.pipeline.Store.UploadFileWithSHA256(ctx, e.pipeline.Bucket, object.Key, bytes.NewReader(pdf), "application/pdf", digest); err != nil {
+			return nil, nil, fail("upload", 0, "infrastructure", err)
+		}
+		pdfs = append(pdfs, model.StatementPDF{Language: s.Language, Object: object})
+	}
+	return built, pdfs, nil
+}
+
+func typesetKind(err error) string {
+	if _, ok := errors.AsType[*statement.Error](err); ok {
+		return "author"
+	}
+	return processKind(err)
 }
 
 func objectReferences(d model.Draft, id uuid.UUID) string {

@@ -115,6 +115,7 @@ DELETE FROM stored_objects WHERE id IN (
   AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
   AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_package_pdfs f WHERE f.object_id=o.id)
  ORDER BY o.id LIMIT 100)
 RETURNING key
 `
@@ -149,6 +150,23 @@ UPDATE problem_builds SET state='failed',finished_at=clock_timestamp(),
 func (q *Queries) FailExhaustedBuild(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, failExhaustedBuild, id)
 	return err
+}
+
+const findPackagePDF = `-- name: FindPackagePDF :one
+SELECT o.key FROM problem_package_pdfs f JOIN stored_objects o ON o.id=f.object_id
+WHERE f.package_id=$1 AND f.language=$2
+`
+
+type FindPackagePDFParams struct {
+	PackageID uuid.UUID `json:"package_id"`
+	Language  string    `json:"language"`
+}
+
+func (q *Queries) FindPackagePDF(ctx context.Context, arg FindPackagePDFParams) (string, error) {
+	row := q.db.QueryRow(ctx, findPackagePDF, arg.PackageID, arg.Language)
+	var key string
+	err := row.Scan(&key)
+	return key, err
 }
 
 const finishBuildAttemptRow = `-- name: FinishBuildAttemptRow :exec
@@ -187,6 +205,22 @@ type InsertPackageAssetsParams struct {
 
 func (q *Queries) InsertPackageAssets(ctx context.Context, arg InsertPackageAssetsParams) error {
 	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.Assets)
+	return err
+}
+
+const insertPackagePDFs = `-- name: InsertPackagePDFs :exec
+INSERT INTO problem_package_pdfs(package_id,language,object_id)
+SELECT $1::uuid,f.language,f.object_id
+FROM jsonb_to_recordset($2::jsonb) f(language text,object_id uuid)
+`
+
+type InsertPackagePDFsParams struct {
+	PackageID uuid.UUID `json:"package_id"`
+	Pdfs      []byte    `json:"pdfs"`
+}
+
+func (q *Queries) InsertPackagePDFs(ctx context.Context, arg InsertPackagePDFsParams) error {
+	_, err := q.db.Exec(ctx, insertPackagePDFs, arg.PackageID, arg.Pdfs)
 	return err
 }
 

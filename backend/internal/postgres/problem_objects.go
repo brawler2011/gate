@@ -37,7 +37,20 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 		index.Samples = []model.Sample{}
 	}
 	if index.Statements == nil {
-		index.Statements = []model.DraftStatement{}
+		index.Statements = []model.BuiltStatement{}
+	}
+	objects := []model.StoredObject{object}
+	type pdf struct {
+		Language string    `json:"language"`
+		ObjectID uuid.UUID `json:"object_id"`
+	}
+	pdfs := []pdf{}
+	for _, p := range index.PDFs {
+		if p.Object.OrganizationID != object.OrganizationID || p.Object.Purpose != "statement" {
+			return uuid.Nil, pkg.ErrInvalid
+		}
+		objects = append(objects, p.Object)
+		pdfs = append(pdfs, pdf{p.Language, p.Object.ID})
 	}
 	if index.Assets == nil {
 		index.Assets = []model.DraftAsset{}
@@ -70,7 +83,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	if succeeded != 1 {
 		return uuid.Nil, pkg.ErrConflict
 	}
-	if err := insertObjects(ctx, tx, []model.StoredObject{object}); err != nil {
+	if err := insertObjects(ctx, tx, objects); err != nil {
 		return uuid.Nil, err
 	}
 	pid := uuid.New()
@@ -83,6 +96,9 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	}
 	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, Assets: encode(index.Assets)}); err != nil {
 		return uuid.Nil, dbError("insert package assets", err)
+	}
+	if err := q.InsertPackagePDFs(ctx, sqlc.InsertPackagePDFsParams{PackageID: pid, Pdfs: encode(pdfs)}); err != nil {
+		return uuid.Nil, dbError("insert package PDFs", err)
 	}
 	if err := commitTx(ctx, tx); err != nil {
 		resolveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -142,4 +158,12 @@ func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID,
 		assets = append(assets, model.PackageAsset{Name: row.Name, Key: row.Key})
 	}
 	return assets, nil
+}
+
+func (r *ProblemDraftsRepo) FindPackagePDF(ctx context.Context, id uuid.UUID, language string) (string, error) {
+	key, err := sqlc.New(r.pool).FindPackagePDF(ctx, sqlc.FindPackagePDFParams{PackageID: id, Language: language})
+	if err != nil {
+		return "", dbError("find package PDF", err)
+	}
+	return key, nil
 }

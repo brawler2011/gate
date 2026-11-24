@@ -30,7 +30,6 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
-	bookletrpc "github.com/brawler2011/gate/backend/internal/transport/booklet"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
@@ -145,11 +144,14 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		return fmt.Errorf("create problem work directory: %w", err)
 	}
 
-	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft)}
+	typesetClient, err := sandbox.NewClient(cfg.Typeset.HTTPURL, &http.Client{})
+	if err != nil {
+		return fmt.Errorf("initialize typeset client: %w", err)
+	}
+	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft), typeset: sandbox.NewTypesetter(typesetClient, cfg.Problems.Limits.Typeset)}
 
 	var services []appService
 	var languages *sandbox.Config
-	var compiler contests.BookletCompiler = bookletrpc.NewClient(cfg.Judge.WorkerURL, cfg.Problems.Limits.Booklet)
 	if mode.Worker() {
 		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.HTTPURL, &http.Client{})
 		if err != nil {
@@ -169,10 +171,8 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 			return err
 		}
 		services = append(services, workers...)
-		local := bookletrpc.Local{Compiler: sandbox.NewSandbox(sandboxClient, judgeImage.Config), Limits: cfg.Problems.Limits.Booklet}
-		compiler = local
 		if !mode.API() {
-			services = append(services, newHTTPService("worker server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHandler(ready, local), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
+			services = append(services, newHTTPService("worker server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHandler(ready), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
 		}
 	}
 	if mode.API() {
@@ -182,7 +182,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 				return err
 			}
 		}
-		api, err := apiServices(shared, languages, compiler)
+		api, err := apiServices(shared, languages)
 		if err != nil {
 			return err
 		}
@@ -200,6 +200,7 @@ type sharedDeps struct {
 	pool          *pgxpool.Pool
 	store         *storage.S3Storage
 	problemDrafts *pgstore.ProblemDraftsRepo
+	typeset       *sandbox.Typesetter
 }
 
 // The returned ready reports whether the worker takes judging and build jobs.
@@ -245,7 +246,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		status, gate, calib = hostMonitor.Status, hostMonitor, hostMonitor.Calibration
 	}
 	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
-	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Calibration: calib, Logger: d.logger}
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Typeset: d.typeset, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Parallelism: parallelism, Calibration: calib, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll, Gate: gate}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
@@ -297,9 +298,8 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	return services, status, nil
 }
 
-func workerHandler(ready func() (bool, []string), booklets bookletrpc.Local) http.Handler {
+func workerHandler(ready func() (bool, []string)) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("POST "+bookletrpc.Path, bookletrpc.Handler(booklets.Compiler, booklets.Limits))
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","message":"Worker is running"}`))
@@ -315,7 +315,7 @@ func workerHandler(ready func() (bool, []string), booklets bookletrpc.Local) htt
 	return mux
 }
 
-func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.BookletCompiler) ([]appService, error) {
+func apiServices(d sharedDeps, languages *sandbox.Config) ([]appService, error) {
 	cfg, logger, pool, store := d.cfg, d.logger, d.pool, d.store
 
 	usersRepo := pgstore.NewUsersRepo(pool)
@@ -367,12 +367,12 @@ func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.Book
 	problemDrafts := d.problemDrafts
 	objectStore := store
 	buildOptions := problemsmodel.BuildOptions{Languages: languages.Langs, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
-	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Access: accessLoader, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, BuildOptions: buildOptions, Languages: languages}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Access: accessLoader, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, BuildOptions: buildOptions, Languages: languages, Typeset: d.typeset}
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket}
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, accessLoader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: accessLoader}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, compiler)
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, accessLoader, d.typeset)
 
 	observerHub := wsobserver.NewHub(contestsRepo, contestsUC)
 	contestsObserverHub := wsobserver.NewContestsHub()

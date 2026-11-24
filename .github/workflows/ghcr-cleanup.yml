@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [gate-backend, gate-go-judge]
+        package: [gate-backend, gate-go-judge, gate-typeset]
     steps:
       - name: Delete old versions
         run: |

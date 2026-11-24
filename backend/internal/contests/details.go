@@ -2,16 +2,17 @@ package contests
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/booklet"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/google/uuid"
 )
 
@@ -37,19 +38,21 @@ type ContestDetailsStore interface {
 type StatementSource interface {
 	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent
 	OpenImage(context.Context, uuid.UUID, string) (io.ReadCloser, string, error)
+	OpenPDF(ctx context.Context, problemID, packageID uuid.UUID, language string) (io.ReadCloser, error)
+	ReadPrinted(ctx context.Context, problemID, packageID uuid.UUID, language string) (problems.Printed, error)
 }
-type BookletCompiler interface {
-	CompilePDF(context.Context, string) ([]byte, error)
+type Typesetter interface {
+	PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error)
 }
 type DetailsReader struct {
 	contests   ContestDetailsStore
 	statements StatementSource
 	access     access.Loader
-	compiler   BookletCompiler
+	typeset    Typesetter
 }
 
-func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, loader access.Loader, compiler BookletCompiler) *DetailsReader {
-	return &DetailsReader{contests: contests, statements: statements, access: loader, compiler: compiler}
+func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, loader access.Loader, typeset Typesetter) *DetailsReader {
+	return &DetailsReader{contests: contests, statements: statements, access: loader, typeset: typeset}
 }
 
 // GetContestDetails resolves the contest by logins; every other contest route takes its id.
@@ -108,6 +111,18 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, contestID, id uuid
 	}
 	return r.statements.OpenImage(ctx, link.PackageID, sha256)
 }
+// OpenProblemPDF opens the statement PDF of the package the contest uses; it has the statement's visibility.
+func (r *DetailsReader) OpenProblemPDF(ctx context.Context, contestID, id uuid.UUID, language string) (io.ReadCloser, error) {
+	link, statementVisible, err := r.contestProblem(ctx, contestID, id)
+	if err != nil {
+		return nil, err
+	}
+	if !statementVisible {
+		return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
+	}
+	return r.statements.OpenPDF(ctx, link.ProblemID, link.PackageID, language)
+}
+
 func (r *DetailsReader) ReadBooklet(ctx context.Context, contestID uuid.UUID, language string) ([]byte, error) {
 	a, err := access.Contest(ctx, r.access, contestID, accessmodel.ContestView)
 	if err != nil {
@@ -123,94 +138,36 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, contestID uuid.UUID, la
 	if !a.Can(accessmodel.ContestViewStatements) {
 		return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
 	}
-
-	problems, err := r.contests.GetContestProblems(ctx, contest.ID)
+	links, err := r.contests.GetContestProblems(ctx, contest.ID)
 	if err != nil {
 		return nil, err
 	}
-
-	lang := language
-
-	var problemDatas []booklet.ProblemData
-	for _, cp := range problems {
-		content := r.statements.ReadStatement(ctx, cp.ProblemID, cp.PackageID, lang)
-		statement, samples := content.Statement, content.Samples
-
-		title := strings.TrimSpace(cp.Title)
-		if statement != nil && strings.TrimSpace(statement.Title) != "" {
-			title = strings.TrimSpace(statement.Title)
-		}
-
-		var bookletSamples []booklet.SampleData
-		for _, s := range samples {
-			bookletSamples = append(bookletSamples, booklet.SampleData{
-				Input:  s.Input,
-				Output: s.Output,
-			})
-		}
-
-		legend := ""
-		inputFormat := ""
-		outputFormat := ""
-		interaction := ""
-		scoring := ""
-		notes := ""
-		if statement != nil {
-			legend = statement.Legend
-			inputFormat = statement.InputFormat
-			outputFormat = statement.OutputFormat
-			interaction = statement.Interaction
-			scoring = statement.Scoring
-			notes = statement.Notes
-		}
-
-		problemDatas = append(problemDatas, booklet.ProblemData{
-			Letter:        ordinalToLetter(cp.Ordinal),
-			Title:         title,
-			TimeLimitMs:   cp.TimeLimitMs,
-			MemoryLimitMb: cp.MemoryLimitMb,
-			InputFile:     cp.InputFile,
-			OutputFile:    cp.OutputFile,
-			Legend:        legend,
-			InputFormat:   inputFormat,
-			OutputFormat:  outputFormat,
-			Interaction:   interaction,
-			Scoring:       scoring,
-			Notes:         notes,
-			Samples:       bookletSamples,
-		})
-	}
-
-	dateStr := accessmodel.ReadTime(ctx).Format("02.01.2006")
+	date := accessmodel.ReadTime(ctx)
 	if contest.StartTime != nil {
-		dateStr = contest.StartTime.Format("02.01.2006")
+		date = *contest.StartTime
 	}
-
-	contestData := booklet.ContestData{
-		Title:        contest.Title,
-		Organization: contest.OrganizationLogin,
-		Date:         dateStr,
-		Language:     lang,
-		Problems:     problemDatas,
+	booklet := statement.Contest{Title: contest.Title, Place: contest.OrganizationLogin, Date: date.Format("02.01.2006"), Language: language}
+	files := map[string][]byte{"olymp.sty": statement.OlympSty}
+	for i, cp := range links {
+		printed, err := r.statements.ReadPrinted(ctx, cp.ProblemID, cp.PackageID, language)
+		if err != nil {
+			return nil, err
+		}
+		limits := problemsmodel.PrintedLimits{TimeLimitMs: cp.TimeLimitMs, MemoryLimitMb: cp.MemoryLimitMb, InputFile: cp.InputFile, OutputFile: cp.OutputFile}
+		p := problemsmodel.PrintedProblem(cp.Title, limits, printed.Statement, printed.Samples)
+		// Problems may show different images under one name.
+		p.Letter, p.Assets = ordinalToLetter(cp.Ordinal), fmt.Sprintf("assets/%d", i)
+		for name, data := range printed.Images {
+			files[p.Assets+"/"+name] = data
+		}
+		booklet.Problems = append(booklet.Problems, p)
 	}
-
-	texSource, err := booklet.GenerateLatex(contestData)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to generate LaTeX booklet")
-	}
-
-	var pdfBytes []byte
-	if r.compiler != nil {
-		pdfBytes, err = r.compiler.CompilePDF(ctx, texSource)
-	} else {
-		pdfBytes, err = booklet.CompilePDFLocal(ctx, texSource)
-	}
+	pdf, err := r.typeset.PDF(ctx, statement.NewDocument(booklet).Source, files)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to compile PDF booklet", "error", err)
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to compile PDF booklet")
 	}
-
-	return pdfBytes, nil
+	return pdf, nil
 }
 
 func ordinalToLetter(ordinal int) string {

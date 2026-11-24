@@ -1,0 +1,41 @@
+{{- with .Values.typeset }}
+{{- if .image }}
+# A standalone typeset go-judge for a backend on the host.
+apiVersion: v1
+kind: Service
+metadata:
+  name: typeset
+spec:
+  type: NodePort
+  selector: {app.kubernetes.io/name: typeset}
+  ports:
+    - {name: http, port: 5050, nodePort: {{ required "typeset.nodePort is required" .nodePort }}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: typeset
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app.kubernetes.io/name: typeset}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: typeset}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: go-judge
+          image: {{ .image }}
+          args: [-http-addr=0.0.0.0:5050, -dir=/data]
+          securityContext: {privileged: true, seccompProfile: {type: Unconfined}}
+          ports:
+            - {name: http, containerPort: 5050}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: data
+          emptyDir: {}
+{{- end }}
+{{- end }}

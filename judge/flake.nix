@@ -54,17 +54,6 @@
       # Copy content only: checkout file modes must not affect image identity.
       source = name: pkgs.writeText name (builtins.readFile (./. + "/${name}"));
 
-      # metafont generates Cyrillic font metrics on demand.
-      tex = pkgs.texliveBasic.withPackages (
-        ps: with ps; [
-          babel-russian
-          cm-super
-          cyrillic
-          hyphen-russian
-          lh
-          metafont
-        ]
-      );
 
       # Expose the Nix runtime as /usr/bin and /bin in mount.yaml.
       runtime = pkgs.buildEnv {
@@ -72,7 +61,6 @@
         paths = [
           pkgs.bash
           pkgs.coreutils
-          tex
         ]
         ++ builtins.attrValues langPackages;
       };
@@ -138,7 +126,6 @@
       ]
       ++ pkgs.lib.mapAttrsToList (name: pkg: layer ([ pkg ] ++ pkgs.lib.optional (name == langs.go.package) goCache)) langPackages
       ++ [
-        (layer [ tex ])
         (layer [ pkgs.go-judge ])
       ];
 

@@ -14,6 +14,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 )
@@ -170,8 +171,8 @@ type BuildLimits struct {
 	WallFactor int                   `json:"wall_factor" yaml:"wall_factor"`
 	Compile    sandbox.FileRunLimits `json:"compile" yaml:"compile"`
 	Auxiliary  sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
-	// Booklets are no part of a build snapshot.
-	Booklet sandbox.FileRunLimits `json:"-" yaml:"booklet"`
+	// Typesetting runs in its own sandbox, outside build snapshots.
+	Typeset sandbox.FileRunLimits `json:"-" yaml:"typeset"`
 }
 
 // WithCPU sets a run's CPU limit and the wall-clock limit that follows from it.
@@ -182,7 +183,7 @@ func (l BuildLimits) WithCPU(r sandbox.FileRunLimits, cpu time.Duration) sandbox
 
 // DeriveWalls sets the wall-clock limits of the configured runs.
 func (l *BuildLimits) DeriveWalls() {
-	for _, r := range []*sandbox.FileRunLimits{&l.Compile, &l.Auxiliary, &l.Booklet} {
+	for _, r := range []*sandbox.FileRunLimits{&l.Compile, &l.Auxiliary, &l.Typeset} {
 		*r = l.WithCPU(*r, r.CPU)
 	}
 }
@@ -851,7 +852,7 @@ func (d *Draft) validateImages(v *validation, previous *Draft) {
 				continue
 			}
 			for _, ref := range ImageReferences(body) {
-				if !assets[ref] {
+				if _, ok := statement.ImageFile(ref, func(name string) bool { return assets[name] }); !ok {
 					v.fail(fmt.Sprintf("/statements/%d/%s", i, name), pkg.ErrUnknown, value(ref), "%s section of the %s statement shows missing asset %q", name, s.Language, ref)
 				}
 			}

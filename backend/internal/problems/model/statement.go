@@ -1,48 +1,68 @@
 package problemsmodel
 
 import (
-	"net/url"
-	"regexp"
-	"strings"
+	"slices"
 
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/ast"
-	"github.com/yuin/goldmark/text"
-	"github.com/yuin/goldmark/util"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 )
 
-var urlScheme = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+// ImageReferences lists the asset names \includegraphics shows.
+func ImageReferences(tex string) []string { return statement.Images(tex) }
 
-// ImageReferences resolves escapes and encoding as the renderer does; absolute and rooted URLs are excluded.
-func ImageReferences(markdown string) []string {
-	if !strings.Contains(markdown, "![") {
-		return nil
-	}
-	source := []byte(markdown)
-	doc := goldmark.DefaultParser().Parse(text.NewReader(source))
-	var refs []string
-	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if image, ok := n.(*ast.Image); ok && entering {
-			destination := util.ResolveEntityNames(util.ResolveNumericReferences(util.UnescapePunctuations(image.Destination)))
-			if name, ok := assetName(string(destination)); ok {
-				refs = append(refs, name)
-			}
-		}
-		return ast.WalkContinue, nil
-	})
-	return refs
+// BuiltStatement is a draft statement with the HTML its build made of each nonempty section.
+type BuiltStatement struct {
+	DraftStatement
+	HTML map[string]string `json:"html"`
 }
 
-func assetName(destination string) (string, bool) {
-	if i := strings.IndexByte(destination, '#'); i >= 0 {
-		destination = destination[:i]
+// StatementPDF is a statement compiled for print, stored as its own object.
+type StatementPDF struct {
+	Language string
+	Object   StoredObject
+}
+
+// Sections lists the statement's sections in statement.Order.
+func (s *DraftStatement) Sections() []statement.Section {
+	sections := make([]statement.Section, 0, len(statement.Order))
+	for _, name := range statement.Order {
+		sections = append(sections, statement.Section{Name: name, Text: *s.Section(name)})
 	}
-	if destination == "" || strings.HasPrefix(destination, "/") || urlScheme.MatchString(destination) {
-		return "", false
+	return sections
+}
+
+// PrintedProblem lays out a statement for olymp.sty; images are under the assets directory.
+func PrintedProblem(title string, limits PrintedLimits, s DraftStatement, samples []Sample) statement.Problem {
+	if s.Title != "" {
+		title = s.Title
 	}
-	destination = strings.TrimPrefix(destination, "./")
-	if decoded, err := url.PathUnescape(destination); err == nil {
-		destination = decoded
+	p := statement.Problem{Title: title, TimeLimitMs: limits.TimeLimitMs, MemoryLimitMb: limits.MemoryLimitMb, InputFile: limits.InputFile, OutputFile: limits.OutputFile, Sections: s.Sections(), Assets: "assets"}
+	for _, sample := range samples {
+		p.Samples = append(p.Samples, statement.Sample{Input: sample.Input, Output: sample.Output})
 	}
-	return destination, true
+	return p
+}
+
+type PrintedLimits struct {
+	TimeLimitMs, MemoryLimitMb int
+	InputFile, OutputFile      string
+}
+
+// StatementImages lists the assets the statement shows that exist.
+func StatementImages(s DraftStatement, assets []DraftAsset) []DraftAsset {
+	exists := func(name string) bool { return slices.ContainsFunc(assets, func(a DraftAsset) bool { return a.Name == name }) }
+	shown := map[string]bool{}
+	for _, name := range statement.Order {
+		for _, ref := range ImageReferences(*s.Section(name)) {
+			if file, ok := statement.ImageFile(ref, exists); ok {
+				shown[file] = true
+			}
+		}
+	}
+	var result []DraftAsset
+	for _, a := range assets {
+		if shown[a.Name] {
+			result = append(result, a)
+		}
+	}
+	return result
 }
