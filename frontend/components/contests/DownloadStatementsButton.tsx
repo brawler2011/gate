@@ -19,6 +19,10 @@ interface DownloadStatementsButtonProps {
 const LANGUAGE_NAMES: Record<string, string> = {ru: "На русском языке", en: "На английском языке"};
 const STATE_NOTES: Record<ContestBooklet["state"], string> = {building: " (собирается)", ready: "", failed: " (ошибка сборки)"};
 
+// Contest changes re-key booklets, so their editors invalidate this.
+export const bookletsQueryKey = (contestId: string): readonly unknown[] =>
+  api.queryOptions("get", "/contests/{contest_id}/booklets", {params: {path: {contest_id: contestId}}}).queryKey;
+
 const useBooklets = (contestId: string) =>
   api.useQuery("get", "/contests/{contest_id}/booklets", {params: {path: {contest_id: contestId}}}, {
     refetchInterval: (query) => (query.state.data?.booklets.some((b) => b.state === "building") ? 3000 : false),

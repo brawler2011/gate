@@ -5,7 +5,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
 import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {BookletDiagnostics, DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
+import {BookletDiagnostics, DownloadStatementsButton, bookletsQueryKey} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {useLanguages} from "@/lib/languages";
@@ -272,6 +272,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       type: "success",
       message: "Настройки контеста обновлены",
     });
+    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contest.id)});
 
     if (newLogin && newLogin !== contest.login) {
       navigate(`/${contest.organization_login}/${newLogin}/settings`);

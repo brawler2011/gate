@@ -108,7 +108,12 @@ func NewDocument(c Contest) Document {
 	w.text("\\usepackage{amsmath,amssymb}\n\\usepackage{graphicx}\n\\DeclareGraphicsRule{.svg}{pdf}{*}{}\n\\usepackage{olymp}\n")
 	w.text(fmt.Sprintf("\\contest{%s}{%s}{%s}\n", escape(c.Title), escape(c.Place), escape(c.Date)))
 	if c.Date == "" {
-		w.text("\\DeclareRobustCommand{\\contestname}{\\thecontestname\\par\\thecontestlocation}\n")
+		// olymp.sty ends the header line with \\, which fails after an empty paragraph.
+		header := "\\thecontestname"
+		if strings.TrimSpace(c.Place) != "" {
+			header += "\\par\\thecontestlocation"
+		}
+		w.text("\\DeclareRobustCommand{\\contestname}{" + header + "}\n")
 	}
 	w.text("\\binoppenalty=10000\n\\relpenalty=10000\n\\begin{document}\n")
 	for i, p := range c.Problems {

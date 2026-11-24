@@ -58,10 +58,14 @@ type Typesetter interface {
 }
 
 func (w *BookletWorker) Run(ctx context.Context) error {
-	if err := w.Queue.RekeyAllBooklets(ctx); err != nil && ctx.Err() == nil {
-		w.Logger.ErrorContext(ctx, "rekey booklets", "error", err)
-	}
+	rekeyed := false
 	for ctx.Err() == nil {
+		if !rekeyed {
+			err := w.Queue.RekeyAllBooklets(ctx)
+			if rekeyed = err == nil; !rekeyed && ctx.Err() == nil {
+				w.Logger.ErrorContext(ctx, "rekey booklets", "error", err)
+			}
+		}
 		job, err := w.Queue.ClaimBooklet(ctx, w.Lease)
 		if err != nil && ctx.Err() == nil {
 			w.Logger.ErrorContext(ctx, "claim booklet", "error", err)

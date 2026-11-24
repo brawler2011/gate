@@ -6,7 +6,7 @@ import {useInfiniteQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useRevalidator} from "react-router-dom";
 
-import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
+import {DownloadStatementsButton, bookletsQueryKey} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api, unwrap} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
@@ -154,6 +154,7 @@ export const ProblemsSection = ({
     setSearchQuery("");
     setSelectedProblemId(null);
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
     void revalidator.revalidate();
   };
 
@@ -187,6 +188,7 @@ export const ProblemsSection = ({
     });
 
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
     void revalidator.revalidate();
   };
 
@@ -289,6 +291,7 @@ export const ProblemsSection = ({
       color: "green",
     });
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
     void revalidator.revalidate();
   };
 
@@ -355,6 +358,7 @@ export const ProblemsSection = ({
 
     setReplaceTarget(null);
     void queryClient.invalidateQueries({queryKey: contestQueryKey});
+    void queryClient.invalidateQueries({queryKey: bookletsQueryKey(contestId)});
     void revalidator.revalidate();
   };
 
