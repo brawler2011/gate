@@ -11,6 +11,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -288,9 +289,11 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)
 	uploading, release := make(chan struct{}), make(chan struct{})
+	// Statement PDFs upload before the package; the first upload starts the edit.
+	var started sync.Once
 	pipeline := h.pipeline()
 	pipeline.Store = publicationStore{S3Storage: h.services.store, afterUpload: func(ctx context.Context, _, _ string) error {
-		close(uploading)
+		started.Do(func() { close(uploading) })
 		select {
 		case <-release:
 			return nil
