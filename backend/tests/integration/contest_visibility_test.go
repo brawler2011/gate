@@ -73,3 +73,51 @@ func (s *IntegrationTestSuite) TestHiddenOwnResultsUntilTheEnd() {
 	s.Require().Len(own.Submission.TestDetails.Value.Tests, 1, "only samples after the end")
 	s.EqualValues(1, own.Submission.TestDetails.Value.Tests[0].TestIndex)
 }
+
+// A group whose policy shows only points must not reveal which of its tests failed, in lists either.
+func (s *IntegrationTestSuite) TestGroupFeedbackHidesFailedTestInLists() {
+	admin := s.createUser("admin_groups_"+uuid.NewString()[:8], accessmodel.UserRoleAdmin)
+	participant := s.createUser("participant_groups_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	org := s.createOrganization("groups-"+uuid.NewString()[:8], "Group Feedback", admin.Id)
+	problem, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		Title: "Groups", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
+	s.Require().NoError(err)
+	contestID := uuid.New()
+	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, Title: "Groups",
+		Login: "groups", Visibility: contestsmodel.ContestVisibilityPublic}, admin.Id))
+	setEnd := func(end time.Time) {
+		start := time.Now().Add(-2 * time.Hour)
+		s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contestID,
+			StartTime: &start, StartTimeSet: true, EndTime: &end, EndTimeSet: true}))
+	}
+	setEnd(time.Now().Add(time.Hour))
+	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
+		FeedbackDuring: corev1.NewOptFeedbackLevel(corev1.FeedbackLevelFull)}, corev1.UpdateContestParams{ContestID: contestID}))
+	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
+		ContestId: contestID, ProblemId: problem.ID, PackageId: s.createDummyProblemPackage(problem.ID, org.ID)}))
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
+		ContestId: contestID, UserId: participant.Id, Role: accessmodel.ContestParticipant}))
+	as := withTestUser(s.ctx, participant.Id)
+	created, err := s.client.CreateSubmission(as, &corev1.CreateSubmissionRequestModel{Submission: "print(1)"},
+		corev1.CreateSubmissionParams{ProblemID: problem.ID, ContestID: contestID, Language: "python3"})
+	s.Require().NoError(err)
+	_, err = s.dbPool.Exec(s.ctx, `UPDATE submissions SET state=106, test_details=$2 WHERE id=$1`, created.ID,
+		`{"failed_test":2,"tests":[{"test_index":1,"verdict":"OK","subtask":""},{"test_index":2,"verdict":"WA","subtask":"secret"}],
+		"subtasks":[{"name":""},{"name":"secret","feedback":"points"}]}`)
+	s.Require().NoError(err)
+	listed := func() corev1.OptNilInt32 {
+		list, err := s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{ContestID: contestID})
+		s.Require().NoError(err)
+		s.Require().Len(list.Submissions, 1)
+		return list.Submissions[0].FailedTest
+	}
+
+	s.False(listed().IsSet())
+	own, err := s.client.GetSubmission(as, corev1.GetSubmissionParams{SubmissionID: created.ID})
+	s.Require().NoError(err)
+	s.False(own.Submission.FailedTest.IsSet())
+	s.Equal([]corev1.TestDetailItemModel{{TestIndex: 1, Verdict: "OK", Subtask: corev1.NewOptString("")}}, own.Submission.TestDetails.Value.Tests)
+
+	setEnd(time.Now().Add(-time.Minute))
+	s.EqualValues(2, listed().Value)
+}

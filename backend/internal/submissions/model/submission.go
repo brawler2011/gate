@@ -139,32 +139,34 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
-	Revision          int64                  `json:"revision"`
-	ResultHidden      bool                   `json:"-"`
-	SourceHidden      bool                   `json:"-"`
-	ID                uuid.UUID              `json:"id"`
-	Kind              Kind                   `json:"kind"`
-	CreatedBy         *uuid.UUID             `json:"created_by"`
-	Username          string                 `json:"username"`
-	Submission        string                 `json:"submission"`
-	State             State                  `json:"state"`
-	Score             points.Value           `json:"score"`
-	Penalty           int32                  `json:"penalty"`
-	TimeStat          int32                  `json:"time_stat"`
-	MemoryStat        int32                  `json:"memory_stat"`
-	Language          string                 `json:"language"`
-	FailedTest        *int32                 `json:"failed_test,omitempty"`
-	TestDetails       *SubmissionTestDetails `json:"test_details,omitempty"`
-	BanReason         *string                `json:"ban_reason,omitempty"`
-	ProblemID         *uuid.UUID             `json:"problem_id"`
-	ProblemTitle      string                 `json:"problem_title"`
-	Position          *int32                 `json:"position"`
-	ContestID         *uuid.UUID             `json:"contest_id"`
-	ContestLogin      string                 `json:"contest_login"`
-	ContestTitle      string                 `json:"contest_title"`
-	OrganizationLogin string                 `json:"organization_login"`
-	UpdatedAt         time.Time              `json:"updated_at"`
-	CreatedAt         time.Time              `json:"created_at"`
+	Revision     int64                  `json:"revision"`
+	ResultHidden bool                   `json:"-"`
+	SourceHidden bool                   `json:"-"`
+	ID           uuid.UUID              `json:"id"`
+	Kind         Kind                   `json:"kind"`
+	CreatedBy    *uuid.UUID             `json:"created_by"`
+	Username     string                 `json:"username"`
+	Submission   string                 `json:"submission"`
+	State        State                  `json:"state"`
+	Score        points.Value           `json:"score"`
+	Penalty      int32                  `json:"penalty"`
+	TimeStat     int32                  `json:"time_stat"`
+	MemoryStat   int32                  `json:"memory_stat"`
+	Language     string                 `json:"language"`
+	FailedTest   *int32                 `json:"failed_test,omitempty"`
+	TestDetails  *SubmissionTestDetails `json:"test_details,omitempty"`
+	// FailedTestFeedback stands in for TestDetails in lists, which do not load reports.
+	FailedTestFeedback string     `json:"-"`
+	BanReason          *string    `json:"ban_reason,omitempty"`
+	ProblemID          *uuid.UUID `json:"problem_id"`
+	ProblemTitle       string     `json:"problem_title"`
+	Position           *int32     `json:"position"`
+	ContestID          *uuid.UUID `json:"contest_id"`
+	ContestLogin       string     `json:"contest_login"`
+	ContestTitle       string     `json:"contest_title"`
+	OrganizationLogin  string     `json:"organization_login"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 type SubmissionsList struct {
@@ -267,9 +269,17 @@ func (s Submission) EventMeta() SubmissionEventMeta {
 func (s Submission) CompletedEvent() SubmissionCompletedEvent {
 	e := SubmissionCompletedEvent{Id: s.ID, State: s.State, Score: s.Score, Penalty: s.Penalty, TimeStat: s.TimeStat, MemoryStat: s.MemoryStat, FailedTest: s.FailedTest, SubmissionEventMeta: s.EventMeta()}
 	if s.FailedTest != nil {
-		e.FailedTestFeedback = s.TestDetails.Feedback(*s.FailedTest)
+		e.FailedTestFeedback = s.FailedFeedback()
 	}
 	return e
+}
+
+// FailedFeedback is the feedback policy of the failed test's group; empty means complete.
+func (s Submission) FailedFeedback() string {
+	if s.TestDetails == nil || s.FailedTest == nil {
+		return s.FailedTestFeedback
+	}
+	return s.TestDetails.Feedback(*s.FailedTest)
 }
 
 // Feedback finds the feedback policy of the group holding a test; empty means complete.

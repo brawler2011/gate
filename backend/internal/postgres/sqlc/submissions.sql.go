@@ -294,6 +294,13 @@ SELECT s.id,
   COALESCE((s.test_details->>'memory_stat')::integer, 0)::integer AS memory_stat,
   s.language,
   COALESCE((s.test_details->>'failed_test')::integer, 0)::integer AS failed_test,
+  COALESCE((
+    SELECT g->>'feedback'
+    FROM jsonb_array_elements(s.test_details->'tests') t
+      JOIN jsonb_array_elements(s.test_details->'subtasks') g ON g->>'name' = COALESCE(t->>'subtask', '')
+    WHERE (t->>'test_index')::integer = (s.test_details->>'failed_test')::integer
+    LIMIT 1
+  ), '')::text AS failed_test_feedback,
   s.ban_reason,
   s.problem_id,
   pp.title AS problem_title,
@@ -358,29 +365,30 @@ type ListSubmissionsParams struct {
 }
 
 type ListSubmissionsRow struct {
-	ID                uuid.UUID              `json:"id"`
-	OwnerID           *uuid.UUID             `json:"owner_id"`
-	Kind              submissionsmodel.Kind  `json:"kind"`
-	Username          *string                `json:"username"`
-	State             submissionsmodel.State `json:"state"`
-	Score             points.Value           `json:"score"`
-	Penalty           int32                  `json:"penalty"`
-	TimeStat          int32                  `json:"time_stat"`
-	MemoryStat        int32                  `json:"memory_stat"`
-	Language          string                 `json:"language"`
-	FailedTest        int32                  `json:"failed_test"`
-	BanReason         *string                `json:"ban_reason"`
-	ProblemID         *uuid.UUID             `json:"problem_id"`
-	ProblemTitle      *string                `json:"problem_title"`
-	ProblemShortName  *string                `json:"problem_short_name"`
-	ProblemOrdinal    *int32                 `json:"problem_ordinal"`
-	ContestID         *uuid.UUID             `json:"contest_id"`
-	ContestTitle      *string                `json:"contest_title"`
-	ContestLogin      *string                `json:"contest_login"`
-	OrganizationLogin string                 `json:"organization_login"`
-	UpdatedAt         time.Time              `json:"updated_at"`
-	Revision          int64                  `json:"revision"`
-	CreatedAt         time.Time              `json:"created_at"`
+	ID                 uuid.UUID              `json:"id"`
+	OwnerID            *uuid.UUID             `json:"owner_id"`
+	Kind               submissionsmodel.Kind  `json:"kind"`
+	Username           *string                `json:"username"`
+	State              submissionsmodel.State `json:"state"`
+	Score              points.Value           `json:"score"`
+	Penalty            int32                  `json:"penalty"`
+	TimeStat           int32                  `json:"time_stat"`
+	MemoryStat         int32                  `json:"memory_stat"`
+	Language           string                 `json:"language"`
+	FailedTest         int32                  `json:"failed_test"`
+	FailedTestFeedback string                 `json:"failed_test_feedback"`
+	BanReason          *string                `json:"ban_reason"`
+	ProblemID          *uuid.UUID             `json:"problem_id"`
+	ProblemTitle       *string                `json:"problem_title"`
+	ProblemShortName   *string                `json:"problem_short_name"`
+	ProblemOrdinal     *int32                 `json:"problem_ordinal"`
+	ContestID          *uuid.UUID             `json:"contest_id"`
+	ContestTitle       *string                `json:"contest_title"`
+	ContestLogin       *string                `json:"contest_login"`
+	OrganizationLogin  string                 `json:"organization_login"`
+	UpdatedAt          time.Time              `json:"updated_at"`
+	Revision           int64                  `json:"revision"`
+	CreatedAt          time.Time              `json:"created_at"`
 }
 
 func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error) {
@@ -413,6 +421,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.MemoryStat,
 			&i.Language,
 			&i.FailedTest,
+			&i.FailedTestFeedback,
 			&i.BanReason,
 			&i.ProblemID,
 			&i.ProblemTitle,

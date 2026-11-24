@@ -57,7 +57,7 @@ func (v SubmissionVisibility) Apply(sub submissionsmodel.Submission) submissions
 		sub.FailedTest = nil
 		sub.BanReason = nil
 	}
-	if sub.FailedTest != nil && v.Groups && !submissionsmodel.FeedbackShowsFailure(sub.TestDetails.Feedback(*sub.FailedTest)) {
+	if sub.FailedTest != nil && v.Groups && !submissionsmodel.FeedbackShowsFailure(sub.FailedFeedback()) {
 		sub.FailedTest = nil
 	}
 	sub.TestDetails = v.Report(sub.TestDetails)
