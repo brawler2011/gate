@@ -1,7 +1,7 @@
 package icpc
 
 type Problem struct {
-	Type   string  `yaml:"type"` // "pass-fail" or "scoring"
+	Type   string  `yaml:"type"` // "pass-fail" or "scoring", optionally with "submit-answer"
 	Name   string  `yaml:"name"`
 	Author string  `yaml:"author"`
 	Source string  `yaml:"source"`

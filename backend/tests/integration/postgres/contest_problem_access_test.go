@@ -192,6 +192,10 @@ func (s *pinnedContestStatement) OpenPDF(context.Context, uuid.UUID, uuid.UUID, 
 	return nil, pkg.ErrNotFound
 }
 
+func (s *pinnedContestStatement) OpenInputs(context.Context, uuid.UUID) (io.ReadCloser, error) {
+	return nil, pkg.ErrNotFound
+}
+
 func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 	t.Parallel()
 	f := newContestProblemFixture(t)

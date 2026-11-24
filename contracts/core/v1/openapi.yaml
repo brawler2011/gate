@@ -804,6 +804,25 @@ paths:
               schema:
                 type: string
                 format: binary
+  /contests/{contest_id}/problems/{problem_id}/inputs.zip:
+    get:
+      summary: "Download the test inputs of an output-only contest problem"
+      description: "Inputs of every test, named <ordinal>.in, from the package the contest uses; visible with the statement."
+      tags: [contests]
+      operationId: DownloadContestProblemInputs
+      parameters:
+        - $ref: "#/components/parameters/ContestIDPath"
+        - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Zip of test inputs
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
   /contests/{contest_id}/members:
     get:
       summary: "List contest members"
@@ -1478,6 +1497,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListSubmissionsResponseModel"
+  /submissions/outputs:
+    post:
+      summary: "Submit outputs to an output-only problem"
+      description: "Each file is the output of the test whose number ends its name, before or after the extension (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA."
+      tags: [submissions]
+      operationId: CreateOutputsSubmission
+      parameters:
+        - $ref: "#/components/parameters/ProblemIDQuery"
+        - name: contest_id
+          description: "UUID of the contest."
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreationResponseModel"
+  /submissions/{submission_id}/outputs.zip:
+    get:
+      summary: "Download the outputs of an output-only submission"
+      description: "Visible where the submission's source would be; files are named by test number."
+      tags: [submissions]
+      operationId: DownloadSubmissionOutputs
+      parameters:
+        - $ref: "#/components/parameters/SubmissionIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Zip of submitted outputs
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
   /submissions/{submission_id}:
     get:
       summary: "Get submission"
@@ -1980,6 +2055,23 @@ paths:
           description: Statement PDF
           content:
             application/pdf:
+              schema:
+                type: string
+                format: binary
+  /problems/{id}/inputs.zip:
+    get:
+      tags: [problems]
+      operationId: DownloadProblemInputs
+      summary: "Download the test inputs of an output-only problem's latest package"
+      parameters:
+        - $ref: '#/components/parameters/ProblemIDPath'
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: Zip of test inputs, named <ordinal>.in
+          content:
+            application/zip:
               schema:
                 type: string
                 format: binary
@@ -3803,11 +3895,7 @@ components:
         short_name:
           type: string
         type:
-          type: string
-          enum:
-          - pass-fail
-          - scoring
-          - interactive
+          $ref: "#/components/schemas/ProblemType"
         time_limit_ms:
           type: integer
           format: int64
@@ -4518,11 +4606,20 @@ components:
           $ref: "#/components/schemas/ProblemModel"
         statement:
           $ref: "#/components/schemas/ProblemStatementModel"
+    ProblemType:
+      description: "An output-only problem judges the outputs participants submit, one file per test, instead of running a program."
+      type: string
+      enum:
+        - pass-fail
+        - scoring
+        - interactive
+        - output-only
     ProblemStatementModel:
       description: "Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview."
       type: object
       required:
         - title
+        - type
         - time_limit
         - memory_limit
         - input_file
@@ -4539,6 +4636,8 @@ components:
       properties:
         title:
           type: string
+        type:
+          $ref: "#/components/schemas/ProblemType"
         time_limit:
           type: integer
           format: int32
@@ -4598,6 +4697,7 @@ components:
         - permissions
         - problem_id
         - title
+        - type
         - time_limit
         - memory_limit
         - input_file
@@ -4623,6 +4723,8 @@ components:
         title:
           type: string
           example: Test problem
+        type:
+          $ref: "#/components/schemas/ProblemType"
         time_limit:
           type: integer
           format: int32
@@ -4977,6 +5079,7 @@ components:
         - problem_id
         - position
         - title
+        - type
         - memory_limit
         - time_limit
         - created_at
@@ -4993,6 +5096,8 @@ components:
         title:
           type: string
           example: Test task
+        type:
+          $ref: "#/components/schemas/ProblemType"
         memory_limit:
           type: integer
           format: int32

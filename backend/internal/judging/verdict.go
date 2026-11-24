@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/points"
 
@@ -228,7 +230,7 @@ func groupResults(groups []gfmt.GroupResult, scored bool) []submissionsmodel.Gro
 }
 
 func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
-	if vc.problemType == "scoring" {
+	if spec.Scored(vc.problemType) {
 		return vc.CalculateScoringVerdict(results)
 	}
 	verdict := vc.CalculateStandardVerdict(results)

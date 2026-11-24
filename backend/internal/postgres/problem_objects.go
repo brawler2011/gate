@@ -55,6 +55,14 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	if index.Assets == nil {
 		index.Assets = []model.DraftAsset{}
 	}
+	var inputs *uuid.UUID
+	if index.Inputs != nil {
+		if index.Inputs.OrganizationID != object.OrganizationID || index.Inputs.Purpose != "inputs" {
+			return uuid.Nil, pkg.ErrInvalid
+		}
+		objects = append(objects, *index.Inputs)
+		inputs = &index.Inputs.ID
+	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
 		return uuid.Nil, err
@@ -90,7 +98,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
 		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision,
 		Title: index.Title, ShortName: index.ShortName, Type: index.Type, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
-		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples),
+		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples), InputsObjectID: inputs,
 	}); err != nil {
 		return uuid.Nil, dbError("insert package", err)
 	}
@@ -158,6 +166,14 @@ func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID,
 		assets = append(assets, model.PackageAsset{Name: row.Name, Key: row.Key})
 	}
 	return assets, nil
+}
+
+func (r *ProblemDraftsRepo) FindPackageInputs(ctx context.Context, id uuid.UUID) (string, error) {
+	key, err := sqlc.New(r.pool).FindPackageInputs(ctx, id)
+	if err != nil {
+		return "", dbError("find package inputs", err)
+	}
+	return key, nil
 }
 
 func (r *ProblemDraftsRepo) FindPackagePDF(ctx context.Context, id uuid.UUID, language string) (string, error) {

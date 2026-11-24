@@ -136,6 +136,8 @@ type ProblemsUC interface {
 
 type SubmissionsUC interface {
 	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
+	CreateOutputsSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation, archive []byte, sha string) (uuid.UUID, error)
+	OpenOutputs(ctx context.Context, id uuid.UUID) (io.ReadCloser, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
 	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error)
 
@@ -169,6 +171,7 @@ type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, uuid.UUID, uuid.UUID) (*contests.ContestProblemDetails, error)
 	OpenProblemPDF(ctx context.Context, contestID, problemID uuid.UUID, language string) (io.ReadCloser, error)
+	OpenProblemInputs(ctx context.Context, contestID, problemID uuid.UUID) (io.ReadCloser, error)
 	OpenProblemAsset(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, string, error)
 }
 

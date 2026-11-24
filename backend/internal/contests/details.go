@@ -35,6 +35,7 @@ type StatementSource interface {
 	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent
 	OpenImage(context.Context, uuid.UUID, string) (io.ReadCloser, string, error)
 	OpenPDF(ctx context.Context, problemID, packageID uuid.UUID, language string) (io.ReadCloser, error)
+	OpenInputs(ctx context.Context, packageID uuid.UUID) (io.ReadCloser, error)
 }
 type DetailsReader struct {
 	contests   ContestDetailsStore
@@ -111,6 +112,18 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, contestID, id uuid
 		return nil, "", pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
 	}
 	return r.statements.OpenImage(ctx, link.PackageID, sha256)
+}
+
+// OpenProblemInputs opens the test inputs of an output-only problem in the package the contest uses; they have the statement's visibility.
+func (r *DetailsReader) OpenProblemInputs(ctx context.Context, contestID, id uuid.UUID) (io.ReadCloser, error) {
+	link, statementVisible, err := r.contestProblem(ctx, contestID, id)
+	if err != nil {
+		return nil, err
+	}
+	if !statementVisible {
+		return nil, pkg.Wrap(pkg.ErrStatementsHidden, nil, "statements are hidden for this contest")
+	}
+	return r.statements.OpenInputs(ctx, link.PackageID)
 }
 
 // OpenProblemPDF opens the statement PDF of the package the contest uses; it has the statement's visibility.

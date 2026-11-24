@@ -93,7 +93,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, job judgingmodel.Jo
 		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error", err)
 	}
 
-	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, submission.Pretests, uc.progress)
+	verdict, err := uc.judge(ctx, pkg, submission)
 	if err != nil {
 		if IsTemporary(err) {
 			return err
@@ -120,6 +120,23 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, job judgingmodel.Jo
 	)
 
 	return nil
+}
+
+func (uc *JudgeUseCase) judge(ctx context.Context, pkg *LoadedPackage, submission submissionsmodel.Submission) (*FinalVerdict, error) {
+	outputOnly := pkg.Format.Problem.Type == "output-only"
+	switch {
+	case outputOnly != (submission.Outputs != nil):
+		// A rejudge on a package whose type changed since the submission.
+		return nil, fmt.Errorf("problem type %s does not match the submission", pkg.Format.Problem.Type)
+	case !outputOnly:
+		return uc.executor.Judge(ctx, pkg, submission.ID, submission.Submission, submission.Language, submission.Pretests, uc.progress)
+	}
+	outputs, err := uc.packageLoader.LoadOutputs(ctx, *submission.Outputs)
+	if err != nil {
+		return nil, err
+	}
+	defer outputs.Release()
+	return uc.executor.JudgeOutputs(ctx, pkg, submission.ID, outputs.Dir(), submission.Pretests, uc.progress)
 }
 
 func (uc *JudgeUseCase) markInternalError(ctx context.Context, job judgingmodel.Job, cause error) error {

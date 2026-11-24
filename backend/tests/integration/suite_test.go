@@ -171,7 +171,7 @@ func (s *IntegrationTestSuite) initApp() {
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, loader, packagesRepo)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Access: loader}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), loader)
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, pgstore.NewSubmissionTransactions(s.dbPool), loader)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, pgstore.NewSubmissionTransactions(s.dbPool), loader, submissions.OutputsStore{Store: objectStore, Bucket: bucket})
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)

@@ -11,7 +11,7 @@ import {api, unwrap} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
-import {formatPoints} from "./draft/draftOps";
+import {formatPoints, isScored} from "./draft/draftOps";
 import {useSaveDraft} from "./draft/useDraft";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
@@ -21,6 +21,7 @@ const PROBLEM_TYPE_OPTIONS = [
   {value: "pass-fail", label: "Pass-Fail"},
   {value: "scoring", label: "Scoring"},
   {value: "interactive", label: "Interactive"},
+  {value: "output-only", label: "Output-only"},
 ];
 
 type Props = {
@@ -84,7 +85,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
               onChange={(value) => setType((value as ProblemDraft["type"] | null) ?? "pass-fail")}
             />
           </Grid.Col>
-          {type === "scoring" && (
+          {isScored(type) && (
             <Grid.Col span={{base: 12, sm: 6}}>
               <TextInput
                 label="Максимальный балл"

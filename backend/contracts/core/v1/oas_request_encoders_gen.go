@@ -257,6 +257,34 @@ func encodeCreateOrganizationJoinRequestRequest(
 	return nil
 }
 
+func encodeCreateOutputsSubmissionRequest(
+	req *CreateOutputsSubmissionReq,
+	r *http.Request,
+) error {
+	const contentType = "multipart/form-data"
+	request := req
+
+	q := uri.NewFormEncoder(map[string]string{})
+	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
+		if err := func() error {
+			for idx, val := range request.Files {
+				if err := val.WriteMultipart("files", w); err != nil {
+					return errors.Wrapf(err, "file [%d]", idx)
+				}
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrap(err, "write \"files\"")
+		}
+		if err := q.WriteMultipart(w); err != nil {
+			return errors.Wrap(err, "write multipart")
+		}
+		return nil
+	})
+	ht.SetCloserBody(r, body, mime.FormatMediaType(contentType, map[string]string{"boundary": boundary}))
+	return nil
+}
+
 func encodeCreatePostRequest(
 	req *CreatePostReq,
 	r *http.Request,

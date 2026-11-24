@@ -76,7 +76,7 @@ func (f *concurrencyFixture) userContext(i int) context.Context {
 	return accessmodel.WithUser(f.ctx, accessmodel.User{Id: f.users[i], Role: role})
 }
 func (f *concurrencyFixture) submissionUC(tx submissions.SubmissionTransactions) *submissions.SubmissionsUseCase {
-	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), tx, f.loader)
+	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), tx, f.loader, submissions.OutputsStore{})
 }
 func (f *concurrencyFixture) create(tx submissions.SubmissionTransactions, user int) (uuid.UUID, error) {
 	return f.submissionUC(tx).CreateSubmission(f.userContext(user), &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.users[user], Solution: "print(1)", Language: "python3"})

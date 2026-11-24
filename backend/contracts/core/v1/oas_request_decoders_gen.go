@@ -1182,6 +1182,79 @@ func (s *Server) decodeCreateOrganizationJoinRequestRequest(r *http.Request) (
 	}
 }
 
+func (s *Server) decodeCreateOutputsSubmissionRequest(r *http.Request) (
+	req *CreateOutputsSubmissionReq,
+	rawBody []byte,
+	close func() error,
+	rerr error,
+) {
+	var closers []func() error
+	close = func() error {
+		var merr error
+		// Close in reverse order, to match defer behavior.
+		for i := len(closers) - 1; i >= 0; i-- {
+			c := closers[i]
+			merr = errors.Join(merr, c())
+		}
+		return merr
+	}
+	defer func() {
+		if rerr != nil {
+			rerr = errors.Join(rerr, close())
+		}
+	}()
+	ct, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return req, rawBody, close, errors.Wrap(err, "parse media type")
+	}
+	switch {
+	case ct == "multipart/form-data":
+		if r.ContentLength == 0 {
+			return req, rawBody, close, validate.ErrBodyRequired
+		}
+		if err := r.ParseMultipartForm(s.cfg.MaxMultipartMemory); err != nil {
+			return req, rawBody, close, errors.Wrap(err, "parse multipart form")
+		}
+		// Remove all temporary files created by ParseMultipartForm when the request is done.
+		//
+		// Notice that the closers are called in reverse order, to match defer behavior, so
+		// any opened file will be closed before RemoveAll call.
+		closers = append(closers, r.MultipartForm.RemoveAll)
+		// Form values may be unused.
+		form := url.Values(r.MultipartForm.Value)
+		_ = form
+
+		var request CreateOutputsSubmissionReq
+		{
+			if err := func() error {
+				files, ok := r.MultipartForm.File["files"]
+				_ = ok
+				request.Files = make([]ht.MultipartFile, 0, len(files))
+				for _, fh := range files {
+					f, err := fh.Open()
+					if err != nil {
+						return errors.Wrap(err, "open")
+					}
+					closers = append(closers, f.Close)
+
+					request.Files = append(request.Files, ht.MultipartFile{
+						Name:   fh.Filename,
+						File:   f,
+						Size:   fh.Size,
+						Header: fh.Header,
+					})
+				}
+				return nil
+			}(); err != nil {
+				return req, rawBody, close, errors.Wrap(err, "decode \"files\"")
+			}
+		}
+		return &request, rawBody, close, nil
+	default:
+		return req, rawBody, close, validate.InvalidContentType(ct)
+	}
+}
+
 func (s *Server) decodeCreatePostRequest(r *http.Request) (
 	req *CreatePostReq,
 	rawBody []byte,

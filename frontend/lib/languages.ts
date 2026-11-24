@@ -26,8 +26,11 @@ export const useContestLanguages = (allowed: string[] | undefined): SupportedLan
   return useMemo(() => allowedLanguages(catalog, allowed), [catalog, allowed]);
 };
 
+// Output-only submissions carry this language; they run nothing.
+export const OUTPUTS_LANGUAGE = "output";
+
 export const languageName = (catalog: SupportedLanguage[], id: string | undefined): string =>
-  catalog.find((language) => language.id === id)?.name ?? id ?? "";
+  id === OUTPUTS_LANGUAGE ? "Ответы" : catalog.find((language) => language.id === id)?.name ?? id ?? "";
 
 export const languageForExtension = (
   catalog: SupportedLanguage[], extension: string, preferred?: string,

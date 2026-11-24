@@ -11,6 +11,9 @@ import type {
   ProblemDraftValidatorTest,
 } from "@/contracts/core/v1/schema";
 
+// Output-only problems score submitted outputs test by test, as scoring ones do.
+export const isScored = (type: ProblemDraft["type"]): boolean => type === "scoring" || type === "output-only";
+
 export type ComponentRole = "checker" | "validator" | "interactor" | "generator" | "solution";
 
 export const ROLE_LABELS: Record<ComponentRole, string> = {

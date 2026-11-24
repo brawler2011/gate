@@ -79,7 +79,7 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			viewerID := uuid.New()
 			loader := accesstest.Loader{Contests: map[uuid.UUID]access.ContestFacts{contestID: {Contest: contestsmodel.Contest{ID: contestID}, Now: time.Now()}}}
 			loader.Grant(contestID, viewerID, string(accessmodel.ContestModerator))
-			uc := NewSubmissionsUseCase(repo, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{Loader: loader, submissionCommandStore: repo, Writer: notices}}, loader)
+			uc := NewSubmissionsUseCase(repo, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{Loader: loader, submissionCommandStore: repo, Writer: notices}}, loader, OutputsStore{})
 			ctx := accessmodel.WithUser(requestid.With(context.Background(), "request-123"), accessmodel.User{Id: viewerID, Role: accessmodel.UserRoleUser})
 			var err error
 			if rejudge {

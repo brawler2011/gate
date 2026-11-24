@@ -277,6 +277,19 @@ func encodeCreateOrganizationJoinRequestResponse(response *OrganizationJoinReque
 	return nil
 }
 
+func encodeCreateOutputsSubmissionResponse(response *CreationResponseModel, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeCreatePostResponse(response *CreatedPost, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(201)
@@ -419,6 +432,21 @@ func encodeDisableTeamJoinLinkResponse(response *DisableTeamJoinLinkNoContent, w
 	return nil
 }
 
+func encodeDownloadContestProblemInputsResponse(response DownloadContestProblemInputsOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/zip")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeDownloadContestProblemStatementPdfResponse(response DownloadContestProblemStatementPdfOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.WriteHeader(200)
@@ -449,6 +477,21 @@ func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatemen
 	return nil
 }
 
+func encodeDownloadProblemInputsResponse(response DownloadProblemInputsOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/zip")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeDownloadProblemPackageResponse(response DownloadProblemPackageOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(200)
@@ -466,6 +509,21 @@ func encodeDownloadProblemPackageResponse(response DownloadProblemPackageOK, w h
 
 func encodeDownloadProblemStatementPdfResponse(response DownloadProblemStatementPdfOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/pdf")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
+func encodeDownloadSubmissionOutputsResponse(response DownloadSubmissionOutputsOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(200)
 
 	writer := w

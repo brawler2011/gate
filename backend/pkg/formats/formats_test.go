@@ -232,6 +232,14 @@ func TestICPCScoring(t *testing.T) {
 			{Name: "secret/group2", Aggregate: "min", Tests: []spec.Test{test("data/secret/group2/c.in", 4, 70, false)}},
 		}},
 	}}, p.Testset)
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring submit-answer\nvalidation: custom\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "output-only", p.Type)
+	require.Equal(t, 30*points.Unit, p.Testset.Groups[1].Groups[0].Tests[0].Points, "submit-answer keeps the scoring testset")
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: submit-answer\nvalidation: custom\n")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "submit-answer problems must be scoring")
 	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom\ngrading:\n  on_reject: first_error\n")
 	p, err = Read(dir)
 	require.NoError(t, err)

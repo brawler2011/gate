@@ -615,7 +615,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if len(d.ShortName) > 128 {
 		v.fail("/short_name", pkg.ErrLength, maximum(128), "short name exceeds 128 bytes")
 	}
-	if d.Type != "pass-fail" && d.Type != "scoring" && d.Type != "interactive" {
+	if !slices.Contains(spec.ProblemTypes, d.Type) {
 		v.fail("/type", pkg.ErrUnknown, value(d.Type), "invalid problem type %q", d.Type)
 	}
 	if d.TimeLimitMs <= 0 {
@@ -733,7 +733,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		}
 		if s.Points != nil {
 			switch {
-			case d.Type != "scoring":
+			case !spec.Scored(d.Type):
 				v.fail(at+"/points", pkg.ErrInconsistent, with("/type"), "expected points need a scoring problem")
 			case len(s.Verdicts) == 0:
 				v.fail(at+"/points", pkg.ErrInconsistent, with(at+"/verdicts"), "expected points need a solution that runs")
@@ -877,9 +877,9 @@ func (d *Draft) validateGroups(v *validation, q DraftQuotas) {
 	switch {
 	case err != nil:
 		v.fail("/tests", pkg.ErrRange, maximum(points.Max), "test points exceed the score limit")
-	case d.Type == "scoring" && (d.MaxScore == nil || *d.MaxScore != max):
+	case spec.Scored(d.Type) && (d.MaxScore == nil || *d.MaxScore != max):
 		v.fail("/max_score", pkg.ErrInconsistent, with("/testset"), "max score must equal the testset score")
-	case d.Type != "scoring" && d.MaxScore != nil:
+	case !spec.Scored(d.Type) && d.MaxScore != nil:
 		v.fail("/max_score", pkg.ErrInconsistent, with("/type"), "max score requires scoring type")
 	}
 }
@@ -1051,7 +1051,7 @@ func (d *Draft) ComputeScores() error {
 		return err
 	}
 	d.MaxScore = nil
-	if d.Type == "scoring" {
+	if spec.Scored(d.Type) {
 		d.MaxScore = &max
 	}
 	return nil

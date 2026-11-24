@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -13,9 +14,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 
 	"github.com/brawler2011/gate/backend/internal/judging"
 	"github.com/brawler2011/gate/backend/internal/problems/archive"
@@ -188,11 +192,61 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, statements, pdfs, e.samples))
+	var inputs *model.StoredObject
+	if s.Draft.Type == "output-only" {
+		if inputs, err = e.uploadInputs(ctx, filepath.Join(root, "inputs.zip")); err != nil {
+			return uuid.Nil, err
+		}
+	}
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, model.NewPackageIndex(s.Draft, statements, pdfs, e.samples, inputs))
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
+}
+
+// uploadInputs packs every test input as <ordinal>.in, zero-padded so the names sort.
+func (e *execution) uploadInputs(ctx context.Context, path string) (*model.StoredObject, error) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	if err != nil {
+		return nil, fail("inputs", 0, "infrastructure", err)
+	}
+	defer f.Close()
+	tests := e.build.Snapshot.Draft.Tests
+	width := 0
+	for _, t := range tests {
+		width = max(width, len(strconv.Itoa(t.Ordinal)))
+	}
+	hash := sha256.New()
+	w := zip.NewWriter(io.MultiWriter(f, hash))
+	for _, t := range tests {
+		entry, err := w.CreateHeader(&zip.FileHeader{Name: fmt.Sprintf("%0*d.in", width, t.Ordinal), Method: zip.Deflate})
+		if err != nil {
+			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+		}
+		in, err := os.Open(filepath.Join(e.dir.root, e.tests[t.ID].Input))
+		if err != nil {
+			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+		}
+		_, err = io.Copy(entry, in)
+		in.Close()
+		if err != nil {
+			return nil, fail("inputs", t.Ordinal, "infrastructure", err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		return nil, fail("inputs", 0, "infrastructure", err)
+	}
+	size, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return nil, fail("inputs", 0, "infrastructure", err)
+	}
+	digest := hex.EncodeToString(hash.Sum(nil))
+	object := model.NewStoredObject(e.build.OrganizationID, model.UploadSpec{Purpose: "inputs", SHA256: digest, Size: size})
+	if err := e.pipeline.Store.UploadFileWithSHA256(ctx, e.pipeline.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/zip", digest); err != nil {
+		return nil, fail("upload", 0, "infrastructure", err)
+	}
+	return &object, nil
 }
 
 // typeset makes the site's HTML and the PDF of each statement, so authors, not participants, meet LaTeX errors.
@@ -677,7 +731,7 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 		}
 		if e.uncompiled[sol.Name] {
 			result.Verdict = string(sandbox.StatusCE)
-		} else if d.Type == "scoring" {
+		} else if spec.Scored(d.Type) {
 			score := judging.NewVerdictCalculator(d.Type, e.pkg.Manifest).Calculate(tests).Score
 			result.Points = &score
 		}

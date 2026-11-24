@@ -512,6 +512,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contests/{contest_id}/problems/{problem_id}/inputs.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the test inputs of an output-only contest problem
+         * @description Inputs of every test, named <ordinal>.in, from the package the contest uses; visible with the statement.
+         */
+        get: operations["DownloadContestProblemInputs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contests/{contest_id}/members": {
         parameters: {
             query?: never;
@@ -835,6 +855,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/submissions/outputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit outputs to an output-only problem
+         * @description Each file is the output of the test whose number ends its name, before or after the extension (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+         */
+        post: operations["CreateOutputsSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/submissions/{submission_id}/outputs.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the outputs of an output-only submission
+         * @description Visible where the submission's source would be; files are named by test number.
+         */
+        get: operations["DownloadSubmissionOutputs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/submissions/{submission_id}": {
         parameters: {
             query?: never;
@@ -1129,6 +1189,23 @@ export interface paths {
         };
         /** Download the statement PDF of the problem's latest package */
         get: operations["DownloadProblemStatementPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/inputs.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the test inputs of an output-only problem's latest package */
+        get: operations["DownloadProblemInputs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1887,8 +1964,7 @@ export interface components {
             revision: number;
             title: string;
             short_name: string;
-            /** @enum {string} */
-            type: "pass-fail" | "scoring" | "interactive";
+            type: components["schemas"]["ProblemType"];
             /** Format: int64 */
             time_limit_ms: number;
             /** Format: int64 */
@@ -2322,9 +2398,15 @@ export interface components {
             problem: components["schemas"]["ProblemModel"];
             statement?: components["schemas"]["ProblemStatementModel"];
         };
+        /**
+         * @description An output-only problem judges the outputs participants submit, one file per test, instead of running a program.
+         * @enum {string}
+         */
+        ProblemType: "pass-fail" | "scoring" | "interactive" | "output-only";
         /** @description Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview. */
         ProblemStatementModel: {
             title: string;
+            type: components["schemas"]["ProblemType"];
             /** Format: int32 */
             time_limit: number;
             /** Format: int32 */
@@ -2380,6 +2462,7 @@ export interface components {
             problem_id: string;
             /** @example Test problem */
             title: string;
+            type: components["schemas"]["ProblemType"];
             /**
              * Format: int32
              * @example 1000
@@ -2653,6 +2736,7 @@ export interface components {
             position: number;
             /** @example Test task */
             title: string;
+            type: components["schemas"]["ProblemType"];
             /**
              * Format: int32
              * @example 256
@@ -5395,6 +5479,7 @@ export type ProblemModel = components['schemas']['ProblemModel'];
 export type ProblemsListItemModel = components['schemas']['ProblemsListItemModel'];
 export type ListProblemsResponseModel = components['schemas']['ListProblemsResponseModel'];
 export type GetProblemResponseModel = components['schemas']['GetProblemResponseModel'];
+export type ProblemType = components['schemas']['ProblemType'];
 export type ProblemStatementModel = components['schemas']['ProblemStatementModel'];
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];
@@ -6578,6 +6663,32 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    DownloadContestProblemInputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zip of test inputs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     ListContestMembers: {
         parameters: {
             query?: {
@@ -7574,6 +7685,62 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    CreateOutputsSubmission: {
+        parameters: {
+            query: {
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDQuery"];
+                /** @description UUID of the contest. */
+                contest_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    files: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreationResponseModel"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DownloadSubmissionOutputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zip of submitted outputs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     GetSubmission: {
         parameters: {
             query?: never;
@@ -8260,6 +8427,30 @@ export interface operations {
                 };
                 content: {
                     "application/pdf": string;
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DownloadProblemInputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zip of test inputs, named <ordinal>.in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
                 };
             };
             default: components["responses"]["Problem"];

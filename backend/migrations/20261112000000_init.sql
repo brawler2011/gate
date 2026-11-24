@@ -256,7 +256,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text, 'inputs'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
@@ -310,14 +310,14 @@ CREATE TABLE problem_drafts (
     -- Stored objects the content references; written with it so GC need not parse drafts.
     object_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
     CONSTRAINT problem_drafts_content_check CHECK ((jsonb_typeof(content) = 'object'::text)),
-    CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
+    CONSTRAINT problem_drafts_check CHECK (((type = ANY (ARRAY['scoring'::text, 'output-only'::text])) = (max_score IS NOT NULL))),
     CONSTRAINT problem_drafts_max_score_check CHECK ((max_score >= (0)::numeric)),
     CONSTRAINT problem_drafts_memory_limit_mb_check CHECK ((memory_limit_mb > 0)),
     CONSTRAINT problem_drafts_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_drafts_short_name_check CHECK (((octet_length(short_name) >= 1) AND (octet_length(short_name) <= 128))),
     CONSTRAINT problem_drafts_time_limit_ms_check CHECK ((time_limit_ms > 0)),
     CONSTRAINT problem_drafts_title_check CHECK ((octet_length(title) <= 1024)),
-    CONSTRAINT problem_drafts_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
+    CONSTRAINT problem_drafts_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text, 'output-only'::text]))),
     CONSTRAINT problem_drafts_organization_id_short_name_key UNIQUE (organization_id, short_name),
     CONSTRAINT problem_drafts_pkey PRIMARY KEY (problem_id),
     CONSTRAINT problem_drafts_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
@@ -395,20 +395,25 @@ CREATE TABLE problem_packages (
     revision bigint NOT NULL,
     samples jsonb NOT NULL,
     statements jsonb NOT NULL,
+    -- The zip of every test input that participants of an output-only problem download.
+    inputs_object_id uuid,
+    CONSTRAINT problem_packages_inputs_check CHECK (((inputs_object_id IS NOT NULL) = (type = 'output-only'::text))),
     CONSTRAINT problem_packages_package_hash_check CHECK ((length((package_hash)::text) = 64)),
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
     CONSTRAINT problem_packages_statements_check CHECK ((jsonb_typeof(statements) = 'array'::text)),
-    CONSTRAINT problem_packages_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
+    CONSTRAINT problem_packages_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text, 'output-only'::text]))),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_packages_inputs_object_id_fkey FOREIGN KEY (inputs_object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT problem_packages_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
 CREATE INDEX problem_packages_created_at_idx ON problem_packages USING btree (created_at DESC);
 CREATE INDEX problem_packages_object ON problem_packages USING btree (object_id);
+CREATE INDEX problem_packages_inputs_object ON problem_packages USING btree (inputs_object_id);
 CREATE INDEX problem_packages_organization_id_idx ON problem_packages USING btree (organization_id);
 CREATE INDEX problem_packages_package_hash_idx ON problem_packages USING btree (package_hash);
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (problem_id);
@@ -729,6 +734,9 @@ CREATE TABLE submissions (
     -- Strict mode: the time limit factor and the benchmark that measured it.
     judge_k double precision,
     judge_benchmark text,
+    -- SHA-256 of the archive of an output-only submission's outputs, which replaces its source.
+    outputs text,
+    CONSTRAINT submissions_outputs_check CHECK ((outputs ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT submissions_calibration_check CHECK (((judge_k IS NULL) = (judge_benchmark IS NULL))),
     CONSTRAINT submissions_pkey PRIMARY KEY (id),
     CONSTRAINT submissions_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE SET NULL,

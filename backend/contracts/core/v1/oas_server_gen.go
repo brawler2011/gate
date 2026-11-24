@@ -164,6 +164,13 @@ type Handler interface {
 	//
 	// POST /organizations/{login}/requests
 	CreateOrganizationJoinRequest(ctx context.Context, req OptCreateOrganizationJoinRequestModel, params CreateOrganizationJoinRequestParams) (*OrganizationJoinRequestResponseModel, error)
+	// CreateOutputsSubmission implements CreateOutputsSubmission operation.
+	//
+	// Each file is the output of the test whose number ends its name, before or after the extension
+	// (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+	//
+	// POST /submissions/outputs
+	CreateOutputsSubmission(ctx context.Context, req *CreateOutputsSubmissionReq, params CreateOutputsSubmissionParams) (*CreationResponseModel, error)
 	// CreatePost implements CreatePost operation.
 	//
 	// Create a new post.
@@ -278,6 +285,12 @@ type Handler interface {
 	//
 	// DELETE /teams/{id}/join-link
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
+	// DownloadContestProblemInputs implements DownloadContestProblemInputs operation.
+	//
+	// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+	//
+	// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
+	DownloadContestProblemInputs(ctx context.Context, params DownloadContestProblemInputsParams) (DownloadContestProblemInputsOK, error)
 	// DownloadContestProblemStatementPdf implements DownloadContestProblemStatementPdf operation.
 	//
 	// The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -290,6 +303,12 @@ type Handler interface {
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
+	// DownloadProblemInputs implements DownloadProblemInputs operation.
+	//
+	// Download the test inputs of an output-only problem's latest package.
+	//
+	// GET /problems/{id}/inputs.zip
+	DownloadProblemInputs(ctx context.Context, params DownloadProblemInputsParams) (DownloadProblemInputsOK, error)
 	// DownloadProblemPackage implements DownloadProblemPackage operation.
 	//
 	// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
@@ -303,6 +322,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}/statement.pdf
 	DownloadProblemStatementPdf(ctx context.Context, params DownloadProblemStatementPdfParams) (DownloadProblemStatementPdfOK, error)
+	// DownloadSubmissionOutputs implements DownloadSubmissionOutputs operation.
+	//
+	// Visible where the submission's source would be; files are named by test number.
+	//
+	// GET /submissions/{submission_id}/outputs.zip
+	DownloadSubmissionOutputs(ctx context.Context, params DownloadSubmissionOutputsParams) (DownloadSubmissionOutputsOK, error)
 	// ExportProblemDraft implements ExportProblemDraft operation.
 	//
 	// The archive imports back through ImportProblem.

@@ -4,6 +4,7 @@ import {Link} from "react-router-dom";
 
 import {Problem} from "@/components/problems/Problem";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
+import {OutputsSubmissionForm} from "@/components/submissions/OutputsSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {api} from "@/lib/api";
 import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH} from "@/lib/constants";
@@ -150,6 +151,9 @@ const Task = ({
                   return hash && `/api/contests/${contest.id}/problems/${task.problem_id}/assets/${hash}`;
                 }}
                 pdfUrl={`/api/contests/${contest.id}/problems/${task.problem_id}/statement.pdf`}
+                inputsUrl={task.type === "output-only"
+                  ? `/api/contests/${contest.id}/problems/${task.problem_id}/inputs.zip`
+                  : undefined}
               />
             </Box>
           </Container>
@@ -169,7 +173,15 @@ const Task = ({
                 bg="var(--mantine-color-gray-light)"
                 style={{width: "100%"}}
               >
-                <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.permissions.submit} />
+                {task.type === "output-only" ? (
+                  <OutputsSubmissionForm
+                    contestId={contest.id}
+                    problemId={task.problem_id}
+                    disabled={!task.permissions.submit}
+                  />
+                ) : (
+                  <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.permissions.submit} />
+                )}
                 {!task.permissions.submit && !contest.enable_upsolving && ended && (
                   <Text size="sm" c="dimmed" mt="xs">Контест завершён, дорешивание отключено</Text>
                 )}

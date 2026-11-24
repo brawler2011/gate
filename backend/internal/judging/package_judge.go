@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -245,6 +246,77 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	}
 	return result, nil
 }
+// JudgeOutputs checks the outputs an output-only submission gave, files named by test ordinal in dir; a missing one is WA.
+func (j *PackageJudge) JudgeOutputs(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, dir string, pretests bool, progress Progress) (*FinalVerdict, error) {
+	p := pkg.Format.Problem
+	if pretests {
+		p, pretests = p.Pretests()
+	}
+	checker, err := j.roleProgram(ctx, pkg, "checker")
+	defer j.releaseRoleProgram(checker)
+	if err != nil {
+		return nil, err
+	}
+	if checker == nil {
+		return nil, errors.New("package has no checker")
+	}
+	if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestingStarted, ID: submissionID}); err != nil {
+		return nil, err
+	}
+	sb := sandbox.NewSandbox(j.Client, j.Languages)
+	tests := p.Tests()
+	results := make([]TestResult, 0, len(tests))
+	details := true
+	for _, test := range tests {
+		if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestStarted, ID: submissionID, Number: safeInt32(test.Test.Ordinal)}); err != nil {
+			return nil, err
+		}
+		result, err := j.checkOutput(ctx, sb, pkg, checker, test, dir, details)
+		if err != nil {
+			return nil, err
+		}
+		details = details && result.Verdict == "OK"
+		results = append(results, result)
+	}
+	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict.Pretests = pretests
+	return verdict, nil
+}
+
+func (j *PackageJudge) checkOutput(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, checker *sandbox.Jury, test gfmt.GroupTest, dir string, details bool) (TestResult, error) {
+	p := pkg.Format.Problem
+	result := TestResult{TestNumber: test.Test.Ordinal, Sample: test.Test.Sample, Public: p.ShowsInput(test.Test), Group: test.Group.Name}
+	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
+	name := strconv.Itoa(test.Test.Ordinal)
+	if _, err := os.Stat(filepath.Join(dir, name)); errors.Is(err, fs.ErrNotExist) {
+		result.Verdict, result.Message = string(sandbox.StatusWA), "no output submitted for this test"
+	} else {
+		files := make([]sandbox.File, 3)
+		for i, path := range []string{filepath.Join(pkg.Format.Path, inputPath), filepath.Join(dir, name), filepath.Join(pkg.Format.Path, answerPath)} {
+			if files[i], err = j.WorkDir.File(path); err != nil {
+				return result, err //nolint:wrapcheck // names the path
+			}
+		}
+		check, err := sb.CheckFiles(ctx, checker.With(test.Group.CheckerArgs), files[0], files[1], files[2], j.Limits.Auxiliary)
+		if err != nil {
+			return result, err
+		}
+		result.Verdict, result.Message, result.CheckerOutput, result.Score = string(check.Status), check.Message, check.Message, check.Score
+	}
+	if !details || result.Verdict == "OK" {
+		return result, nil
+	}
+	var err error
+	if result.Output, err = packagePreview(dir, name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return result, err
+	}
+	if result.Input, err = packagePreview(pkg.Format.Path, inputPath); err != nil {
+		return result, err
+	}
+	result.Answer, err = packagePreview(pkg.Format.Path, answerPath)
+	return result, err
+}
+
 func packagePreview(root, path string) (string, error) {
 	if path == "" {
 		return "", nil

@@ -113,7 +113,7 @@ DELETE FROM stored_objects WHERE id IN (
  SELECT o.id FROM stored_objects o
  WHERE NOT EXISTS(SELECT 1 FROM problem_drafts d WHERE o.id=ANY(d.object_ids))
   AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
-  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id OR p.inputs_object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_pdfs f WHERE f.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM contest_booklets b WHERE b.object_id=o.id)
@@ -151,6 +151,17 @@ UPDATE problem_builds SET state='failed',finished_at=clock_timestamp(),
 func (q *Queries) FailExhaustedBuild(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, failExhaustedBuild, id)
 	return err
+}
+
+const findPackageInputs = `-- name: FindPackageInputs :one
+SELECT o.key FROM problem_packages p JOIN stored_objects o ON o.id=p.inputs_object_id WHERE p.id=$1
+`
+
+func (q *Queries) FindPackageInputs(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, findPackageInputs, id)
+	var key string
+	err := row.Scan(&key)
+	return key, err
 }
 
 const findPackagePDF = `-- name: FindPackagePDF :one
@@ -256,27 +267,28 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 
 const insertProblemPackage = `-- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+ title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,inputs_object_id)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 `
 
 type InsertProblemPackageParams struct {
-	ID             uuid.UUID `json:"id"`
-	ProblemID      uuid.UUID `json:"problem_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	BuildID        uuid.UUID `json:"build_id"`
-	ObjectID       uuid.UUID `json:"object_id"`
-	PackageHash    string    `json:"package_hash"`
-	Revision       int64     `json:"revision"`
-	Title          string    `json:"title"`
-	ShortName      string    `json:"short_name"`
-	Type           string    `json:"type"`
-	TimeLimitMs    int32     `json:"time_limit_ms"`
-	MemoryLimitMb  int32     `json:"memory_limit_mb"`
-	InputFile      string    `json:"input_file"`
-	OutputFile     string    `json:"output_file"`
-	Statements     []byte    `json:"statements"`
-	Samples        []byte    `json:"samples"`
+	ID             uuid.UUID  `json:"id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	BuildID        uuid.UUID  `json:"build_id"`
+	ObjectID       uuid.UUID  `json:"object_id"`
+	PackageHash    string     `json:"package_hash"`
+	Revision       int64      `json:"revision"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	Type           string     `json:"type"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	InputFile      string     `json:"input_file"`
+	OutputFile     string     `json:"output_file"`
+	Statements     []byte     `json:"statements"`
+	Samples        []byte     `json:"samples"`
+	InputsObjectID *uuid.UUID `json:"inputs_object_id"`
 }
 
 func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPackageParams) error {
@@ -297,6 +309,7 @@ func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPac
 		arg.OutputFile,
 		arg.Statements,
 		arg.Samples,
+		arg.InputsObjectID,
 	)
 	return err
 }

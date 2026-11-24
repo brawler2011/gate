@@ -4,6 +4,8 @@
 package integration
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -20,11 +22,13 @@ import (
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
+	"github.com/brawler2011/gate/backend/pkg/outputs"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -254,6 +258,8 @@ type judgeHarness struct {
 	orgID       uuid.UUID
 	userID      uuid.UUID
 	contestID   uuid.UUID
+	store       *storage.S3Storage
+	bucket      string
 }
 
 func newJudgeHarness(t *testing.T) *judgeHarness {
@@ -270,7 +276,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	require.Equal(t, source.Langs, image.Config.Langs)
 	cfg := image.Config
 
-	h := &judgeHarness{pool: dbPool, userID: uuid.New(), contestID: uuid.New()}
+	h := &judgeHarness{pool: dbPool, userID: uuid.New(), contestID: uuid.New(), store: store, bucket: bucket}
 	orgsRepo := pgstore.NewOrganizationsRepo(dbPool)
 	usersRepo := pgstore.NewUsersRepo(dbPool)
 	h.contests = pgstore.NewContestsRepo(dbPool)
@@ -427,6 +433,65 @@ func TestStandardCheckerE2E(t *testing.T) {
 			assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", c.wrong).State)
 		})
 	}
+}
+
+// Output-only judging checks each submitted output; a test without one is WA, and the others still score.
+func TestOutputOnlyJudgingE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+	t.Parallel()
+	h := newJudgeHarness(t)
+	problemID := h.publish(t, "output-only", func(d *problemsmodel.Draft) {
+		generator, main, group := "gen", "main", uuid.New()
+		d.Type = "output-only"
+		d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: "wcmp"}
+		d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
+		d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()))\n"}}, Verdicts: []string{}}}
+		d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Double each number."}}
+		d.MainSolution = &main
+		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+		for i, arg := range []string{"1", "2", "3"} {
+			d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 10 * points.Unit,
+				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{arg}},
+				Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
+		}
+		max := 30 * points.Unit
+		d.MaxScore = &max
+	})
+
+	link, err := h.contests.GetContestProblem(h.ctx, contestsmodel.ContestProblemGet{ContestId: h.contestID, ProblemId: problemID})
+	require.NoError(t, err)
+	content := &problems.PackageContent{Repo: h.drafts, Store: h.store, Bucket: h.bucket}
+	inputs, err := content.OpenInputs(h.ctx, link.PackageID)
+	require.NoError(t, err)
+	data, err := io.ReadAll(inputs)
+	require.NoError(t, inputs.Close())
+	require.NoError(t, err)
+	z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	require.NoError(t, err)
+	names := []string{}
+	for _, f := range z.File {
+		names = append(names, f.Name)
+	}
+	assert.Equal(t, []string{"1.in", "2.in", "3.in"}, names)
+
+	archive, sha, err := outputs.Pack([]outputs.File{{Name: "01.out", Data: strings.NewReader("2\n")}, {Name: "02.out", Data: strings.NewReader("4\n")}})
+	require.NoError(t, err)
+	require.NoError(t, h.store.UploadFile(h.ctx, h.bucket, outputs.Key(sha), bytes.NewReader(archive), "application/zip"))
+	id, err := h.submissions.CreateSubmission(h.ctx, &submissionsmodel.SubmissionCreation{Kind: submissionsmodel.KindContest, Outputs: &sha, ProblemId: problemID, ContestId: h.contestID, UserId: h.userID, Language: submissionsmodel.OutputsLanguage})
+	require.NoError(t, err)
+	judgeNow(t, h.ctx, h.pool, h.judge, id)
+	sub, err := h.submissions.GetSubmission(h.ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, submissionsmodel.GotWA, sub.State)
+	assert.Equal(t, 20*points.Unit, sub.Score)
+	require.NotNil(t, sub.TestDetails)
+	verdicts := []string{}
+	for _, test := range sub.TestDetails.Tests {
+		verdicts = append(verdicts, test.Verdict)
+	}
+	assert.Equal(t, []string{"OK", "OK", "WA"}, verdicts)
 }
 
 // contestOwner keeps the judged user a plain participant.

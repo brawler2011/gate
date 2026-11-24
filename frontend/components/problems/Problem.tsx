@@ -1,7 +1,7 @@
 "use client";
 
 import {Alert, Anchor, Group, Stack, Title} from "@mantine/core";
-import {IconEyeOff, IconFileTypePdf} from "@tabler/icons-react";
+import {IconEyeOff, IconFileTypePdf, IconFileZip} from "@tabler/icons-react";
 import {type ReactNode} from "react";
 
 import {ProblemCopyableBlock} from "./ProblemCopyableBlock";
@@ -46,6 +46,8 @@ export type ProblemProps = {
   hideStatements?: boolean;
   assetUrl?: AssetUrl;
   pdfUrl?: string;
+  // Output-only problems give participants every test input.
+  inputsUrl?: string;
 };
 
 const Section = ({title, html, assetUrl}: {title: string; html?: string; assetUrl?: AssetUrl}): ReactNode =>
@@ -65,6 +67,7 @@ const ProblemComponent = ({
   hideStatements,
   assetUrl,
   pdfUrl,
+  inputsUrl,
 }: ProblemProps): ReactNode => {
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
@@ -96,14 +99,24 @@ const ProblemComponent = ({
         </Alert>
       ) : (
         <>
-          {pdfUrl && (
+          {(pdfUrl || inputsUrl) && (
             <Group justify="flex-end">
-              <Anchor href={pdfUrl} target="_blank" rel="noreferrer" size="sm">
-                <Group gap={4}>
-                  <IconFileTypePdf size={16} />
-                  PDF
-                </Group>
-              </Anchor>
+              {inputsUrl && (
+                <Anchor href={inputsUrl} download size="sm">
+                  <Group gap={4}>
+                    <IconFileZip size={16} />
+                    Входные данные тестов
+                  </Group>
+                </Anchor>
+              )}
+              {pdfUrl && (
+                <Anchor href={pdfUrl} target="_blank" rel="noreferrer" size="sm">
+                  <Group gap={4}>
+                    <IconFileTypePdf size={16} />
+                    PDF
+                  </Group>
+                </Anchor>
+              )}
             </Group>
           )}
           {problem.legend && <StatementHtml html={problem.legend} assetUrl={assetUrl} />}

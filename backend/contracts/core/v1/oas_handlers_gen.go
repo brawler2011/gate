@@ -2742,6 +2742,121 @@ func (s *Server) handleCreateOrganizationJoinRequestRequest(args [1]string, args
 	}
 }
 
+// handleCreateOutputsSubmissionRequest handles CreateOutputsSubmission operation.
+//
+// Each file is the output of the test whose number ends its name, before or after the extension
+// (01.out, output_1.txt); .zip files hold such files. Tests without an output get WA.
+//
+// POST /submissions/outputs
+func (s *Server) handleCreateOutputsSubmissionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateOutputsSubmissionOperation,
+			ID:   "CreateOutputsSubmission",
+		}
+	)
+	params, err := decodeCreateOutputsSubmissionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateOutputsSubmissionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *CreationResponseModel
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateOutputsSubmissionOperation,
+			OperationSummary: "Submit outputs to an output-only problem",
+			OperationID:      "CreateOutputsSubmission",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "problem_id",
+					In:   "query",
+				}: params.ProblemID,
+				{
+					Name: "contest_id",
+					In:   "query",
+				}: params.ContestID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *CreateOutputsSubmissionReq
+			Params   = CreateOutputsSubmissionParams
+			Response = *CreationResponseModel
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCreateOutputsSubmissionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateOutputsSubmission(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateOutputsSubmission(ctx, request, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeCreateOutputsSubmissionResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleCreatePostRequest handles CreatePost operation.
 //
 // Create a new post.
@@ -4702,6 +4817,105 @@ func (s *Server) handleDisableTeamJoinLinkRequest(args [1]string, argsEscaped bo
 	}
 }
 
+// handleDownloadContestProblemInputsRequest handles DownloadContestProblemInputs operation.
+//
+// Inputs of every test, named .in, from the package the contest uses; visible with the statement.
+//
+// GET /contests/{contest_id}/problems/{problem_id}/inputs.zip
+func (s *Server) handleDownloadContestProblemInputsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DownloadContestProblemInputsOperation,
+			ID:   "DownloadContestProblemInputs",
+		}
+	)
+	params, err := decodeDownloadContestProblemInputsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response DownloadContestProblemInputsOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DownloadContestProblemInputsOperation,
+			OperationSummary: "Download the test inputs of an output-only contest problem",
+			OperationID:      "DownloadContestProblemInputs",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "contest_id",
+					In:   "path",
+				}: params.ContestID,
+				{
+					Name: "problem_id",
+					In:   "path",
+				}: params.ProblemID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DownloadContestProblemInputsParams
+			Response = DownloadContestProblemInputsOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDownloadContestProblemInputsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DownloadContestProblemInputs(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DownloadContestProblemInputs(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeDownloadContestProblemInputsResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleDownloadContestProblemStatementPdfRequest handles DownloadContestProblemStatementPdf operation.
 //
 // The PDF the build of the package the contest uses printed; it is visible with the statement.
@@ -4904,6 +5118,101 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [1]string, argsE
 	}
 }
 
+// handleDownloadProblemInputsRequest handles DownloadProblemInputs operation.
+//
+// Download the test inputs of an output-only problem's latest package.
+//
+// GET /problems/{id}/inputs.zip
+func (s *Server) handleDownloadProblemInputsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DownloadProblemInputsOperation,
+			ID:   "DownloadProblemInputs",
+		}
+	)
+	params, err := decodeDownloadProblemInputsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response DownloadProblemInputsOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DownloadProblemInputsOperation,
+			OperationSummary: "Download the test inputs of an output-only problem's latest package",
+			OperationID:      "DownloadProblemInputs",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DownloadProblemInputsParams
+			Response = DownloadProblemInputsOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDownloadProblemInputsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DownloadProblemInputs(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DownloadProblemInputs(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeDownloadProblemInputsResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleDownloadProblemPackageRequest handles DownloadProblemPackage operation.
 //
 // A gfmt package with every test's input and answer as files. Importing it gives the draft it was
@@ -5095,6 +5404,101 @@ func (s *Server) handleDownloadProblemStatementPdfRequest(args [1]string, argsEs
 	}
 
 	if err := encodeDownloadProblemStatementPdfResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleDownloadSubmissionOutputsRequest handles DownloadSubmissionOutputs operation.
+//
+// Visible where the submission's source would be; files are named by test number.
+//
+// GET /submissions/{submission_id}/outputs.zip
+func (s *Server) handleDownloadSubmissionOutputsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DownloadSubmissionOutputsOperation,
+			ID:   "DownloadSubmissionOutputs",
+		}
+	)
+	params, err := decodeDownloadSubmissionOutputsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response DownloadSubmissionOutputsOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DownloadSubmissionOutputsOperation,
+			OperationSummary: "Download the outputs of an output-only submission",
+			OperationID:      "DownloadSubmissionOutputs",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "submission_id",
+					In:   "path",
+				}: params.SubmissionID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DownloadSubmissionOutputsParams
+			Response = DownloadSubmissionOutputsOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDownloadSubmissionOutputsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DownloadSubmissionOutputs(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DownloadSubmissionOutputs(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeDownloadSubmissionOutputsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

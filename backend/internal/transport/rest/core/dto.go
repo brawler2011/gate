@@ -140,6 +140,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
+			Type:         corev1.ProblemType(contestProblem.Type),
 			ProblemID:    contestProblem.ProblemID,
 			Title:        title,
 			TimeLimit:    safeInt32(problem.TimeLimitMs),
@@ -224,7 +225,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
-	return corev1.ContestProblemListItemModel{ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 }
 func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
 	result := make([]corev1.ProblemSampleModel, len(samples))

@@ -5,7 +5,7 @@ import React, {useState, type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
 import {CodeBlock} from "@/components/shared/CodeBlock";
-import {languageName, useLanguages} from "@/lib/languages";
+import {languageName, OUTPUTS_LANGUAGE, useLanguages} from "@/lib/languages";
 import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionKindBadge} from "./SubmissionKindBadge";
@@ -502,33 +502,51 @@ export const SubmissionDetailsContent = ({
         </Alert>
       )}
 
-      <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
-        <Group justify="space-between" align="center" mb="sm">
-          <Group gap="xs">
-            <IconFileCode size={20} />
-            <Title order={4}>Исходный код решения</Title>
+      {submission.language === OUTPUTS_LANGUAGE ? (
+        <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <IconFileCode size={20} />
+              <Title order={4}>Отправленные ответы</Title>
+            </Group>
+            {submission.submission === undefined ? (
+              <Text c="dimmed">Ответы скрыты</Text>
+            ) : (
+              <Button size="xs" variant="light" component="a" href={`/api/submissions/${submission.id}/outputs.zip`} download leftSection={<IconDownload size={14} />}>
+                Скачать архив
+              </Button>
+            )}
           </Group>
-          <Button
-            size="xs"
-            variant="light"
-            color={copiedCode ? "green" : "blue"}
-            leftSection={copiedCode ? <IconCheck size={14} /> : <IconCopy size={14} />}
-            onClick={handleCopyCode}
-            disabled={submission.submission === undefined}
-          >
-            {copiedCode ? "Скопировано!" : "Копировать код"}
-          </Button>
-        </Group>
+        </Card>
+      ) : (
+        <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
+          <Group justify="space-between" align="center" mb="sm">
+            <Group gap="xs">
+              <IconFileCode size={20} />
+              <Title order={4}>Исходный код решения</Title>
+            </Group>
+            <Button
+              size="xs"
+              variant="light"
+              color={copiedCode ? "green" : "blue"}
+              leftSection={copiedCode ? <IconCheck size={14} /> : <IconCopy size={14} />}
+              onClick={handleCopyCode}
+              disabled={submission.submission === undefined}
+            >
+              {copiedCode ? "Скопировано!" : "Копировать код"}
+            </Button>
+          </Group>
 
-        {submission.submission === undefined ? (
-          <Text c="dimmed">Исходный код скрыт</Text>
-        ) : (
-          <CodeBlock
-            code={submission.submission}
-            syntax={languages.find((language) => language.id === submission.language)?.syntax ?? ""}
-          />
-        )}
-      </Card>
+          {submission.submission === undefined ? (
+            <Text c="dimmed">Исходный код скрыт</Text>
+          ) : (
+            <CodeBlock
+              code={submission.submission}
+              syntax={languages.find((language) => language.id === submission.language)?.syntax ?? ""}
+            />
+          )}
+        </Card>
+      )}
 
       <SubmissionSanctionsModal
         actionType={sanctionAction}

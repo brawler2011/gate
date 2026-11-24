@@ -122,7 +122,7 @@ func TestExpiredLeaseCannotPublish(t *testing.T) {
 	require.NoError(t, err)
 	expireLease(t, ctx, pool, build.ID)
 	output := packageObject(org)
-	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil, nil))
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, output.ID))
@@ -144,16 +144,16 @@ func TestStaleAttemptCannotPublish(t *testing.T) {
 
 	stale := packageObject(org)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, first.ID, *first.LeaseToken, []byte(`{"message":"late"}`), false), pkg.ErrConflict)
-	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, model.NewPackageIndex(d, built(d), nil, nil))
+	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, model.NewPackageIndex(d, built(d), nil, nil, nil))
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
 
 	output := packageObject(org)
-	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
+	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil, nil))
 	require.NoError(t, err)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1 AND object_id=$2`, packageID, output.ID))
 	// A retry after a lost commit response resolves to the same Package and records nothing.
-	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), model.NewPackageIndex(d, built(d), nil, nil))
+	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), model.NewPackageIndex(d, built(d), nil, nil, nil))
 	require.NoError(t, err)
 	require.Equal(t, packageID, again)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
@@ -181,7 +181,7 @@ func TestGCKeepsReferencedObjects(t *testing.T) {
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	output := packageObject(org)
-	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil))
+	_, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), nil, nil, nil))
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -357,7 +357,7 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	ctx, pool, repo, org, d, build, output, asset := claimedBuildWithAsset(t)
 	samples := []model.Sample{{Input: "1 2\n", Output: "3\n"}}
 	pdf := model.NewStoredObject(org, model.UploadSpec{Purpose: "statement", SHA256: strings.Repeat("1", 64), Size: 3})
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), []model.StatementPDF{{Language: "ru", Object: pdf}}, samples))
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, model.NewPackageIndex(d, built(d), []model.StatementPDF{{Language: "ru", Object: pdf}}, samples, nil))
 	require.NoError(t, err)
 
 	statement, err := repo.GetPackageStatement(ctx, packageID)

@@ -88,8 +88,13 @@ type SubmissionUpdate struct {
 	Calibration calibration.Calibration
 }
 
+// OutputsLanguage stands in for a language on output-only submissions, which run nothing.
+const OutputsLanguage = "output"
+
 type SubmissionCreation struct {
-	Solution  string
+	Solution string
+	// Outputs is the SHA-256 of an output-only submission's outputs archive; Solution is then empty.
+	Outputs   *string
 	ProblemId uuid.UUID
 	ContestId uuid.UUID
 	UserId    uuid.UUID
@@ -159,7 +164,8 @@ type Submission struct {
 	FailedTest   *int32                 `json:"failed_test,omitempty"`
 	TestDetails  *SubmissionTestDetails `json:"test_details,omitempty"`
 	// Pretests marks a contest submission judged on pretests only, until system testing.
-	Pretests bool `json:"pretests,omitempty"`
+	Pretests bool    `json:"pretests,omitempty"`
+	Outputs  *string `json:"-"`
 	// FailedTestFeedback stands in for TestDetails in lists, which do not load reports.
 	FailedTestFeedback string     `json:"-"`
 	BanReason          *string    `json:"ban_reason,omitempty"`

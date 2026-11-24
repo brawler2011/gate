@@ -50,7 +50,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 		loader.Contests = map[uuid.UUID]access.ContestFacts{contestID: {Contest: stub.contest, Now: time.Now()}}
 	}
 	setContest()
-	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, nil, loader)
+	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, nil, loader, submissions.OutputsStore{})
 	h := NewCoreServer(Services{Contests: stub, Submissions: application}, false)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser})
 	for _, own := range []bool{false, true} {
