@@ -195,6 +195,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		EnableDrafts:        optBool(req.EnableDrafts),
 		EnableUpsolving:     optBool(req.EnableUpsolving),
 		AllowVirtual:        optBool(req.AllowVirtual),
+		Pretests:            optBool(req.Pretests),
 	}
 	if v, ok := req.FreezeDurationMinutes.Get(); ok {
 		settings.FreezeDurationMinutes = &v

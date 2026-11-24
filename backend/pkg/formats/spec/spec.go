@@ -127,6 +127,7 @@ type Test struct {
 	AnswerSolution string
 	Points         points.Value
 	Sample         bool
+	Pretest        bool
 	// Positive ordinals order tests across groups; zero keeps the group order.
 	Ordinal int
 }

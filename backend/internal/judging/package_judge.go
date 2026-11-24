@@ -110,8 +110,12 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 	}
 }
 
-func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress) (*FinalVerdict, error) {
+// Judge runs only pretests when asked and the package has a proper subset of them.
+func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, pretests bool, progress Progress) (*FinalVerdict, error) {
 	p := pkg.Format.Problem
+	if pretests {
+		p, pretests = p.Pretests()
+	}
 	calib := j.Calibration()
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
@@ -149,7 +153,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	if err := progress.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventTestingStarted, ID: submissionID}); err != nil {
 		return nil, err
 	}
-	tests := collectFlatTests(pkg.Format.Problem)
+	tests := collectFlatTests(p)
 	results := make([]TestResult, 0, len(tests))
 	hasFailureDetails := false
 	for _, test := range tests {
@@ -170,6 +174,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	}
 	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
 	verdict.Calibration = calib
+	verdict.Pretests = pretests
 	return verdict, nil
 }
 func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, calib calibration.Calibration, details bool) (TestResult, error) {

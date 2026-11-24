@@ -84,7 +84,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
 			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: cfg}), Limits: testBuildOptions(s.T()).Limits, WorkDir: sandbox.SharedDir{Local: shared.judgeDir, Sandbox: judgeMount}, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), main.Source, language, silentJudgeProgress{})
+			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), main.Source, language, false, silentJudgeProgress{})
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)
 		})

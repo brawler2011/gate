@@ -177,7 +177,7 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 	tests := slices.Clone(d.Tests)
 	slices.SortFunc(tests, func(a, b model.DraftTest) int { return a.Ordinal - b.Ordinal })
 	for _, t := range tests {
-		test := gfmt.Test{Ordinal: t.Ordinal, Points: t.Points, Sample: t.Sample}
+		test := gfmt.Test{Ordinal: t.Ordinal, Points: t.Points, Sample: t.Sample, Pretest: t.Pretest}
 		name := fmt.Sprintf("%03d", t.Ordinal)
 		local, isBuilt := built[t.ID]
 		if built != nil && !isBuilt {

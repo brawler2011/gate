@@ -492,6 +492,22 @@ func apiServices(d sharedDeps, languages *sandbox.Config, compiler contests.Book
 				return nil
 			},
 		),
+		newService("system testing", func(ctx context.Context) error {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			for {
+				if n, err := judging.SystemTest(ctx, pgstore.NewJudgeTransactions(pool)); err != nil && ctx.Err() == nil {
+					slog.ErrorContext(ctx, "system testing failed", "error", err)
+				} else if n > 0 {
+					slog.InfoContext(ctx, "system testing started", "submissions", n)
+				}
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-ticker.C:
+				}
+			}
+		}, func(context.Context) error { return nil }),
 		newHTTPService("public server", publicServer),
 	}
 	return services, nil

@@ -206,7 +206,8 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.created_at
+  s.created_at,
+  s.pretests
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id
@@ -246,6 +247,7 @@ type GetSubmissionRow struct {
 	UpdatedAt         time.Time                        `json:"updated_at"`
 	Revision          int64                            `json:"revision"`
 	CreatedAt         time.Time                        `json:"created_at"`
+	Pretests          bool                             `json:"pretests"`
 }
 
 func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error) {
@@ -278,6 +280,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.UpdatedAt,
 		&i.Revision,
 		&i.CreatedAt,
+		&i.Pretests,
 	)
 	return i, err
 }
@@ -312,7 +315,8 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
-  s.created_at
+  s.created_at,
+  s.pretests
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
   LEFT JOIN problem_catalog p ON s.problem_id = p.id
@@ -389,6 +393,7 @@ type ListSubmissionsRow struct {
 	UpdatedAt          time.Time              `json:"updated_at"`
 	Revision           int64                  `json:"revision"`
 	CreatedAt          time.Time              `json:"created_at"`
+	Pretests           bool                   `json:"pretests"`
 }
 
 func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error) {
@@ -434,6 +439,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.UpdatedAt,
 			&i.Revision,
 			&i.CreatedAt,
+			&i.Pretests,
 		); err != nil {
 			return nil, err
 		}
@@ -460,6 +466,46 @@ func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (LockSubmiss
 	var i LockSubmissionRow
 	err := row.Scan(&i.ID, &i.Revision, &i.State)
 	return i, err
+}
+
+const resetFinishedPretests = `-- name: ResetFinishedPretests :many
+WITH candidates AS (
+  SELECT s.id, s.state FROM submissions s JOIN contests c ON c.id = s.contest_id
+  WHERE s.pretests AND s.state <> 300 AND c.end_time <= now()
+  ORDER BY s.id FOR UPDATE OF s
+)
+UPDATE submissions s
+SET state = 1, score = 0, test_details = NULL,
+    ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
+FROM candidates WHERE s.id = candidates.id
+RETURNING s.id, candidates.state AS previous_state, s.revision
+`
+
+type ResetFinishedPretestsRow struct {
+	ID            uuid.UUID `json:"id"`
+	PreviousState int32     `json:"previous_state"`
+	Revision      int64     `json:"revision"`
+}
+
+// FOR UPDATE rechecks the conditions after a concurrent block or tick commits.
+func (q *Queries) ResetFinishedPretests(ctx context.Context) ([]ResetFinishedPretestsRow, error) {
+	rows, err := q.db.Query(ctx, resetFinishedPretests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ResetFinishedPretestsRow{}
+	for rows.Next() {
+		var i ResetFinishedPretestsRow
+		if err := rows.Scan(&i.ID, &i.PreviousState, &i.Revision); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const resetSubmissionsState = `-- name: ResetSubmissionsState :many
@@ -543,11 +589,11 @@ func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandid
 
 const updateSubmission = `-- name: UpdateSubmission :one
 WITH previous AS (
-  SELECT id, state FROM submissions WHERE id = $6::uuid FOR UPDATE
+  SELECT id, state FROM submissions WHERE id = $7::uuid FOR UPDATE
 )
 UPDATE submissions s
-SET state = $1, score = $2, test_details = $3,
-    judge_k = $4, judge_benchmark = $5,
+SET state = $1, score = $2, test_details = $3, pretests = $4,
+    judge_k = $5, judge_benchmark = $6,
     updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
@@ -557,6 +603,7 @@ type UpdateSubmissionParams struct {
 	State          submissionsmodel.State `json:"state"`
 	Score          points.Value           `json:"score"`
 	TestDetails    []byte                 `json:"test_details"`
+	Pretests       bool                   `json:"pretests"`
 	JudgeK         *float64               `json:"judge_k"`
 	JudgeBenchmark *string                `json:"judge_benchmark"`
 	ID             uuid.UUID              `json:"id"`
@@ -573,6 +620,7 @@ func (q *Queries) UpdateSubmission(ctx context.Context, arg UpdateSubmissionPara
 		arg.State,
 		arg.Score,
 		arg.TestDetails,
+		arg.Pretests,
 		arg.JudgeK,
 		arg.JudgeBenchmark,
 		arg.ID,

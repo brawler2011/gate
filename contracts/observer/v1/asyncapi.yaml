@@ -203,6 +203,8 @@ components:
           properties:
             result_hidden:
               type: boolean
+            pretests:
+              type: boolean
             id:
               type: string
               format: uuid

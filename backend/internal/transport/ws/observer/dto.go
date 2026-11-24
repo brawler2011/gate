@@ -202,6 +202,7 @@ func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observe
 		Language:     strPtrIfNotEmpty(e.Language),
 		MemoryStat:   &e.MemoryStat,
 		FailedTest:   e.FailedTest,
+		Pretests:     &e.Pretests,
 		Penalty:      &e.Penalty,
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,

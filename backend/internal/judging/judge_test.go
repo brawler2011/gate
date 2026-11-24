@@ -47,6 +47,12 @@ func (s *terminalStore) UpdateSubmission(_ context.Context, _ uuid.UUID, update 
 	s.submission.Revision++
 	return submissionsmodel.SubmissionChange{PreviousState: submissionsmodel.Saved, Revision: s.submission.Revision}, nil
 }
+func (s *terminalStore) ResetFinishedPretests(context.Context) ([]submissionsmodel.SubmissionReset, error) {
+	return nil, nil
+}
+func (s *terminalStore) ScheduleJob(context.Context, uuid.UUID) (judgingmodel.Job, error) {
+	return judgingmodel.Job{}, nil
+}
 func (s *terminalStore) Notify(_ context.Context, n events.Notice) error {
 	s.notices = append(s.notices, n)
 	return nil

@@ -13,6 +13,7 @@ interface MessageSubmissionCompleted {
   'language'?: string;
   'created_at'?: string;
   'result_hidden'?: boolean;
+  'pretests'?: boolean;
   'id': string;
   'state'?: number;
   'score'?: number;

@@ -23,6 +23,7 @@ const parseArgs = (text: string): string[] => text.split(/\s+/).filter((part) =>
 export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}: Props): ReactNode => {
   const [subtaskId, setSubtaskId] = useState(test.subtask_id);
   const [sample, setSample] = useState(test.sample);
+  const [pretest, setPretest] = useState(test.pretest);
   const [points, setPoints] = useState<number>(test.points);
   const [inputMode, setInputMode] = useState<"manual" | "generator">(test.input.mode);
   const [generator, setGenerator] = useState(test.input.generator);
@@ -57,6 +58,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       ...test,
       subtask_id: subtaskId,
       sample,
+      pretest,
       points: toHundredths(points) / 100,
       input:
         inputMode === "manual"
@@ -92,6 +94,11 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
           />
         </Group>
         <Checkbox label="Пример (показывается в условии)" checked={sample} onChange={(e) => setSample(e.currentTarget.checked)} />
+        <Checkbox
+          label="Претест (на контестах с претестами до конца проверяется только на претестах)"
+          checked={pretest}
+          onChange={(e) => setPretest(e.currentTarget.checked)}
+        />
 
         <Stack gap="xs">
           <Text fw={600} size="sm">

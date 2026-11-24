@@ -253,6 +253,11 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
                         пример
                       </Badge>
                     )}
+                    {test.pretest && (
+                      <Badge ml={4} size="xs" variant="light" color="grape">
+                        претест
+                      </Badge>
+                    )}
                   </Table.Td>
                   <Table.Td>{subtaskNames.get(test.subtask_id) ?? "?"}</Table.Td>
                   <Table.Td>{describeInput(test, draft, problemId)}</Table.Td>

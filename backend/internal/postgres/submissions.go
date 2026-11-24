@@ -82,6 +82,7 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 		State:       update.State,
 		Score:       update.Score,
 		TestDetails: detailsBytes,
+		Pretests:    update.Pretests,
 		ID:          id,
 	}
 	if c := update.Calibration; c.Benchmark != "" {
@@ -258,6 +259,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) submissionsmodel.Submission 
 		OrganizationLogin: row.OrganizationLogin,
 		UpdatedAt:         row.UpdatedAt,
 		CreatedAt:         row.CreatedAt,
+		Pretests:          row.Pretests,
 	}
 }
 
@@ -327,7 +329,21 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submiss
 		OrganizationLogin:  row.OrganizationLogin,
 		UpdatedAt:          row.UpdatedAt,
 		CreatedAt:          row.CreatedAt,
+		Pretests:           row.Pretests,
 	}
+}
+
+// ResetFinishedPretests resets contest submissions judged on pretests once their contest has ended.
+func (r *SubmissionsRepo) ResetFinishedPretests(ctx context.Context) ([]submissionsmodel.SubmissionReset, error) {
+	rows, err := r.queries.ResetFinishedPretests(ctx)
+	if err != nil {
+		return nil, dbError("reset finished pretests", err)
+	}
+	result := make([]submissionsmodel.SubmissionReset, len(rows))
+	for i, row := range rows {
+		result[i] = submissionsmodel.SubmissionReset{ID: row.ID, PreviousState: row.PreviousState}
+	}
+	return result, nil
 }
 
 func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error) {

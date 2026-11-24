@@ -62,7 +62,8 @@ export const StateColor = (state?: number | string): string => {
   }
 };
 
-export const StateString = (state?: number | string, failedTest?: number | null): string => {
+// Pretests mark verdicts that system testing will replace after the contest.
+export const StateString = (state?: number | string, failedTest?: number | null, pretests?: boolean): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   let baseString: string;
@@ -90,7 +91,7 @@ export const StateString = (state?: number | string, failedTest?: number | null)
       baseString = "Ошибка тестирующей системы";
       break;
     case 200:
-      return "Принято";
+      return pretests ? "Претесты пройдены" : "Принято";
     case 300:
       return "Дисквалифицировано";
     default:
@@ -98,13 +99,13 @@ export const StateString = (state?: number | string, failedTest?: number | null)
   }
   
   if (failedTest !== null && failedTest !== undefined && failedTest > 0) {
-    return `${baseString} на тесте ${failedTest}`;
+    return `${baseString} на ${pretests ? "претесте" : "тесте"} ${failedTest}`;
   }
   
   return baseString;
 };
 
-export const ShortVerdictString = (state?: number | string, failedTest?: number | null): string => {
+export const ShortVerdictString = (state?: number | string, failedTest?: number | null, pretests?: boolean): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   const testSuffix = failedTest !== null && failedTest !== undefined && failedTest > 0 ? `${failedTest}` : "";
 
@@ -126,7 +127,7 @@ export const ShortVerdictString = (state?: number | string, failedTest?: number 
     case 107:
       return "IE";
     case 200:
-      return "AC";
+      return pretests ? "PP" : "AC";
     case 300:
       return "DQ";
     default:

@@ -1337,8 +1337,10 @@ type ContestModel struct {
 	AllowClarifications bool                     `json:"allow_clarifications"`
 	EnableUpsolving     bool                     `json:"enable_upsolving"`
 	AllowVirtual        bool                     `json:"allow_virtual"`
-	JoinPolicy          ContestModelJoinPolicy   `json:"join_policy"`
-	HideStatements      bool                     `json:"hide_statements"`
+	// Contest submissions are judged on pretests until the end, then on all tests.
+	Pretests       bool                   `json:"pretests"`
+	JoinPolicy     ContestModelJoinPolicy `json:"join_policy"`
+	HideStatements bool                   `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog.
 	Languages []string `json:"languages"`
 }
@@ -1491,6 +1493,11 @@ func (s *ContestModel) GetEnableUpsolving() bool {
 // GetAllowVirtual returns the value of AllowVirtual.
 func (s *ContestModel) GetAllowVirtual() bool {
 	return s.AllowVirtual
+}
+
+// GetPretests returns the value of Pretests.
+func (s *ContestModel) GetPretests() bool {
+	return s.Pretests
 }
 
 // GetJoinPolicy returns the value of JoinPolicy.
@@ -1656,6 +1663,11 @@ func (s *ContestModel) SetEnableUpsolving(val bool) {
 // SetAllowVirtual sets the value of AllowVirtual.
 func (s *ContestModel) SetAllowVirtual(val bool) {
 	s.AllowVirtual = val
+}
+
+// SetPretests sets the value of Pretests.
+func (s *ContestModel) SetPretests(val bool) {
+	s.Pretests = val
 }
 
 // SetJoinPolicy sets the value of JoinPolicy.
@@ -10273,13 +10285,15 @@ func (s *ProblemDraftSubtaskPolicy) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/ProblemDraftTest
 type ProblemDraftTest struct {
-	Points    float64            `json:"points"`
-	ID        uuid.UUID          `json:"id"`
-	Ordinal   int64              `json:"ordinal"`
-	SubtaskID uuid.UUID          `json:"subtask_id"`
-	Sample    bool               `json:"sample"`
-	Input     ProblemDraftInput  `json:"input"`
-	Answer    ProblemDraftAnswer `json:"answer"`
+	Points    float64   `json:"points"`
+	ID        uuid.UUID `json:"id"`
+	Ordinal   int64     `json:"ordinal"`
+	SubtaskID uuid.UUID `json:"subtask_id"`
+	Sample    bool      `json:"sample"`
+	// Contests with pretests judge their submissions on these tests until the end.
+	Pretest bool               `json:"pretest"`
+	Input   ProblemDraftInput  `json:"input"`
+	Answer  ProblemDraftAnswer `json:"answer"`
 }
 
 // GetPoints returns the value of Points.
@@ -10305,6 +10319,11 @@ func (s *ProblemDraftTest) GetSubtaskID() uuid.UUID {
 // GetSample returns the value of Sample.
 func (s *ProblemDraftTest) GetSample() bool {
 	return s.Sample
+}
+
+// GetPretest returns the value of Pretest.
+func (s *ProblemDraftTest) GetPretest() bool {
+	return s.Pretest
 }
 
 // GetInput returns the value of Input.
@@ -10340,6 +10359,11 @@ func (s *ProblemDraftTest) SetSubtaskID(val uuid.UUID) {
 // SetSample sets the value of Sample.
 func (s *ProblemDraftTest) SetSample(val bool) {
 	s.Sample = val
+}
+
+// SetPretest sets the value of Pretest.
+func (s *ProblemDraftTest) SetPretest(val bool) {
+	s.Pretest = val
 }
 
 // SetInput sets the value of Input.
@@ -12311,16 +12335,18 @@ func (s *SubmissionKind) UnmarshalText(data []byte) error {
 type SubmissionModel struct {
 	Kind SubmissionKind `json:"kind"`
 	// The verdict and resources are withheld by the freeze or the contest's feedback level.
-	ResultHidden OptBool    `json:"result_hidden"`
-	ID           uuid.UUID  `json:"id"`
-	UserID       uuid.UUID  `json:"user_id"`
-	Username     string     `json:"username"`
-	Submission   OptString  `json:"submission"`
-	State        OptInt32   `json:"state"`
-	Score        OptFloat64 `json:"score"`
-	Penalty      OptInt32   `json:"penalty"`
-	TimeStat     OptInt32   `json:"time_stat"`
-	MemoryStat   OptInt32   `json:"memory_stat"`
+	ResultHidden OptBool `json:"result_hidden"`
+	// Judged on pretests only; system testing rejudges it on all tests after the contest.
+	Pretests   OptBool    `json:"pretests"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Username   string     `json:"username"`
+	Submission OptString  `json:"submission"`
+	State      OptInt32   `json:"state"`
+	Score      OptFloat64 `json:"score"`
+	Penalty    OptInt32   `json:"penalty"`
+	TimeStat   OptInt32   `json:"time_stat"`
+	MemoryStat OptInt32   `json:"memory_stat"`
 	// Identifier of the language configuration from GET /languages.
 	Language          string                        `json:"language"`
 	FailedTest        OptNilInt32                   `json:"failed_test"`
@@ -12345,6 +12371,11 @@ func (s *SubmissionModel) GetKind() SubmissionKind {
 // GetResultHidden returns the value of ResultHidden.
 func (s *SubmissionModel) GetResultHidden() OptBool {
 	return s.ResultHidden
+}
+
+// GetPretests returns the value of Pretests.
+func (s *SubmissionModel) GetPretests() OptBool {
+	return s.Pretests
 }
 
 // GetID returns the value of ID.
@@ -12465,6 +12496,11 @@ func (s *SubmissionModel) SetKind(val SubmissionKind) {
 // SetResultHidden sets the value of ResultHidden.
 func (s *SubmissionModel) SetResultHidden(val OptBool) {
 	s.ResultHidden = val
+}
+
+// SetPretests sets the value of Pretests.
+func (s *SubmissionModel) SetPretests(val OptBool) {
+	s.Pretests = val
 }
 
 // SetID sets the value of ID.
@@ -12674,15 +12710,17 @@ type SubmissionsListItemModel struct {
 	// Revision local to this submission.
 	Revision int64 `json:"revision"`
 	// The verdict and resources are withheld by the freeze or the contest's feedback level.
-	ResultHidden OptBool    `json:"result_hidden"`
-	ID           uuid.UUID  `json:"id"`
-	UserID       uuid.UUID  `json:"user_id"`
-	Username     string     `json:"username"`
-	State        OptInt32   `json:"state"`
-	Score        OptFloat64 `json:"score"`
-	Penalty      OptInt32   `json:"penalty"`
-	TimeStat     OptInt32   `json:"time_stat"`
-	MemoryStat   OptInt32   `json:"memory_stat"`
+	ResultHidden OptBool `json:"result_hidden"`
+	// Judged on pretests only; system testing rejudges it on all tests after the contest.
+	Pretests   OptBool    `json:"pretests"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Username   string     `json:"username"`
+	State      OptInt32   `json:"state"`
+	Score      OptFloat64 `json:"score"`
+	Penalty    OptInt32   `json:"penalty"`
+	TimeStat   OptInt32   `json:"time_stat"`
+	MemoryStat OptInt32   `json:"memory_stat"`
 	// Identifier of the language configuration from GET /languages.
 	Language          string       `json:"language"`
 	FailedTest        OptNilInt32  `json:"failed_test"`
@@ -12711,6 +12749,11 @@ func (s *SubmissionsListItemModel) GetRevision() int64 {
 // GetResultHidden returns the value of ResultHidden.
 func (s *SubmissionsListItemModel) GetResultHidden() OptBool {
 	return s.ResultHidden
+}
+
+// GetPretests returns the value of Pretests.
+func (s *SubmissionsListItemModel) GetPretests() OptBool {
+	return s.Pretests
 }
 
 // GetID returns the value of ID.
@@ -12826,6 +12869,11 @@ func (s *SubmissionsListItemModel) SetRevision(val int64) {
 // SetResultHidden sets the value of ResultHidden.
 func (s *SubmissionsListItemModel) SetResultHidden(val OptBool) {
 	s.ResultHidden = val
+}
+
+// SetPretests sets the value of Pretests.
+func (s *SubmissionsListItemModel) SetPretests(val OptBool) {
+	s.Pretests = val
 }
 
 // SetID sets the value of ID.
@@ -13562,9 +13610,11 @@ type UpdateContestRequestModel struct {
 	EnableDrafts        OptBool                                  `json:"enable_drafts"`
 	AllowClarifications OptBool                                  `json:"allow_clarifications"`
 	AllowVirtual        OptBool                                  `json:"allow_virtual"`
-	EnableUpsolving     OptBool                                  `json:"enable_upsolving"`
-	JoinPolicy          OptUpdateContestRequestModelJoinPolicy   `json:"join_policy"`
-	HideStatements      OptBool                                  `json:"hide_statements"`
+	// Requires an end time.
+	Pretests        OptBool                                `json:"pretests"`
+	EnableUpsolving OptBool                                `json:"enable_upsolving"`
+	JoinPolicy      OptUpdateContestRequestModelJoinPolicy `json:"join_policy"`
+	HideStatements  OptBool                                `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves
 	// the current list.
 	Languages []string `json:"languages"`
@@ -13683,6 +13733,11 @@ func (s *UpdateContestRequestModel) GetAllowClarifications() OptBool {
 // GetAllowVirtual returns the value of AllowVirtual.
 func (s *UpdateContestRequestModel) GetAllowVirtual() OptBool {
 	return s.AllowVirtual
+}
+
+// GetPretests returns the value of Pretests.
+func (s *UpdateContestRequestModel) GetPretests() OptBool {
+	return s.Pretests
 }
 
 // GetEnableUpsolving returns the value of EnableUpsolving.
@@ -13818,6 +13873,11 @@ func (s *UpdateContestRequestModel) SetAllowClarifications(val OptBool) {
 // SetAllowVirtual sets the value of AllowVirtual.
 func (s *UpdateContestRequestModel) SetAllowVirtual(val OptBool) {
 	s.AllowVirtual = val
+}
+
+// SetPretests sets the value of Pretests.
+func (s *UpdateContestRequestModel) SetPretests(val OptBool) {
+	s.Pretests = val
 }
 
 // SetEnableUpsolving sets the value of EnableUpsolving.

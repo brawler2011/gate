@@ -1,6 +1,7 @@
 package judging
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -165,6 +166,32 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, submissionsmodel.Accepted, verdict.State)
 		assert.Equal(t, points.Value(9666), verdict.Score)
 	})
+}
+
+func TestPretestsScoreOnlyPretests(t *testing.T) {
+	p := testProblemWithGroups()
+	for name, ordinals := range map[string][]int{"group1": {1}, "group2": {}} {
+		s := p.Subtasks[name]
+		for i := range s.Tests {
+			s.Tests[i].Pretest = slices.Contains(ordinals, s.Tests[i].Ordinal)
+		}
+		p.Subtasks[name] = s
+	}
+	restricted, ok := p.Pretests()
+	require.True(t, ok)
+	require.Equal(t, []FlatTest{{SubtaskName: "group1", TestIndex: 1, Test: p.Subtasks["group1"].Tests[0]}}, collectFlatTests(restricted))
+	verdict := NewVerdictCalculator("scoring", restricted).Calculate([]TestResult{{TestNumber: 1, Verdict: "OK"}})
+	assert.Equal(t, submissionsmodel.Accepted, verdict.State)
+	assert.Equal(t, points.Value(3333), verdict.Score)
+
+	for name, s := range p.Subtasks {
+		for i := range s.Tests {
+			s.Tests[i].Pretest = true
+		}
+		p.Subtasks[name] = s
+	}
+	_, ok = p.Pretests()
+	require.False(t, ok, "pretests covering every test judge like a full run")
 }
 
 func testProblem() *gfmt.Problem {

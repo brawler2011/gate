@@ -3526,6 +3526,7 @@ components:
       - ordinal
       - subtask_id
       - sample
+      - pretest
       - input
       - answer
       properties:
@@ -3545,6 +3546,9 @@ components:
           type: string
           format: uuid
         sample:
+          type: boolean
+        pretest:
+          description: Contests with pretests judge their submissions on these tests until the end.
           type: boolean
         input:
           $ref: '#/components/schemas/ProblemDraftInput'
@@ -4564,6 +4568,7 @@ components:
         - enable_drafts
         - enable_upsolving
         - allow_virtual
+        - pretests
         - languages
         - created_at
         - updated_at
@@ -4650,6 +4655,9 @@ components:
         enable_upsolving:
           type: boolean
         allow_virtual:
+          type: boolean
+        pretests:
+          description: "Contest submissions are judged on pretests until the end, then on all tests."
           type: boolean
         join_policy:
           type: string
@@ -4944,6 +4952,9 @@ components:
           type: boolean
         allow_virtual:
           type: boolean
+        pretests:
+          description: "Requires an end time."
+          type: boolean
         enable_upsolving:
           type: boolean
         join_policy:
@@ -5071,6 +5082,9 @@ components:
           minimum: 0
         result_hidden:
           description: The verdict and resources are withheld by the freeze or the contest's feedback level.
+          type: boolean
+        pretests:
+          description: Judged on pretests only; system testing rejudges it on all tests after the contest.
           type: boolean
         id:
           type: string
@@ -5303,6 +5317,9 @@ components:
           $ref: "#/components/schemas/SubmissionKind"
         result_hidden:
           description: The verdict and resources are withheld by the freeze or the contest's feedback level.
+          type: boolean
+        pretests:
+          description: Judged on pretests only; system testing rejudges it on all tests after the contest.
           type: boolean
         id:
           type: string
