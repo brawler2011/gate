@@ -116,13 +116,13 @@ VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems 
 ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id;
 
 -- name: GetContestProblem :one
-SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.created_at AS problem_updated_at
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.created_at AS problem_updated_at
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1

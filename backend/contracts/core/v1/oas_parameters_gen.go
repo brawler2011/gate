@@ -4150,15 +4150,15 @@ func decodeDisableTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
-// DownloadContestProblemInputsParams is parameters of DownloadContestProblemInputs operation.
-type DownloadContestProblemInputsParams struct {
+// DownloadContestProblemFilesParams is parameters of DownloadContestProblemFiles operation.
+type DownloadContestProblemFilesParams struct {
 	// UUID of the contest.
 	ContestID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
 }
 
-func unpackDownloadContestProblemInputsParams(packed middleware.Parameters) (params DownloadContestProblemInputsParams) {
+func unpackDownloadContestProblemFilesParams(packed middleware.Parameters) (params DownloadContestProblemFilesParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "contest_id",
@@ -4176,7 +4176,7 @@ func unpackDownloadContestProblemInputsParams(packed middleware.Parameters) (par
 	return params
 }
 
-func decodeDownloadContestProblemInputsParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadContestProblemInputsParams, _ error) {
+func decodeDownloadContestProblemFilesParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadContestProblemFilesParams, _ error) {
 	// Decode path: contest_id.
 	if err := func() error {
 		param := args[0]
@@ -4555,13 +4555,13 @@ func decodeDownloadContestStatementsPdfParams(args [1]string, argsEscaped bool, 
 	return params, nil
 }
 
-// DownloadProblemInputsParams is parameters of DownloadProblemInputs operation.
-type DownloadProblemInputsParams struct {
+// DownloadProblemFilesParams is parameters of DownloadProblemFiles operation.
+type DownloadProblemFilesParams struct {
 	// UUID of the problem.
 	ID uuid.UUID
 }
 
-func unpackDownloadProblemInputsParams(packed middleware.Parameters) (params DownloadProblemInputsParams) {
+func unpackDownloadProblemFilesParams(packed middleware.Parameters) (params DownloadProblemFilesParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -4572,7 +4572,7 @@ func unpackDownloadProblemInputsParams(packed middleware.Parameters) (params Dow
 	return params
 }
 
-func decodeDownloadProblemInputsParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadProblemInputsParams, _ error) {
+func decodeDownloadProblemFilesParams(args [1]string, argsEscaped bool, r *http.Request) (params DownloadProblemFilesParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

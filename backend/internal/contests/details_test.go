@@ -63,7 +63,7 @@ func (s *detailStatements) OpenPDF(context.Context, uuid.UUID, uuid.UUID, string
 	return io.NopCloser(strings.NewReader("pdf")), nil
 }
 
-func (s *detailStatements) OpenInputs(context.Context, uuid.UUID) (io.ReadCloser, error) {
+func (s *detailStatements) OpenFiles(context.Context, uuid.UUID) (io.ReadCloser, error) {
 	return nil, pkg.ErrNotFound
 }
 

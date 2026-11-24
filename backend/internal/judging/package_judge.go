@@ -118,7 +118,16 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	}
 	calib := j.Calibration()
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
-	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
+	graders, err := pkg.Graders()
+	if err != nil {
+		return nil, err
+	}
+	var sol sandbox.Executable
+	if graders != nil {
+		sol, err = sb.CompileWithGraders(ctx, []byte(source), lang, graders, j.Limits.Compile)
+	} else {
+		sol, err = sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
+	}
 	if err != nil {
 		// A missing worker language is a system configuration error, not a contestant compilation error.
 		if IsTemporary(err) || errors.Is(err, sandbox.ErrUnknownLanguage) {

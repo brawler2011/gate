@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 
 	"github.com/brawler2011/gate/backend/pkg/outputs"
 
@@ -145,6 +146,9 @@ func (uc *SubmissionsUseCase) create(ctx context.Context, creation *submissionsm
 				return pkg.Invalid(pkg.ErrInconsistent, "an output-only problem takes outputs, not a program", nil)
 			}
 			return pkg.Invalid(pkg.ErrInconsistent, "this problem takes a program, not outputs", nil)
+		}
+		if len(problem.Languages) > 0 && !slices.Contains(problem.Languages, creation.Language) {
+			return pkg.Invalid(pkg.ErrLanguageNotAllowed, "the problem's graders do not compile this language", map[string]any{"id": creation.Language})
 		}
 		if store != nil {
 			if err := store(ctx); err != nil {

@@ -512,7 +512,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/contests/{contest_id}/problems/{problem_id}/inputs.zip": {
+    "/contests/{contest_id}/problems/{problem_id}/files.zip": {
         parameters: {
             query?: never;
             header?: never;
@@ -520,10 +520,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download the test inputs of an output-only contest problem
-         * @description Inputs of every test, named <ordinal>.in, from the package the contest uses; visible with the statement.
+         * Download the participants' files of a contest problem
+         * @description Attachments and, for an output-only problem, every test input named <ordinal>.in, from the package the contest uses; visible with the statement.
          */
-        get: operations["DownloadContestProblemInputs"];
+        get: operations["DownloadContestProblemFiles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1197,15 +1197,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/problems/{id}/inputs.zip": {
+    "/problems/{id}/files.zip": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Download the test inputs of an output-only problem's latest package */
-        get: operations["DownloadProblemInputs"];
+        /** Download the participants' files of a problem's latest package */
+        get: operations["DownloadProblemFiles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1877,6 +1877,10 @@ export interface components {
             /** @description Run by every build after compiling the validator; a test it judges differently fails the build. */
             tests: components["schemas"]["ProblemDraftValidatorTest"][];
         };
+        ProblemDraftFile: {
+            name: string;
+            content: string;
+        };
         /** @description A source file judge programs include by its name; names are unique in a draft and identify the file. */
         ProblemDraftLibraryFile: {
             name: string;
@@ -1983,6 +1987,10 @@ export interface components {
             /** @description File the solution writes instead of standard output; empty for standard output. */
             output_file: string;
             library: components["schemas"]["ProblemDraftLibraryFile"][];
+            /** @description Files linked with every solution; only languages that compile one of them can be submitted. */
+            graders: components["schemas"]["ProblemDraftFile"][];
+            /** @description Files participants download with the statement. */
+            attachments: components["schemas"]["ProblemDraftFile"][];
             statements: components["schemas"]["ProblemDraftStatement"][];
             assets: components["schemas"]["ProblemDraftAsset"][];
             testset: components["schemas"]["ProblemDraftGroup"];
@@ -2415,6 +2423,8 @@ export interface components {
             input_file: string;
             /** @description File the solution writes instead of standard output; empty for standard output. */
             output_file: string;
+            /** @description The participants' files archive (files.zip) exists. */
+            files: boolean;
             legend: string;
             input_format: string;
             output_format: string;
@@ -2477,6 +2487,10 @@ export interface components {
             input_file: string;
             /** @description File the solution writes instead of standard output; empty for standard output. */
             output_file: string;
+            /** @description The participants' files archive (files.zip) exists. */
+            files: boolean;
+            /** @description Languages the problem accepts, within the contest's; empty accepts every language. */
+            languages: string[];
             /** Format: int32 */
             position: number;
             legend: string;
@@ -2737,6 +2751,8 @@ export interface components {
             /** @example Test task */
             title: string;
             type: components["schemas"]["ProblemType"];
+            /** @description Languages the problem accepts, within the contest's; empty accepts every language. */
+            languages: string[];
             /**
              * Format: int32
              * @example 256
@@ -5450,6 +5466,7 @@ export type ProblemDraftSolution = components['schemas']['ProblemDraftSolution']
 export type ProblemSolutionVerdict = components['schemas']['ProblemSolutionVerdict'];
 export type ProblemBuildSolution = components['schemas']['ProblemBuildSolution'];
 export type ProblemDraftValidator = components['schemas']['ProblemDraftValidator'];
+export type ProblemDraftFile = components['schemas']['ProblemDraftFile'];
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
 export type StatementPreview = components['schemas']['StatementPreview'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
@@ -6663,7 +6680,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    DownloadContestProblemInputs: {
+    DownloadContestProblemFiles: {
         parameters: {
             query?: never;
             header?: never;
@@ -6677,7 +6694,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Zip of test inputs */
+            /** @description Zip of participants' files */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8432,7 +8449,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    DownloadProblemInputs: {
+    DownloadProblemFiles: {
         parameters: {
             query?: never;
             header?: never;
@@ -8444,7 +8461,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Zip of test inputs, named <ordinal>.in */
+            /** @description Zip of attachments and output-only test inputs, named <ordinal>.in */
             200: {
                 headers: {
                     [name: string]: unknown;

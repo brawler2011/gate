@@ -48,6 +48,10 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
 			auto := manifest.Sources[rel].AutoUpdate
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
+		case folder == GraderFolder && name != "" && !strings.Contains(name, "/"):
+			p.Graders = append(p.Graders, spec.File{Name: name, Path: rel})
+		case folder == AttachmentFolder && name != "" && !strings.Contains(name, "/"):
+			p.Attachments = append(p.Attachments, spec.File{Name: name, Path: rel})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
 		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".tex":

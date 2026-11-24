@@ -939,7 +939,8 @@ type ProblemPackage struct {
 	Revision       int64      `json:"revision"`
 	Samples        []byte     `json:"samples"`
 	Statements     []byte     `json:"statements"`
-	InputsObjectID *uuid.UUID `json:"inputs_object_id"`
+	FilesObjectID  *uuid.UUID `json:"files_object_id"`
+	Languages      []string   `json:"languages"`
 }
 
 type ProblemPackageAsset struct {

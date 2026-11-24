@@ -21,10 +21,11 @@ type Props = {
 
 export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactNode => {
   const navigate = useNavigate();
-  const languages = useContestLanguages(contest.languages);
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.find((problem) => problem.permissions.submit)?.problem_id ?? null,
   );
+  const selectedProblem = problems.find((problem) => problem.problem_id === selectedProblemId);
+  const languages = useContestLanguages(contest.languages, selectedProblem?.languages);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const mySubmissions = `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`;
 
@@ -76,7 +77,6 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
     return result;
   };
 
-  const selectedProblem = problems.find((problem) => problem.problem_id === selectedProblemId);
   const disabled = isSubmitted || !contest.permissions.submit || !selectedProblem?.permissions.submit;
   const problemSelect = (
     <Select

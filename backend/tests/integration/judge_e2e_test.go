@@ -463,7 +463,7 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 	link, err := h.contests.GetContestProblem(h.ctx, contestsmodel.ContestProblemGet{ContestId: h.contestID, ProblemId: problemID})
 	require.NoError(t, err)
 	content := &problems.PackageContent{Repo: h.drafts, Store: h.store, Bucket: h.bucket}
-	inputs, err := content.OpenInputs(h.ctx, link.PackageID)
+	inputs, err := content.OpenFiles(h.ctx, link.PackageID)
 	require.NoError(t, err)
 	data, err := io.ReadAll(inputs)
 	require.NoError(t, inputs.Close())
@@ -492,6 +492,48 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 		verdicts = append(verdicts, test.Verdict)
 	}
 	assert.Equal(t, []string{"OK", "OK", "WA"}, verdicts)
+}
+
+// A grader problem links each solution with the jury's grader; a solution with its own main does not link.
+func TestGraderJudgingE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+	t.Parallel()
+	h := newJudgeHarness(t)
+	const header = "long long sum(long long a, long long b);\n"
+	solution := func(body string) string { return "#include \"sum.h\"\nlong long sum(long long a, long long b) { return " + body + "; }\n" }
+	problemID := h.publish(t, "grader", func(d *problemsmodel.Draft) {
+		generator, main, group := "gen", "main", uuid.New()
+		d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: "wcmp"}
+		d.Graders = []problemsmodel.DraftFile{{Name: "sum.h", Content: header},
+			{Name: "grader.cpp", Content: "#include <cstdio>\n#include \"sum.h\"\nint main() { long long a, b; scanf(\"%lld %lld\", &a, &b); printf(\"%lld\\n\", sum(a, b)); }\n"}}
+		d.Attachments = []problemsmodel.DraftFile{{Name: "sum.h", Content: header}}
+		d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+		d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: solution("a + b")}}, Verdicts: []string{}}}
+		d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Implement sum."}}
+		d.MainSolution = &main
+		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+		for i, args := range [][]string{{"1", "2"}, {"3", "-4"}} {
+			d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 50 * points.Unit,
+				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args},
+				Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
+		}
+	})
+	link, err := h.contests.GetContestProblem(h.ctx, contestsmodel.ContestProblemGet{ContestId: h.contestID, ProblemId: problemID})
+	require.NoError(t, err)
+	assert.Contains(t, link.Languages, "cpp17")
+	assert.NotContains(t, link.Languages, "c")
+	assert.NotContains(t, link.Languages, "python3")
+	assert.True(t, link.Files)
+
+	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "cpp17", solution("a + b")).State)
+	assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "cpp17", solution("a - b")).State)
+	own := h.submit(t, problemID, "cpp17", solution("a + b")+"int main() {}\n")
+	assert.Equal(t, submissionsmodel.GotCE, own.State)
+	require.NotNil(t, own.TestDetails)
+	require.NotNil(t, own.TestDetails.CompilerOutput)
+	assert.Contains(t, *own.TestDetails.CompilerOutput, "multiple definition of `main'")
 }
 
 // contestOwner keeps the judged user a plain participant.

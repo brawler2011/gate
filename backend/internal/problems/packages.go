@@ -73,8 +73,8 @@ func (uc *PackageUseCase) OpenStatementPDF(ctx context.Context, id uuid.UUID, la
 	return uc.Content.OpenPDF(ctx, id, ready.ID, language)
 }
 
-// OpenInputs opens the test inputs of the latest package of an output-only problem, which the statement's visibility exposes.
-func (uc *PackageUseCase) OpenInputs(ctx context.Context, id uuid.UUID) (io.ReadCloser, error) {
+// OpenFiles opens the participants' files of the latest package, which the statement's visibility exposes.
+func (uc *PackageUseCase) OpenFiles(ctx context.Context, id uuid.UUID) (io.ReadCloser, error) {
 	if _, err := access.Problem(ctx, uc.Access, id, accessmodel.ProblemView); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (uc *PackageUseCase) OpenInputs(ctx context.Context, id uuid.UUID) (io.Read
 	if err != nil {
 		return nil, err
 	}
-	return uc.Content.OpenInputs(ctx, ready.ID)
+	return uc.Content.OpenFiles(ctx, ready.ID)
 }
 
 func (uc *PackageUseCase) DownloadPackage(ctx context.Context, id, pid uuid.UUID) (io.ReadCloser, error) {

@@ -126,6 +126,7 @@ type ProblemPackage struct {
 	MemoryLimitMb  int32
 	InputFile      string
 	OutputFile     string
+	Files          bool
 }
 
 type CreateProblemInput struct {

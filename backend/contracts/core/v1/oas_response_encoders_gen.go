@@ -432,7 +432,7 @@ func encodeDisableTeamJoinLinkResponse(response *DisableTeamJoinLinkNoContent, w
 	return nil
 }
 
-func encodeDownloadContestProblemInputsResponse(response DownloadContestProblemInputsOK, w http.ResponseWriter) error {
+func encodeDownloadContestProblemFilesResponse(response DownloadContestProblemFilesOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(200)
 
@@ -477,7 +477,7 @@ func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatemen
 	return nil
 }
 
-func encodeDownloadProblemInputsResponse(response DownloadProblemInputsOK, w http.ResponseWriter) error {
+func encodeDownloadProblemFilesResponse(response DownloadProblemFilesOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(200)
 

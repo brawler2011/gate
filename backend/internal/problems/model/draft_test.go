@@ -98,6 +98,31 @@ func TestValidateLocatesViolations(t *testing.T) {
 	}
 }
 
+// Graders must link with some language and with every solution's, since solutions are judged as submissions.
+func TestGradersNeedLanguagesThatLinkThem(t *testing.T) {
+	languages := map[string]sandbox.Language{
+		"cpp":    {Extensions: []string{"cpp"}, Compile: "g++ -o ${name} foo.cpp ${graders}"},
+		"c":      {Extensions: []string{"c"}, Compile: "gcc -o ${name} foo.c ${graders}"},
+		"python": {Extensions: []string{"py"}},
+	}
+	d := validDraft()
+	d.Graders = []DraftFile{{Name: "grader.cpp"}, {Name: "sum.h"}}
+	require.NoError(t, d.ValidateBuild(testQuotas, languages))
+
+	d.Solutions[0].Language = "c"
+	fields := fieldErrors(t, d.ValidateBuild(testQuotas, languages))
+	require.Len(t, fields, 1, "%v", fields)
+	require.Equal(t, "/solutions/0/language", fields[0].Pointer)
+
+	d = validDraft()
+	d.Graders = []DraftFile{{Name: "grader.py"}}
+	pointers := []string{}
+	for _, f := range fieldErrors(t, d.ValidateBuild(testQuotas, languages)) {
+		pointers = append(pointers, f.Pointer)
+	}
+	require.Equal(t, []string{"/graders", "/solutions/0/language"}, pointers)
+}
+
 // Asset renames may save with stale image references, but builds must reject them.
 func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 	saved := validDraft()

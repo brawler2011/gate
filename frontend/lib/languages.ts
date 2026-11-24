@@ -18,12 +18,14 @@ export const useLanguages = (): SupportedLanguage[] => {
   return data ?? NONE;
 };
 
-const allowedLanguages = (catalog: SupportedLanguage[], allowed: string[] | undefined): SupportedLanguage[] =>
-  allowed?.length ? catalog.filter((language) => allowed.includes(language.id)) : catalog;
+// An empty or missing list allows every language.
+const allowedLanguages = (catalog: SupportedLanguage[], ...lists: (string[] | undefined)[]): SupportedLanguage[] =>
+  catalog.filter((language) => lists.every((allowed) => !allowed?.length || allowed.includes(language.id)));
 
-export const useContestLanguages = (allowed: string[] | undefined): SupportedLanguage[] => {
+// A problem with graders narrows the contest's languages to those that link with them.
+export const useContestLanguages = (contest: string[] | undefined, problem?: string[]): SupportedLanguage[] => {
   const catalog = useLanguages();
-  return useMemo(() => allowedLanguages(catalog, allowed), [catalog, allowed]);
+  return useMemo(() => allowedLanguages(catalog, contest, problem), [catalog, contest, problem]);
 };
 
 // Output-only submissions carry this language; they run nothing.

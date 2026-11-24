@@ -28,7 +28,7 @@ func (r packageAssets) FindPackageAssets(context.Context, uuid.UUID, string) ([]
 func (packageAssets) FindPackagePDF(context.Context, uuid.UUID, string) (string, error) {
 	return "", pkg.ErrNotFound
 }
-func (packageAssets) FindPackageInputs(context.Context, uuid.UUID) (string, error) {
+func (packageAssets) FindPackageFiles(context.Context, uuid.UUID) (string, error) {
 	return "", pkg.ErrNotFound
 }
 
@@ -78,7 +78,7 @@ func (storedStatement) FindPackageAssets(context.Context, uuid.UUID, string) ([]
 func (storedStatement) FindPackagePDF(context.Context, uuid.UUID, string) (string, error) {
 	return "", pkg.ErrNotFound
 }
-func (storedStatement) FindPackageInputs(context.Context, uuid.UUID) (string, error) {
+func (storedStatement) FindPackageFiles(context.Context, uuid.UUID) (string, error) {
 	return "", pkg.ErrNotFound
 }
 

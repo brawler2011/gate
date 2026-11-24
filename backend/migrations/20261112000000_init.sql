@@ -256,7 +256,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text, 'inputs'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text, 'files'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
@@ -395,9 +395,11 @@ CREATE TABLE problem_packages (
     revision bigint NOT NULL,
     samples jsonb NOT NULL,
     statements jsonb NOT NULL,
-    -- The zip of every test input that participants of an output-only problem download.
-    inputs_object_id uuid,
-    CONSTRAINT problem_packages_inputs_check CHECK (((inputs_object_id IS NOT NULL) = (type = 'output-only'::text))),
+    -- The zip participants download: attachments and, for output-only problems, every test input.
+    files_object_id uuid,
+    -- Languages a submission may use, set by graders; NULL allows every language.
+    languages text[],
+    CONSTRAINT problem_packages_files_check CHECK (((files_object_id IS NOT NULL) OR (type <> 'output-only'::text))),
     CONSTRAINT problem_packages_package_hash_check CHECK ((length((package_hash)::text) = 64)),
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
@@ -407,13 +409,13 @@ CREATE TABLE problem_packages (
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_packages_inputs_object_id_fkey FOREIGN KEY (inputs_object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_packages_files_object_id_fkey FOREIGN KEY (files_object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT problem_packages_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
 CREATE INDEX problem_packages_created_at_idx ON problem_packages USING btree (created_at DESC);
 CREATE INDEX problem_packages_object ON problem_packages USING btree (object_id);
-CREATE INDEX problem_packages_inputs_object ON problem_packages USING btree (inputs_object_id);
+CREATE INDEX problem_packages_files_object ON problem_packages USING btree (files_object_id);
 CREATE INDEX problem_packages_organization_id_idx ON problem_packages USING btree (organization_id);
 CREATE INDEX problem_packages_package_hash_idx ON problem_packages USING btree (package_hash);
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (problem_id);

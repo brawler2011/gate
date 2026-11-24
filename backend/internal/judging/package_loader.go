@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -34,6 +35,25 @@ type LoadedPackage struct {
 }
 
 func (l *LoadedPackage) Release() { l.handle.Release() }
+
+// Graders is nil for a package without graders.
+func (l *LoadedPackage) Graders() (map[string][]byte, error) {
+	dir := filepath.Join(l.Format.Path, gfmt.GraderFolder)
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("readdir: %w", err)
+	}
+	graders := map[string][]byte{}
+	for _, e := range entries {
+		if graders[e.Name()], err = os.ReadFile(filepath.Join(dir, e.Name())); err != nil {
+			return nil, fmt.Errorf("read grader: %w", err)
+		}
+	}
+	return graders, nil
+}
 
 // PackageLoader keeps packages extracted after first use; they are immutable, so entries are only evicted.
 type PackageLoader struct {

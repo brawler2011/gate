@@ -43,6 +43,10 @@ type DraftContent struct {
 	Solutions    []DraftSolution     `json:"solutions"`
 	MainSolution *string             `json:"main_solution"`
 	Library      []DraftLibraryFile  `json:"library"`
+	// Graders are linked with every solution; only languages that compile one of them can be submitted.
+	Graders []DraftFile `json:"graders"`
+	// Attachments are given to participants with the statement.
+	Attachments  []DraftFile         `json:"attachments"`
 	Statements   []DraftStatement    `json:"statements"`
 	Assets       []DraftAsset        `json:"assets"`
 	// Testset is the root group of every test.
@@ -128,6 +132,31 @@ func (f *DraftLibraryFile) Text() string {
 		return system.Content
 	}
 	return f.Content
+}
+
+type DraftFile struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// GraderFiles is nil for a problem without graders, so solutions compile alone.
+func (d *Draft) GraderFiles() map[string][]byte {
+	if len(d.Graders) == 0 {
+		return nil
+	}
+	files := map[string][]byte{}
+	for _, f := range d.Graders {
+		files[f.Name] = []byte(f.Content)
+	}
+	return files
+}
+
+func (d *Draft) GraderNames() []string {
+	names := make([]string, len(d.Graders))
+	for i, f := range d.Graders {
+		names[i] = f.Name
+	}
+	return names
 }
 
 type DraftStatement struct {
@@ -412,6 +441,11 @@ func (d *Draft) Normalize() {
 	if d.Library == nil {
 		d.Library = []DraftLibraryFile{}
 	}
+	for _, files := range []*[]DraftFile{&d.Graders, &d.Attachments} {
+		if *files == nil {
+			*files = []DraftFile{}
+		}
+	}
 	if d.Statements == nil {
 		d.Statements = []DraftStatement{}
 	}
@@ -583,6 +617,29 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 	if d.Checker != nil && d.Checker.Standard != "" && !slices.Contains(languages[d.Checker.Language].Extensions, "cpp") {
 		v.fail("/checker/language", pkg.ErrInconsistent, with("/checker/standard"), "a standard checker compiles as C++")
 	}
+	if len(d.Graders) > 0 {
+		graders := d.GraderNames()
+		graded := false
+		for _, lang := range languages {
+			graded = graded || lang.Graded(graders)
+		}
+		if !graded {
+			v.fail("/graders", pkg.ErrInconsistent, nil, "no language compiles a solution with these graders")
+		}
+		for i, s := range d.Solutions {
+			if lang, ok := languages[s.Language]; ok && !lang.Graded(graders) {
+				v.fail(fmt.Sprintf("/solutions/%d/language", i), pkg.ErrInconsistent, with("/graders"), "language %q does not compile with the graders", s.Language)
+			}
+		}
+	}
+	if d.Type == "output-only" {
+		for i, f := range d.Attachments {
+			// Inputs share the participants' archive as <ordinal>.in.
+			if strings.HasSuffix(f.Name, ".in") {
+				v.fail(fmt.Sprintf("/attachments/%d/name", i), pkg.ErrInconsistent, with("/type"), "an output-only problem's attachments cannot end in .in")
+			}
+		}
+	}
 	if d.Type != "interactive" && d.Checker == nil {
 		v.fail("/checker", pkg.ErrRequired, nil, "checker is required")
 	}
@@ -634,8 +691,8 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if programs > q.Components {
 		v.fail("", pkg.ErrTooMany, maximum(q.Components), "more than %d programs", q.Components)
 	}
-	if len(d.Library)+len(d.Assets) > q.Files {
-		v.fail("/library", pkg.ErrTooMany, maximum(q.Files), "more than %d library files and assets", q.Files)
+	if len(d.Library)+len(d.Assets)+len(d.Graders)+len(d.Attachments) > q.Files {
+		v.fail("/library", pkg.ErrTooMany, maximum(q.Files), "more than %d library files, graders, attachments and assets", q.Files)
 	}
 	if len(d.Tests) > q.Tests {
 		v.fail("/tests", pkg.ErrTooMany, maximum(q.Tests), "more than %d tests", q.Tests)
@@ -659,6 +716,17 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		if _, ok := syslib.Lookup(f.Name); f.AutoUpdate && (!ok || f.Content != "") {
 			v.fail(at+"/auto_update", pkg.ErrInconsistent, with(at+"/content"), "only an empty system library file can be auto-updated")
 		}
+	}
+	for list, files := range map[string][]DraftFile{"graders": d.Graders, "attachments": d.Attachments} {
+		names := make(map[string]bool)
+		for i, f := range files {
+			at := fmt.Sprintf("/%s/%d", list, i)
+			v.name(at+"/name", f.Name, ValidFileName(f.Name), names)
+			text(at+"/content", f.Content)
+		}
+	}
+	if d.Type == "output-only" && len(d.Graders) > 0 {
+		v.fail("/graders", pkg.ErrInconsistent, with("/type"), "an output-only problem runs no solutions to link with graders")
 	}
 	program := func(at string, p DraftProgram) {
 		if !languageKey.MatchString(p.Language) {

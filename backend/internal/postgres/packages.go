@@ -66,7 +66,7 @@ func (r *PackagesRepo) GetPackageByID(ctx context.Context, id uuid.UUID) (proble
 func mapPackage(p sqlc.ProblemPackage) (problemsmodel.ProblemPackage, error) {
 	result := problemsmodel.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, OrganizationID: p.OrganizationID, BuildID: p.BuildID, ObjectID: p.ObjectID, Revision: p.Revision,
 		PackageHash: p.PackageHash, CreatedAt: p.CreatedAt, Title: p.Title, Type: p.Type,
-		TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, InputFile: p.InputFile, OutputFile: p.OutputFile}
+		TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, InputFile: p.InputFile, OutputFile: p.OutputFile, Files: p.FilesObjectID != nil}
 	if err := json.Unmarshal(p.Statements, &result.Statements); err != nil {
 		return result, dbError("decode package statements", err)
 	}

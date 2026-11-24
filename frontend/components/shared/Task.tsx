@@ -32,7 +32,7 @@ const Task = ({
   user,
   isManager,
 }: PageProps): ReactNode => {
-  const languages = useContestLanguages(contest.languages);
+  const languages = useContestLanguages(contest.languages, task.languages);
   const ended = contest.end_time !== undefined && contest.end_time !== null && new Date(contest.end_time) <= new Date();
   const onSubmit = async (
     submission: FormData,
@@ -151,9 +151,7 @@ const Task = ({
                   return hash && `/api/contests/${contest.id}/problems/${task.problem_id}/assets/${hash}`;
                 }}
                 pdfUrl={`/api/contests/${contest.id}/problems/${task.problem_id}/statement.pdf`}
-                inputsUrl={task.type === "output-only"
-                  ? `/api/contests/${contest.id}/problems/${task.problem_id}/inputs.zip`
-                  : undefined}
+                filesUrl={task.files ? `/api/contests/${contest.id}/problems/${task.problem_id}/files.zip` : undefined}
               />
             </Box>
           </Container>

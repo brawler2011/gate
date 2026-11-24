@@ -224,7 +224,11 @@ type ContestProblem struct {
 	MemoryLimitMb int
 	InputFile     string
 	OutputFile    string
-	UpdatedAt     time.Time
+	// Languages a submission may use; empty allows every language.
+	Languages []string
+	// Files reports that participants can download the package's files archive.
+	Files     bool
+	UpdatedAt time.Time
 	ContestID     uuid.UUID
 	ProblemID     uuid.UUID
 	PackageID     uuid.UUID

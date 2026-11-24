@@ -122,6 +122,11 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 		}
 		p.files = append(p.files, file{name: path, text: f.Text()})
 	}
+	for folder, files := range map[string][]model.DraftFile{gfmt.GraderFolder: d.Graders, gfmt.AttachmentFolder: d.Attachments} {
+		for _, f := range files {
+			p.files = append(p.files, file{name: folder + "/" + f.Name, text: f.Content})
+		}
+	}
 	for _, s := range d.Statements {
 		if s.Title != "" {
 			if m.Titles == nil {

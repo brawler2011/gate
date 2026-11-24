@@ -1,9 +1,12 @@
 package sandbox
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -106,6 +109,15 @@ func (s *Sandbox) inline(ctx context.Context, data []byte, uploaded *[]string) (
 }
 
 func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte, limits FileRunLimits) (Executable, error) {
+	return s.compile(ctx, sourceCode, langKey, dependencies, nil, limits)
+}
+
+// CompileWithGraders links the source with the grader files of its language; a language without ${graders} in its command cannot.
+func (s *Sandbox) CompileWithGraders(ctx context.Context, sourceCode []byte, langKey string, graders map[string][]byte, limits FileRunLimits) (Executable, error) {
+	return s.compile(ctx, sourceCode, langKey, nil, graders, limits)
+}
+
+func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string, dependencies, graders map[string][]byte, limits FileRunLimits) (Executable, error) {
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return Executable{}, fmt.Errorf("invalid compilation limits")
 	}
@@ -113,6 +125,22 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 	lang, ok := s.config.Langs[langKey]
 	if !ok {
 		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
+	}
+	outputName := cmp.Or(lang.CompileFile, "solution")
+	var linked []string
+	if graders != nil {
+		if !lang.Graded(slices.Collect(maps.Keys(graders))) {
+			return Executable{}, fmt.Errorf("%w: %s", ErrGradersUnsupported, langKey)
+		}
+		for _, name := range slices.Sorted(maps.Keys(graders)) {
+			if name == lang.CodeFile || name == outputName {
+				return Executable{}, fmt.Errorf("grader file %s clashes with the solution's files", name)
+			}
+			if lang.compiles(name) {
+				linked = append(linked, name)
+			}
+		}
+		dependencies = graders
 	}
 
 	var uploaded []string
@@ -174,14 +202,17 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		}, nil
 	}
 
-	outputName := lang.CompileFile
-	if outputName == "" {
-		outputName = "solution"
-	}
-
 	compileCmd := strings.ReplaceAll(lang.Compile, "${name}", outputName)
+	args := []string{}
+	for arg := range strings.FieldsSeq(compileCmd) {
+		if arg == gradersArg {
+			args = append(args, linked...)
+		} else {
+			args = append(args, arg)
+		}
+	}
 	results, err := s.client.run(ctx, request{Cmd: []cmd{{
-		Args:          strings.Fields(compileCmd),
+		Args:          args,
 		Files:         []*cmdFile{memoryFile(""), collector("stdout", int64(limits.Diagnostic), false), collector("stderr", int64(limits.Diagnostic), false)},
 		CopyIn:        copyIn,
 		CopyOutCached: []string{outputName},

@@ -10,6 +10,7 @@ import (
 	"hash"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -22,6 +23,8 @@ type Program struct {
 	Source   []byte
 	Language string
 	Deps     map[string][]byte
+	// Graders, when set, are linked with the source instead of Deps.
+	Graders map[string][]byte
 }
 
 func (p Program) key(compiler string) string {
@@ -41,6 +44,13 @@ func (p Program) key(compiler string) string {
 	for _, name := range names {
 		field(h, []byte(name))
 		field(h, p.Deps[name])
+	}
+	if p.Graders != nil {
+		field(h, []byte("graders"))
+		for _, name := range slices.Sorted(maps.Keys(p.Graders)) {
+			field(h, []byte(name))
+			field(h, p.Graders[name])
+		}
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -69,7 +79,7 @@ func (c *ProgramCache) Get(ctx context.Context, p Program, limits FileRunLimits)
 }
 
 func (s *Sandbox) CompileTo(ctx context.Context, files *FileTransport, p Program, limits FileRunLimits, dir string) error {
-	executable, err := s.CompileWithLimits(ctx, p.Source, p.Language, p.Deps, limits)
+	executable, err := s.compile(ctx, p.Source, p.Language, p.Deps, p.Graders, limits)
 	if err != nil {
 		return err
 	}

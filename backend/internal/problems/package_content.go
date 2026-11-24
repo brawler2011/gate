@@ -23,7 +23,7 @@ type PackageContent struct {
 		GetPackageStatement(context.Context, uuid.UUID) (model.PackageStatement, error)
 		FindPackageAssets(context.Context, uuid.UUID, string) ([]model.PackageAsset, error)
 		FindPackagePDF(ctx context.Context, packageID uuid.UUID, language string) (key string, err error)
-		FindPackageInputs(ctx context.Context, packageID uuid.UUID) (key string, err error)
+		FindPackageFiles(ctx context.Context, packageID uuid.UUID) (key string, err error)
 	}
 	Store  DraftObjectStore
 	Bucket string
@@ -114,9 +114,9 @@ func (c *PackageContent) OpenPDF(ctx context.Context, problemID, packageID uuid.
 	return r, err
 }
 
-// OpenInputs opens the archive of test inputs, which only output-only packages have.
-func (c *PackageContent) OpenInputs(ctx context.Context, packageID uuid.UUID) (io.ReadCloser, error) {
-	key, err := c.Repo.FindPackageInputs(ctx, packageID)
+// OpenFiles opens the participants' archive of attachments and output-only test inputs.
+func (c *PackageContent) OpenFiles(ctx context.Context, packageID uuid.UUID) (io.ReadCloser, error) {
+	key, err := c.Repo.FindPackageFiles(ctx, packageID)
 	if err != nil {
 		return nil, err
 	}
