@@ -682,6 +682,21 @@ type ContestAnnouncement struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+type ContestBooklet struct {
+	ContestID      uuid.UUID  `json:"contest_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Language       string     `json:"language"`
+	Source         string     `json:"source"`
+	SourceSha256   string     `json:"source_sha256"`
+	State          string     `json:"state"`
+	Attempt        int32      `json:"attempt"`
+	LeaseToken     *uuid.UUID `json:"lease_token"`
+	LeaseDeadline  *time.Time `json:"lease_deadline"`
+	ObjectID       *uuid.UUID `json:"object_id"`
+	Diagnostic     *string    `json:"diagnostic"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
 type ContestClarification struct {
 	ID         uuid.UUID  `json:"id"`
 	ContestID  uuid.UUID  `json:"contest_id"`

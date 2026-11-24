@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"sort"
 	"time"
@@ -27,6 +28,11 @@ type ContestsUseCase struct {
 	transactions    CommandTransactions
 	access          access.Loader
 	notificationsUC NotificationsUC
+	booklets        BookletRefresher
+}
+
+type BookletRefresher interface {
+	Refresh(context.Context, uuid.UUID) error
 }
 
 func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, loader access.Loader) *ContestsUseCase {
@@ -45,6 +51,21 @@ func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (contes
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
 	uc.notificationsUC = n
+}
+
+func (uc *ContestsUseCase) SetBooklets(b BookletRefresher) {
+	uc.booklets = b
+}
+
+// refreshBooklets runs after a change commits; a booklet it misses is queued by its next download.
+func (uc *ContestsUseCase) refreshBooklets(ctx context.Context, contestID uuid.UUID, err error) error {
+	if err != nil || uc.booklets == nil {
+		return err
+	}
+	if err := uc.booklets.Refresh(ctx, contestID); err != nil {
+		slog.ErrorContext(ctx, "refresh contest booklets", "contest_id", contestID, "error", err)
+	}
+	return nil
 }
 
 func (uc *ContestsUseCase) CreateContest(
@@ -76,9 +97,10 @@ func (uc *ContestsUseCase) CreateContest(
 }
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
-	return access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, c.ID, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		return tx.UpdateContest(ctx, c)
 	})
+	return uc.refreshBooklets(ctx, c.ID, err)
 }
 
 func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
@@ -88,7 +110,7 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		var err error
 		if c.PackageId, err = usableProblemPackage(ctx, tx, c.ProblemId, c.PackageId, true); err != nil {
 			return err
@@ -98,35 +120,39 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 		}
 		return tx.CreateContestProblem(ctx, c)
 	})
+	return uc.refreshBooklets(ctx, c.ContestId, err)
 }
 
 // Relinking still requires using the source problem, even during a running contest.
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	return access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, _ access.ContestAccess) error {
 		var err error
 		if packageId, err = usableProblemPackage(ctx, tx, problemId, packageId, false); err != nil {
 			return err
 		}
 		return tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
 	})
+	return uc.refreshBooklets(ctx, contestId, err)
 }
 
 func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
-	return access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, c.ContestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
 			return err
 		}
 		return tx.DeleteContestProblem(ctx, c)
 	})
+	return uc.refreshBooklets(ctx, c.ContestId, err)
 }
 
 func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
-	return access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, contestId, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
 		if err := tx.LockContestProblemOrder(ctx, contestId); err != nil {
 			return err
 		}
 		return tx.ReorderContestProblems(ctx, contestId, problems)
 	})
+	return uc.refreshBooklets(ctx, contestId, err)
 }
 
 func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c contestsmodel.ParticipantDeletion) error {

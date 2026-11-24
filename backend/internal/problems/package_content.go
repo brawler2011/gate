@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"mime"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -45,34 +44,6 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	return nil, "", pkg.ErrNotFound
 }
 
-// Missing languages fall back to English, then alphabetical order.
-func selectStatement(title string, statements []model.DraftStatement, language string) *model.Statement {
-	find := func(language string) *model.DraftStatement {
-		i := slices.IndexFunc(statements, func(s model.DraftStatement) bool { return s.Language == language })
-		if i < 0 {
-			return nil
-		}
-		return &statements[i]
-	}
-	s := find(language)
-	if s == nil {
-		s = find("en")
-	}
-	if s == nil && len(statements) > 0 {
-		first := slices.MinFunc(statements, func(a, b model.DraftStatement) int { return strings.Compare(a.Language, b.Language) })
-		s = &first
-	}
-	statement := model.Statement{Title: title}
-	if s != nil {
-		statement.Legend, statement.InputFormat, statement.OutputFormat = s.Legend, s.Input, s.Output
-		statement.Notes, statement.Interaction, statement.Scoring = s.Notes, s.Interaction, s.Scoring
-		if s.Title != "" {
-			statement.Title = s.Title
-		}
-	}
-	return &statement
-}
-
 // ReadStatement leaves Statement nil when the package is unavailable.
 func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, language string) model.StatementContent {
 	p, err := c.Repo.GetPackageStatement(ctx, packageID)
@@ -82,5 +53,5 @@ func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID
 		}
 		return model.StatementContent{Samples: []model.Sample{}, Assets: map[string]string{}}
 	}
-	return model.StatementContent{Statement: selectStatement(p.Title, p.Statements, language), Samples: p.Samples, Assets: p.Assets}
+	return model.StatementContent{Statement: model.SelectStatement(p.Title, p.Statements, language), Samples: p.Samples, Assets: p.Assets}
 }

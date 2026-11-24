@@ -589,19 +589,36 @@ paths:
           $ref: "#/components/responses/Problem"
         "200":
           description: OK
+  /contests/{contest_id}/booklets:
+    get:
+      tags: [contests]
+      operationId: ListContestBooklets
+      summary: List contest booklets, one per statement language
+      parameters:
+        - $ref: "#/components/parameters/ContestIDPath"
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContestBooklets"
   /contests/{contest_id}/statements.pdf:
     get:
       tags: [contests]
       operationId: DownloadContestStatementsPdf
-      summary: Download PDF booklet with contest statements
+      summary: Download the stored PDF booklet with contest statements
+      description: Answers booklet_not_ready while the booklet is being built and booklet_failed when it does not compile.
       parameters:
         - $ref: "#/components/parameters/ContestIDPath"
         - name: lang
-          description: "Language code of the problem statement."
+          description: "Statement language of the booklet."
           in: query
+          required: true
           schema:
             type: string
-            default: ru
       responses:
         default:
           $ref: "#/components/responses/Problem"
@@ -3882,6 +3899,8 @@ components:
         - package_not_ready
         - stale_revision
         - build_finished
+        - booklet_not_ready
+        - booklet_failed
         - required
         - length
         - format
@@ -4488,6 +4507,36 @@ components:
       properties:
         problem:
           $ref: "#/components/schemas/ContestProblemModel"
+    ContestBooklets:
+      type: object
+      required:
+        - booklets
+      properties:
+        booklets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContestBooklet"
+    ContestBooklet:
+      type: object
+      required:
+        - language
+        - state
+        - updated_at
+      properties:
+        language:
+          type: string
+        state:
+          type: string
+          enum:
+            - building
+            - ready
+            - failed
+        updated_at:
+          type: string
+          format: date-time
+        diagnostic:
+          description: The LaTeX error of a failed build; shown to contest managers only.
+          type: string
     ContestScope:
       description: >-
         Lowest audience that may see other people's results while the contest runs (*_during) or after it ends (*_after);

@@ -18,7 +18,6 @@ judge:
   # The VPS is a shared vCPU (deploy/strict-judging.md).
   mode: dirty
   manifest_dir: /etc/judge
-  worker_url: http://worker:8080
   # Avoid CPU contention that would skew judging time limits.
   workers: 1
 problems:

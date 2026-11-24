@@ -280,7 +280,8 @@ type Handler interface {
 	DisableTeamJoinLink(ctx context.Context, params DisableTeamJoinLinkParams) error
 	// DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 	//
-	// Download PDF booklet with contest statements.
+	// Answers booklet_not_ready while the booklet is being built and booklet_failed when it does not
+	// compile.
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
@@ -491,6 +492,12 @@ type Handler interface {
 	//
 	// GET /contests/{contest_id}/announcements
 	ListContestAnnouncements(ctx context.Context, params ListContestAnnouncementsParams) (*ListContestAnnouncementsResponseModel, error)
+	// ListContestBooklets implements ListContestBooklets operation.
+	//
+	// List contest booklets, one per statement language.
+	//
+	// GET /contests/{contest_id}/booklets
+	ListContestBooklets(ctx context.Context, params ListContestBookletsParams) (*ContestBooklets, error)
 	// ListContestClarifications implements ListContestClarifications operation.
 	//
 	// List contest clarifications (for participant: own questions; for jury: all questions).

@@ -4051,8 +4051,8 @@ func decodeDisableTeamJoinLinkParams(args [1]string, argsEscaped bool, r *http.R
 type DownloadContestStatementsPdfParams struct {
 	// UUID of the contest.
 	ContestID uuid.UUID
-	// Language code of the problem statement.
-	Lang OptString `json:",omitempty,omitzero"`
+	// Statement language of the booklet.
+	Lang string
 }
 
 func unpackDownloadContestStatementsPdfParams(packed middleware.Parameters) (params DownloadContestStatementsPdfParams) {
@@ -4068,9 +4068,7 @@ func unpackDownloadContestStatementsPdfParams(packed middleware.Parameters) (par
 			Name: "lang",
 			In:   "query",
 		}
-		if v, ok := packed[key]; ok {
-			params.Lang = v.(OptString)
-		}
+		params.Lang = packed[key].(string)
 	}
 	return params
 }
@@ -4122,11 +4120,6 @@ func decodeDownloadContestStatementsPdfParams(args [1]string, argsEscaped bool, 
 			Err:  err,
 		}
 	}
-	// Set default value for query: lang.
-	{
-		val := string("ru")
-		params.Lang.SetTo(val)
-	}
 	// Decode query: lang.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -4137,28 +4130,23 @@ func decodeDownloadContestStatementsPdfParams(args [1]string, argsEscaped bool, 
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLangVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotLangVal = c
-					return nil
-				}(); err != nil {
+				val, err := d.DecodeValue()
+				if err != nil {
 					return err
 				}
-				params.Lang.SetTo(paramsDotLangVal)
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Lang = c
 				return nil
 			}); err != nil {
 				return err
 			}
+		} else {
+			return err
 		}
 		return nil
 	}(); err != nil {
@@ -7028,6 +7016,72 @@ func decodeListContestAnnouncementsParams(args [1]string, argsEscaped bool, r *h
 		return params, &ogenerrors.DecodeParamError{
 			Name: "pageSize",
 			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListContestBookletsParams is parameters of ListContestBooklets operation.
+type ListContestBookletsParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
+}
+
+func unpackListContestBookletsParams(packed middleware.Parameters) (params ListContestBookletsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "path",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeListContestBookletsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListContestBookletsParams, _ error) {
+	// Decode path: contest_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "path",
 			Err:  err,
 		}
 	}

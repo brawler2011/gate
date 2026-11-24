@@ -1,13 +1,8 @@
 package booklet
 
 import (
-	"bytes"
-	"context"
 	_ "embed"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -225,71 +220,6 @@ func formatSampleContent(s string) string {
 		s += "\n"
 	}
 	return s
-}
-
-type Compiler interface {
-	CompilePDF(ctx context.Context, texSource string) ([]byte, error)
-}
-
-func CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
-	return CompilePDFLocal(ctx, texSource)
-}
-
-func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
-	tempDir, err := os.MkdirTemp("", "booklet-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	if err := os.WriteFile(filepath.Join(tempDir, "olymp.sty"), OlympSty, 0600); err != nil {
-		return nil, fmt.Errorf("failed to write olymp.sty: %w", err)
-	}
-
-	texPath := filepath.Join(tempDir, "booklet.tex")
-	if err := os.WriteFile(texPath, []byte(texSource), 0600); err != nil {
-		return nil, fmt.Errorf("failed to write booklet.tex: %w", err)
-	}
-
-	compiler := "pdflatex"
-	if _, err := exec.LookPath("pdflatex"); err != nil {
-		if _, errX := exec.LookPath("xelatex"); errX == nil {
-			compiler = "xelatex"
-		} else {
-			return nil, fmt.Errorf("neither pdflatex nor xelatex found on system")
-		}
-	}
-
-	// A second compiler pass resolves labels and page numbers.
-	for run := 1; run <= 2; run++ {
-		//nolint:gosec // compiler is selected from fixed binary names pdflatex or xelatex
-		cmd := exec.CommandContext(ctx, compiler,
-			"-interaction=nonstopmode",
-			"-halt-on-error",
-			"-output-directory="+tempDir,
-			texPath,
-		)
-		var outBuf bytes.Buffer
-		cmd.Stdout = &outBuf
-		cmd.Stderr = &outBuf
-
-		if err := cmd.Run(); err != nil {
-			logBytes, _ := os.ReadFile(filepath.Join(tempDir, "booklet.log"))
-			logSnippet := string(logBytes)
-			if len(logSnippet) > 4000 {
-				logSnippet = logSnippet[len(logSnippet)-4000:]
-			}
-			return nil, fmt.Errorf("LaTeX compilation error on pass %d: %w\nOutput:\n%s\nLog:\n%s", run, err, outBuf.String(), logSnippet)
-		}
-	}
-
-	pdfPath := filepath.Join(tempDir, "booklet.pdf")
-	pdfBytes, err := os.ReadFile(pdfPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read generated PDF: %w", err)
-	}
-
-	return pdfBytes, nil
 }
 
 func MarkdownToLatex(text string) string {

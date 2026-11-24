@@ -114,8 +114,6 @@ type Judge struct {
 	Workers   int                  `yaml:"workers"`
 	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
-	// API instances compile booklets on a worker reached here.
-	WorkerURL string `yaml:"worker_url"`
 }
 
 func (j Judge) Cores() ([]int, error) {
@@ -217,7 +215,6 @@ func (c Config) Validate(mode Mode) error {
 	}
 	if mode == ModeAPI {
 		v.required("judge.manifest_dir", c.Judge.ManifestDir)
-		v.url("judge.worker_url", c.Judge.WorkerURL)
 	}
 	v.url("storage.s3_endpoint", c.Storage.S3Endpoint)
 	switch c.Email.Provider {

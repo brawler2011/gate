@@ -691,6 +691,118 @@ func (s *ContestAnnouncementModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Ref: #/components/schemas/ContestBooklet
+type ContestBooklet struct {
+	Language  string              `json:"language"`
+	State     ContestBookletState `json:"state"`
+	UpdatedAt time.Time           `json:"updated_at"`
+	// The LaTeX error of a failed build; shown to contest managers only.
+	Diagnostic OptString `json:"diagnostic"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ContestBooklet) GetLanguage() string {
+	return s.Language
+}
+
+// GetState returns the value of State.
+func (s *ContestBooklet) GetState() ContestBookletState {
+	return s.State
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ContestBooklet) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetDiagnostic returns the value of Diagnostic.
+func (s *ContestBooklet) GetDiagnostic() OptString {
+	return s.Diagnostic
+}
+
+// SetLanguage sets the value of Language.
+func (s *ContestBooklet) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetState sets the value of State.
+func (s *ContestBooklet) SetState(val ContestBookletState) {
+	s.State = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ContestBooklet) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetDiagnostic sets the value of Diagnostic.
+func (s *ContestBooklet) SetDiagnostic(val OptString) {
+	s.Diagnostic = val
+}
+
+type ContestBookletState string
+
+const (
+	ContestBookletStateBuilding ContestBookletState = "building"
+	ContestBookletStateReady    ContestBookletState = "ready"
+	ContestBookletStateFailed   ContestBookletState = "failed"
+)
+
+// AllValues returns all ContestBookletState values.
+func (ContestBookletState) AllValues() []ContestBookletState {
+	return []ContestBookletState{
+		ContestBookletStateBuilding,
+		ContestBookletStateReady,
+		ContestBookletStateFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestBookletState) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestBookletStateBuilding:
+		return []byte(s), nil
+	case ContestBookletStateReady:
+		return []byte(s), nil
+	case ContestBookletStateFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestBookletState) UnmarshalText(data []byte) error {
+	switch ContestBookletState(data) {
+	case ContestBookletStateBuilding:
+		*s = ContestBookletStateBuilding
+		return nil
+	case ContestBookletStateReady:
+		*s = ContestBookletStateReady
+		return nil
+	case ContestBookletStateFailed:
+		*s = ContestBookletStateFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ContestBooklets
+type ContestBooklets struct {
+	Booklets []ContestBooklet `json:"booklets"`
+}
+
+// GetBooklets returns the value of Booklets.
+func (s *ContestBooklets) GetBooklets() []ContestBooklet {
+	return s.Booklets
+}
+
+// SetBooklets sets the value of Booklets.
+func (s *ContestBooklets) SetBooklets(val []ContestBooklet) {
+	s.Booklets = val
+}
+
 // Contest clarification data.
 // Ref: #/components/schemas/ContestClarificationModel
 type ContestClarificationModel struct {
@@ -3166,6 +3278,8 @@ const (
 	ErrorCodePackageNotReady             ErrorCode = "package_not_ready"
 	ErrorCodeStaleRevision               ErrorCode = "stale_revision"
 	ErrorCodeBuildFinished               ErrorCode = "build_finished"
+	ErrorCodeBookletNotReady             ErrorCode = "booklet_not_ready"
+	ErrorCodeBookletFailed               ErrorCode = "booklet_failed"
 	ErrorCodeRequired                    ErrorCode = "required"
 	ErrorCodeLength                      ErrorCode = "length"
 	ErrorCodeFormat                      ErrorCode = "format"
@@ -3233,6 +3347,8 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodePackageNotReady,
 		ErrorCodeStaleRevision,
 		ErrorCodeBuildFinished,
+		ErrorCodeBookletNotReady,
+		ErrorCodeBookletFailed,
 		ErrorCodeRequired,
 		ErrorCodeLength,
 		ErrorCodeFormat,
@@ -3345,6 +3461,10 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeStaleRevision:
 		return []byte(s), nil
 	case ErrorCodeBuildFinished:
+		return []byte(s), nil
+	case ErrorCodeBookletNotReady:
+		return []byte(s), nil
+	case ErrorCodeBookletFailed:
 		return []byte(s), nil
 	case ErrorCodeRequired:
 		return []byte(s), nil
@@ -3522,6 +3642,12 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeBuildFinished:
 		*s = ErrorCodeBuildFinished
+		return nil
+	case ErrorCodeBookletNotReady:
+		*s = ErrorCodeBookletNotReady
+		return nil
+	case ErrorCodeBookletFailed:
+		*s = ErrorCodeBookletFailed
 		return nil
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired

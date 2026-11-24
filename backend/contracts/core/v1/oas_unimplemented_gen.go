@@ -420,7 +420,8 @@ func (UnimplementedHandler) DisableTeamJoinLink(ctx context.Context, params Disa
 
 // DownloadContestStatementsPdf implements DownloadContestStatementsPdf operation.
 //
-// Download PDF booklet with contest statements.
+// Answers booklet_not_ready while the booklet is being built and booklet_failed when it does not
+// compile.
 //
 // GET /contests/{contest_id}/statements.pdf
 func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (r DownloadContestStatementsPdfOK, _ error) {
@@ -733,6 +734,15 @@ func (UnimplementedHandler) InviteOrganizationMember(ctx context.Context, req *I
 //
 // GET /contests/{contest_id}/announcements
 func (UnimplementedHandler) ListContestAnnouncements(ctx context.Context, params ListContestAnnouncementsParams) (r *ListContestAnnouncementsResponseModel, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListContestBooklets implements ListContestBooklets operation.
+//
+// List contest booklets, one per statement language.
+//
+// GET /contests/{contest_id}/booklets
+func (UnimplementedHandler) ListContestBooklets(ctx context.Context, params ListContestBookletsParams) (r *ContestBooklets, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

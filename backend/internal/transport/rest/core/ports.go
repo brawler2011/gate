@@ -168,8 +168,12 @@ type UsersUC interface {
 type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, uuid.UUID, uuid.UUID) (*contests.ContestProblemDetails, error)
-	ReadBooklet(context.Context, uuid.UUID, string) ([]byte, error)
 	OpenProblemAsset(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, string, error)
+}
+
+type BookletsReader interface {
+	List(context.Context, uuid.UUID) ([]contestsmodel.Booklet, error)
+	Open(context.Context, uuid.UUID, string) (io.ReadCloser, error)
 }
 
 type AvatarsUC interface {

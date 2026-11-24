@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -316,11 +315,31 @@ func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.G
 }
 
 func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params corev1.DownloadContestStatementsPdfParams) (corev1.DownloadContestStatementsPdfOK, error) {
-	data, err := h.ContestDetails.ReadBooklet(ctx, params.ContestID, params.Lang.Or("ru"))
+	file, err := h.Booklets.Open(ctx, params.ContestID, params.Lang)
 	if err != nil {
 		return corev1.DownloadContestStatementsPdfOK{}, err
 	}
-	return corev1.DownloadContestStatementsPdfOK{Data: bytes.NewReader(data)}, nil
+	return corev1.DownloadContestStatementsPdfOK{Data: file}, nil
+}
+
+var bookletStates = map[string]corev1.ContestBookletState{
+	contestsmodel.BookletQueued: corev1.ContestBookletStateBuilding, contestsmodel.BookletRunning: corev1.ContestBookletStateBuilding,
+	contestsmodel.BookletSucceeded: corev1.ContestBookletStateReady, contestsmodel.BookletFailed: corev1.ContestBookletStateFailed,
+}
+
+func (h *CoreServer) ListContestBooklets(ctx context.Context, params corev1.ListContestBookletsParams) (*corev1.ContestBooklets, error) {
+	booklets, err := h.Booklets.List(ctx, params.ContestID)
+	if err != nil {
+		return nil, err
+	}
+	result := &corev1.ContestBooklets{Booklets: make([]corev1.ContestBooklet, len(booklets))}
+	for i, b := range booklets {
+		result.Booklets[i] = corev1.ContestBooklet{Language: b.Language, State: bookletStates[b.State], UpdatedAt: b.UpdatedAt}
+		if b.Diagnostic != "" {
+			result.Booklets[i].Diagnostic = corev1.NewOptString(b.Diagnostic)
+		}
+	}
+	return result, nil
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.DeleteContestProblemParams) error {

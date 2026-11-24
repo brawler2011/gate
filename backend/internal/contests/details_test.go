@@ -57,11 +57,22 @@ func (s *detailStatements) OpenImage(_ context.Context, _ uuid.UUID, hash string
 	return io.NopCloser(strings.NewReader("png")), "image/png", nil
 }
 
-type detailCompiler struct{ calls int }
+func (s *detailStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
+	return s.contest, nil
+}
+func (s *detailStatements) GetPackageStatement(context.Context, uuid.UUID) (problemsmodel.PackageStatement, error) {
+	return problemsmodel.PackageStatement{Statements: []problemsmodel.DraftStatement{{Language: "ru", Legend: "Условие"}}}, nil
+}
 
-func (c *detailCompiler) CompilePDF(context.Context, string) ([]byte, error) {
-	c.calls++
-	return []byte("pdf"), nil
+type detailBooklets struct{ queued []string }
+
+func (b *detailBooklets) QueueBooklet(_ context.Context, _ uuid.UUID, language, _, _ string) error {
+	b.queued = append(b.queued, language)
+	return nil
+}
+func (b *detailBooklets) KeepBooklets(context.Context, uuid.UUID, []string) error { return nil }
+func (b *detailBooklets) ListBooklets(context.Context, uuid.UUID) ([]contestsmodel.Booklet, error) {
+	return nil, nil
 }
 
 func detailAccess(contest contestsmodel.Contest, actor uuid.UUID, role accessmodel.ContestRole) *accesstest.Loader {
@@ -92,9 +103,10 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			}
 			contest := contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start, Settings: contestsmodel.ContestSettings{HideStatements: tc.hidden}}
 			store := &detailStore{contest: contest, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
-			statements, compiler := &detailStatements{}, &detailCompiler{}
+			statements, booklets := &detailStatements{}, &detailBooklets{}
 			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			reader := NewDetailsReader(store, statements, detailAccess(contest, actor.Id, tc.role), compiler)
+			loader := detailAccess(contest, actor.Id, tc.role)
+			reader := NewDetailsReader(store, statements, loader)
 			ctx := accessmodel.WithUser(context.Background(), actor)
 
 			result, err := reader.GetContestProblemDetails(ctx, contest.ID, store.link.ProblemID)
@@ -116,16 +128,22 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.Zero(t, statements.fileCalls)
 			}
 
-			_, err = reader.ReadBooklet(ctx, contest.ID, "ru")
-			require.ErrorIs(t, err, tc.booklet)
-			require.Equal(t, tc.booklet == nil, compiler.calls == 1)
+			// A booklet never built is queued on its first download.
+			_, err = (&Booklets{Contests: store, Statements: statements, Store: booklets, Access: loader}).Open(ctx, contest.ID, "ru")
+			if tc.booklet == nil {
+				require.ErrorIs(t, err, pkg.ErrBookletNotReady)
+				require.Equal(t, []string{"ru"}, booklets.queued)
+			} else {
+				require.ErrorIs(t, err, tc.booklet)
+				require.Empty(t, booklets.queued)
+			}
 		})
 	}
 }
 
 func TestContestListUsesFlatProjection(t *testing.T) {
 	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic}, link: contestsmodel.ContestProblem{Title: "Projected", TimeLimitMs: 1234, MemoryLimitMb: 512}}
-	reader := NewDetailsReader(store, nil, detailAccess(store.contest, uuid.Nil, ""), nil)
+	reader := NewDetailsReader(store, nil, detailAccess(store.contest, uuid.Nil, ""))
 	result, err := reader.GetContestDetails(context.Background(), "org", "contest")
 	require.NoError(t, err)
 	require.Len(t, result.Problems, 1)

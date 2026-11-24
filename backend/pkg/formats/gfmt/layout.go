@@ -26,3 +26,8 @@ func folderRole(folder string) string {
 func StatementPath(language, section string) string {
 	return StatementFolder + "/" + language + "/" + section + ".md"
 }
+
+// StatementPDFPath is where built packages keep a statement compiled for print; imports ignore it.
+func StatementPDFPath(language string) string {
+	return StatementFolder + "/" + language + "/statement.pdf"
+}

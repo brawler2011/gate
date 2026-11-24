@@ -4704,7 +4704,8 @@ func (s *Server) handleDisableTeamJoinLinkRequest(args [1]string, argsEscaped bo
 
 // handleDownloadContestStatementsPdfRequest handles DownloadContestStatementsPdf operation.
 //
-// Download PDF booklet with contest statements.
+// Answers booklet_not_ready while the booklet is being built and booklet_failed when it does not
+// compile.
 //
 // GET /contests/{contest_id}/statements.pdf
 func (s *Server) handleDownloadContestStatementsPdfRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4737,7 +4738,7 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [1]string, argsE
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DownloadContestStatementsPdfOperation,
-			OperationSummary: "Download PDF booklet with contest statements",
+			OperationSummary: "Download the stored PDF booklet with contest statements",
 			OperationID:      "DownloadContestStatementsPdf",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -8059,6 +8060,101 @@ func (s *Server) handleListContestAnnouncementsRequest(args [1]string, argsEscap
 	}
 
 	if err := encodeListContestAnnouncementsResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListContestBookletsRequest handles ListContestBooklets operation.
+//
+// List contest booklets, one per statement language.
+//
+// GET /contests/{contest_id}/booklets
+func (s *Server) handleListContestBookletsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListContestBookletsOperation,
+			ID:   "ListContestBooklets",
+		}
+	)
+	params, err := decodeListContestBookletsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *ContestBooklets
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListContestBookletsOperation,
+			OperationSummary: "List contest booklets, one per statement language",
+			OperationID:      "ListContestBooklets",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "contest_id",
+					In:   "path",
+				}: params.ContestID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListContestBookletsParams
+			Response = *ContestBooklets
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListContestBookletsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListContestBooklets(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListContestBooklets(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeListContestBookletsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

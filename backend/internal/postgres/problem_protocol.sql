@@ -8,6 +8,7 @@ DELETE FROM stored_objects WHERE id IN (
   AND NOT EXISTS(SELECT 1 FROM problem_builds b WHERE b.snapshot->'input_objects' @> jsonb_build_array(o.id))
   AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
   AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
+  AND NOT EXISTS(SELECT 1 FROM contest_booklets b WHERE b.object_id=o.id)
  ORDER BY o.id LIMIT 100)
 RETURNING key;
 

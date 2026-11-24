@@ -23,6 +23,13 @@ import (
 
 func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UUID {
 	s.T().Helper()
+	packageID, err := s.runBuild(userID, problemID)
+	s.Require().NoError(err)
+	return packageID
+}
+
+func (s *IntegrationTestSuite) runBuild(userID, problemID uuid.UUID) (uuid.UUID, error) {
+	s.T().Helper()
 	ctx := withTestUser(s.ctx, userID)
 	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problemID})
 	s.Require().NoError(err)
@@ -36,9 +43,7 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	s.Require().NoError(err)
 	s.Require().Equal(accepted.BuildID, build.ID)
 	pipeline := builder.Pipeline{Repo: s.problemDrafts, Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Client: client, Files: files, Languages: &sandbox.Config{Langs: options.Languages}, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: &sandbox.Config{Langs: options.Languages}}), Parallelism: judgeParallelism(s.T()), Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	packageID, err := pipeline.Execute(s.ctx, build)
-	s.Require().NoError(err)
-	return packageID
+	return pipeline.Execute(s.ctx, build)
 }
 
 func testLanguages(t *testing.T) *sandbox.Config {

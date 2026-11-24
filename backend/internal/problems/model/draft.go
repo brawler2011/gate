@@ -170,8 +170,8 @@ type BuildLimits struct {
 	WallFactor int                   `json:"wall_factor" yaml:"wall_factor"`
 	Compile    sandbox.FileRunLimits `json:"compile" yaml:"compile"`
 	Auxiliary  sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
-	// Booklets are no part of a build snapshot.
-	Booklet sandbox.FileRunLimits `json:"-" yaml:"booklet"`
+	// LaTeX runs: statement PDFs of builds and contest booklets.
+	Booklet sandbox.FileRunLimits `json:"booklet" yaml:"booklet"`
 }
 
 // WithCPU sets a run's CPU limit and the wall-clock limit that follows from it.

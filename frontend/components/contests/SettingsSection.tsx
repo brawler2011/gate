@@ -5,7 +5,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
 import {useRevalidator, useNavigate} from "react-router-dom";
 
-import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
+import {BookletDiagnostics, DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {useLanguages} from "@/lib/languages";
@@ -437,7 +437,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             <Stack gap={2}>
               <Text size="sm" fw={500}>Печатный буклет задач</Text>
               <Text size="xs" c="dimmed">
-                Сгенерировать официальный PDF буклет со всеми условиями и примерами контеста (LaTeX / olymp.sty)
+                PDF со всеми условиями и примерами (LaTeX / olymp.sty) собирается заранее
+                после каждого изменения задач контеста
               </Text>
             </Stack>
             <DownloadStatementsButton
@@ -445,6 +446,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
               contestLogin={contest.login}
             />
           </Group>
+          <BookletDiagnostics contestId={contest.id} />
 
           <Divider my="sm" />
 

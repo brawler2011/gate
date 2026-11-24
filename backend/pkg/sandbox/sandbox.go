@@ -231,6 +231,15 @@ func statusToString(status string) Status {
 	}
 }
 
+// latexError keeps the log from the first TeX error ("! ..."), which names the problem and its line.
+func latexError(log string) string {
+	const limit = 4096
+	if i := strings.Index(log, "\n! "); i >= 0 {
+		return log[i+1 : i+1+min(limit, len(log)-i-1)]
+	}
+	return log[max(0, len(log)-limit):]
+}
+
 // CompilePDF limits the PDF by limits.Output and the reported log tail by limits.Diagnostic.
 func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileRunLimits) ([]byte, error) {
 	latex := "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex >/dev/null"
@@ -254,8 +263,8 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string, limits FileR
 	pdfID := res.FileIDs["booklet.pdf"]
 	defer s.client.release(pdfID)
 	if res.Status != resultAccepted {
-		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nLog:\n%s\n%s",
-			res.Status, res.ExitStatus, res.Files["stdout"], res.Files["stderr"])
+		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\n%s",
+			res.Status, res.ExitStatus, latexError(res.Files["stdout"]+res.Files["stderr"]))
 	}
 	if pdfID == "" {
 		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")

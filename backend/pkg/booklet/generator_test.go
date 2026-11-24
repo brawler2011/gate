@@ -1,10 +1,7 @@
 package booklet
 
 import (
-	"context"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,24 +63,6 @@ func TestGenerateLatex(t *testing.T) {
 	assert.Contains(t, latex, "256 МБ")
 	assert.Contains(t, latex, "\\exmp{2 2")
 	assert.Contains(t, latex, "\\begin{problem}{B. Graph Connectivity}")
-}
-
-func TestCompilePDFLocal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping LaTeX compilation test in short mode")
-	}
-
-	latex := "\\documentclass{article}\\begin{document}Hello World\\end{document}"
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	pdfBytes, err := CompilePDFLocal(ctx, latex)
-	if err != nil && strings.Contains(err.Error(), "neither pdflatex nor xelatex found") {
-		t.Skip("neither pdflatex nor xelatex found on system, skipping local compilation test")
-	}
-	require.NoError(t, err)
-	assert.NotEmpty(t, pdfBytes)
-	assert.True(t, strings.HasPrefix(string(pdfBytes[:4]), "%PDF"))
 }
 
 func TestMarkdownToLatex(t *testing.T) {

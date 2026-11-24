@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -19,6 +20,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/judging"
 	"github.com/brawler2011/gate/backend/internal/problems/archive"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -163,6 +165,9 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.checkSolutions(ctx); err != nil {
 		return uuid.Nil, err
 	}
+	if err := e.printStatements(ctx); err != nil {
+		return uuid.Nil, err
+	}
 	f, err := os.OpenFile(filepath.Join(root, "package.zip"), os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return uuid.Nil, fail("archive", 0, "infrastructure", err)
@@ -181,6 +186,30 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
+}
+
+// printStatements compiles each statement as contest booklets print it, so that authors, not participants, meet LaTeX errors.
+func (e *execution) printStatements(ctx context.Context) error {
+	s := e.build.Snapshot
+	d := s.Draft
+	problem := model.BookletProblem{Title: d.Title, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb, InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: d.Statements, Samples: e.samples}
+	for _, st := range d.Statements {
+		data := problem.Data(st.Language)
+		tex, err := booklet.GenerateLatex(booklet.ContestData{Title: data.Title, Language: st.Language, Problems: []booklet.ProblemData{data}})
+		if err != nil {
+			return fail("statements", 0, "infrastructure", err)
+		}
+		pdf, err := e.sandbox.CompilePDF(ctx, tex, s.Limits.Booklet)
+		if err != nil {
+			return fail("statements", 0, processKind(err), fmt.Errorf("%s statement: %w", st.Language, err))
+		}
+		local := "statements/" + st.Language + ".pdf"
+		if _, _, err := e.dir.copy(local, bytes.NewReader(pdf), int64(len(pdf))); err != nil {
+			return fail("statements", 0, "infrastructure", err)
+		}
+		e.pkg.AddStatementPDF(st.Language, filepath.Join(e.dir.root, local))
+	}
+	return nil
 }
 
 func objectReferences(d model.Draft, id uuid.UUID) string {

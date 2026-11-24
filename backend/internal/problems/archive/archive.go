@@ -141,6 +141,11 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 	return p, p.tests(d, solutions, built)
 }
 
+// AddStatementPDF adds a statement PDF the build compiled into local.
+func (p *Package) AddStatementPDF(language, local string) {
+	p.files = append(p.files, file{name: gfmt.StatementPDFPath(language), local: local})
+}
+
 // object adds a file under tests/ unless its source is there already, and returns the name to refer to.
 func (p *Package) object(name string, oid uuid.UUID) string {
 	return p.test(name, "object:"+oid.String(), file{object: oid})

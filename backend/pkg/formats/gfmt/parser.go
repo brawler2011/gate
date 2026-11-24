@@ -50,6 +50,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
+		case folder == StatementFolder && strings.Count(name, "/") == 1 && rel == StatementPDFPath(path.Dir(name)):
 		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".md":
 			language, file, _ := strings.Cut(name, "/")
 			s := statements[language]
