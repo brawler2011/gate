@@ -13,7 +13,7 @@ import {api, unwrap, type Problem} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
-import {emptyStatement, removeAsset, renameAsset, setStatement, STATEMENT_SECTIONS, type StatementSection} from "./draft/draftOps";
+import {emptyStatement, isInteractive, removeAsset, renameAsset, setStatement, STATEMENT_SECTIONS, type StatementSection} from "./draft/draftOps";
 import {objectUrl, useSaveDraft, useUploadToDraft} from "./draft/useDraft";
 
 import "../problems/Problem.css";
@@ -92,7 +92,7 @@ const StatementForm = ({draft, problemId, statement: stored}: StatementProps): R
   const {save, isSaving} = useSaveDraft(problemId);
   const [statement, setLocal] = useState(stored);
   const changed = statement.title !== stored.title || STATEMENT_SECTIONS.some((key) => statement[key] !== stored[key]);
-  const sections = STATEMENT_SECTIONS.filter((key) => key !== "interaction" || draft.type === "interactive" || stored.interaction !== "");
+  const sections = STATEMENT_SECTIONS.filter((key) => key !== "interaction" || isInteractive(draft.type) || stored.interaction !== "");
   return (
     <Stack gap="md">
       <SimpleGrid cols={{base: 1, md: 2}} spacing="md">

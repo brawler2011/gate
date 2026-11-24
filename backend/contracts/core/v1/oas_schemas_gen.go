@@ -9592,8 +9592,12 @@ type ProblemDraft struct {
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
-	OutputFile string                    `json:"output_file"`
-	Library    []ProblemDraftLibraryFile `json:"library"`
+	OutputFile string `json:"output_file"`
+	// Solution copies a communication problem runs at once, 0 for other types. Copy i gets i as its only
+	// argument and talks over its standard streams to the manager, which reads it on fd 5+2i and writes to
+	// it on fd 6+2i; the manager otherwise is called as an interactor.
+	Processes int32                     `json:"processes"`
+	Library   []ProblemDraftLibraryFile `json:"library"`
 	// Files linked with every solution; only languages that compile one of them can be submitted.
 	Graders []ProblemDraftFile `json:"graders"`
 	// Files participants download with the statement.
@@ -9682,6 +9686,11 @@ func (s *ProblemDraft) GetInputFile() string {
 // GetOutputFile returns the value of OutputFile.
 func (s *ProblemDraft) GetOutputFile() string {
 	return s.OutputFile
+}
+
+// GetProcesses returns the value of Processes.
+func (s *ProblemDraft) GetProcesses() int32 {
+	return s.Processes
 }
 
 // GetLibrary returns the value of Library.
@@ -9797,6 +9806,11 @@ func (s *ProblemDraft) SetInputFile(val string) {
 // SetOutputFile sets the value of OutputFile.
 func (s *ProblemDraft) SetOutputFile(val string) {
 	s.OutputFile = val
+}
+
+// SetProcesses sets the value of Processes.
+func (s *ProblemDraft) SetProcesses(val int32) {
+	s.Processes = val
 }
 
 // SetLibrary sets the value of Library.
@@ -11992,15 +12006,17 @@ func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 }
 
 // An output-only problem judges the outputs participants submit, one file per test, instead of running
-// a program.
+// a program. A communication problem runs several copies of the solution at once, each talking to the
+// interactor, its manager.
 // Ref: #/components/schemas/ProblemType
 type ProblemType string
 
 const (
-	ProblemTypePassFail    ProblemType = "pass-fail"
-	ProblemTypeScoring     ProblemType = "scoring"
-	ProblemTypeInteractive ProblemType = "interactive"
-	ProblemTypeOutputOnly  ProblemType = "output-only"
+	ProblemTypePassFail      ProblemType = "pass-fail"
+	ProblemTypeScoring       ProblemType = "scoring"
+	ProblemTypeInteractive   ProblemType = "interactive"
+	ProblemTypeCommunication ProblemType = "communication"
+	ProblemTypeOutputOnly    ProblemType = "output-only"
 )
 
 // AllValues returns all ProblemType values.
@@ -12009,6 +12025,7 @@ func (ProblemType) AllValues() []ProblemType {
 		ProblemTypePassFail,
 		ProblemTypeScoring,
 		ProblemTypeInteractive,
+		ProblemTypeCommunication,
 		ProblemTypeOutputOnly,
 	}
 }
@@ -12021,6 +12038,8 @@ func (s ProblemType) MarshalText() ([]byte, error) {
 	case ProblemTypeScoring:
 		return []byte(s), nil
 	case ProblemTypeInteractive:
+		return []byte(s), nil
+	case ProblemTypeCommunication:
 		return []byte(s), nil
 	case ProblemTypeOutputOnly:
 		return []byte(s), nil
@@ -12040,6 +12059,9 @@ func (s *ProblemType) UnmarshalText(data []byte) error {
 		return nil
 	case ProblemTypeInteractive:
 		*s = ProblemTypeInteractive
+		return nil
+	case ProblemTypeCommunication:
+		*s = ProblemTypeCommunication
 		return nil
 	case ProblemTypeOutputOnly:
 		*s = ProblemTypeOutputOnly

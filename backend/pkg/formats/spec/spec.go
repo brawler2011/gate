@@ -46,6 +46,8 @@ type Problem struct {
 	Checker       *Program
 	Validators    []Program
 	Interactor    *Program
+	// Processes is the number of solution copies a communication problem runs at once.
+	Processes int
 	// Tests identify generators by path.
 	Generators []Program
 	Solutions  []Program
@@ -193,10 +195,18 @@ func (g *Group) walk(yield func(*Group) bool) bool {
 var Aggregations = []string{"sum", "min", "max", "avg"}
 
 // ProblemTypes lists every problem type; an output-only problem judges submitted outputs instead of running a program.
-var ProblemTypes = []string{"pass-fail", "scoring", "interactive", "output-only"}
+var ProblemTypes = []string{"pass-fail", "scoring", "interactive", "communication", "output-only"}
 
 // Scored reports whether a problem type earns points per test rather than all or nothing.
 func Scored(problemType string) bool { return problemType == "scoring" || problemType == "output-only" }
+
+// Interactive reports whether the interactor, a manager on communication problems, talks to the running solution.
+func Interactive(problemType string) bool {
+	return problemType == "interactive" || problemType == "communication"
+}
+
+// MaxProcesses bounds the solution copies of a communication problem, each with the full memory limit.
+const MaxProcesses = 8
 
 // Aggregate combines scores by an Aggregations entry, empty meaning sum; avg rounds down to hundredths.
 func Aggregate(kind string, scores []points.Value) points.Value {
@@ -297,10 +307,10 @@ func (p *Problem) SetExamples(fsys fs.FS, dir string, files func(Test) (input, a
 		input, answer := files(*t)
 		example := path.Join(dir, fmt.Sprintf("example.%02d", n+1))
 		// The interactor's files are never what the participant sees.
-		if p.Type == "interactive" || differs(fsys, example, input) {
+		if Interactive(p.Type) || differs(fsys, example, input) {
 			t.StatementInput = regularFile(fsys, example)
 		}
-		if p.Type == "interactive" || differs(fsys, example+".a", answer) {
+		if Interactive(p.Type) || differs(fsys, example+".a", answer) {
 			t.StatementOutput = regularFile(fsys, example+".a")
 		}
 	}

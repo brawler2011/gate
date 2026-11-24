@@ -15,6 +15,9 @@ import type {
 // Output-only problems score submitted outputs test by test, as scoring ones do.
 export const isScored = (type: ProblemDraft["type"]): boolean => type === "scoring" || type === "output-only";
 
+// A communication problem's interactor is the manager of several solution copies.
+export const isInteractive = (type: ProblemDraft["type"]): boolean => type === "interactive" || type === "communication";
+
 export type ComponentRole = "checker" | "validator" | "interactor" | "generator" | "solution";
 
 export const ROLE_LABELS: Record<ComponentRole, string> = {
@@ -405,7 +408,7 @@ export const moveTest = (draft: ProblemDraft, id: string, delta: number): Proble
 };
 
 const newAnswer = (draft: ProblemDraft, mode: "provided" | "generated"): ProblemDraftTest["answer"] =>
-  draft.type === "interactive"
+  isInteractive(draft.type)
     ? {mode: "interactive", object_id: null, solution: null}
     : {mode, object_id: null, solution: mode === "generated" ? draft.main_solution : null};
 

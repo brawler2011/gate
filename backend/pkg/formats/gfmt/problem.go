@@ -4,6 +4,7 @@ import (
 	"iter"
 	"slices"
 
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
@@ -22,6 +23,8 @@ type Problem struct {
 	// Empty names keep standard input and output.
 	InputFile  string `yaml:"input_file,omitempty" json:"input_file,omitempty"`
 	OutputFile string `yaml:"output_file,omitempty" json:"output_file,omitempty"`
+	// Processes is the number of solution copies a communication problem runs at once.
+	Processes int `yaml:"processes,omitempty" json:"processes,omitempty"`
 	// MainSolution names the solutions/ file whose output answers tests without an answer.
 	MainSolution string                 `yaml:"main_solution,omitempty" json:"main_solution,omitempty"`
 	Solutions    map[string]Expectation `yaml:"solutions,omitempty" json:"solutions,omitempty"`
@@ -71,7 +74,7 @@ type Test struct {
 
 // ShowsInput reports whether the statement shows the test's own input; an interactive one is the interactor's.
 func (p *Problem) ShowsInput(t Test) bool {
-	return t.Sample && t.StatementInput == "" && p.Type != "interactive"
+	return t.Sample && t.StatementInput == "" && !spec.Interactive(p.Type)
 }
 
 // Pretests keeps only pretests and drops groups left without tests; ok is false unless that leaves a proper subset.

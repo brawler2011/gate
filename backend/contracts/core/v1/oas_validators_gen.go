@@ -2600,6 +2600,27 @@ func (s *ProblemDraft) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        true,
+			Max:           8,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Processes)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "processes",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Library == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -3435,6 +3456,8 @@ func (s ProblemType) Validate() error {
 	case "scoring":
 		return nil
 	case "interactive":
+		return nil
+	case "communication":
 		return nil
 	case "output-only":
 		return nil

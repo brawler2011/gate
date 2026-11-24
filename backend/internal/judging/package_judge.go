@@ -19,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
@@ -147,7 +148,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		return nil, err
 	}
 	var interactor *sandbox.Jury
-	if p.Type == "interactive" {
+	if spec.Interactive(p.Type) {
 		interactor, err = j.roleProgram(ctx, pkg, "interactor")
 		defer j.releaseRoleProgram(interactor)
 		if err != nil {
@@ -201,7 +202,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	run := func() (TestResult, string, error) {
 		result := TestResult{TestNumber: test.Test.Ordinal, Sample: test.Test.Sample, Public: p.ShowsInput(test.Test), Group: test.Group.Name}
 		if interactor != nil {
-			r, err := sb.InteractFiles(ctx, sol, lang, interactor.With(test.Group.CheckerArgs), input, answer, limits, j.Limits.Auxiliary)
+			r, err := sb.InteractFiles(ctx, sol, lang, interactor.With(test.Group.CheckerArgs), p.Processes, input, answer, limits, j.Limits.Auxiliary)
 			if err != nil {
 				return result, "", err
 			}

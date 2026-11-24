@@ -16957,6 +16957,10 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 		e.Str(s.OutputFile)
 	}
 	{
+		e.FieldStart("processes")
+		e.Int32(s.Processes)
+	}
+	{
 		e.FieldStart("library")
 		e.ArrStart()
 		for _, elem := range s.Library {
@@ -17010,7 +17014,7 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraft = [23]string{
+var jsonFieldsNameOfProblemDraft = [24]string{
 	0:  "problem_id",
 	1:  "revision",
 	2:  "title",
@@ -17027,13 +17031,14 @@ var jsonFieldsNameOfProblemDraft = [23]string{
 	13: "main_solution",
 	14: "input_file",
 	15: "output_file",
-	16: "library",
-	17: "graders",
-	18: "attachments",
-	19: "statements",
-	20: "assets",
-	21: "testset",
-	22: "tests",
+	16: "processes",
+	17: "library",
+	18: "graders",
+	19: "attachments",
+	20: "statements",
+	21: "assets",
+	22: "testset",
+	23: "tests",
 }
 
 // Decode decodes ProblemDraft from json.
@@ -17245,8 +17250,20 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"output_file\"")
 			}
-		case "library":
+		case "processes":
 			requiredBitSet[2] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int32()
+				s.Processes = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"processes\"")
+			}
+		case "library":
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				s.Library = make([]ProblemDraftLibraryFile, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17264,7 +17281,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"library\"")
 			}
 		case "graders":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				s.Graders = make([]ProblemDraftFile, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17282,7 +17299,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"graders\"")
 			}
 		case "attachments":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				s.Attachments = make([]ProblemDraftFile, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17300,7 +17317,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachments\"")
 			}
 		case "statements":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				s.Statements = make([]ProblemDraftStatement, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17318,7 +17335,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"statements\"")
 			}
 		case "assets":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				s.Assets = make([]ProblemDraftAsset, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17336,7 +17353,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"assets\"")
 			}
 		case "testset":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				if err := s.Testset.Decode(d); err != nil {
 					return err
@@ -17346,7 +17363,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"testset\"")
 			}
 		case "tests":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				s.Tests = make([]ProblemDraftTest, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17375,7 +17392,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 	for i, mask := range [3]uint8{
 		0b11111111,
 		0b11111111,
-		0b01111111,
+		0b11111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -21949,6 +21966,8 @@ func (s *ProblemType) Decode(d *jx.Decoder) error {
 		*s = ProblemTypeScoring
 	case ProblemTypeInteractive:
 		*s = ProblemTypeInteractive
+	case ProblemTypeCommunication:
+		*s = ProblemTypeCommunication
 	case ProblemTypeOutputOnly:
 		*s = ProblemTypeOutputOnly
 	default:

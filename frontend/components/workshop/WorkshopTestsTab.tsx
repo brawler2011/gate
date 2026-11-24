@@ -13,6 +13,7 @@ import {
   groupLabel,
   groupMaxPoints,
   groupRows,
+  isInteractive,
   moveTest,
   newGeneratedTest,
   newManualTest,
@@ -326,8 +327,8 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
                   <Table.Td>
                     {test.ordinal}
                     {test.sample && (
-                      <Tooltip label="Не показывается в условии: задайте ввод для условия" disabled={!(draft.type === "interactive" && test.statement_input === null)}>
-                        <Badge ml={4} size="xs" variant="light" color={draft.type === "interactive" && test.statement_input === null ? "yellow" : undefined}>
+                      <Tooltip label="Не показывается в условии: задайте ввод для условия" disabled={!(isInteractive(draft.type) && test.statement_input === null)}>
+                        <Badge ml={4} size="xs" variant="light" color={isInteractive(draft.type) && test.statement_input === null ? "yellow" : undefined}>
                           пример
                         </Badge>
                       </Tooltip>

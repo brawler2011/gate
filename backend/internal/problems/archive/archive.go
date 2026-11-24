@@ -65,7 +65,7 @@ func ProgramPath(languages *sandbox.Config, role, name, language string) string 
 // Layout writes every test from objects, or, when built is set, from the files the build produced.
 func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltTest) (*Package, error) {
 	p := &Package{Manifest: &gfmt.Problem{FormatVersion: gfmt.FormatVersion, Title: d.Title, Type: d.Type, MaxScore: d.MaxScore,
-		Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, InputFile: d.InputFile, OutputFile: d.OutputFile,
+		Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, InputFile: d.InputFile, OutputFile: d.OutputFile, Processes: d.Processes,
 		Sources: map[string]gfmt.Source{}, Solutions: map[string]gfmt.Expectation{}}}
 	p.names = map[string]string{}
 	m := p.Manifest

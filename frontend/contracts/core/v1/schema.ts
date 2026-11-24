@@ -1986,6 +1986,11 @@ export interface components {
             input_file: string;
             /** @description File the solution writes instead of standard output; empty for standard output. */
             output_file: string;
+            /**
+             * Format: int32
+             * @description Solution copies a communication problem runs at once, 0 for other types. Copy i gets i as its only argument and talks over its standard streams to the manager, which reads it on fd 5+2i and writes to it on fd 6+2i; the manager otherwise is called as an interactor.
+             */
+            processes: number;
             library: components["schemas"]["ProblemDraftLibraryFile"][];
             /** @description Files linked with every solution; only languages that compile one of them can be submitted. */
             graders: components["schemas"]["ProblemDraftFile"][];
@@ -2407,10 +2412,10 @@ export interface components {
             statement?: components["schemas"]["ProblemStatementModel"];
         };
         /**
-         * @description An output-only problem judges the outputs participants submit, one file per test, instead of running a program.
+         * @description An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager.
          * @enum {string}
          */
-        ProblemType: "pass-fail" | "scoring" | "interactive" | "output-only";
+        ProblemType: "pass-fail" | "scoring" | "interactive" | "communication" | "output-only";
         /** @description Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview. */
         ProblemStatementModel: {
             title: string;

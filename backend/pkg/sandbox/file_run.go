@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -175,11 +176,22 @@ func (s *Sandbox) CheckFiles(ctx context.Context, checker Jury, input, output, a
 const interactorOutput = "output.txt"
 
 // InteractFiles allows a zero answer; OutputID is a testlib interactor's file for the checker.
+// With processes > 0, the interactor manages that many solution copies as ProblemDraft.processes in the API contract describes.
 // The caller owns OutputID even on failure.
-func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Jury, input, answer File, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
-	sol, err := s.fileCommand(solution, solutionLanguage, File{}, nil, nil, solutionLimits)
-	if err != nil {
-		return nil, err
+func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Jury, processes int, input, answer File, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
+	copies := max(processes, 1)
+	cmds := make([]cmd, 0, copies+1)
+	for i := range copies {
+		var args []string
+		if processes > 0 {
+			args = []string{strconv.Itoa(i)}
+		}
+		sol, err := s.fileCommand(solution, solutionLanguage, File{}, args, nil, solutionLimits)
+		if err != nil {
+			return nil, err
+		}
+		sol.Files[0], sol.Files[1], sol.CopyOutCached = nil, nil, nil
+		cmds = append(cmds, *sol)
 	}
 	args, extra := []string{"/dev/fd/3", interactorOutput}, []File{input}
 	if answer != (File{}) {
@@ -198,30 +210,58 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	if interactor.Protocol == ProtocolICPC {
 		icpcFeedback(intr)
 	}
-	for _, c := range []*cmd{sol, intr} {
-		c.Files[0] = nil
-		c.Files[1] = nil
-		c.CopyOutCached = nil
+	m := len(cmds)
+	var pipes []pipeMap
+	if processes == 0 {
+		intr.Files[0], intr.Files[1] = nil, nil
+		pipes = []pipeMap{
+			{In: pipeIndex{Index: 0, Fd: 1}, Out: pipeIndex{Index: m, Fd: 0}, Proxy: true, Max: int64(solutionLimits.Output)},
+			{In: pipeIndex{Index: m, Fd: 1}, Out: pipeIndex{Index: 0, Fd: 0}, Proxy: true, Max: int64(interactorLimits.Output)},
+		}
+	} else {
+		if answer == (File{}) {
+			intr.Files = append(intr.Files, memoryFile(""))
+		}
+		for i := range copies {
+			intr.Files = append(intr.Files, nil, nil)
+			pipes = append(pipes,
+				pipeMap{In: pipeIndex{Index: i, Fd: 1}, Out: pipeIndex{Index: m, Fd: 5 + 2*i}, Proxy: true, Max: int64(solutionLimits.Output)},
+				pipeMap{In: pipeIndex{Index: m, Fd: 6 + 2*i}, Out: pipeIndex{Index: i, Fd: 0}, Proxy: true, Max: int64(interactorLimits.Output)})
+		}
 	}
 	// An interactor that writes no output still yields an empty one.
 	intr.CopyIn[interactorOutput] = *memoryFile("")
 	intr.CopyOutCached = []string{interactorOutput}
-	pipes := []pipeMap{
-		{In: pipeIndex{Index: 0, Fd: 1}, Out: pipeIndex{Index: 1, Fd: 0}, Proxy: true, Max: int64(solutionLimits.Output)},
-		{In: pipeIndex{Index: 1, Fd: 1}, Out: pipeIndex{Index: 0, Fd: 0}, Proxy: true, Max: int64(interactorLimits.Output)},
-	}
-	results, err := s.client.run(ctx, request{Cmd: []cmd{*sol, *intr}, PipeMapping: pipes})
+	results, err := s.client.run(ctx, request{Cmd: append(cmds, *intr), PipeMapping: pipes})
 	if err != nil {
 		return nil, fmt.Errorf("interactive file execution: %w", err)
 	}
-	a, b := results[0], results[1]
+	b := results[m]
 	outputID := b.FileIDs[interactorOutput]
 	status, score, message := interactor.verdict(b, "")
-	if (status == StatusOK || status == StatusPoints) && a.Status != resultAccepted {
-		status = statusToString(a.Status)
-		score = nil
+	sol := solutionRun(results[:m])
+	limitExceeded := processes > 0 && limitStatus(sol.Status)
+	if sol.Status != StatusOK && (status == StatusOK || status == StatusPoints || limitExceeded && status != StatusFail) {
+		status, score = sol.Status, nil
 	}
-	return &InteractiveResult{Status: status, Score: score, Message: message, OutputID: outputID,
-		SolutionResult:   RunResult{Status: statusToString(a.Status), ExitStatus: a.ExitStatus, Time: safeDuration(a.Time), Memory: safeInt64(a.Memory), Stderr: []byte(a.Files["stderr"])},
+	return &InteractiveResult{Status: status, Score: score, Message: message, OutputID: outputID, SolutionResult: sol,
 		InteractorResult: RunResult{Status: statusToString(b.Status), ExitStatus: b.ExitStatus, Time: safeDuration(b.Time), Memory: safeInt64(b.Memory), Stderr: []byte(b.Files["stderr"])}}, nil
+}
+
+func limitStatus(s Status) bool { return s == StatusTLE || s == StatusMLE || s == StatusOLE }
+
+// solutionRun reports the largest time and memory of the copies and the copy that failed, preferring an exceeded limit
+// over a copy killed by the pipes closing after it.
+func solutionRun(results []result) RunResult {
+	run := RunResult{Status: StatusOK}
+	for _, r := range results {
+		run.Time, run.Memory = max(run.Time, safeDuration(r.Time)), max(run.Memory, safeInt64(r.Memory))
+		if status := statusToString(r.Status); r.Status != resultAccepted && (run.Status == StatusOK || limitStatus(status) && !limitStatus(run.Status)) {
+			run.Status, run.ExitStatus, run.Stderr = status, r.ExitStatus, []byte(r.Files["stderr"])
+		}
+	}
+	if run.Status == StatusOK {
+		run.ExitStatus, run.Stderr = results[0].ExitStatus, []byte(results[0].Files["stderr"])
+	}
+	return run
 }

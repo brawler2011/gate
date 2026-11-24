@@ -55,6 +55,8 @@ type DraftContent struct {
 	// Solutions read InputFile and write OutputFile instead of a standard stream when the name is set.
 	InputFile  string `json:"input_file"`
 	OutputFile string `json:"output_file"`
+	// Processes is the number of solution copies a communication problem runs at once; 0 for other types.
+	Processes int `json:"processes"`
 }
 
 type DraftProgram struct {
@@ -643,13 +645,13 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 			}
 		}
 	}
-	if d.Type != "interactive" && d.Checker == nil {
+	if !spec.Interactive(d.Type) && d.Checker == nil {
 		v.fail("/checker", pkg.ErrRequired, nil, "checker is required")
 	}
-	if d.Type == "interactive" && d.Interactor == nil {
+	if spec.Interactive(d.Type) && d.Interactor == nil {
 		v.fail("/interactor", pkg.ErrRequired, nil, "interactor is required")
 	}
-	if d.Type == "interactive" && d.MainSolution == nil {
+	if spec.Interactive(d.Type) && d.MainSolution == nil {
 		v.fail("/main_solution", pkg.ErrRequired, nil, "interactive problem requires a main solution")
 	}
 	if strings.TrimSpace(d.Title) == "" {
@@ -683,6 +685,12 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	if d.MemoryLimitMb <= 0 {
 		v.fail("/memory_limit_mb", pkg.ErrRange, positive(), "memory limit must be positive")
+	}
+	switch {
+	case d.Type != "communication" && d.Processes != 0:
+		v.fail("/processes", pkg.ErrInconsistent, with("/type"), "only a communication problem runs several processes")
+	case d.Type == "communication" && (d.Processes < 1 || d.Processes > spec.MaxProcesses):
+		v.fail("/processes", pkg.ErrRange, map[string]any{"min": 1, "max": spec.MaxProcesses}, "processes are out of range")
 	}
 	programs := len(d.Validators) + len(d.Generators) + len(d.Solutions)
 	if d.Checker != nil {
@@ -821,7 +829,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		case name == "":
 		case !ValidFileName(name) || !sandbox.ValidSolutionFile(name):
 			v.fail(pointer, pkg.ErrFormat, nil, "invalid file name %q", name)
-		case d.Type == "interactive":
+		case spec.Interactive(d.Type):
 			v.fail(pointer, pkg.ErrInconsistent, with("/type"), "an interactive problem has no file I/O")
 		}
 	}
@@ -1029,7 +1037,7 @@ func (d *Draft) validateTests(v *validation) {
 			}
 		}
 		a := test.Answer
-		if d.Type == "interactive" && a.Mode != "provided" {
+		if spec.Interactive(d.Type) && a.Mode != "provided" {
 			if a.Mode != "interactive" || a.ObjectID != nil || a.Solution != nil {
 				v.fail(at+"/answer", pkg.ErrInconsistent, with("/type"), "interactive test answer is the interactor's output or provided")
 			}
