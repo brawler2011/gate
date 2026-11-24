@@ -36,7 +36,8 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	}
 	for _, a := range assets {
 		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(a.Name)))
-		if !strings.HasPrefix(contentType, "image/") {
+		// Statements show PDF images as links.
+		if !strings.HasPrefix(contentType, "image/") && contentType != "application/pdf" {
 			continue
 		}
 		r, _, err := c.Store.DownloadFile(ctx, c.Bucket, a.Key, nil)
@@ -70,6 +71,13 @@ func selectStatement(title string, statements []model.BuiltStatement, language s
 		statement.Notes, statement.Interaction, statement.Scoring = s.HTML["notes"], s.HTML["interaction"], s.HTML["scoring"]
 		if s.Title != "" {
 			statement.Title = s.Title
+		}
+		// A tutorial written in one language only serves every statement.
+		statement.Tutorial = s.HTML["tutorial"]
+		for _, other := range statements {
+			if statement.Tutorial == "" {
+				statement.Tutorial = other.HTML["tutorial"]
+			}
 		}
 	}
 	return &statement

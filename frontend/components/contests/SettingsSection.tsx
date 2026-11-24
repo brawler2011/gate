@@ -30,6 +30,7 @@ const PHASED_SCOPES = [
   {key: "submissions", label: "Список чужих посылок"},
   {key: "sources", label: "Чужой код"},
   {key: "reports", label: "Чужие протоколы тестирования"},
+  {key: "tutorials", label: "Разборы задач"},
 ] as const;
 
 const FEEDBACK_OPTIONS = [
@@ -153,6 +154,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     sources_after: corev1.ContestScope;
     reports_during: corev1.ContestScope;
     reports_after: corev1.ContestScope;
+    tutorials_during: corev1.ContestScope;
+    tutorials_after: corev1.ContestScope;
     feedback_during: corev1.FeedbackLevel;
     feedback_after: corev1.FeedbackLevel;
     freeze_hides_attempts: boolean;
@@ -190,6 +193,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       sources_after: contest.sources_after,
       reports_during: contest.reports_during,
       reports_after: contest.reports_after,
+      tutorials_during: contest.tutorials_during,
+      tutorials_after: contest.tutorials_after,
       feedback_during: contest.feedback_during,
       feedback_after: contest.feedback_after,
       freeze_hides_attempts: contest.freeze_hides_attempts,
@@ -462,7 +467,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <Text size="sm" fw={500}>Видимость результатов</Text>
           <Text size="xs" c="dimmed">
-            Кто видит чужие результаты во время контеста и после окончания. Модераторы видят всё;
+            Кто видит чужие результаты и разборы во время контеста и после окончания. Модераторы видят всё;
             чужие посылки никогда не показываются подробнее, чем их автору.
           </Text>
 

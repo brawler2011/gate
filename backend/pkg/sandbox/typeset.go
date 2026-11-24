@@ -112,9 +112,9 @@ func (t *Typesetter) HTML(ctx context.Context, tex string) (string, []PandocMess
 //go:embed plain.lua
 var plainLaTeX string
 
-// LaTeX converts Markdown with pandoc into LaTeX that HTML and PDF typesetting read back.
-func (t *Typesetter) LaTeX(ctx context.Context, markdown string) (string, []PandocMessage, error) {
-	return t.pandoc(ctx, markdown, "-f", "markdown", "-t", "latex", "--lua-filter=plain.lua")
+// LaTeX converts Markdown or HTML, as pandoc names the format, into LaTeX that HTML and PDF typesetting read back.
+func (t *Typesetter) LaTeX(ctx context.Context, from, text string) (string, []PandocMessage, error) {
+	return t.pandoc(ctx, text, "-f", from, "-t", "latex", "--lua-filter=plain.lua")
 }
 
 func (t *Typesetter) pandoc(ctx context.Context, input string, args ...string) (string, []PandocMessage, error) {

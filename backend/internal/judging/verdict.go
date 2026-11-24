@@ -34,6 +34,7 @@ func truncateDetailString(s string) (string, bool) {
 type TestResult struct {
 	TestNumber    int
 	Sample        bool
+	Public        bool
 	Group         string
 	Verdict       string
 	Score         *float64
@@ -127,6 +128,7 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 
 			failedTestDetails = &submissionsmodel.FailedTestDetail{
 				TestIndex:     safeInt32(result.TestNumber),
+				Public:        result.Public,
 				Input:         inStr,
 				Output:        outStr,
 				Answer:        ansStr,

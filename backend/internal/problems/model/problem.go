@@ -37,6 +37,7 @@ type Statement struct {
 	Notes        string `json:"notes"`
 	Interaction  string `json:"interaction"`
 	Scoring      string `json:"scoring"`
+	Tutorial     string `json:"tutorial"`
 }
 
 type Dependency struct {

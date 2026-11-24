@@ -1,4 +1,4 @@
-import {Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
+import {Alert, Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput, Textarea} from "@mantine/core";
 import {useState} from "react";
 
 import {groupLabel, groupRows, toHundredths} from "../draft/draftOps";
@@ -17,6 +17,25 @@ type Props = {
   onSubmit: (test: ProblemDraftTest, files: TestFiles) => void;
 };
 
+// Null shows the test's own file; an empty text is a valid example.
+type ExampleFieldProps = {label: string; value: string | null; onChange: (value: string | null) => void};
+
+const ExampleField = ({label, value, onChange}: ExampleFieldProps): ReactNode => (
+  <Stack gap={4}>
+    <Checkbox label={label} checked={value !== null} onChange={(e) => onChange(e.currentTarget.checked ? "" : null)} />
+    {value !== null && (
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        autosize
+        minRows={2}
+        maxRows={10}
+        styles={{input: {fontFamily: "var(--mantine-font-family-monospace)"}}}
+      />
+    )}
+  </Stack>
+);
+
 // Arguments are passed as argv without shell expansion.
 const parseArgs = (text: string): string[] => text.split(/\s+/).filter((part) => part !== "");
 
@@ -24,6 +43,8 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const [groupId, setGroupId] = useState(test.group_id);
   const [sample, setSample] = useState(test.sample);
   const [pretest, setPretest] = useState(test.pretest);
+  const [statementInput, setStatementInput] = useState(test.statement_input);
+  const [statementOutput, setStatementOutput] = useState(test.statement_output);
   const [points, setPoints] = useState<number>(test.points);
   const [inputMode, setInputMode] = useState<"manual" | "generator">(test.input.mode);
   const [generator, setGenerator] = useState(test.input.generator);
@@ -59,6 +80,8 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       group_id: groupId,
       sample,
       pretest,
+      statement_input: sample ? statementInput : null,
+      statement_output: sample ? statementOutput : null,
       points: toHundredths(points) / 100,
       input:
         inputMode === "manual"
@@ -94,6 +117,20 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
           />
         </Group>
         <Checkbox label="Пример (показывается в условии)" checked={sample} onChange={(e) => setSample(e.currentTarget.checked)} />
+        {sample && (
+          <Stack gap="xs">
+            {interactive && statementInput === null && (
+              <Alert color="yellow">
+                Пример не показывается в условии: файлы интерактивного теста — данные интерактора.
+                Задайте ввод для условия.
+              </Alert>
+            )}
+            <Group grow align="flex-start">
+              <ExampleField label="Свой ввод в условии" value={statementInput} onChange={setStatementInput} />
+              <ExampleField label="Свой вывод в условии" value={statementOutput} onChange={setStatementOutput} />
+            </Group>
+          </Stack>
+        )}
         <Checkbox
           label="Претест (на контестах с претестами до конца проверяется только на претестах)"
           checked={pretest}

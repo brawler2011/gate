@@ -57,7 +57,7 @@ type DraftUseCase struct {
 
 type Typesetter interface {
 	statement.Converter
-	LaTeX(ctx context.Context, markdown string) (string, []sandbox.PandocMessage, error)
+	LaTeX(ctx context.Context, from, text string) (string, []sandbox.PandocMessage, error)
 	PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error)
 }
 

@@ -30,6 +30,11 @@ func (s *DraftStatement) Sections() []statement.Section {
 	return sections
 }
 
+// SiteSections are the sections the site shows: the printed ones and the tutorial.
+func (s *DraftStatement) SiteSections() []statement.Section {
+	return append(s.Sections(), statement.Section{Name: "tutorial", Text: s.Tutorial})
+}
+
 // PrintedProblem lays out a statement for olymp.sty; images are under the assets directory.
 func PrintedProblem(title string, limits PrintedLimits, s DraftStatement, samples []Sample) statement.Problem {
 	if s.Title != "" {

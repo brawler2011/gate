@@ -329,6 +329,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Scoreboard:  contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeParticipant, After: contestsmodel.ScopePublic},
 		Submissions: contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeModerator, After: contestsmodel.ScopeParticipant},
 		Sources:     contestsmodel.Same(contestsmodel.ScopeModerator), Reports: contestsmodel.Same(contestsmodel.ScopeModerator),
+		Tutorials:    contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeModerator, After: contestsmodel.ScopeParticipant},
 		Feedback:     contestsmodel.Phased[contestsmodel.FeedbackLevel]{During: contestsmodel.FeedbackVerdict, After: contestsmodel.FeedbackFull},
 		FreezeStatus: contestsmodel.FreezeStatusAuto, AllowClarifications: true, EnableDrafts: true, EnableUpsolving: true, Languages: []string{},
 	}, c.Settings)

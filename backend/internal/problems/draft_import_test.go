@@ -469,6 +469,38 @@ func TestImportSplitsPolygonStatementIntoSections(t *testing.T) {
 	}
 }
 
+// Statement examples differing from the sample files and tutorials survive the import and the export.
+func TestImportKeepsStatementExamplesAndTutorials(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/interactive-guess", map[string]string{
+		"statement-sections/english/example.01":   "? 5\r\n",
+		"statement-sections/english/example.01.a": "< 50\n",
+	})
+	require.NoError(t, err)
+	defer plan.Close()
+	sample := plan.draft.Tests[0]
+	require.True(t, sample.Sample, "an interactive sample stays a sample")
+	require.Equal(t, "? 5\n", *sample.StatementInput)
+	require.Equal(t, "< 50\n", *sample.StatementOutput)
+	require.NotEmpty(t, plan.draft.Statement("en").Tutorial)
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+
+	plan, err = importDir(t, "../../pkg/testdata/pcms2/a-plus-b", map[string]string{"statements/english/example.02.a": "another answer\n"})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Nil(t, plan.draft.Tests[1].StatementInput, "the example shows the test input")
+	require.Equal(t, "another answer\n", *plan.draft.Tests[1].StatementOutput)
+	require.Nil(t, plan.draft.Tests[0].StatementOutput)
+}
+
+func TestImportLinksPCMS2StatementPDF(t *testing.T) {
+	plan, err := importDir(t, unpack(t, "pcms2-pdf-statement"), nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, `\includegraphics{statement-en.pdf}`, plan.draft.Statement("en").Legend)
+	require.Equal(t, "statement-en.pdf", plan.draft.Assets[0].Name)
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+}
+
 func TestImportKeepsStatementTitles(t *testing.T) {
 	xml, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/problem.xml")
 	require.NoError(t, err)

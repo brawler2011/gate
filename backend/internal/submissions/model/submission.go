@@ -55,7 +55,9 @@ type GroupResult struct {
 }
 
 type FailedTestDetail struct {
-	TestIndex     int32  `json:"test_index"`
+	TestIndex int32 `json:"test_index"`
+	// Public marks a sample whose input the statement shows as is.
+	Public        bool   `json:"public,omitempty"`
 	Input         string `json:"input"`
 	Output        string `json:"output"`
 	Answer        string `json:"answer"`

@@ -646,6 +646,8 @@ type Contest struct {
 	SourcesAfter          contestsmodel.ContestScope      `json:"sources_after"`
 	ReportsDuring         contestsmodel.ContestScope      `json:"reports_during"`
 	ReportsAfter          contestsmodel.ContestScope      `json:"reports_after"`
+	TutorialsDuring       contestsmodel.ContestScope      `json:"tutorials_during"`
+	TutorialsAfter        contestsmodel.ContestScope      `json:"tutorials_after"`
 	FeedbackDuring        contestsmodel.FeedbackLevel     `json:"feedback_during"`
 	FeedbackAfter         contestsmodel.FeedbackLevel     `json:"feedback_after"`
 	FreezeStatus          contestsmodel.FreezeStatus      `json:"freeze_status"`

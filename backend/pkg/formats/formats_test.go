@@ -76,7 +76,7 @@ func TestReadTestdataPackages(t *testing.T) {
 		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/12.00/3.00/0.00"}},
 		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/sum/2.00/0.00/0.00"}},
+			Groups: []string{"/sum/2.00/1.00/0.00"}},
 		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/4.00/2.00/0.00"}},
 		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
@@ -85,11 +85,11 @@ func TestReadTestdataPackages(t *testing.T) {
 			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/3.00/3.00/0.00", "secret/sum/9.00/0.00/0.00"}},
 		// An interactive input is what the interactor reads, so none is published.
 		"icpc/interactive-guess": {Type: "interactive", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
-			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/0.00/0.00", "secret/sum/1.00/0.00/0.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/1.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/12.00/3.00/0.00"}},
 		"pcms2/interactive-guess": {Type: "interactive", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/sum/2.00/0.00/0.00"}},
+			Groups: []string{"/sum/2.00/1.00/0.00"}},
 		"pcms2/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/4.00/2.00/0.00"}},
 		"pcms2/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
@@ -142,6 +142,32 @@ func TestPolygonPretestMatching(t *testing.T) {
 	write(t, dir, "pretests/03", "5\n")
 	_, err = Read(dir)
 	require.ErrorContains(t, err, "pretest 3 is not one of the tests")
+}
+
+func TestPolygonTutorialKeepsProblemTeX(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "p")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("..", "testdata", "polygon", "interactive-guess"))))
+	for _, name := range []string{"legend", "input", "output", "notes"} {
+		require.NoError(t, os.Remove(filepath.Join(dir, "statement-sections", "english", name+".tex")))
+	}
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "statements/english/problem.tex", p.Statements[0].TeX)
+	require.Equal(t, "statement-sections/english/tutorial.tex", p.Statements[0].Sections["tutorial"])
+}
+
+// A tutorial in a language without a statement still reaches the site.
+func TestICPCTutorialWithoutItsStatement(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "p")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("..", "testdata", "icpc", "a-plus-b"))))
+	write(t, dir, "problem_statement/solution.de.tex", "Lösung\n")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	var tutorials []string
+	for _, s := range p.Statements {
+		tutorials = append(tutorials, s.Tutorial)
+	}
+	require.Contains(t, tutorials, "problem_statement/solution.de.tex")
 }
 
 func TestPolygonResources(t *testing.T) {

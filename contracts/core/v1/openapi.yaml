@@ -3619,6 +3619,7 @@ components:
       - notes
       - interaction
       - scoring
+      - tutorial
       properties:
         language:
           type: string
@@ -3637,6 +3638,9 @@ components:
         interaction:
           type: string
         scoring:
+          type: string
+        tutorial:
+          description: Shown on the site only, as contest settings allow; statement PDFs leave it out.
           type: string
     ProblemDraftGroup:
       description: >-
@@ -3710,6 +3714,8 @@ components:
       - pretest
       - input
       - answer
+      - statement_input
+      - statement_output
       properties:
         points:
           type: number
@@ -3736,6 +3742,14 @@ components:
           $ref: '#/components/schemas/ProblemDraftInput'
         answer:
           $ref: '#/components/schemas/ProblemDraftAnswer'
+        statement_input:
+          description: Shown in the statement instead of the sample input; an interactive sample without it is not shown.
+          type: string
+          nullable: true
+        statement_output:
+          description: Shown in the statement instead of the sample answer.
+          type: string
+          nullable: true
     ProblemDraftAsset:
       description: A statement resource; sections show it with \includegraphics{name}.
       type: object
@@ -4519,6 +4533,7 @@ components:
         - notes
         - interaction
         - scoring
+        - tutorial
         - samples
         - assets
       properties:
@@ -4547,6 +4562,8 @@ components:
         interaction:
           type: string
         scoring:
+          type: string
+        tutorial:
           type: string
         samples:
           type: array
@@ -4592,6 +4609,7 @@ components:
         - notes
         - interaction
         - scoring
+        - tutorial
         - created_at
         - updated_at
         - samples
@@ -4634,6 +4652,9 @@ components:
           type: string
         scoring:
           type: string
+        tutorial:
+          type: string
+          description: Empty unless the contest settings show tutorials to the caller.
         created_at:
           type: string
           format: date-time
@@ -4743,6 +4764,8 @@ components:
         sources_after: moderator
         reports_during: moderator
         reports_after: moderator
+        tutorials_during: moderator
+        tutorials_after: participant
         feedback_during: verdict
         feedback_after: full
         freeze_status: auto
@@ -4773,6 +4796,8 @@ components:
         - sources_after
         - reports_during
         - reports_after
+        - tutorials_during
+        - tutorials_after
         - feedback_during
         - feedback_after
         - freeze_status
@@ -4826,6 +4851,10 @@ components:
         reports_during:
           $ref: "#/components/schemas/ContestScope"
         reports_after:
+          $ref: "#/components/schemas/ContestScope"
+        tutorials_during:
+          $ref: "#/components/schemas/ContestScope"
+        tutorials_after:
           $ref: "#/components/schemas/ContestScope"
         feedback_during:
           $ref: "#/components/schemas/FeedbackLevel"
@@ -5091,6 +5120,8 @@ components:
         sources_after: moderator
         reports_during: moderator
         reports_after: moderator
+        tutorials_during: moderator
+        tutorials_after: participant
         feedback_during: verdict
         feedback_after: full
         freeze_duration_minutes: 1
@@ -5133,6 +5164,10 @@ components:
         reports_during:
           $ref: "#/components/schemas/ContestScope"
         reports_after:
+          $ref: "#/components/schemas/ContestScope"
+        tutorials_during:
+          $ref: "#/components/schemas/ContestScope"
+        tutorials_after:
           $ref: "#/components/schemas/ContestScope"
         feedback_during:
           $ref: "#/components/schemas/FeedbackLevel"

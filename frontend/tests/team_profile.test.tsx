@@ -23,7 +23,7 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   id, login: id, organization_id: "org", organization_login: "school", title: id, place: "",
   description: "", visibility: "public", scoreboard_during: "public", scoreboard_after: "public",
   submissions_during: "public", submissions_after: "public", sources_during: "public", sources_after: "public",
-  reports_during: "public", reports_after: "public", feedback_during: "full", feedback_after: "full",
+  reports_during: "public", reports_after: "public", tutorials_during: "public", tutorials_after: "public", feedback_during: "full", feedback_after: "full",
   freeze_hides_attempts: false, freeze_status: "auto" as ContestModel["freeze_status"],
   hide_statements: false,
   enable_drafts: true,

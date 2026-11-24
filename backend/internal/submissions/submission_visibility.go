@@ -87,7 +87,7 @@ func (v SubmissionVisibility) Report(details *submissionsmodel.SubmissionTestDet
 				samples[test.TestIndex] = true
 			}
 		}
-		if report.FailedTestDetails != nil && !samples[report.FailedTestDetails.TestIndex] {
+		if failed := report.FailedTestDetails; failed != nil && (!samples[failed.TestIndex] || !failed.Public) {
 			report.FailedTestDetails = nil
 		}
 		report.Groups = nil

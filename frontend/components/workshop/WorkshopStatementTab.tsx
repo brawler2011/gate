@@ -28,6 +28,7 @@ const SECTION_TITLES: Record<StatementSection, string> = {
   interaction: "Протокол взаимодействия",
   notes: "Примечания",
   scoring: "Система оценки",
+  tutorial: "Разбор",
 };
 
 type StatementProps = {draft: ProblemDraft; problemId: string; statement: ProblemDraftStatement};
@@ -168,7 +169,7 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
           </Button>
         </Group>
         <Text size="xs" c="dimmed">
-          Разделы пишутся на LaTeX, как в Polygon; пустое название — название задачи. Изображения подключаются по имени ресурса: <code>{"\\includegraphics{pic.png}"}</code>.
+          Разделы пишутся на LaTeX, как в Polygon; пустое название — название задачи. Изображения подключаются по имени ресурса: <code>{"\\includegraphics{pic.png}"}</code>. Разбор не печатается; участникам его показывают по настройкам контеста.
         </Text>
         <StatementForm key={language} draft={draft} problemId={problemId} statement={stored} />
       </Stack>

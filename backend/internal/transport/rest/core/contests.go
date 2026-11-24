@@ -184,6 +184,8 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		SourcesAfter:        optScope(req.SourcesAfter),
 		ReportsDuring:       optScope(req.ReportsDuring),
 		ReportsAfter:        optScope(req.ReportsAfter),
+		TutorialsDuring:     optScope(req.TutorialsDuring),
+		TutorialsAfter:      optScope(req.TutorialsAfter),
 		FeedbackDuring:      optFeedback(req.FeedbackDuring),
 		FeedbackAfter:       optFeedback(req.FeedbackAfter),
 		FreezeHidesAttempts: optBool(req.FreezeHidesAttempts),

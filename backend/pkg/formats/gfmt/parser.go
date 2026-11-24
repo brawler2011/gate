@@ -205,6 +205,12 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 		}
 		test.Generator, test.Args = name, argv[1:]
 	}
+	if t.StatementInput != "" {
+		test.StatementInput = TestFolder + "/" + t.StatementInput
+	}
+	if t.StatementOutput != "" {
+		test.StatementOutput = TestFolder + "/" + t.StatementOutput
+	}
 	switch {
 	case t.Solution != "":
 		test.AnswerSolution = RoleFolder("solution") + "/" + t.Solution

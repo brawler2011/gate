@@ -33,7 +33,7 @@ func (q *Queries) GetAccessActor(ctx context.Context, id uuid.UUID) (GetAccessAc
 }
 
 const loadContestAccess = `-- name: LoadContestAccess :many
-SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login, COALESCE(a.role::text, '')::text AS role, now()::timestamptz AS now,
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login AS org_login, COALESCE(a.role::text, '')::text AS role, now()::timestamptz AS now,
     ARRAY(SELECT b.problem_id FROM contest_user_problem_blocks b
           WHERE b.contest_id = c.id AND b.user_id = $1::uuid)::uuid[] AS blocked,
     r.started_at AS run_started_at, r.ends_at AS run_ends_at, r.finished_at AS run_finished_at,
@@ -88,6 +88,8 @@ func (q *Queries) LoadContestAccess(ctx context.Context, arg LoadContestAccessPa
 			&i.Contest.SourcesAfter,
 			&i.Contest.ReportsDuring,
 			&i.Contest.ReportsAfter,
+			&i.Contest.TutorialsDuring,
+			&i.Contest.TutorialsAfter,
 			&i.Contest.FeedbackDuring,
 			&i.Contest.FeedbackAfter,
 			&i.Contest.FreezeStatus,

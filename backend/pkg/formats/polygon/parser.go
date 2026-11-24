@@ -113,14 +113,16 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Type = problemType(prob, &p.Testset)
-	p.KeepInteractiveInputsPrivate()
 	// Well-formed Polygon tests are text; Windows packages use CRLF.
 	for _, property := range prob.Properties {
 		if property.Name == "tests-wellformed" && property.Value == "true" {
 			p.TextTests = true
 		}
 	}
-	p.Statements = statements(fsys, p, prob.Statements)
+	p.Statements = statements(fsys, p, prob.Statements, prob.Tutorials)
+	p.SetExamples(fsys, spec.ExampleDir(fsys, "statement-sections"), func(t spec.Test) (string, string) {
+		return fmt.Sprintf(testset.InputPathPattern, t.Ordinal), fmt.Sprintf(testset.AnswerPathPattern, t.Ordinal)
+	})
 	for _, name := range prob.Names {
 		p.SetStatementTitle(spec.LanguageCode(name.Language), name.Value)
 	}
@@ -361,7 +363,7 @@ func parsePoints(value float64) (points.Value, error) {
 }
 
 // Polygon keeps each section in statement-sections/<language>, with the images it shows; problem.tex is the fallback.
-func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement {
+func statements(fsys fs.FS, p *spec.Problem, list, tutorials []Statement) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
 	for _, s := range list {
@@ -375,7 +377,7 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {
 			section, ok := strings.CutSuffix(e.Name(), ".tex")
-			if e.Type().IsRegular() && ok && slices.Contains(statement.Order, section) {
+			if e.Type().IsRegular() && ok && (slices.Contains(statement.Order, section) || section == "tutorial") {
 				if st.Sections == nil {
 					st.Sections = map[string]string{}
 				}
@@ -383,12 +385,19 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 			}
 		}
 		images(fsys, p, dir)
-		if st.Sections != nil {
+		// A folder with only the tutorial leaves the statement to problem.tex.
+		if slices.ContainsFunc(statement.Order, func(name string) bool { return st.Sections[name] != "" }) {
 			st.TeX = ""
 		} else {
 			images(fsys, p, path.Dir(s.Path))
 		}
 		result = append(result, st)
+	}
+	for _, t := range tutorials {
+		if t.Type == "application/x-tex" {
+			images(fsys, p, path.Dir(t.Path))
+			spec.AddTutorial(result, spec.LanguageCode(t.Language), t.Path)
+		}
 	}
 	return result
 }

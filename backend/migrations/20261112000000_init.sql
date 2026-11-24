@@ -454,6 +454,8 @@ CREATE TABLE contests (
     sources_after contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
     reports_during contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
     reports_after contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    tutorials_during contest_scope DEFAULT 'moderator'::contest_scope NOT NULL,
+    tutorials_after contest_scope DEFAULT 'participant'::contest_scope NOT NULL,
     feedback_during feedback_level DEFAULT 'verdict'::feedback_level NOT NULL,
     feedback_after feedback_level DEFAULT 'full'::feedback_level NOT NULL,
     freeze_status freeze_status DEFAULT 'auto'::freeze_status NOT NULL,

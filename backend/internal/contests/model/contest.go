@@ -274,6 +274,7 @@ type ContestSettings struct {
 	Submissions           Phased[ContestScope]
 	Sources               Phased[ContestScope]
 	Reports               Phased[ContestScope]
+	Tutorials             Phased[ContestScope]
 	Feedback              Phased[FeedbackLevel]
 	FreezeStatus          FreezeStatus
 	FreezeDurationMinutes *int32
@@ -300,6 +301,8 @@ type ContestSettingsPatch struct {
 	SourcesAfter          *ContestScope
 	ReportsDuring         *ContestScope
 	ReportsAfter          *ContestScope
+	TutorialsDuring       *ContestScope
+	TutorialsAfter        *ContestScope
 	FeedbackDuring        *FeedbackLevel
 	FeedbackAfter         *FeedbackLevel
 	FreezeStatus          *FreezeStatus

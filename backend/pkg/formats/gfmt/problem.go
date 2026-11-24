@@ -64,6 +64,14 @@ type Test struct {
 	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`
 	// Pretest tests judge contest submissions until the contest ends.
 	Pretest bool `yaml:"pretest,omitempty" json:"pretest,omitempty"`
+	// StatementInput and StatementOutput name files under tests/ that the statement shows instead of the sample's own.
+	StatementInput  string `yaml:"statement_input,omitempty" json:"statement_input,omitempty"`
+	StatementOutput string `yaml:"statement_output,omitempty" json:"statement_output,omitempty"`
+}
+
+// ShowsInput reports whether the statement shows the test's own input; an interactive one is the interactor's.
+func (p *Problem) ShowsInput(t Test) bool {
+	return t.Sample && t.StatementInput == "" && p.Type != "interactive"
 }
 
 // Pretests keeps only pretests and drops groups left without tests; ok is false unless that leaves a proper subset.

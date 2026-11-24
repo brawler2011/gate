@@ -1424,6 +1424,8 @@ type ContestModel struct {
 	SourcesAfter      ContestScope  `json:"sources_after"`
 	ReportsDuring     ContestScope  `json:"reports_during"`
 	ReportsAfter      ContestScope  `json:"reports_after"`
+	TutorialsDuring   ContestScope  `json:"tutorials_during"`
+	TutorialsAfter    ContestScope  `json:"tutorials_after"`
 	FeedbackDuring    FeedbackLevel `json:"feedback_during"`
 	FeedbackAfter     FeedbackLevel `json:"feedback_after"`
 	// Hide attempts made after the freeze instead of showing them as pending.
@@ -1533,6 +1535,16 @@ func (s *ContestModel) GetReportsDuring() ContestScope {
 // GetReportsAfter returns the value of ReportsAfter.
 func (s *ContestModel) GetReportsAfter() ContestScope {
 	return s.ReportsAfter
+}
+
+// GetTutorialsDuring returns the value of TutorialsDuring.
+func (s *ContestModel) GetTutorialsDuring() ContestScope {
+	return s.TutorialsDuring
+}
+
+// GetTutorialsAfter returns the value of TutorialsAfter.
+func (s *ContestModel) GetTutorialsAfter() ContestScope {
+	return s.TutorialsAfter
 }
 
 // GetFeedbackDuring returns the value of FeedbackDuring.
@@ -1708,6 +1720,16 @@ func (s *ContestModel) SetReportsDuring(val ContestScope) {
 // SetReportsAfter sets the value of ReportsAfter.
 func (s *ContestModel) SetReportsAfter(val ContestScope) {
 	s.ReportsAfter = val
+}
+
+// SetTutorialsDuring sets the value of TutorialsDuring.
+func (s *ContestModel) SetTutorialsDuring(val ContestScope) {
+	s.TutorialsDuring = val
+}
+
+// SetTutorialsAfter sets the value of TutorialsAfter.
+func (s *ContestModel) SetTutorialsAfter(val ContestScope) {
+	s.TutorialsAfter = val
 }
 
 // SetFeedbackDuring sets the value of FeedbackDuring.
@@ -2105,17 +2127,19 @@ type ContestProblemModel struct {
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
-	OutputFile   string               `json:"output_file"`
-	Position     int32                `json:"position"`
-	Legend       string               `json:"legend"`
-	InputFormat  string               `json:"input_format"`
-	OutputFormat string               `json:"output_format"`
-	Notes        string               `json:"notes"`
-	Interaction  string               `json:"interaction"`
-	Scoring      string               `json:"scoring"`
-	CreatedAt    time.Time            `json:"created_at"`
-	UpdatedAt    time.Time            `json:"updated_at"`
-	Samples      []ProblemSampleModel `json:"samples"`
+	OutputFile   string `json:"output_file"`
+	Position     int32  `json:"position"`
+	Legend       string `json:"legend"`
+	InputFormat  string `json:"input_format"`
+	OutputFormat string `json:"output_format"`
+	Notes        string `json:"notes"`
+	Interaction  string `json:"interaction"`
+	Scoring      string `json:"scoring"`
+	// Empty unless the contest settings show tutorials to the caller.
+	Tutorial  string               `json:"tutorial"`
+	CreatedAt time.Time            `json:"created_at"`
+	UpdatedAt time.Time            `json:"updated_at"`
+	Samples   []ProblemSampleModel `json:"samples"`
 	// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`; images are served by hash
 	// from the problem's assets endpoint.
 	Assets ContestProblemModelAssets `json:"assets"`
@@ -2189,6 +2213,11 @@ func (s *ContestProblemModel) GetInteraction() string {
 // GetScoring returns the value of Scoring.
 func (s *ContestProblemModel) GetScoring() string {
 	return s.Scoring
+}
+
+// GetTutorial returns the value of Tutorial.
+func (s *ContestProblemModel) GetTutorial() string {
+	return s.Tutorial
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -2279,6 +2308,11 @@ func (s *ContestProblemModel) SetInteraction(val string) {
 // SetScoring sets the value of Scoring.
 func (s *ContestProblemModel) SetScoring(val string) {
 	s.Scoring = val
+}
+
+// SetTutorial sets the value of Tutorial.
+func (s *ContestProblemModel) SetTutorial(val string) {
+	s.Tutorial = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -10560,6 +10594,8 @@ type ProblemDraftStatement struct {
 	Notes       string `json:"notes"`
 	Interaction string `json:"interaction"`
 	Scoring     string `json:"scoring"`
+	// Shown on the site only, as contest settings allow; statement PDFs leave it out.
+	Tutorial string `json:"tutorial"`
 }
 
 // GetLanguage returns the value of Language.
@@ -10602,6 +10638,11 @@ func (s *ProblemDraftStatement) GetScoring() string {
 	return s.Scoring
 }
 
+// GetTutorial returns the value of Tutorial.
+func (s *ProblemDraftStatement) GetTutorial() string {
+	return s.Tutorial
+}
+
 // SetLanguage sets the value of Language.
 func (s *ProblemDraftStatement) SetLanguage(val string) {
 	s.Language = val
@@ -10642,6 +10683,11 @@ func (s *ProblemDraftStatement) SetScoring(val string) {
 	s.Scoring = val
 }
 
+// SetTutorial sets the value of Tutorial.
+func (s *ProblemDraftStatement) SetTutorial(val string) {
+	s.Tutorial = val
+}
+
 // Ref: #/components/schemas/ProblemDraftTest
 type ProblemDraftTest struct {
 	Points  float64   `json:"points"`
@@ -10654,6 +10700,10 @@ type ProblemDraftTest struct {
 	Pretest bool               `json:"pretest"`
 	Input   ProblemDraftInput  `json:"input"`
 	Answer  ProblemDraftAnswer `json:"answer"`
+	// Shown in the statement instead of the sample input; an interactive sample without it is not shown.
+	StatementInput NilString `json:"statement_input"`
+	// Shown in the statement instead of the sample answer.
+	StatementOutput NilString `json:"statement_output"`
 }
 
 // GetPoints returns the value of Points.
@@ -10696,6 +10746,16 @@ func (s *ProblemDraftTest) GetAnswer() ProblemDraftAnswer {
 	return s.Answer
 }
 
+// GetStatementInput returns the value of StatementInput.
+func (s *ProblemDraftTest) GetStatementInput() NilString {
+	return s.StatementInput
+}
+
+// GetStatementOutput returns the value of StatementOutput.
+func (s *ProblemDraftTest) GetStatementOutput() NilString {
+	return s.StatementOutput
+}
+
 // SetPoints sets the value of Points.
 func (s *ProblemDraftTest) SetPoints(val float64) {
 	s.Points = val
@@ -10734,6 +10794,16 @@ func (s *ProblemDraftTest) SetInput(val ProblemDraftInput) {
 // SetAnswer sets the value of Answer.
 func (s *ProblemDraftTest) SetAnswer(val ProblemDraftAnswer) {
 	s.Answer = val
+}
+
+// SetStatementInput sets the value of StatementInput.
+func (s *ProblemDraftTest) SetStatementInput(val NilString) {
+	s.StatementInput = val
+}
+
+// SetStatementOutput sets the value of StatementOutput.
+func (s *ProblemDraftTest) SetStatementOutput(val NilString) {
+	s.StatementOutput = val
 }
 
 type ProblemDraftType string
@@ -11527,6 +11597,7 @@ type ProblemStatementModel struct {
 	Notes        string               `json:"notes"`
 	Interaction  string               `json:"interaction"`
 	Scoring      string               `json:"scoring"`
+	Tutorial     string               `json:"tutorial"`
 	Samples      []ProblemSampleModel `json:"samples"`
 	// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`.
 	Assets ProblemStatementModelAssets `json:"assets"`
@@ -11585,6 +11656,11 @@ func (s *ProblemStatementModel) GetInteraction() string {
 // GetScoring returns the value of Scoring.
 func (s *ProblemStatementModel) GetScoring() string {
 	return s.Scoring
+}
+
+// GetTutorial returns the value of Tutorial.
+func (s *ProblemStatementModel) GetTutorial() string {
+	return s.Tutorial
 }
 
 // GetSamples returns the value of Samples.
@@ -11650,6 +11726,11 @@ func (s *ProblemStatementModel) SetInteraction(val string) {
 // SetScoring sets the value of Scoring.
 func (s *ProblemStatementModel) SetScoring(val string) {
 	s.Scoring = val
+}
+
+// SetTutorial sets the value of Tutorial.
+func (s *ProblemStatementModel) SetTutorial(val string) {
+	s.Tutorial = val
 }
 
 // SetSamples sets the value of Samples.
@@ -13968,6 +14049,8 @@ type UpdateContestRequestModel struct {
 	SourcesAfter      OptContestScope  `json:"sources_after"`
 	ReportsDuring     OptContestScope  `json:"reports_during"`
 	ReportsAfter      OptContestScope  `json:"reports_after"`
+	TutorialsDuring   OptContestScope  `json:"tutorials_during"`
+	TutorialsAfter    OptContestScope  `json:"tutorials_after"`
 	FeedbackDuring    OptFeedbackLevel `json:"feedback_during"`
 	FeedbackAfter     OptFeedbackLevel `json:"feedback_after"`
 	// Hide attempts made after the freeze instead of showing them as pending.
@@ -14056,6 +14139,16 @@ func (s *UpdateContestRequestModel) GetReportsDuring() OptContestScope {
 // GetReportsAfter returns the value of ReportsAfter.
 func (s *UpdateContestRequestModel) GetReportsAfter() OptContestScope {
 	return s.ReportsAfter
+}
+
+// GetTutorialsDuring returns the value of TutorialsDuring.
+func (s *UpdateContestRequestModel) GetTutorialsDuring() OptContestScope {
+	return s.TutorialsDuring
+}
+
+// GetTutorialsAfter returns the value of TutorialsAfter.
+func (s *UpdateContestRequestModel) GetTutorialsAfter() OptContestScope {
+	return s.TutorialsAfter
 }
 
 // GetFeedbackDuring returns the value of FeedbackDuring.
@@ -14201,6 +14294,16 @@ func (s *UpdateContestRequestModel) SetReportsDuring(val OptContestScope) {
 // SetReportsAfter sets the value of ReportsAfter.
 func (s *UpdateContestRequestModel) SetReportsAfter(val OptContestScope) {
 	s.ReportsAfter = val
+}
+
+// SetTutorialsDuring sets the value of TutorialsDuring.
+func (s *UpdateContestRequestModel) SetTutorialsDuring(val OptContestScope) {
+	s.TutorialsDuring = val
+}
+
+// SetTutorialsAfter sets the value of TutorialsAfter.
+func (s *UpdateContestRequestModel) SetTutorialsAfter(val OptContestScope) {
+	s.TutorialsAfter = val
 }
 
 // SetFeedbackDuring sets the value of FeedbackDuring.

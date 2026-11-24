@@ -97,7 +97,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 	if ok {
 		s := content.Statement
 		response.Statement.SetTo(corev1.ProblemStatementModel{
-			Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Interaction: s.Interaction, Scoring: s.Scoring,
+			Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Interaction: s.Interaction, Scoring: s.Scoring, Tutorial: s.Tutorial,
 			TimeLimit: ready.TimeLimitMs, MemoryLimit: ready.MemoryLimitMb, InputFile: ready.InputFile, OutputFile: ready.OutputFile,
 			Samples: SamplesDTO(content.Samples), Assets: content.Assets,
 		})

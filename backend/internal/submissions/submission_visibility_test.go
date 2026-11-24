@@ -88,6 +88,13 @@ func TestSubmissionReportLevels(t *testing.T) {
 	}
 	require.Nil(t, SubmissionVisibility{Results: contestsmodel.FeedbackHidden}.Report(details))
 	require.Len(t, details.Tests, 3, "trimming must not change the stored report")
+
+	sample := &submissionsmodel.SubmissionTestDetails{Tests: []submissionsmodel.TestDetailItem{{TestIndex: 1, Verdict: "WA", Sample: true}},
+		FailedTestDetails: &submissionsmodel.FailedTestDetail{TestIndex: 1, Input: "interactor data"}}
+	samples := SubmissionVisibility{Results: contestsmodel.FeedbackSamples}
+	require.Nil(t, samples.Report(sample).FailedTestDetails, "the statement does not show this sample's input")
+	sample.FailedTestDetails.Public = true
+	require.NotNil(t, samples.Report(sample).FailedTestDetails)
 }
 
 func TestSubmissionReportGroupFeedback(t *testing.T) {

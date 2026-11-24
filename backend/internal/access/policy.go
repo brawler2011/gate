@@ -140,6 +140,8 @@ func ContestAllows(actor m.User, f ContestFacts, action m.ContestAction) bool {
 		return s.manager || s.view && s.started
 	case m.ContestViewStatements:
 		return s.manager || s.view && s.started && !settings.HideStatements
+	case m.ContestViewTutorials:
+		return ContestAllows(actor, f, m.ContestViewStatements) && s.audience(settings.Tutorials)
 	case m.ContestManage:
 		return s.manager
 	case m.ContestDelete:

@@ -2,6 +2,9 @@ package statement
 
 import (
 	"context"
+	"maps"
+	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -52,6 +55,28 @@ func (p pandocStub) HTML(_ context.Context, tex string) (string, []sandbox.Pando
 		}
 	}
 	return p.html, log, nil
+}
+
+// Polygon HTML keeps the sections in divs and MathJax in $$$; limits and samples are left to the problem.
+func TestSplitHTMLReadsPolygonSections(t *testing.T) {
+	page, err := os.ReadFile("../testdata/pcms2/a-plus-b/statements/.html/english/problem.html")
+	require.NoError(t, err)
+	sections, err := SplitHTML(string(page))
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"legend", "input", "output", "notes"}, slices.Collect(maps.Keys(sections)))
+	legend := sections["legend"]
+	require.Contains(t, legend.HTML, "integers GATEMATH0END and")
+	require.Equal(t, `integers \(a\) and`, legend.LaTeX("integers GATEMATH0END and"))
+	require.Contains(t, sections["input"].Math, `\(-100 \le a,b \le 100\)`)
+	require.NotContains(t, sections["input"].HTML, "section-title")
+	for _, s := range sections {
+		require.NotContains(t, s.HTML, "time limit")
+		require.NotContains(t, s.HTML, "-106")
+	}
+
+	plain, err := SplitHTML("<p>Just text</p>")
+	require.NoError(t, err)
+	require.Equal(t, map[string]HTMLSection{"legend": {HTML: "<p>Just text</p>"}}, plain)
 }
 
 func TestHTMLSplitsSectionsAndSanitizes(t *testing.T) {

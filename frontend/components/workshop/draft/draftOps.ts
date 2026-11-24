@@ -200,7 +200,7 @@ export const removeLibraryFile = (draft: ProblemDraft, name: string): ProblemDra
   library: draft.library.filter((f) => f.name !== name),
 });
 
-export const STATEMENT_SECTIONS = ["legend", "input", "output", "interaction", "notes", "scoring"] as const;
+export const STATEMENT_SECTIONS = ["legend", "input", "output", "interaction", "notes", "scoring", "tutorial"] as const;
 export type StatementSection = (typeof STATEMENT_SECTIONS)[number];
 
 export const emptyStatement = (language: string): ProblemDraftStatement => ({
@@ -212,6 +212,7 @@ export const emptyStatement = (language: string): ProblemDraftStatement => ({
   notes: "",
   interaction: "",
   scoring: "",
+  tutorial: "",
 });
 
 export const setStatement = (draft: ProblemDraft, statement: ProblemDraftStatement): ProblemDraft => ({
@@ -388,6 +389,8 @@ export const newGeneratedTest = (draft: ProblemDraft, groupId: string): ProblemD
   group_id: groupId,
   sample: false,
   pretest: false,
+  statement_input: null,
+  statement_output: null,
   points: 0,
   input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: []},
   answer: newAnswer(draft, "generated"),
@@ -399,6 +402,8 @@ export const newManualTest = (draft: ProblemDraft, groupId: string): ProblemDraf
   group_id: groupId,
   sample: false,
   pretest: false,
+  statement_input: null,
+  statement_output: null,
   points: 0,
   input: {mode: "manual", object_id: null, generator: null, args: []},
   answer: newAnswer(draft, "provided"),
@@ -411,6 +416,7 @@ const SECTION_LABELS: Record<string, string> = {
   notes: "примечания",
   interaction: "протокол",
   scoring: "оценивание",
+  tutorial: "разбор",
 };
 
 const describeGroup = (draft: ProblemDraft, steps: string[]): string => {

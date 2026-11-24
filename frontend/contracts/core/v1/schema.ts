@@ -1823,6 +1823,8 @@ export interface components {
             notes: string;
             interaction: string;
             scoring: string;
+            /** @description Shown on the site only, as contest settings allow; statement PDFs leave it out. */
+            tutorial: string;
         };
         /** @description A test group scoring its tests and subgroups, taken in the order of their first tests. The testset is the unnamed root group; other names are unique. */
         ProblemDraftGroup: {
@@ -1866,6 +1868,10 @@ export interface components {
             pretest: boolean;
             input: components["schemas"]["ProblemDraftInput"];
             answer: components["schemas"]["ProblemDraftAnswer"];
+            /** @description Shown in the statement instead of the sample input; an interactive sample without it is not shown. */
+            statement_input: string | null;
+            /** @description Shown in the statement instead of the sample answer. */
+            statement_output: string | null;
         };
         /** @description A statement resource; sections show it with \includegraphics{name}. */
         ProblemDraftAsset: {
@@ -2333,6 +2339,7 @@ export interface components {
             notes: string;
             interaction: string;
             scoring: string;
+            tutorial: string;
             samples: components["schemas"]["ProblemSampleModel"][];
             /** @description SHA-256 of each statement asset by package path, e.g. `assets/pic.png`. */
             assets: {
@@ -2395,6 +2402,8 @@ export interface components {
             notes: string;
             interaction: string;
             scoring: string;
+            /** @description Empty unless the contest settings show tutorials to the caller. */
+            tutorial: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2490,6 +2499,8 @@ export interface components {
          *       "sources_after": "moderator",
          *       "reports_during": "moderator",
          *       "reports_after": "moderator",
+         *       "tutorials_during": "moderator",
+         *       "tutorials_after": "participant",
          *       "feedback_during": "verdict",
          *       "feedback_after": "full",
          *       "freeze_status": "auto",
@@ -2526,6 +2537,8 @@ export interface components {
             sources_after: components["schemas"]["ContestScope"];
             reports_during: components["schemas"]["ContestScope"];
             reports_after: components["schemas"]["ContestScope"];
+            tutorials_during: components["schemas"]["ContestScope"];
+            tutorials_after: components["schemas"]["ContestScope"];
             feedback_during: components["schemas"]["FeedbackLevel"];
             feedback_after: components["schemas"]["FeedbackLevel"];
             /** @description Hide attempts made after the freeze instead of showing them as pending. */
@@ -2771,6 +2784,8 @@ export interface components {
          *       "sources_after": "moderator",
          *       "reports_during": "moderator",
          *       "reports_after": "moderator",
+         *       "tutorials_during": "moderator",
+         *       "tutorials_after": "participant",
          *       "feedback_during": "verdict",
          *       "feedback_after": "full",
          *       "freeze_duration_minutes": 1,
@@ -2802,6 +2817,8 @@ export interface components {
             sources_after?: components["schemas"]["ContestScope"];
             reports_during?: components["schemas"]["ContestScope"];
             reports_after?: components["schemas"]["ContestScope"];
+            tutorials_during?: components["schemas"]["ContestScope"];
+            tutorials_after?: components["schemas"]["ContestScope"];
             feedback_during?: components["schemas"]["FeedbackLevel"];
             feedback_after?: components["schemas"]["FeedbackLevel"];
             /** @description Hide attempts made after the freeze instead of showing them as pending. */

@@ -41,6 +41,7 @@ const (
 	ContestView               ContestAction = "view"
 	ContestViewProblems       ContestAction = "view_problems"
 	ContestViewStatements     ContestAction = "view_statements"
+	ContestViewTutorials      ContestAction = "view_tutorials"
 	ContestManage             ContestAction = "manage"
 	ContestDelete             ContestAction = "delete"
 	ContestViewScoreboard     ContestAction = "view_scoreboard"

@@ -140,6 +140,8 @@ type DraftStatement struct {
 	Notes       string `json:"notes"`
 	Interaction string `json:"interaction"`
 	Scoring     string `json:"scoring"`
+	// Tutorial is shown on the site only, as contest settings allow; statement PDFs leave it out.
+	Tutorial string `json:"tutorial"`
 }
 
 type DraftAsset struct {
@@ -191,6 +193,9 @@ type DraftTest struct {
 	Pretest bool         `json:"pretest"`
 	Input   DraftInput   `json:"input"`
 	Answer  DraftAnswer  `json:"answer"`
+	// The statement shows these instead of the sample's files; an interactive sample without StatementInput is not shown.
+	StatementInput  *string `json:"statement_input"`
+	StatementOutput *string `json:"statement_output"`
 }
 
 type DraftInput struct {
@@ -258,7 +263,7 @@ type DraftQuotas struct {
 	Groups     int           `yaml:"groups"`
 }
 
-var StatementSections = []string{"legend", "input", "output", "notes", "interaction", "scoring"}
+var StatementSections = []string{"legend", "input", "output", "notes", "interaction", "scoring", "tutorial"}
 
 func (s *DraftStatement) Section(name string) *string {
 	switch name {
@@ -274,6 +279,8 @@ func (s *DraftStatement) Section(name string) *string {
 		return &s.Interaction
 	case "scoring":
 		return &s.Scoring
+	case "tutorial":
+		return &s.Tutorial
 	}
 	return nil
 }
@@ -760,6 +767,13 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 			text(at+"/"+name, *s.Section(name))
 		}
 	}
+	for i, t := range d.Tests {
+		for name, example := range map[string]*string{"statement_input": t.StatementInput, "statement_output": t.StatementOutput} {
+			if example != nil {
+				text(fmt.Sprintf("/tests/%d/%s", i, name), *example)
+			}
+		}
+	}
 	if total > int64(q.TextBytes) {
 		v.fail("", pkg.ErrTooLarge, maximum(int64(q.TextBytes)), "texts exceed %d bytes together", int64(q.TextBytes))
 	}
@@ -913,6 +927,9 @@ func (d *Draft) validateTests(v *validation) {
 		}
 		ids[test.ID] = true
 		orders[test.Ordinal] = true
+		if !test.Sample && (test.StatementInput != nil || test.StatementOutput != nil) {
+			v.fail(at+"/sample", pkg.ErrInconsistent, with(at+"/statement_input"), "only a sample has a statement example")
+		}
 		i := test.Input
 		switch i.Mode {
 		case "manual":
