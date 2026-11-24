@@ -3888,6 +3888,7 @@ components:
       - main_solution
       - input_file
       - output_file
+      - processes
       - library
       - graders
       - attachments
@@ -3948,6 +3949,12 @@ components:
         output_file:
           type: string
           description: File the solution writes instead of standard output; empty for standard output.
+        processes:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 8
+          description: "Solution copies a communication problem runs at once, 0 for other types. Copy i gets i as its only argument and talks over its standard streams to the manager, which reads it on fd 5+2i and writes to it on fd 6+2i; the manager otherwise is called as an interactor."
         library:
           type: array
           items:
@@ -4629,12 +4636,13 @@ components:
         statement:
           $ref: "#/components/schemas/ProblemStatementModel"
     ProblemType:
-      description: "An output-only problem judges the outputs participants submit, one file per test, instead of running a program."
+      description: "An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager."
       type: string
       enum:
         - pass-fail
         - scoring
         - interactive
+        - communication
         - output-only
     ProblemStatementModel:
       description: "Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview."

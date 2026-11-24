@@ -578,7 +578,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 	}
 	var outputID, answerID string
-	if s.Draft.Type == "interactive" {
+	if spec.Interactive(s.Draft.Type) {
 		var answer sandbox.File
 		if test.Answer.Mode == "provided" {
 			id, err := e.upload(ctx, files.Answer)
@@ -590,7 +590,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(group.CheckerArgs), sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(group.CheckerArgs), s.Draft.Processes, sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
 		if err != nil {
 			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -660,7 +660,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		tr.solutions[sol.Name] = result
 	}
 	// Interactive test files are interactor data, not what the participant sees.
-	interactive := s.Draft.Type == "interactive"
+	interactive := spec.Interactive(s.Draft.Type)
 	if test.Sample && (!interactive || test.StatementInput != nil) {
 		input, answer := files.Input, files.Answer
 		if test.StatementInput != nil {
@@ -702,9 +702,9 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, arg
 	sol := e.compiled[programKey("solution", name)]
 	result := judging.TestResult{TestNumber: ordinal}
 	var outputID string
-	if s.Draft.Type == "interactive" {
+	if spec.Interactive(s.Draft.Type) {
 		intr := e.compiled["interactor"]
-		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(args), sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
+		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(args), s.Draft.Processes, sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
 		if err != nil {
 			return result, err
 		}

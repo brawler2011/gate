@@ -420,7 +420,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							}
 
 							if pkg.Problem.Type == "interactive" {
-								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, sandbox.Jury{Executable: interactor.exe, Language: interactor.lang, Protocol: sandbox.ProtocolTestlib}, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(limits, timeLimit, memLimit), limits.Auxiliary)
+								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, sandbox.Jury{Executable: interactor.exe, Language: interactor.lang, Protocol: sandbox.ProtocolTestlib}, 0, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(limits, timeLimit, memLimit), limits.Auxiliary)
 								if err != nil {
 									t.Fatalf("interact failed: %v", err)
 								}

@@ -11,7 +11,7 @@ import {api, unwrap} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
-import {formatPoints, isScored} from "./draft/draftOps";
+import {formatPoints, isInteractive, isScored} from "./draft/draftOps";
 import {useSaveDraft} from "./draft/useDraft";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
@@ -21,6 +21,7 @@ const PROBLEM_TYPE_OPTIONS = [
   {value: "pass-fail", label: "Pass-Fail"},
   {value: "scoring", label: "Scoring"},
   {value: "interactive", label: "Interactive"},
+  {value: "communication", label: "Communication"},
   {value: "output-only", label: "Output-only"},
 ];
 
@@ -38,6 +39,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [mainSolution, setMainSolution] = useState(draft.main_solution);
   const [inputFile, setInputFile] = useState(draft.input_file);
   const [outputFile, setOutputFile] = useState(draft.output_file);
+  const [processes, setProcesses] = useState(Math.max(draft.processes, 2));
 
   const changed =
     title !== draft.title ||
@@ -47,7 +49,8 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
     memoryLimit !== draft.memory_limit_mb ||
     mainSolution !== draft.main_solution ||
     inputFile !== draft.input_file ||
-    outputFile !== draft.output_file;
+    outputFile !== draft.output_file ||
+    (type === "communication" && processes !== draft.processes);
 
   const handleSave = async () => {
     const ok = await save((current) => ({
@@ -58,8 +61,9 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
       main_solution: mainSolution,
-      input_file: type === "interactive" ? "" : inputFile.trim(),
-      output_file: type === "interactive" ? "" : outputFile.trim(),
+      input_file: isInteractive(type) ? "" : inputFile.trim(),
+      output_file: isInteractive(type) ? "" : outputFile.trim(),
+      processes: type === "communication" ? processes : 0,
     }));
     if (ok) {
       notifications.show({title: "Сохранено", message: "Черновик обновлён", color: "green"});
@@ -115,7 +119,19 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
               step={16}
             />
           </Grid.Col>
-          {type !== "interactive" && (
+          {type === "communication" && (
+            <Grid.Col span={{base: 12, sm: 6}}>
+              <NumberInput
+                label="Число процессов"
+                description="Копия i решения получает i аргументом и общается с менеджером-интерактором"
+                value={processes}
+                onChange={(value) => setProcesses(typeof value === "number" ? value : processes)}
+                min={1}
+                max={8}
+              />
+            </Grid.Col>
+          )}
+          {!isInteractive(type) && (
             <>
               <Grid.Col span={{base: 12, sm: 6}}>
                 <TextInput

@@ -104,7 +104,10 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 			return err
 		}
 	}
-	for role, required := range map[string]bool{"checker": p.Type != "interactive", "interactor": p.Type == "interactive"} {
+	if (p.Type == "communication") != (p.Processes > 0) || p.Processes > spec.MaxProcesses {
+		return fmt.Errorf("invalid package processes")
+	}
+	for role, required := range map[string]bool{"checker": !spec.Interactive(p.Type), "interactor": spec.Interactive(p.Type)} {
 		if roles[role] > 1 || required && roles[role] == 0 {
 			return fmt.Errorf("package needs exactly one %s", role)
 		}

@@ -396,6 +396,41 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 	})
 }
 
+// A communication problem runs both copies of the solution against one manager, which relays copy 0's message to copy 1.
+func TestCommunicationJudgingE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+	t.Parallel()
+	h := newJudgeHarness(t)
+	const (
+		manager = "import sys\na = open(sys.argv[1]).read().strip()\n" +
+			"def ask(i, message):\n    with open(6 + 2 * i, 'w') as w:\n        w.write(message + '\\n')\n    return open(5 + 2 * i).readline().strip()\n" +
+			"reply = ask(1, ask(0, a))\nopen(sys.argv[2], 'w').write(reply + '\\n')\nsys.exit(0 if reply == a else 1)\n"
+		encode  = "import sys\nx = int(input())\nif sys.argv[1] == '0':\n    print(2 * x, flush=True)\nelse:\n"
+		correct = encode + "    print(x // 2, flush=True)\n"
+		wrong   = encode + "    print(x, flush=True)\n"
+		slow    = encode + "    while True:\n        pass\n"
+	)
+	problemID := h.publish(t, "communication", func(d *problemsmodel.Draft) {
+		generator, solution, group := "gen", "main", uuid.New()
+		d.Type = "communication"
+		d.Processes = 2
+		d.Interactor = &problemsmodel.DraftInteractor{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: manager}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}}
+		d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
+		d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: correct}}, Verdicts: []string{}}}
+		d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Pass the number from the first copy to the second."}}
+		d.MainSolution = &solution
+		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+		d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100 * points.Unit,
+			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"21"}},
+			Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
+	})
+	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", correct).State)
+	assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", wrong).State)
+	assert.Equal(t, submissionsmodel.GotTL, h.submit(t, problemID, "python3", slow).State)
+}
+
 // Standard checkers build with the system testlib.h without a draft copy.
 func TestStandardCheckerE2E(t *testing.T) {
 	if testing.Short() {

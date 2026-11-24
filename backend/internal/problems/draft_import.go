@@ -135,7 +135,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
-		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
+		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Processes: p.Processes, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
 			Library: []model.DraftLibraryFile{}, Graders: []model.DraftFile{}, Attachments: []model.DraftFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
 	if err := c.convert(ctx, p); err != nil {
 		return err
@@ -673,7 +673,7 @@ func (c *importConverter) test(test spec.Test, group uuid.UUID, generators, solu
 	}
 	switch {
 	// Only ICPC interactors read the answer; testlib ones produce it.
-	case c.draft.Type == "interactive" && (test.Answer == "" || c.draft.Interactor == nil || c.draft.Interactor.Protocol != sandbox.ProtocolICPC):
+	case spec.Interactive(c.draft.Type) && (test.Answer == "" || c.draft.Interactor == nil || c.draft.Interactor.Protocol != sandbox.ProtocolICPC):
 		t.Answer = model.DraftAnswer{Mode: "interactive"}
 	case test.Answer != "":
 		oid, err := c.object(test.Answer, "test-answer")

@@ -1,7 +1,7 @@
 import {Alert, Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput, Textarea} from "@mantine/core";
 import {useState} from "react";
 
-import {groupLabel, groupRows, toHundredths} from "../draft/draftOps";
+import {groupLabel, groupRows, isInteractive, toHundredths} from "../draft/draftOps";
 
 import type {ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -54,7 +54,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [answerFile, setAnswerFile] = useState<File | null>(null);
 
-  const interactive = draft.type === "interactive";
+  const interactive = isInteractive(draft.type);
   const programOptions = (programs: ProblemDraft["generators"]) => programs.map((p) => ({value: p.name, label: p.name}));
 
   const needsInputFile = inputMode === "manual" && !test.input.object_id && !inputFile;
