@@ -36,7 +36,7 @@ func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, imag
 			return err
 		}
 		if path == "problem.yaml" {
-			data = []byte(strings.Replace(string(data), `- generate: "echo 10 20"`, "- generate: \"echo 10 20\"\n        sample: true", 1))
+			data = []byte(strings.Replace(string(data), `- generate: "echo 10 20"`, "- generate: \"echo 10 20\"\n          sample: true", 1))
 		}
 		f, err := w.Create(path)
 		if err != nil {

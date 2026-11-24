@@ -411,6 +411,10 @@ func (d *Draft) Normalize() {
 	if d.Assets == nil {
 		d.Assets = []DraftAsset{}
 	}
+	// A new draft's testset takes the problem's ID, so every read of it names the same group.
+	if d.Testset.ID == uuid.Nil {
+		d.Testset.ID = d.ProblemID
+	}
 	for g := range d.Testset.All() {
 		for _, list := range []*[]string{&g.CheckerArgs, &g.ValidatorArgs} {
 			if *list == nil {
