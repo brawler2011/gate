@@ -50,11 +50,6 @@ func (r *InvitationsRepo) OrganizationID(ctx context.Context, login string) (uui
 	return org.ID, nil
 }
 
-func (r *InvitationsRepo) ContestID(ctx context.Context, orgLogin, contestLogin string) (uuid.UUID, error) {
-	id, err := r.q.GetContestIDByLogins(ctx, sqlc.GetContestIDByLoginsParams{OrgLogin: orgLogin, ContestLogin: contestLogin})
-	return id, dbError("get contest", err)
-}
-
 func (r *InvitationsRepo) CreateInvitation(ctx context.Context, input invitations.NewInvitation) (uuid.UUID, error) {
 	org, _, contest := targetColumns(input.Target)
 	id, err := r.q.CreateInvitation(ctx, sqlc.CreateInvitationParams{

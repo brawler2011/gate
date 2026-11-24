@@ -6,7 +6,6 @@ import (
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -64,8 +63,6 @@ type TeamsRepo interface {
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
 	GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]organizationsmodel.Team, error)
-
-	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error)
 }
 
 type UsersUC interface {

@@ -180,22 +180,6 @@ func mapProblemMember(pm sqlc.ProblemMember) problemsmodel.ProblemMember {
 	}
 }
 
-func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
-	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
-		ViewerID: userID, PageSize: limit,
-	})
-	if err != nil {
-		return nil, dbError("list dashboard problems", err)
-	}
-
-	problems := make([]problemsmodel.DashboardProblem, len(rows))
-	for i, row := range rows {
-		problems[i] = mapDashboardProblem(row)
-	}
-
-	return problems, nil
-}
-
 func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) problemsmodel.ProblemMember {
 	var email string
 	if pm.Email != nil {
@@ -210,17 +194,3 @@ func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) problemsmodel.Probl
 		CreatedAt: pm.CreatedAt,
 	}
 }
-
-func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) problemsmodel.DashboardProblem {
-	return problemsmodel.DashboardProblem{
-		ID:                row.ProblemID,
-		Title:             row.ProblemTitle,
-		OrganizationID:    row.OrgID,
-		OrganizationName:  row.OrgName,
-		OrganizationLogin: row.OrgLogin,
-		TimeLimitMs:       int(row.TimeLimitMs),
-		MemoryLimitMb:     int(row.MemoryLimitMb),
-		UpdatedAt:         row.UpdatedAt,
-	}
-}
-

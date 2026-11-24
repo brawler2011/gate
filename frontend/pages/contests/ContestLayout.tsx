@@ -22,7 +22,7 @@ const ContestLayout = (): ReactNode => {
   if (!organization.data) {
     return <QueryState error={organization.error} />;
   }
-  const {response, user, contestRole} = contest.data;
+  const {response, user} = contest.data;
   const org = organization.data.organization;
   const {permissions} = response.contest;
   const isModerator = permissions.manage;
@@ -39,15 +39,12 @@ const ContestLayout = (): ReactNode => {
       headerSecondaryNav={
         <ContestHeaderNav
           contest={response.contest}
-          contestRole={contestRole}
           orgLogin={org.login}
           user={user}
         />
       }
     >
       <ContestEventsListener
-        orgLogin={slug}
-        contestLogin={contestLogin}
         contestId={response.contest.id}
         currentUserId={user?.id}
         isModerator={isModerator}

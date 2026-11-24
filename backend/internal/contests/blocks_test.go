@@ -140,7 +140,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	}{repo, notices, f.repo, loader}}, loader)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Cheating"
-	require.NoError(t, uc.BlockSubmission(ctx, f.repo.contest.ID, id, &reason))
+	require.NoError(t, uc.SetSubmissionBlocked(ctx, id, true, &reason))
 	sub, err := uc.GetSubmission(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Disqualified, sub.State)
@@ -148,7 +148,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	sb := f.scoreboard(t, false)
 	require.EqualValues(t, 1, sb.Items[0].ProblemsSolved)
 	require.EqualValues(t, 20, sb.Items[0].TotalPenalty)
-	require.NoError(t, uc.UnblockSubmission(ctx, f.repo.contest.ID, id))
+	require.NoError(t, uc.SetSubmissionBlocked(ctx, id, false, nil))
 	sub, err = uc.GetSubmission(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, sub.State)

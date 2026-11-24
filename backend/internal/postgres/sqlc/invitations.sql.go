@@ -67,23 +67,6 @@ func (q *Queries) DeleteJoinLink(ctx context.Context, arg DeleteJoinLinkParams) 
 	return err
 }
 
-const getContestIDByLogins = `-- name: GetContestIDByLogins :one
-SELECT c.id FROM contests c JOIN organizations o ON o.id = c.organization_id
-WHERE lower(o.login) = lower($1) AND lower(c.login) = lower($2)
-`
-
-type GetContestIDByLoginsParams struct {
-	OrgLogin     string `json:"org_login"`
-	ContestLogin string `json:"contest_login"`
-}
-
-func (q *Queries) GetContestIDByLogins(ctx context.Context, arg GetContestIDByLoginsParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, getContestIDByLogins, arg.OrgLogin, arg.ContestLogin)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
-}
-
 const getContestRole = `-- name: GetContestRole :one
 SELECT role::contest_role FROM contest_access WHERE contest_id = $1 AND user_id = $2
 `

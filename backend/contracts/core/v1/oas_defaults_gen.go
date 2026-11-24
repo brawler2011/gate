@@ -11,14 +11,6 @@ func (s *AdminChangeEmailRequestModel) setDefaults() {
 }
 
 // setDefaults set default value of fields.
-func (s *ApproveOrganizationJoinRequestModel) setDefaults() {
-	{
-		val := ApproveOrganizationJoinRequestModelRole("member")
-		s.Role.SetTo(val)
-	}
-}
-
-// setDefaults set default value of fields.
 func (s *InviteOrganizationMemberRequestModel) setDefaults() {
 	{
 		val := InviteOrganizationMemberRequestModelRole("member")

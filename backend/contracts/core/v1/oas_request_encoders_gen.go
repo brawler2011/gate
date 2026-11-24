@@ -57,26 +57,6 @@ func encodeAnswerContestClarificationRequest(
 	return nil
 }
 
-func encodeApproveOrganizationJoinRequestRequest(
-	req OptApproveOrganizationJoinRequestModel,
-	r *http.Request,
-) error {
-	const contentType = "application/json"
-	if !req.Set {
-		// Keep request with empty body if value is not set.
-		return nil
-	}
-	e := new(jx.Encoder)
-	{
-		if req.Set {
-			req.Encode(e)
-		}
-	}
-	encoded := e.Bytes()
-	ht.SetBody(r, bytes.NewReader(encoded), contentType)
-	return nil
-}
-
 func encodeBatchCreateOrganizationUsersRequest(
 	req *BatchCreateOrganizationUsersRequestModel,
 	r *http.Request,
@@ -111,28 +91,22 @@ func encodeBlockProblemForUserRequest(
 	return nil
 }
 
-func encodeBlockSubmissionRequest(
-	req OptBlockSubmissionRequestModel,
+func encodeBuildProblemPackageRequest(
+	req *BuildProblemPackageReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
-	if !req.Set {
-		// Keep request with empty body if value is not set.
-		return nil
-	}
 	e := new(jx.Encoder)
 	{
-		if req.Set {
-			req.Encode(e)
-		}
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
 	return nil
 }
 
-func encodeBuildProblemPackageRequest(
-	req *BuildProblemPackageReq,
+func encodeCancelProblemBuildRequest(
+	req *CancelProblemBuildRequestModel,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -175,6 +149,20 @@ func encodeClaimTemporaryUserRequest(
 
 func encodeConfirmEmailChangeRequest(
 	req *ConfirmEmailChangeRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateContestRequest(
+	req *CreateContestRequestModel,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -357,6 +345,20 @@ func encodeCreateTeamRequest(
 	return nil
 }
 
+func encodeFinishVirtualRunRequest(
+	req *FinishVirtualRunRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeForgotPasswordRequest(
 	req *ForgotPasswordRequestModel,
 	r *http.Request,
@@ -523,6 +525,26 @@ func encodeRegisterRequest(
 	return nil
 }
 
+func encodeRejudgeContestRequest(
+	req OptRejudgeContestRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	if !req.Set {
+		// Keep request with empty body if value is not set.
+		return nil
+	}
+	e := new(jx.Encoder)
+	{
+		if req.Set {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeReorderContestProblemsRequest(
 	req *ReorderContestProblemsRequestModel,
 	r *http.Request,
@@ -579,6 +601,48 @@ func encodeResetPasswordRequest(
 	return nil
 }
 
+func encodeResolveContestJoinRequestRequest(
+	req *ResolveJoinRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeResolveOrganizationJoinRequestRequest(
+	req *ResolveOrganizationJoinRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRespondInvitationRequest(
+	req *RespondInvitationRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSaveProblemDraftRequest(
 	req *ProblemDraft,
 	r *http.Request,
@@ -623,6 +687,20 @@ func encodeUpdateOrganizationRequest(
 
 func encodeUpdateProblemRequest(
 	req *UpdateProblemRequestModel,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateSubmissionRequest(
+	req *UpdateSubmissionRequestModel,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

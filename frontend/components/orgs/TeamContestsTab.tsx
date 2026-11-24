@@ -26,7 +26,7 @@ const getContestStatus = (contest: ContestModel, now: number): string => {
 export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
   const {data, isPending: isLoading, error, page, setPage, dataUpdatedAt} = usePagedQuery(
     ["team-contests", teamId],
-    (page, pageSize) => unwrap(api.GET("/teams/{id}/contests", {params: {path: {id: teamId}, query: {page, pageSize}}})),
+    (page, pageSize) => unwrap(api.GET("/contests", {params: {query: {team_id: teamId, page, pageSize}}})),
   );
   if (error) {
     return <ErrorDisplay error={error} />;

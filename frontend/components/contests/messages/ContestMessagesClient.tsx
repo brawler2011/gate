@@ -19,8 +19,6 @@ import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, 
 
 export interface ContestMessagesClientProps {
   contest: ContestModel;
-  orgLogin: string;
-  contestLogin: string;
   user: UserModel | null;
   isModerator: boolean;
   problems?: ContestProblemListItemModel[];
@@ -28,8 +26,6 @@ export interface ContestMessagesClientProps {
 
 export const ContestMessagesClient = ({
   contest,
-  orgLogin,
-  contestLogin,
   user,
   isModerator,
   problems = [],
@@ -43,11 +39,12 @@ export const ContestMessagesClient = ({
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [problemFilter, setProblemFilter] = useState<string>("");
 
-  const path = {org_login: orgLogin, contest_login: contestLogin};
-  const announcementsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/announcements', {
+  const contestId = contest.id;
+  const path = {contest_id: contestId};
+  const announcementsQuery = api.useQuery('get', '/contests/{contest_id}/announcements', {
     params: {path, query: {page: 1, pageSize: 100}},
   });
-  const clarificationsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/clarifications', {
+  const clarificationsQuery = api.useQuery('get', '/contests/{contest_id}/clarifications', {
     params: {path, query: {
       problem_id: problemFilter || undefined, status: statusFilter || undefined, page: 1, pageSize: 100,
     }},
@@ -73,12 +70,11 @@ export const ContestMessagesClient = ({
     }
 
     const {error: err} = await api.DELETE(
-      "/organizations/{org_login}/contests/{contest_login}/announcements/{announcement_id}",
+      "/contests/{contest_id}/announcements/{announcement_id}",
       {
         params: {
           path: {
-            org_login: orgLogin,
-            contest_login: contestLogin,
+            contest_id: contestId,
             announcement_id: id,
           },
         },
@@ -452,8 +448,7 @@ export const ContestMessagesClient = ({
       <CreateAnnouncementModal
         opened={createAnnOpened}
         onClose={() => setCreateAnnOpened(false)}
-        orgLogin={orgLogin}
-        contestLogin={contestLogin}
+        contestId={contestId}
         problems={problems}
         onSuccess={() => {
           refreshAnnouncements();
@@ -463,8 +458,7 @@ export const ContestMessagesClient = ({
       <AskClarificationModal
         opened={askClarOpened}
         onClose={() => setAskClarOpened(false)}
-        orgLogin={orgLogin}
-        contestLogin={contestLogin}
+        contestId={contestId}
         problems={problems}
         onSuccess={() => {
           refreshClarifications();
@@ -475,8 +469,7 @@ export const ContestMessagesClient = ({
       <AnswerClarificationModal
         opened={!!answeringClar}
         onClose={() => setAnsweringClar(null)}
-        orgLogin={orgLogin}
-        contestLogin={contestLogin}
+        contestId={contestId}
         clarification={answeringClar}
         onSuccess={() => {
           refreshClarifications();

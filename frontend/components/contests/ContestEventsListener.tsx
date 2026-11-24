@@ -8,16 +8,12 @@ import {api} from "@/lib/api";
 
 interface ContestEventsListenerProps {
   contestId: string;
-  orgLogin: string;
-  contestLogin: string;
   currentUserId?: string;
   isModerator?: boolean;
 }
 
 export const ContestEventsListener = ({
   contestId,
-  orgLogin,
-  contestLogin,
   currentUserId,
   isModerator = false,
 }: ContestEventsListenerProps): ReactNode => {
@@ -30,17 +26,17 @@ export const ContestEventsListener = ({
     onConnected: () => {
       for (const resource of ['announcements', 'clarifications'] as const) {
         void queryClient.invalidateQueries({queryKey: api.queryOptions('get',
-          `/organizations/{org_login}/contests/{contest_login}/${resource}`, {
-            params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+          `/contests/{contest_id}/${resource}`, {
+            params: {path: {contest_id: contestId}},
           }).queryKey});
       }
     },
     onEvent: event => {
       const path = event.event_type === 'contest.announcement_created' || event.event_type === 'contest.announcement_deleted'
-        ? '/organizations/{org_login}/contests/{contest_login}/announcements'
-        : '/organizations/{org_login}/contests/{contest_login}/clarifications';
+        ? '/contests/{contest_id}/announcements'
+        : '/contests/{contest_id}/clarifications';
       void queryClient.invalidateQueries({queryKey: api.queryOptions('get', path, {
-        params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+        params: {path: {contest_id: contestId}},
       }).queryKey});
     },
   });

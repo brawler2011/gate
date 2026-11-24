@@ -28,12 +28,12 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const isModerator =
     contestResponse.contest.permissions.manage;
 
-  return {slug, contestLogin, contestResponse, user, isModerator};
+  return {contestResponse, user, isModerator};
 }) satisfies LoaderFunction;
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {slug, contestLogin, contestResponse, user, isModerator} =
+  const {contestResponse, user, isModerator} =
     data;
   const problems = contestResponse.problems || [];
   return (
@@ -41,8 +41,6 @@ const Page = (): ReactNode => {
       <title>Сообщения</title>
       <ContestMessagesClient
         contest={contestResponse.contest}
-        orgLogin={slug}
-        contestLogin={contestLogin}
         user={user}
         isModerator={isModerator}
         problems={problems}

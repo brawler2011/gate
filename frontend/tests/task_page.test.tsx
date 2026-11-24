@@ -36,9 +36,6 @@ it.each(['success', 'failure', 'guest'])('handles the initial submissions snapsh
     if (url.pathname === '/api/users/me') {
       return Response.json({user: null});
     }
-    if (url.pathname.endsWith('/my-role')) {
-      return Response.json({role: 'participant'});
-    }
     if (url.pathname.endsWith('/problems/problem')) {
       return pendingProblem;
     }

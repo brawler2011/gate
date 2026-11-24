@@ -4,7 +4,6 @@ import {useLoaderData} from "react-router-dom";
 import {DefaultLayout} from "@/components/shared";
 import {SubmissionDetailsContent} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
-import {getMyContestRole} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -21,10 +20,6 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
 
   const {data: me} = await api.GET("/users/me");
   const user = me?.user ?? null;
-  const contestRole =
-    submission.organization_login && submission.contest_login
-      ? await getMyContestRole(submission.organization_login, submission.contest_login)
-      : null;
   const contestData =
     submission.organization_login && submission.contest_login
       ? await unwrap(
@@ -38,7 +33,7 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
         }),
       )
       : null;
-  return {submission, user, contestRole, contestData};
+  return {submission, user, contestData};
 }) satisfies LoaderFunction;
 
 const Page = (): ReactNode => {

@@ -8,7 +8,7 @@ import {useState, type ReactNode} from "react";
 import {env} from "@/lib/env";
 
 interface DownloadStatementsButtonProps {
-  orgLogin: string;
+  contestId: string;
   contestLogin: string;
   variant?: "filled" | "light" | "outline" | "default";
   size?: "xs" | "sm" | "md" | "lg";
@@ -16,7 +16,7 @@ interface DownloadStatementsButtonProps {
 }
 
 export const DownloadStatementsButton = ({
-  orgLogin,
+  contestId,
   contestLogin,
   variant = "light",
   size = "sm",
@@ -28,11 +28,7 @@ export const DownloadStatementsButton = ({
     setDownloading(true);
     try {
       const backendUrl = env.getBackendApiUrl();
-      const encodedOrg = encodeURIComponent(orgLogin);
-      const encodedContest = encodeURIComponent(contestLogin);
-      const encodedLang = encodeURIComponent(lang);
-
-      const url = `${backendUrl}/organizations/${encodedOrg}/contests/${encodedContest}/statements.pdf?lang=${encodedLang}`;
+      const url = `${backendUrl}/contests/${encodeURIComponent(contestId)}/statements.pdf?lang=${encodeURIComponent(lang)}`;
       const response = await fetch(url, {
         method: "GET",
         credentials: "include",

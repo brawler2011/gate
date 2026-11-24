@@ -12,6 +12,7 @@ import type {ContestProblemListItemModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ContestProblemsTableProps = {
+  contestId: string;
   contestLogin: string;
   orgLogin: string;
   problems: Array<ContestProblemListItemModel>;
@@ -31,6 +32,7 @@ const formatMemoryLimit = (memoryKb: number) => {
 };
 
 export const ContestProblemsTable = ({
+  contestId,
   contestLogin,
   orgLogin,
   problems,
@@ -44,7 +46,7 @@ export const ContestProblemsTable = ({
       {(!hideStatements || isManager) && (
         <Group justify="flex-end" mb="sm">
           <DownloadStatementsButton
-            orgLogin={orgLogin}
+            contestId={contestId}
             contestLogin={contestLogin}
             size="xs"
             variant="default"

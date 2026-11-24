@@ -18,11 +18,6 @@ func (m *MockContestsUC) GetContest(ctx context.Context, id uuid.UUID) (contests
 	return args.Get(0).(contestsmodel.Contest), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
-	args := m.Called(ctx, orgLogin, contestLogin)
-	return args.Get(0).(contestsmodel.Contest), args.Error(1) //nolint:wrapcheck
-}
-
 func (m *MockContestsUC) GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen, _ bool) (*contestsmodel.ScoreboardResponse, error) {
 	args := m.Called(ctx, contestID, unfrozen)
 	if res := args.Get(0); res != nil {

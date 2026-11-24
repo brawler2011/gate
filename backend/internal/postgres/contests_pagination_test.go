@@ -23,7 +23,7 @@ func (db *publicContestsPaginationDB) Query(_ context.Context, _ string, args ..
 	return nil, context.Canceled
 }
 
-func TestPublicContestsPagination(t *testing.T) {
+func TestListContestsPagination(t *testing.T) {
 	for _, tc := range []struct {
 		name                             string
 		page, size, wantOffset, wantSize int32
@@ -41,8 +41,8 @@ func TestPublicContestsPagination(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			db := &publicContestsPaginationDB{}
 			repo := &ContestsRepo{queries: sqlc.New(db)}
-			_, err := repo.ListPublicContests(context.Background(), contestsmodel.PublicContestsFilter{
-				Page: tc.page, PageSize: tc.size, Search: "search", SortBy: "title", SortOrder: "asc",
+			_, err := repo.ListContests(context.Background(), contestsmodel.ListContestsFilter{
+				Page: tc.page, PageSize: tc.size, Search: "search", Visibility: contestsmodel.ContestVisibilityPublic, SortBy: "title", SortOrder: "asc",
 			})
 			if tc.invalid {
 				require.ErrorIs(t, err, pkg.ErrInvalid)

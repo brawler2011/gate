@@ -30,7 +30,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration", map[string]any{"id": params.Language})
 	}
 
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
+	contest, err := h.Contests.GetContest(ctx, params.ContestID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,37 +64,12 @@ func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmiss
 	return &corev1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)}, nil
 }
 
-func (h *CoreServer) BlockSubmission(ctx context.Context, req corev1.OptBlockSubmissionRequestModel, params corev1.BlockSubmissionParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
+func (h *CoreServer) UpdateSubmission(ctx context.Context, req *corev1.UpdateSubmissionRequestModel, params corev1.UpdateSubmissionParams) error {
 	var reason *string
-	if req.IsSet() && req.Value.Reason.IsSet() {
-		reason = &req.Value.Reason.Value
+	if v, ok := req.Reason.Get(); ok {
+		reason = &v
 	}
-
-	err = h.Submissions.BlockSubmission(ctx, contest.ID, params.SubmissionID, reason)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *CoreServer) UnblockSubmission(ctx context.Context, params corev1.UnblockSubmissionParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
-	err = h.Submissions.UnblockSubmission(ctx, contest.ID, params.SubmissionID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Submissions.SetSubmissionBlocked(ctx, params.SubmissionID, req.Blocked, reason)
 }
 
 func (h *CoreServer) ListSubmissions(ctx context.Context, params corev1.ListSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
@@ -171,58 +146,17 @@ func ListSolutionsResponseDTO(solutionsList *submissionsmodel.SubmissionsList) *
 	return &resp
 }
 
-func (h *CoreServer) RejudgeSubmission(ctx context.Context, params corev1.RejudgeSubmissionParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
+func (h *CoreServer) RejudgeContest(ctx context.Context, req corev1.OptRejudgeContestRequestModel, params corev1.RejudgeContestParams) error {
+	filter := submissionsmodel.RejudgeFilter{ContestID: params.ContestID}
+	if v, ok := req.Value.ProblemID.Get(); ok {
+		filter.ProblemID = &v
 	}
-
-	filter := submissionsmodel.RejudgeFilter{
-		ContestID:    contest.ID,
-		SubmissionID: &params.SubmissionID,
+	if v, ok := req.Value.SubmissionID.Get(); ok {
+		filter.SubmissionID = &v
 	}
-
-	_, err = h.Submissions.RejudgeSubmissions(ctx, filter)
-	if err != nil {
-		return err
+	if filter.ProblemID != nil && filter.SubmissionID != nil {
+		return pkg.Wrap(pkg.ErrInvalid, nil, "set problem_id or submission_id, not both")
 	}
-
-	return nil
-}
-
-func (h *CoreServer) RejudgeContestProblem(ctx context.Context, params corev1.RejudgeContestProblemParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
-	filter := submissionsmodel.RejudgeFilter{
-		ContestID: contest.ID,
-		ProblemID: &params.ProblemID,
-	}
-
-	_, err = h.Submissions.RejudgeSubmissions(ctx, filter)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *CoreServer) RejudgeContest(ctx context.Context, params corev1.RejudgeContestParams) error {
-	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
-	if err != nil {
-		return err
-	}
-
-	filter := submissionsmodel.RejudgeFilter{
-		ContestID: contest.ID,
-	}
-
-	_, err = h.Submissions.RejudgeSubmissions(ctx, filter)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err := h.Submissions.RejudgeSubmissions(ctx, filter)
+	return err
 }

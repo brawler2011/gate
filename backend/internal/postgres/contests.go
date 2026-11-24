@@ -144,33 +144,14 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgLogin, search string, page, pageSize int32) (*contestsmodel.ContestsList, error) {
-	org, err := r.queries.GetOrganizationByLogin(ctx, orgLogin)
-	if err != nil {
-		return nil, dbError("list organization contests", err)
-	}
-	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{OrganizationID: &org.ID, Search: search}, page, pageSize)
-}
-func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error) {
-	var visibility string
-	if filter.Visibility != nil {
-		visibility = string(*filter.Visibility)
-	}
-	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{Search: filter.Search, Visibility: visibility, SortBy: filter.SortBy, SortOrder: filter.SortOrder}, filter.Page, filter.PageSize)
-}
-func (r *ContestsRepo) ListUserContests(ctx context.Context, filter contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error) {
-	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{Search: filter.Search, SortBy: filter.SortBy, SortOrder: filter.SortOrder}, filter.Page, filter.PageSize)
-}
-func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error) {
-	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{OrganizationID: filter.OrganizationID, Search: filter.Search, SortBy: filter.SortBy, SortOrder: filter.SortOrder}, filter.Page, filter.PageSize)
-}
-func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
+func (r *ContestsRepo) ListContests(ctx context.Context, filter contestsmodel.ListContestsFilter) (*contestsmodel.ContestsList, error) {
 	page, size, err := paging.Normalize(filter.Page, filter.PageSize, 50)
 	if err != nil {
 		return nil, err
 	}
-	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{Search: filter.Search, Visibility: string(contestsmodel.ContestVisibilityPublic), SortBy: filter.SortBy, SortOrder: filter.SortOrder}, page, size)
+	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{OrganizationID: filter.OrganizationID, TeamID: filter.TeamID, Search: filter.Search, Visibility: filter.Visibility, SortBy: filter.SortBy, SortOrder: filter.SortOrder}, page, size)
 }
+
 func (r *ContestsRepo) listScopedContests(ctx context.Context, params sqlc.ScopeContestsParams, page, size int32) (*contestsmodel.ContestsList, error) {
 	var err error
 	if params.ViewerID, params.All, err = (Access{q: r.queries}).visibility(ctx); err != nil {
@@ -551,22 +532,6 @@ func mapContestTeam(c sqlc.ListContestTeamsRow) contestsmodel.ContestTeam {
 	}
 }
 
-func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error) {
-	rows, err := r.queries.ListDashboardContests(ctx, sqlc.ListDashboardContestsParams{
-		ViewerID: userID, PageSize: limit,
-	})
-	if err != nil {
-		return nil, dbError("list dashboard contests", err)
-	}
-
-	contests := make([]contestsmodel.DashboardContest, len(rows))
-	for i, row := range rows {
-		contests[i] = mapDashboardContest(row)
-	}
-
-	return contests, nil
-}
-
 func (r *ContestsRepo) ListContestParticipants(ctx context.Context, contestID uuid.UUID) (map[uuid.UUID]string, error) {
 	rows, err := r.queries.ListContestParticipants(ctx, contestID)
 	if err != nil {
@@ -824,33 +789,6 @@ func mapListContestMembersRow(c sqlc.ListContestMembersRow) contestsmodel.Contes
 		Username:    c.Username,
 		ContestRole: c.Role,
 		CreatedAt:   c.CreatedAt,
-	}
-}
-
-func mapDashboardContest(row sqlc.ListDashboardContestsRow) contestsmodel.DashboardContest {
-	var lastSubTime *time.Time
-	if row.LastSubTime != nil {
-		if t, ok := row.LastSubTime.(time.Time); ok {
-			lastSubTime = &t
-		}
-	}
-
-	startTime := row.ContestStartTime
-
-	endTime := row.ContestEndTime
-
-	return contestsmodel.DashboardContest{
-		ID:                 row.ContestID,
-		Login:              row.ContestLogin,
-		Title:              row.ContestTitle,
-		StartTime:          startTime,
-		EndTime:            endTime,
-		CreatedAt:          row.ContestCreatedAt,
-		OrganizationID:     row.OrgID,
-		OrganizationName:   row.OrgName,
-		OrganizationLogin:  row.OrgLogin,
-		UserRole:           row.UserRole,
-		LastSubmissionTime: lastSubTime,
 	}
 }
 

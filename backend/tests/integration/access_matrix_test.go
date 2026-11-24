@@ -73,7 +73,7 @@ func (s *IntegrationTestSuite) TestAccessMatrix() {
 		}
 		return '?'
 	}
-	contestPath := "/organizations/matrix/contests/matrix"
+	contestPath := "/contests/" + contest.String()
 	revokeTarget := func() {
 		exec(`DELETE FROM problem_members WHERE user_id=$1`, target)
 		exec(`DELETE FROM contest_members WHERE user_id=$1`, target)
@@ -89,7 +89,7 @@ func (s *IntegrationTestSuite) TestAccessMatrix() {
 		{"edit problem", http.MethodPatch, "/problems/" + problem.String(), `{"visibility":"private"}`, "unnfnnfooo"},
 		{"grant problem editor", http.MethodPost, fmt.Sprintf("/problems/%s/members?user_id=%s&role=editor", problem, target), "", "unnfnnfooo"},
 		{"grant problem owner", http.MethodPost, fmt.Sprintf("/problems/%s/members?user_id=%s&role=owner", problem, target), "", "unnfnnffoo"},
-		{"view contest", http.MethodGet, contestPath, "", "unnnoonooo"},
+		{"view contest", http.MethodGet, "/organizations/matrix/contests/matrix", "", "unnnoonooo"},
 		{"edit contest", http.MethodPatch, contestPath, `{"title":"Matrix"}`, "unnnofnooo"},
 		{"invite contest participant", http.MethodPost, contestPath + "/invitations", fmt.Sprintf(`{"user_id":%q}`, target), "unnnofnooo"},
 		{"edit team", http.MethodPatch, "/teams/" + team.ID.String(), `{"name":"Matrix team"}`, "uffffffooo"},

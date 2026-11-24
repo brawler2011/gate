@@ -16,15 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type registrationLookup struct {
-	ContestsRepo
-	contest contestsmodel.Contest
-}
-
-func (r registrationLookup) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
-	return r.contest, nil
-}
-
 type registrationStore struct {
 	CommandTxStore
 	contest           contestsmodel.Contest
@@ -76,9 +67,9 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 		t.Run(string(mode), func(t *testing.T) {
 			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: mode}}
 			store := &registrationStore{contest: contest, owners: []uuid.UUID{uuid.New(), uuid.New()}}
-			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
+			uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
+			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), contest.ID, nil)
 			switch mode {
 			case accessmodel.JoinOpen:
 				require.NoError(t, err)
@@ -104,11 +95,10 @@ func TestContestRegistrationRechecksVisibility(t *testing.T) {
 	contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinOpen}}
 	hidden := contest
 	hidden.Visibility = contestsmodel.ContestVisibilityPrivate
-	// The pre-transaction lookup still sees the public contest; the transaction sees it hidden.
 	store := &registrationStore{contest: hidden}
-	uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
+	uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{store}, nil)
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-	_, _, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
+	_, _, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), contest.ID, nil)
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 	require.False(t, store.joined)
 }
@@ -124,9 +114,9 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic, Settings: contestsmodel.ContestSettings{JoinPolicy: accessmodel.JoinByRequest}}
 			store := &registrationStore{contest: contest, member: tc.member, pending: tc.pending}
-			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
+			uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
+			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), contest.ID, nil)
 			require.ErrorIs(t, err, pkg.ErrConflict)
 			require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 			require.Nil(t, request)

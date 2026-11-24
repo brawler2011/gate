@@ -95,23 +95,15 @@ export const AdminSubmissionsContent = ({
 
   const handleRejudge = async (e: React.MouseEvent, submission: SubmissionModel) => {
     e.stopPropagation();
-    if (!submission.organization_login || !submission.contest_login) {
+    if (!submission.contest_id) {
       return;
     }
     setRejudgingId(submission.id);
     try {
-      const {error: err} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge",
-        {
-          params: {
-            path: {
-              org_login: submission.organization_login,
-              contest_login: submission.contest_login,
-              submission_id: submission.id,
-            },
-          },
-        },
-      );
+      const {error: err} = await api.POST("/contests/{contest_id}/rejudge", {
+        params: {path: {contest_id: submission.contest_id}},
+        body: {submission_id: submission.id},
+      });
 
       if (err) {
         notifications.show({

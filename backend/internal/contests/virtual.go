@@ -32,15 +32,6 @@ func (uc *ContestsUseCase) FinishVirtualRun(ctx context.Context, contestID uuid.
 	})
 }
 
-// GetVirtualRun returns the caller's run, or nil when there is none.
-func (uc *ContestsUseCase) GetVirtualRun(ctx context.Context, contestID uuid.UUID) (*contestsmodel.VirtualRun, error) {
-	a, err := access.Contest(ctx, uc.access, contestID, accessmodel.ContestView)
-	if err != nil {
-		return nil, err
-	}
-	return a.Facts.Run, nil
-}
-
 // virtualScoreboard ranks virtual rows, each against the contest shifted to its run, with the official ones.
 // During the caller's run every row is cut at the caller's elapsed time and frozen by that relative clock.
 func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.ContestAccess, unfrozen, others bool) (*contestsmodel.ScoreboardResponse, error) {

@@ -44,7 +44,7 @@ describe("Production entity management", () => {
       }
       return Response.json({teams: deleted ? [] : [{permissions: {change_role: true, remove: true}, team_id: "team", team_name: "Team A", contest_role: "participant"}]});
     });
-    const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" />);
+    const view = renderWithProviders(<ContestTeamsManagement contestId="contest" />);
     expect(view.queryByText("Team A")).toBeNull();
     expect((view.getByRole("button", {name: "Добавить"}) as HTMLButtonElement).disabled).toBe(true);
     await waitFor(() => expect(view.getByText("Team A")).toBeTruthy());
@@ -111,7 +111,7 @@ describe("Production entity management", () => {
       }
       return Response.json({teams: [{permissions: {change_role: true, remove: true}, team_id: "team", team_name: "Team A", contest_role: role}]});
     });
-    const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" />);
+    const view = renderWithProviders(<ContestTeamsManagement contestId="contest" />);
     await waitFor(() => expect(view.getByText("Team A")).toBeTruthy());
     fireEvent.click(within(view.getByText("Team A").closest("tr")!).getAllByRole("button")[0]);
     fireEvent.click(view.getByRole("textbox", {name: "Новая роль"}));
@@ -179,7 +179,7 @@ describe("Production entity management", () => {
       }
       return Response.json({teams: added ? [added] : []});
     });
-    const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" orgId="org-id" />);
+    const view = renderWithProviders(<ContestTeamsManagement contestId="contest" orgId="org-id" />);
     await waitFor(() => expect(view.getByText("Нет команд. Добавьте команды для привязки к контесту")).toBeTruthy());
     const input = view.getByPlaceholderText("Поиск команды по названию...");
     fireEvent.focus(input);

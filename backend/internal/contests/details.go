@@ -18,6 +18,10 @@ import (
 type ContestDetails struct {
 	Contest  contestsmodel.Contest
 	Problems []contestsmodel.ContestProblem
+	// The caller's role, pending join request and virtual run; empty for guests.
+	Role        accessmodel.ContestRole
+	JoinRequest *contestsmodel.ContestJoinRequest
+	VirtualRun  *contestsmodel.VirtualRun
 }
 type ContestProblemDetails struct {
 	Link contestsmodel.ContestProblem
@@ -28,6 +32,7 @@ type ContestDetailsStore interface {
 	GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error)
 	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	GetContestProblems(context.Context, uuid.UUID) ([]contestsmodel.ContestProblem, error)
+	GetPendingContestJoinRequest(ctx context.Context, contestID, userID uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 }
 type StatementSource interface {
 	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent
@@ -46,34 +51,40 @@ type DetailsReader struct {
 func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, loader access.Loader, compiler BookletCompiler) *DetailsReader {
 	return &DetailsReader{contests: contests, statements: statements, access: loader, compiler: compiler}
 }
-func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string, action accessmodel.ContestAction) (access.ContestAccess, error) {
-	contest, err := r.contests.GetContestByOrgLoginAndContestLogin(ctx, org, login)
-	if err != nil {
-		return access.ContestAccess{}, err
-	}
-	return access.Contest(ctx, r.access, contest.ID, action)
-}
+
+// GetContestDetails resolves the contest by logins; every other contest route takes its id.
 func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string) (*ContestDetails, error) {
-	a, err := r.authorizedContest(ctx, org, login, accessmodel.ContestView)
+	contest, err := r.contests.GetContestByOrgLoginAndContestLogin(ctx, org, login)
 	if err != nil {
 		return nil, err
 	}
-	result := &ContestDetails{Contest: a.Facts.Contest}
-	if a.Can(accessmodel.ContestViewProblems) {
-		result.Problems, err = r.contests.GetContestProblems(ctx, a.Facts.Contest.ID)
+	a, err := access.Contest(ctx, r.access, contest.ID, accessmodel.ContestView)
+	if err != nil {
+		return nil, err
 	}
-	return result, err
+	result := &ContestDetails{Contest: a.Facts.Contest, Role: a.Role(), VirtualRun: a.Facts.Run}
+	if a.Can(accessmodel.ContestViewProblems) {
+		if result.Problems, err = r.contests.GetContestProblems(ctx, contest.ID); err != nil {
+			return nil, err
+		}
+	}
+	if a.Actor.Id != uuid.Nil {
+		if result.JoinRequest, err = r.contests.GetPendingContestJoinRequest(ctx, contest.ID, a.Actor.Id); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
-func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
-	a, err := r.authorizedContest(ctx, org, login, accessmodel.ContestViewProblems)
+func (r *DetailsReader) contestProblem(ctx context.Context, contestID, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
+	a, err := access.Contest(ctx, r.access, contestID, accessmodel.ContestViewProblems)
 	if err != nil {
 		return contestsmodel.ContestProblem{}, false, err
 	}
 	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: a.Facts.Contest.ID, ProblemId: id})
 	return link, a.Can(accessmodel.ContestViewStatements), err
 }
-func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login string, id uuid.UUID) (*ContestProblemDetails, error) {
-	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
+func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, contestID, id uuid.UUID) (*ContestProblemDetails, error) {
+	link, statementVisible, err := r.contestProblem(ctx, contestID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +98,8 @@ func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login
 }
 
 // Statement assets have the same visibility as their statement.
-func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
-	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
+func (r *DetailsReader) OpenProblemAsset(ctx context.Context, contestID, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
+	link, statementVisible, err := r.contestProblem(ctx, contestID, id)
 	if err != nil {
 		return nil, "", err
 	}
@@ -97,8 +108,8 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string,
 	}
 	return r.statements.OpenImage(ctx, link.PackageID, sha256)
 }
-func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin, language string) ([]byte, error) {
-	a, err := r.authorizedContest(ctx, orgLogin, contestLogin, accessmodel.ContestView)
+func (r *DetailsReader) ReadBooklet(ctx context.Context, contestID uuid.UUID, language string) ([]byte, error) {
+	a, err := access.Contest(ctx, r.access, contestID, accessmodel.ContestView)
 	if err != nil {
 		return nil, err
 	}

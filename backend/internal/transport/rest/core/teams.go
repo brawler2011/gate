@@ -6,7 +6,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -149,15 +148,4 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 	}
 
 	return nil
-}
-
-func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
-	contests, err := h.Teams.GetTeamContests(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
-	if err != nil {
-		return nil, err
-	}
-
-	contestsList := &contestsmodel.ContestsList{Contests: contests.Items, Pagination: contests.Pagination}
-
-	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }

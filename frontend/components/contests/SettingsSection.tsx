@@ -243,18 +243,10 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       allow_virtual: values.allow_virtual,
       hide_statements: values.hide_statements,
     };
-    const {error} = await api.PATCH(
-      "/organizations/{org_login}/contests/{contest_login}",
-      {
-        params: {
-          path: {
-            org_login: contest.organization_login,
-            contest_login: contest.login,
-          },
-        },
-        body: payload,
-      },
-    );
+    const {error} = await api.PATCH("/contests/{contest_id}", {
+      params: {path: {contest_id: contest.id}},
+      body: payload,
+    });
     setSaving(false);
 
     if (error) {
@@ -436,7 +428,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
               </Text>
             </Stack>
             <DownloadStatementsButton
-              orgLogin={contest.organization_login}
+              contestId={contest.id}
               contestLogin={contest.login}
             />
           </Group>

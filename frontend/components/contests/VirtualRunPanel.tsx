@@ -31,7 +31,7 @@ export const VirtualRunPanel = ({contest, orgLogin}: {contest: ContestModel; org
   const client = useQueryClient();
   const [opened, {open, close}] = useDisclosure(false);
   const [busy, setBusy] = useState(false);
-  const path = {org_login: orgLogin, contest_login: contest.login};
+  const path = {contest_id: contest.id};
 
   const act = async (request: () => Promise<{error?: unknown}>, failure: string) => {
     setBusy(true);
@@ -51,7 +51,7 @@ export const VirtualRunPanel = ({contest, orgLogin}: {contest: ContestModel; org
         <Group justify="space-between" align="center">
           <Text size="sm">До конца осталось <Remaining until={run.ends_at} /></Text>
           <Button size="xs" variant="subtle" color="violet" loading={busy}
-            onClick={() => act(() => api.POST("/organizations/{org_login}/contests/{contest_login}/virtual/finish", {params: {path}}),
+            onClick={() => act(() => api.PATCH("/contests/{contest_id}/virtual", {params: {path}, body: {finished: true}}),
               "Не удалось завершить виртуальное участие")}>
             Завершить досрочно
           </Button>
@@ -81,7 +81,7 @@ export const VirtualRunPanel = ({contest, orgLogin}: {contest: ContestModel; org
           <Group justify="flex-end">
             <Button variant="default" onClick={close}>Отмена</Button>
             <Button color="violet" loading={busy}
-              onClick={() => act(() => api.POST("/organizations/{org_login}/contests/{contest_login}/virtual", {params: {path}}),
+              onClick={() => act(() => api.POST("/contests/{contest_id}/virtual", {params: {path}}),
                 "Не удалось начать виртуальное участие")}>
               Начать
             </Button>

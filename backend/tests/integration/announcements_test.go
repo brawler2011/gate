@@ -39,7 +39,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 			Visibility: visibility,
 		}, owner.Id))
 	}
-	path := "/organizations/" + org.Login + "/contests/ann-public/announcements"
+	path := "/contests/" + contestID.String() + "/announcements"
 	get := func(path string, userID uuid.UUID, status int) map[string]json.RawMessage {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		if userID != uuid.Nil {
@@ -154,13 +154,12 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	for _, query := range []string{"?page=0", "?page=-1", "?pageSize=0", "?pageSize=101"} {
 		get(path+query, owner.Id, http.StatusBadRequest)
 	}
-	privatePath := "/organizations/" + org.Login + "/contests/ann-private/announcements"
+	privatePath := "/contests/" + otherContestID.String() + "/announcements"
 	get(privatePath, uuid.Nil, http.StatusUnauthorized)
 	get(privatePath, outsider.Id, http.StatusNotFound)
 	get(privatePath, owner.Id, http.StatusOK)
 	get(path, outsider.Id, http.StatusOK)
-	get("/organizations/"+org.Login+"/contests/missing/announcements", owner.Id, http.StatusNotFound)
-	get("/organizations/missing/contests/ann-public/announcements", owner.Id, http.StatusNotFound)
+	get("/contests/"+uuid.NewString()+"/announcements", owner.Id, http.StatusNotFound)
 
 	// The fixture crosses a page boundary to expose an incorrect default limit.
 	_, err = s.dbPool.Exec(s.ctx, `

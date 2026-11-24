@@ -18,8 +18,10 @@ export interface SubmissionWithProgress extends SubmissionsListItemModel {
   isNew?: boolean;
 }
 
-export const SUBMISSIONS_PATH = '/organizations/{org_login}/contests/{contest_login}/submissions';
+export const SUBMISSIONS_PATH = '/contests/{contest_id}/submissions';
 
-export const submissionsParams = ({orgLogin, contestLogin, contestId: _contestId, ...query}: SubmissionsSelection): {
+export const submissionsParams = (
+  {orgLogin: _orgLogin, contestLogin: _contestLogin, contestId, ...query}: SubmissionsSelection,
+): {
   params: paths[typeof SUBMISSIONS_PATH]['get']['parameters'];
-} => ({params: {path: {org_login: orgLogin, contest_login: contestLogin}, query}});
+} => ({params: {path: {contest_id: contestId}, query}});

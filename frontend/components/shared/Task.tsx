@@ -49,8 +49,7 @@ const Task = ({
       params: {
         query: {
           problem_id: problemId,
-          organization_login: contest.organization_login,
-          contest_login: contest.login,
+          contest_id: contest.id,
           language,
         },
       },
@@ -148,7 +147,7 @@ const Task = ({
                 hideStatements={contest.hide_statements}
                 assetUrl={(path) => {
                   const hash = task.assets[path];
-                  return hash && `/api/organizations/${encodeURIComponent(contest.organization_login)}/contests/${encodeURIComponent(contest.login)}/problems/${task.problem_id}/assets/${hash}`;
+                  return hash && `/api/contests/${contest.id}/problems/${task.problem_id}/assets/${hash}`;
                 }}
               />
             </Box>

@@ -25,10 +25,6 @@ type patchContestsModule struct {
 	lastUpdate contestsmodel.ContestUpdateInput
 }
 
-func (m *patchContestsModule) GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error) {
-	return m.contest, nil
-}
-
 func (m *patchContestsModule) UpdateContest(_ context.Context, update contestsmodel.ContestUpdateInput) error {
 	m.lastUpdate = update
 	if v := update.Settings.AllowClarifications; v != nil {
@@ -67,8 +63,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 				server := NewCoreServer(Services{Contests: store, ContestDetails: store}, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 				require.NoError(t, err)
-				path := "/organizations/org/contests/round"
-				req := httptest.NewRequest(http.MethodPatch, path, strings.NewReader(tc.body))
+				req := httptest.NewRequest(http.MethodPatch, "/contests/"+store.contest.ID.String(), strings.NewReader(tc.body))
 				req.Header.Set("Content-Type", "application/json")
 				rec := httptest.NewRecorder()
 				handler.ServeHTTP(rec, req)
@@ -79,7 +74,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 				require.Equal(t, contestsmodel.FreezeStatusFrozen, store.contest.Settings.FreezeStatus, "omitted freeze_status must preserve the stored mode")
 
 				rec = httptest.NewRecorder()
-				handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+				handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organizations/org/contests/round", nil))
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				require.Contains(t, rec.Body.String(), fmt.Sprintf(`"allow_clarifications":%t`, tc.want))
 			})

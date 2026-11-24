@@ -40,10 +40,10 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     : false;
 
   const {data: draftsResponse} = await api.GET(
-    "/organizations/{org_login}/contests/{contest_login}/drafts",
+    "/contests/{contest_id}/drafts",
     {
       params: {
-        path: {org_login: slug, contest_login: contestLogin},
+        path: {contest_id: contestResponse.contest.id},
         query: {page: 1, pageSize: 50},
       },
     },

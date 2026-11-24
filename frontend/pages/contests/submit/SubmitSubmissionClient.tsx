@@ -50,8 +50,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       params: {
         query: {
           problem_id: selectedProblemId,
-          organization_login: contest.organization_login,
-          contest_login: contest.login,
+          contest_id: contest.id,
           language,
         },
       },

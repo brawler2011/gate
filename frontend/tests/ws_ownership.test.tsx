@@ -49,8 +49,8 @@ afterEach(async () => {
 
 it("uses one contest socket and one notification while refreshing only the affected messages", async () => {
   renderWithProviders(<>
-    <ContestEventsListener contestId="contest" currentUserId="user" orgLogin="org" contestLogin="round" />
-    <ContestMessagesClient contest={{id: "contest"} as ContestModel} orgLogin="org" contestLogin="round"
+    <ContestEventsListener contestId="contest" currentUserId="user" />
+    <ContestMessagesClient contest={{id: "contest"} as ContestModel}
       user={{id: "user"} as UserModel} isModerator={false} />
   </>);
   await act(flushMicrotasks);
@@ -74,7 +74,7 @@ it("uses one contest socket and one notification while refreshing only the affec
 });
 
 it("loads one scoreboard snapshot per socket connection", async () => {
-  renderWithProviders(<Monitor orgLogin="org" contestLogin="round"
+  renderWithProviders(<Monitor orgLogin="org" contestLogin="round" contestId="contest"
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
       items: [], problems: [], is_frozen: false}} />);
   await act(flushMicrotasks);
@@ -86,8 +86,8 @@ it("loads one scoreboard snapshot per socket connection", async () => {
 
 it("refreshes the active clarification filter without fetching announcements", async () => {
   const view = renderWithProviders(<>
-    <ContestEventsListener contestId="contest" currentUserId="user" orgLogin="org" contestLogin="round" isModerator />
-    <ContestMessagesClient contest={{id: "contest"} as ContestModel} orgLogin="org" contestLogin="round"
+    <ContestEventsListener contestId="contest" currentUserId="user" isModerator />
+    <ContestMessagesClient contest={{id: "contest"} as ContestModel}
       user={{id: "user"} as UserModel} isModerator />
   </>);
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
@@ -107,7 +107,7 @@ it("refreshes the active clarification filter without fetching announcements", a
 it("keeps the monitor socket while loading each selected snapshot once", async () => {
   fetch.mockImplementation(Object.assign(async () => Response.json({items: [], problems: [], is_frozen: true}),
     {preconnect: () => {}}));
-  const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round" isManager
+  const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round" contestId="contest" isManager
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
       items: [], problems: [], is_frozen: true}} />);
   await act(flushMicrotasks);
@@ -136,7 +136,7 @@ it("updates a cached monitor while its table is unmounted without HTTP", async (
     return <QueryClientProvider client={client}>
       <SubmissionsProvider contestId="contest" orgLogin="org" contestLogin="round" userId="user">
         <button onClick={() => setVisible(!visible)}>Toggle monitor</button>
-        {visible && <ContestMonitorTable orgLogin="org" contestLogin="round" />}
+        {visible && <ContestMonitorTable orgLogin="org" contestLogin="round" contestId="contest" />}
       </SubmissionsProvider>
     </QueryClientProvider>;
   };
@@ -163,13 +163,13 @@ it("updates a cached monitor while its table is unmounted without HTTP", async (
 
 it("refreshes announcements and answers after reconnect without a replayed event", async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity}}});
-  const path = {org_login: "org", contest_login: "round"};
+  const path = {contest_id: "contest"};
   for (const resource of ["announcements", "clarifications"] as const) {
-    client.setQueryData(api.queryOptions("get", `/organizations/{org_login}/contests/{contest_login}/${resource}`,
+    client.setQueryData(api.queryOptions("get", `/contests/{contest_id}/${resource}`,
       {params: {path}}).queryKey, {[resource]: [], pagination});
   }
   renderWithProviders(<QueryClientProvider client={client}>
-    <ContestEventsListener contestId="contest" currentUserId="user" orgLogin="org" contestLogin="round" />
+    <ContestEventsListener contestId="contest" currentUserId="user" />
   </QueryClientProvider>);
   await act(flushMicrotasks);
   await act(async () => TestWebSocket.instances[0].open());
@@ -198,9 +198,9 @@ it("refreshes messages invalidated while their page is unmounted", async () => {
   const Screen = () => {
     const [visible, setVisible] = React.useState(true);
     return <QueryClientProvider client={client}>
-      <ContestEventsListener contestId="contest" currentUserId="user" orgLogin="org" contestLogin="round" />
+      <ContestEventsListener contestId="contest" currentUserId="user" />
       <button onClick={() => setVisible(!visible)}>Toggle messages</button>
-      {visible && <ContestMessagesClient contest={{id: "contest"} as ContestModel} orgLogin="org" contestLogin="round"
+      {visible && <ContestMessagesClient contest={{id: "contest"} as ContestModel}
         user={{id: "user"} as UserModel} isModerator={false} />}
     </QueryClientProvider>;
   };

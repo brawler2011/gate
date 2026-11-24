@@ -13,16 +13,15 @@ import type {ReactNode} from "react";
 
 const Page = (): ReactNode => {
   const {user, isAuthenticated: authenticated} = useSession();
-  const dashboard = api.useQuery("get", "/users/me/dashboard", {}, {enabled: authenticated});
+  const contests = api.useQuery("get", "/contests", {params: {query: {pageSize: 5}}}, {enabled: authenticated});
+  const problems = api.useQuery("get", "/problems", {params: {query: {pageSize: 5, owner: true}}}, {enabled: authenticated});
   const blog = api.useQuery("get", "/posts", {params: {query: {page: 1, pageSize: 5}}});
-  const dashboardData = dashboard.data;
-  const dashboardError = dashboard.error;
   const blogData = blog.data;
   const blogError = blog.error;
 
   if (authenticated) {
-    const recentContests = dashboardData?.recent_contests || [];
-    const myProblems = dashboardData?.my_problems || [];
+    const recentContests = contests.data?.contests || [];
+    const myProblems = problems.data?.problems || [];
     const blogPosts = blogData?.posts || [];
 
     return (
@@ -36,7 +35,7 @@ const Page = (): ReactNode => {
                   <Title order={2} size="h4" fw={700}>
                     Недавние контесты
                   </Title>
-                  {dashboardError ? (
+                  {contests.error ? (
                     <Text size="sm" c="red">
                       Не удалось загрузить данные контестов
                     </Text>
@@ -49,7 +48,7 @@ const Page = (): ReactNode => {
                   <Title order={2} size="h4" fw={700}>
                     Ваши задачи
                   </Title>
-                  {dashboardError ? (
+                  {problems.error ? (
                     <Text size="sm" c="red">
                       Не удалось загрузить ваши задачи
                     </Text>

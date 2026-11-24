@@ -144,7 +144,7 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 	other := s.createUser("other_submitter", accessmodel.UserRoleUser)
 	// Exhausted quotas return 429 before a missing problem can reach the handler.
 	send := func(id uuid.UUID) *httptest.ResponseRecorder {
-		r := httptest.NewRequest(http.MethodPost, "/submissions?problem_id="+uuid.NewString()+"&organization_login=missing&contest_login=missing&language=python3", strings.NewReader(`{"submission":"print(1)"}`))
+		r := httptest.NewRequest(http.MethodPost, "/submissions?problem_id="+uuid.NewString()+"&contest_id="+uuid.NewString()+"&language=python3", strings.NewReader(`{"submission":"print(1)"}`))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Test-User-ID", id.String())
 		rr := httptest.NewRecorder()

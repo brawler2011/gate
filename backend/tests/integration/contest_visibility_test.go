@@ -29,7 +29,7 @@ func (s *IntegrationTestSuite) TestHiddenOwnResultsUntilTheEnd() {
 			StartTime: &start, StartTimeSet: true, EndTime: &end, EndTimeSet: true}))
 	}
 	setEnd(time.Now().Add(time.Hour))
-	path := corev1.UpdateContestParams{OrgLogin: org.Login, ContestLogin: "hidden"}
+	path := corev1.UpdateContestParams{ContestID: contestID}
 	s.Require().NoError(s.client.UpdateContest(withTestUser(s.ctx, admin.Id), &corev1.UpdateContestRequestModel{
 		FeedbackDuring: corev1.NewOptFeedbackLevel(corev1.FeedbackLevelHidden), FeedbackAfter: corev1.NewOptFeedbackLevel(corev1.FeedbackLevelSamples),
 		ScoreboardDuring: corev1.NewOptContestScope(corev1.ContestScopeParticipant)}, path))
@@ -39,7 +39,7 @@ func (s *IntegrationTestSuite) TestHiddenOwnResultsUntilTheEnd() {
 		ContestId: contestID, UserId: participant.Id, Role: accessmodel.ContestParticipant}))
 	as := withTestUser(s.ctx, participant.Id)
 	created, err := s.client.CreateSubmission(as, &corev1.CreateSubmissionRequestModel{Submission: "print(1)"},
-		corev1.CreateSubmissionParams{ProblemID: problem.ID, OrganizationLogin: org.Login, ContestLogin: "hidden", Language: "python3"})
+		corev1.CreateSubmissionParams{ProblemID: problem.ID, ContestID: contestID, Language: "python3"})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, `UPDATE submissions SET state=200, test_details=$2 WHERE id=$1`, created.ID,
 		`{"tests":[{"test_index":1,"verdict":"OK","sample":true},{"test_index":2,"verdict":"OK"}]}`)
@@ -56,12 +56,12 @@ func (s *IntegrationTestSuite) TestHiddenOwnResultsUntilTheEnd() {
 	s.False(own.Submission.State.IsSet())
 	s.False(own.Submission.Submission.IsSet(), "the code stays hidden too")
 	s.False(own.Submission.TestDetails.IsSet())
-	_, err = s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{OrgLogin: org.Login, ContestLogin: "hidden",
+	_, err = s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{ContestID: contestID,
 		UserId: corev1.NewOptUUID(participant.Id), State: corev1.NewOptInt32(200)})
 	s.Equal(http.StatusForbidden, status(err), "a state filter would reveal the verdict")
 	_, err = s.client.ListSubmissions(as, corev1.ListSubmissionsParams{UserId: corev1.NewOptUUID(participant.Id), State: corev1.NewOptInt32(200)})
 	s.Equal(http.StatusForbidden, status(err), "nor may it span contests")
-	_, err = s.client.GetContestScoreboard(as, corev1.GetContestScoreboardParams{OrgLogin: org.Login, ContestLogin: "hidden"})
+	_, err = s.client.GetContestScoreboard(as, corev1.GetContestScoreboardParams{ContestID: contestID})
 	s.Equal(http.StatusForbidden, status(err), "the scoreboard would reveal the verdict")
 
 	setEnd(time.Now().Add(-time.Minute))

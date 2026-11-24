@@ -38,7 +38,7 @@ type AuthUC interface {
 }
 
 type ContestsUC interface {
-	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error)
+	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
 	CreateContest(ctx context.Context, c *contestsmodel.CreateContestInput) (uuid.UUID, error)
 	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
@@ -58,27 +58,19 @@ type ContestsUC interface {
 	GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen, virtual bool) (*contestsmodel.ScoreboardResponse, error)
 	StartVirtualRun(ctx context.Context, contestID uuid.UUID) (contestsmodel.VirtualRun, error)
 	FinishVirtualRun(ctx context.Context, contestID uuid.UUID) error
-	GetVirtualRun(ctx context.Context, contestID uuid.UUID) (*contestsmodel.VirtualRun, error)
 
 	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
 	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 
-	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
-	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string) ([]contestsmodel.ContestJoinRequest, error)
-	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string) error
-	ApproveJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID uuid.UUID) error
-	RejectJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID uuid.UUID) error
-	GetMyPendingJoinRequest(ctx context.Context, orgLogin, contestLogin string) (*contestsmodel.ContestJoinRequest, error)
+	CreateJoinRequest(ctx context.Context, contestID uuid.UUID, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
+	ListJoinRequests(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ContestJoinRequest, error)
+	CancelJoinRequest(ctx context.Context, contestID, requestID uuid.UUID) error
+	ResolveJoinRequest(ctx context.Context, contestID, requestID uuid.UUID, approve bool) error
 
 	GetContestTeams(context.Context, uuid.UUID) ([]contestsmodel.ContestTeam, error)
-	ListPublicContests(context.Context, contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
-	ListWorkshopContests(context.Context, contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)
-	ListUserContests(context.Context, contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error)
-	ListAdminContests(context.Context, contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error)
-	ListOrganizationContests(context.Context, string, string, int32, int32) (*contestsmodel.ContestsList, error)
+	ListContests(context.Context, contestsmodel.ListContestsFilter) (*contestsmodel.ContestsList, error)
 	ListContestMembers(context.Context, contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
-	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
 }
 
 type DraftsUC interface {
@@ -106,7 +98,7 @@ type OrganizationsUC interface {
 
 	CreateJoinRequest(ctx context.Context, orgLogin string, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationJoinRequest, error)
-	CancelJoinRequest(ctx context.Context, orgLogin string) error
+	CancelJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error
 	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID, role accessmodel.OrganizationRole) error
 	RejectJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error
 	GetMyPendingJoinRequest(ctx context.Context, orgLogin string) (*organizationsmodel.OrganizationJoinRequest, error)
@@ -114,14 +106,13 @@ type OrganizationsUC interface {
 
 type InvitationsUC interface {
 	InviteToOrganization(ctx context.Context, orgLogin string, userID uuid.UUID, role accessmodel.OrganizationRole) (*invitations.Invitation, error)
-	InviteToContest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*invitations.Invitation, error)
+	InviteToContest(ctx context.Context, contestID, userID uuid.UUID) (*invitations.Invitation, error)
 	ListOrganizationInvitations(ctx context.Context, orgLogin string) ([]invitations.Invitation, error)
-	ListContestInvitations(ctx context.Context, orgLogin, contestLogin string) ([]invitations.Invitation, error)
+	ListContestInvitations(ctx context.Context, contestID uuid.UUID) ([]invitations.Invitation, error)
 	CancelInvitation(ctx context.Context, id uuid.UUID) error
 	AcceptInvitation(ctx context.Context, id uuid.UUID) error
 	DeclineInvitation(ctx context.Context, id uuid.UUID) error
 
-	ContestTarget(ctx context.Context, orgLogin, contestLogin string) (invitations.Target, error)
 	JoinLink(ctx context.Context, target invitations.Target) (*string, error)
 	ResetJoinLink(ctx context.Context, target invitations.Target) (string, error)
 	DisableJoinLink(ctx context.Context, target invitations.Target) error
@@ -140,7 +131,6 @@ type ProblemsUC interface {
 
 	ListProblemMembers(context.Context, uuid.UUID, paging.Request) (*paging.List[problemsmodel.ProblemMember], error)
 	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
-	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
 	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
 }
 
@@ -149,8 +139,7 @@ type SubmissionsUC interface {
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
 	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error)
 
-	BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error
-	UnblockSubmission(ctx context.Context, contestID, submissionID uuid.UUID) error
+	SetSubmissionBlocked(ctx context.Context, submissionID uuid.UUID, blocked bool, reason *string) error
 	RejudgeSubmissions(ctx context.Context, filter submissionsmodel.RejudgeFilter) (int, error)
 }
 
@@ -165,8 +154,6 @@ type TeamsUC interface {
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error)
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role accessmodel.TeamRole) error
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
-
-	GetTeamContests(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
 }
 
 type UsersUC interface {
@@ -180,9 +167,9 @@ type UsersUC interface {
 
 type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
-	GetContestProblemDetails(context.Context, string, string, uuid.UUID) (*contests.ContestProblemDetails, error)
-	ReadBooklet(context.Context, string, string, string) ([]byte, error)
-	OpenProblemAsset(context.Context, string, string, uuid.UUID, string) (io.ReadCloser, string, error)
+	GetContestProblemDetails(context.Context, uuid.UUID, uuid.UUID) (*contests.ContestProblemDetails, error)
+	ReadBooklet(context.Context, uuid.UUID, string) ([]byte, error)
+	OpenProblemAsset(context.Context, uuid.UUID, uuid.UUID, string) (io.ReadCloser, string, error)
 }
 
 type AvatarsUC interface {

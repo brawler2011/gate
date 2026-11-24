@@ -92,9 +92,15 @@ func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrgan
 		return nil, err
 	}
 
-	return projectResponse(h, ctx, &corev1.GetOrganizationResponseModel{
-		Organization: organizationDTO(*org),
-	})
+	response := &corev1.GetOrganizationResponseModel{Organization: organizationDTO(*org)}
+	joinReq, err := h.Organizations.GetMyPendingJoinRequest(ctx, params.Login)
+	if err != nil {
+		return nil, err
+	}
+	if joinReq != nil {
+		response.MyJoinRequest = corev1.NewOptOrganizationJoinRequestModel(OrganizationJoinRequestDTO(*joinReq))
+	}
+	return projectResponse(h, ctx, response)
 }
 
 func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateOrganizationRequestModel, params corev1.UpdateOrganizationParams) error {
@@ -248,55 +254,17 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 	}, nil
 }
 
-func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params corev1.GetMyOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestNullableResponseModel, error) {
-	joinReq, err := h.Organizations.GetMyPendingJoinRequest(ctx, params.Login)
-	if err != nil {
-		return nil, err
-	}
-
-	var reqOpt corev1.OptOrganizationJoinRequestModel
-	if joinReq != nil {
-		d := OrganizationJoinRequestDTO(*joinReq)
-		reqOpt = corev1.NewOptOrganizationJoinRequestModel(d)
-	}
-
-	return &corev1.OrganizationJoinRequestNullableResponseModel{
-		Request: reqOpt,
-	}, nil
-}
-
 func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params corev1.CancelOrganizationJoinRequestParams) error {
-
-	err := h.Organizations.CancelJoinRequest(ctx, params.Login)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Organizations.CancelJoinRequest(ctx, params.Login, params.ID)
 }
 
-func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req corev1.OptApproveOrganizationJoinRequestModel, params corev1.ApproveOrganizationJoinRequestParams) error {
-	role := accessmodel.OrganizationMember
-	if req.IsSet() && req.Value.Role.IsSet() {
-		role = accessmodel.OrganizationRole(req.Value.Role.Value)
-		if !validateOrganizationRole(string(role)) {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
-		}
+func (h *CoreServer) ResolveOrganizationJoinRequest(ctx context.Context, req *corev1.ResolveOrganizationJoinRequestModel, params corev1.ResolveOrganizationJoinRequestParams) error {
+	if req.Status == corev1.ResolveOrganizationJoinRequestModelStatusRejected {
+		return h.Organizations.RejectJoinRequest(ctx, params.Login, params.ID)
 	}
-
-	err := h.Organizations.ApproveJoinRequest(ctx, params.Login, params.ID, role)
-	if err != nil {
-		return err
+	role := accessmodel.OrganizationRole(req.Role.Or(corev1.ResolveOrganizationJoinRequestModelRoleMember))
+	if !validateOrganizationRole(string(role)) {
+		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 	}
-
-	return nil
-}
-
-func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params corev1.RejectOrganizationJoinRequestParams) error {
-	err := h.Organizations.RejectJoinRequest(ctx, params.Login, params.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return h.Organizations.ApproveJoinRequest(ctx, params.Login, params.ID, role)
 }

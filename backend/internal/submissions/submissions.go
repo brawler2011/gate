@@ -133,29 +133,29 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 	return id, nil
 }
 
-func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
+// SetSubmissionBlocked blocks a contest submission, or unblocks it by rejudging.
+func (uc *SubmissionsUseCase) SetSubmissionBlocked(ctx context.Context, submissionID uuid.UUID, blocked bool, reason *string) error {
+	if _, err := accessmodel.RequireUser(ctx); err != nil {
+		return err
+	}
+	sub, err := uc.submissionsRepo.GetSubmission(ctx, submissionID)
+	if err != nil {
+		return err
+	}
+	if sub.ContestID == nil {
+		return pkg.Wrap(pkg.ErrInvalid, nil, "only contest submissions can be blocked")
+	}
+	contestID := *sub.ContestID
+	if !blocked {
+		_, err := uc.RejudgeSubmissions(ctx, submissionsmodel.RejudgeFilter{ContestID: contestID, SubmissionID: &submissionID})
+		return err
+	}
 	return access.WithinContest(ctx, uc.transactor, contestID, accessmodel.ContestManage, func(tx SubmissionTxStore, _ access.ContestAccess) error {
-		sub, err := tx.GetSubmission(ctx, submissionID)
-		if err != nil {
-			return err
-		}
-		if sub.ContestID == nil || *sub.ContestID != contestID {
-			return pkg.Wrap(pkg.ErrNotFound, nil, "submission does not belong to specified contest")
-		}
 		if err := tx.BlockSubmission(ctx, submissionID, reason); err != nil {
 			return err
 		}
 		return tx.Notify(ctx, eventdata.Notice{Type: submissionsmodel.SubmissionEventCompleted, ID: submissionID})
 	})
-}
-
-func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, submissionID uuid.UUID) error {
-	filter := submissionsmodel.RejudgeFilter{
-		ContestID:    contestID,
-		SubmissionID: &submissionID,
-	}
-	_, err := uc.RejudgeSubmissions(ctx, filter)
-	return err
 }
 
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error) {

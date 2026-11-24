@@ -38,11 +38,9 @@ func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, tr
 	}
 }
 
-func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(
-	ctx context.Context,
-	orgLogin, contestLogin string,
-) (contestsmodel.Contest, error) {
-	return uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+// GetContest reads a contest without authorization; callers must not expose it.
+func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
+	return uc.contestRepo.GetContest(ctx, id)
 }
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
@@ -326,14 +324,9 @@ func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
 
 func (uc *ContestsUseCase) CreateJoinRequest(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID uuid.UUID,
 	message *string,
 ) (*contestsmodel.ContestJoinRequest, bool, error) {
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return nil, false, err
-	}
-
 	user, err := accessmodel.RequireUser(ctx)
 	if err != nil {
 		return nil, false, err
@@ -342,8 +335,8 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	var req *contestsmodel.ContestJoinRequest
 	registered := false
 	var pendingNotifications []notificationsmodel.Notification
-	err = access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestView, func(tx CommandTxStore, current access.ContestAccess) error {
-		contest = current.Facts.Contest
+	err = access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestView, func(tx CommandTxStore, current access.ContestAccess) error {
+		contest := current.Facts.Contest
 		_, err := tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
 		if err == nil {
 			return pkg.Wrap(pkg.ErrAlreadyMember, nil, "already a member of the contest")
@@ -380,7 +373,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		if err != nil {
 			return err
 		}
-		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+		link := fmt.Sprintf("/%s/%s", contest.OrganizationLogin, contest.Login)
 		for _, owner := range owners {
 			notification, err := tx.CreateNotification(ctx, &notificationsmodel.CreateNotificationInput{
 				UserID: owner,
@@ -392,7 +385,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 					"contest_id":         contest.ID.String(),
 					"contest_title":      contest.Title,
 					"contest_login":      contest.Login,
-					"organization_login": orgLogin,
+					"organization_login": contest.OrganizationLogin,
 					"applicant_id":       userID.String(),
 					"applicant_username": user.Username,
 					"request_id":         req.ID.String(),
@@ -424,55 +417,53 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 
 func (uc *ContestsUseCase) ListJoinRequests(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID uuid.UUID,
 ) ([]contestsmodel.ContestJoinRequest, error) {
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := access.Contest(ctx, uc.access, contest.ID, accessmodel.ContestManage); err != nil {
+	if _, err := access.Contest(ctx, uc.access, contestID, accessmodel.ContestManage); err != nil {
 		return nil, err
 	}
 
 	status := string(organizationsmodel.RequestStatusPending)
-	return uc.contestRepo.ListContestJoinRequests(ctx, contest.ID, &status)
+	return uc.contestRepo.ListContestJoinRequests(ctx, contestID, &status)
 }
 
 func (uc *ContestsUseCase) CancelJoinRequest(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID, requestID uuid.UUID,
 ) error {
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return err
-	}
-
 	return access.WithinActor(ctx, uc.transactions, func(tx CommandTxStore, user accessmodel.User) error {
-		req, err := tx.GetPendingContestJoinRequest(ctx, contest.ID, user.Id)
+		req, err := tx.GetContestJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
 		}
-		if req == nil {
-			return pkg.ErrNotFound
+		if req.ContestID != contestID || req.UserID != user.Id {
+			return pkg.Wrap(pkg.ErrNotFound, nil, "join request not found")
+		}
+		if req.Status != organizationsmodel.RequestStatusPending {
+			return pkg.Wrap(pkg.ErrRequestResolved, nil, "the request is already resolved")
 		}
 		return tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusCanceled, nil)
 	})
 }
 
-func (uc *ContestsUseCase) ApproveJoinRequest(
+func (uc *ContestsUseCase) ResolveJoinRequest(ctx context.Context, contestID, requestID uuid.UUID, approve bool) error {
+	if approve {
+		return uc.approveJoinRequest(ctx, contestID, requestID)
+	}
+	return uc.rejectJoinRequest(ctx, contestID, requestID)
+}
+
+func (uc *ContestsUseCase) approveJoinRequest(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID uuid.UUID,
 	requestID uuid.UUID,
 ) error {
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return err
-	}
 
 	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
-	err = access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	err := access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+		contest := a.Facts.Contest
 		req, err := tx.GetContestJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
@@ -500,7 +491,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return fmt.Errorf("create contest member: %w", err)
 		}
 
-		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+		link := fmt.Sprintf("/%s/%s", contest.OrganizationLogin, contest.Login)
 		notification, err := tx.CreateNotification(ctx, &notificationsmodel.CreateNotificationInput{
 			UserID: req.UserID,
 			Type:   notificationsmodel.NotificationTypeContestJoinApproved,
@@ -511,7 +502,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 				"contest_id":         contest.ID.String(),
 				"contest_title":      contest.Title,
 				"contest_login":      contest.Login,
-				"organization_login": orgLogin,
+				"organization_login": contest.OrganizationLogin,
 				"request_id":         req.ID.String(),
 			},
 		})
@@ -535,20 +526,17 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 	return nil
 }
 
-func (uc *ContestsUseCase) RejectJoinRequest(
+func (uc *ContestsUseCase) rejectJoinRequest(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID uuid.UUID,
 	requestID uuid.UUID,
 ) error {
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return err
-	}
 
 	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
-	if err := access.WithinContest(ctx, uc.transactions, contest.ID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+	if err := access.WithinContest(ctx, uc.transactions, contestID, accessmodel.ContestManage, func(tx CommandTxStore, a access.ContestAccess) error {
+		contest := a.Facts.Contest
 		req, err := tx.GetContestJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
@@ -564,7 +552,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 			return err
 		}
 
-		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)
+		link := fmt.Sprintf("/%s/%s", contest.OrganizationLogin, contest.Login)
 		notification, err := tx.CreateNotification(ctx, &notificationsmodel.CreateNotificationInput{
 			UserID: req.UserID,
 			Type:   notificationsmodel.NotificationTypeContestJoinRejected,
@@ -575,7 +563,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 				"contest_id":         contest.ID.String(),
 				"contest_title":      contest.Title,
 				"contest_login":      contest.Login,
-				"organization_login": orgLogin,
+				"organization_login": contest.OrganizationLogin,
 				"request_id":         req.ID.String(),
 			},
 		})
@@ -600,17 +588,13 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 
 func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	ctx context.Context,
-	orgLogin, contestLogin string,
+	contestID uuid.UUID,
 ) (*contestsmodel.ContestJoinRequest, error) {
 	user, err := accessmodel.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return nil, err
-	}
-	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, user.Id)
+	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contestID, user.Id)
 }
 
 func scoreboardItem(userID uuid.UUID, username string, pResults []contestsmodel.ContestProblemResult) contestsmodel.ScoreboardItem {

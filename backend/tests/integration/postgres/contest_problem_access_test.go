@@ -203,7 +203,7 @@ func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 	require.NoError(t, err)
 	statements := &pinnedContestStatement{}
 	reader := contests.NewDetailsReader(f.repo, statements, f.loader, nil)
-	details, err := reader.GetContestProblemDetails(visitor, contest.OrganizationLogin, contest.Login, f.problem)
+	details, err := reader.GetContestProblemDetails(visitor, contest.ID, f.problem)
 	require.NoError(t, err)
 	require.Equal(t, "Pinned statement", details.Statement.Legend)
 	require.Equal(t, f.problem, statements.problem)
@@ -254,7 +254,7 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 	statements := &pinnedContestStatement{}
 	reader := contests.NewDetailsReader(f.repo, statements, f.loader, nil)
 	visitor := accessmodel.WithUser(context.Background(), accessmodel.Guest)
-	details, err := reader.GetContestProblemDetails(visitor, contest.OrganizationLogin, contest.Login, f.problem)
+	details, err := reader.GetContestProblemDetails(visitor, contest.ID, f.problem)
 	require.NoError(t, err)
 	require.Equal(t, before.Title, details.Problem.Title)
 	require.Equal(t, before.TimeLimitMs, details.Problem.TimeLimitMs)

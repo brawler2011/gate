@@ -105,48 +105,15 @@ type CreateContestInput struct {
 	EndTime        *time.Time
 }
 
-type ContestsFilter struct {
-	Page      int32
-	PageSize  int32
-	OwnerId   *uuid.UUID
-	SortOrder paging.SortOrder
-	Search    string
-}
-
-type AdminContestsFilter struct {
-	Page       int32
-	PageSize   int32
-	Search     string
-	Visibility *ContestVisibility
-	SortBy     string
-	SortOrder  paging.SortOrder
-}
-
-type UserContestsFilter struct {
-	Page      int32
-	PageSize  int32
-	UserId    uuid.UUID
-	Search    string
-	SortBy    string
-	SortOrder paging.SortOrder
-}
-
-type WorkshopContestsFilter struct {
+type ListContestsFilter struct {
 	Page           int32
 	PageSize       int32
-	UserId         uuid.UUID
 	Search         string
+	OrganizationID *uuid.UUID
+	TeamID         *uuid.UUID
+	Visibility     ContestVisibility
 	SortBy         string
 	SortOrder      paging.SortOrder
-	OrganizationID *uuid.UUID
-}
-
-type PublicContestsFilter struct {
-	Page      int32
-	PageSize  int32
-	Search    string
-	SortBy    string
-	SortOrder paging.SortOrder
 }
 
 type ContestUpdateInput struct {
@@ -475,20 +442,6 @@ type SubmissionForScoreboard struct {
 type ContestMembersList struct {
 	Members    []ContestMember
 	Pagination paging.Pagination
-}
-
-type DashboardContest struct {
-	ID                 uuid.UUID
-	Login              string
-	Title              string
-	StartTime          *time.Time
-	EndTime            *time.Time
-	CreatedAt          time.Time
-	OrganizationID     uuid.UUID
-	OrganizationName   string
-	OrganizationLogin  string
-	UserRole           accessmodel.ContestRole
-	LastSubmissionTime *time.Time
 }
 
 // PackageRef identifies the package a contest problem pins.

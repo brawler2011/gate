@@ -117,8 +117,9 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
   const cancel = useMutation({
     mutationFn: (buildId: string) =>
       unwrap(
-        api.POST("/problems/{id}/builds/{buildId}/cancel", {
+        api.PATCH("/problems/{id}/builds/{buildId}", {
           params: {path: {id: problemId, buildId}},
+          body: {status: "cancelled"},
         }),
       ),
     onSuccess: refresh,

@@ -37,12 +37,11 @@ export const DraftsClient = ({
   const fetchDrafts = useCallback(async () => {
     setLoading(true);
     const {data, error} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/drafts",
+      "/contests/{contest_id}/drafts",
       {
         params: {
           path: {
-            org_login: contest.organization_login,
-            contest_login: contest.login,
+            contest_id: contest.id,
           },
           query: {page: 1, pageSize: 50},
         },
@@ -52,7 +51,7 @@ export const DraftsClient = ({
     if (!error && data?.drafts) {
       setDrafts(data.drafts);
     }
-  }, [contest.organization_login, contest.login]);
+  }, [contest.id]);
 
   const handleSaveDraft = async () => {
     if (!code.trim()) {
@@ -74,12 +73,11 @@ export const DraftsClient = ({
 
     startTransition(async () => {
       const {data: response, error} = await api.POST(
-        "/organizations/{org_login}/contests/{contest_login}/drafts",
+        "/contests/{contest_id}/drafts",
         {
           params: {
             path: {
-              org_login: contest.organization_login,
-              contest_login: contest.login,
+              contest_id: contest.id,
             },
           },
           body: {code},
@@ -106,12 +104,11 @@ export const DraftsClient = ({
   const handleDeleteDraft = async (draftId: string) => {
     setDeletingId(draftId);
     const {error} = await api.DELETE(
-      "/organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}",
+      "/contests/{contest_id}/drafts/{draft_id}",
       {
         params: {
           path: {
-            org_login: contest.organization_login,
-            contest_login: contest.login,
+            contest_id: contest.id,
             draft_id: draftId,
           },
         },

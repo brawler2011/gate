@@ -16,9 +16,6 @@ it.each(['all', 'mine'])('keeps actual %s page selection in sync with HTTP and p
     if (url.pathname.endsWith('/users/me')) {
       return Response.json({user: {id: 'user', username: 'alice', role: 'admin'}});
     }
-    if (url.pathname.endsWith('/my-role')) {
-      return Response.json({role: 'owner'});
-    }
     if (url.pathname.endsWith('/submissions')) {
       requests.push(url);
       const page = Number(url.searchParams.get('page'));

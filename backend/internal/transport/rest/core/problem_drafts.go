@@ -105,7 +105,7 @@ func (h *CoreServer) ListProblemBuilds(ctx context.Context, p corev1.ListProblem
 	}
 	return *result, nil
 }
-func (h *CoreServer) CancelProblemBuild(ctx context.Context, p corev1.CancelProblemBuildParams) (*corev1.ProblemBuildCancelled, error) {
+func (h *CoreServer) CancelProblemBuild(ctx context.Context, _ *corev1.CancelProblemBuildRequestModel, p corev1.CancelProblemBuildParams) (*corev1.ProblemBuildCancelled, error) {
 	if err := h.ProblemDrafts.CancelBuild(ctx, p.ID, p.BuildId); err != nil {
 		return nil, err
 	}

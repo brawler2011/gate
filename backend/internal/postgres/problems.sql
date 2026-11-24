@@ -47,25 +47,6 @@ WHERE problem_id = $1 AND user_id = $2;
 DELETE FROM problem_members
 WHERE problem_id = $1 AND user_id = $2;
 
--- name: ListDashboardProblems :many
-SELECT
-    p.id as problem_id,
-    p.title as problem_title,
-    p.time_limit_ms,
-    p.memory_limit_mb,
-    p.updated_at,
-    o.id as org_id,
-    o.name as org_name,
-    o.login as org_login
-FROM problem_catalog p
-JOIN organizations o ON p.organization_id = o.id
-LEFT JOIN problem_access a ON a.problem_id = p.id AND a.user_id = sqlc.arg('viewer_id')::uuid
-WHERE p.visibility = 'public' OR a.role IS NOT NULL OR sqlc.arg('all')::boolean
-ORDER BY p.updated_at DESC, p.id DESC
-LIMIT sqlc.arg('page_size')::int;
-
-
-
 -- name: CountProblemMembers :one
 SELECT COUNT(*)
 FROM problem_members pm

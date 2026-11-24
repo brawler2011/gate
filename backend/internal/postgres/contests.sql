@@ -144,33 +144,6 @@ WHERE contest_id = $1 AND problem_id = $2;
 
 
 
--- name: ListDashboardContests :many
-SELECT
-    c.id as contest_id,
-    c.login as contest_login,
-    c.title as contest_title,
-    c.start_time as contest_start_time,
-    c.end_time as contest_end_time,
-    c.created_at as contest_created_at,
-    o.id as org_id,
-    o.name as org_name,
-    o.login as org_login,
-    COALESCE(a.role, 'participant')::contest_role as user_role,
-    sub.last_sub_time
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-LEFT JOIN contest_access a ON a.contest_id = c.id AND a.user_id = sqlc.arg('viewer_id')::uuid
-LEFT JOIN (
-    SELECT submissions.contest_id, MAX(submissions.created_at) as last_sub_time
-    FROM submissions
-    WHERE submissions.owner_id = sqlc.arg('viewer_id')::uuid
-    GROUP BY submissions.contest_id
-) sub ON c.id = sub.contest_id
-WHERE (c.visibility = 'public' OR a.role IS NOT NULL OR sqlc.arg('all')::boolean)
-ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC, c.id DESC
-LIMIT sqlc.arg('page_size')::int;
-
-
 -- name: ListContestParticipants :many
 SELECT cm.user_id, u.username
 FROM contest_members cm

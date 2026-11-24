@@ -49,6 +49,7 @@ const Contest = ({contest, orgLogin, problems, isManager, isAuthenticated, hasAc
       )}
       {!showCountdown && problems.length > 0 && (
         <ContestProblemsTable
+          contestId={contest.id}
           contestLogin={contest.login}
           orgLogin={orgLogin}
           problems={problems}

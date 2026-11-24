@@ -245,7 +245,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 
 		// Contest membership rejects problem roles.
 		badContestReq := httptest.NewRequest(http.MethodPatch,
-			fmt.Sprintf("/organizations/%s/contests/%s/members?user_id=%s&role=viewer", org.Login, "align-contest", other.Id), nil)
+			fmt.Sprintf("/contests/%s/members?user_id=%s&role=viewer", contestID, other.Id), nil)
 		badContestReq.Header.Set("X-Test-User-ID", owner.Id.String())
 		badContestReq.AddCookie(&http.Cookie{Name: "session_id", Value: uuid.NewString()})
 		badContestRec := httptest.NewRecorder()
@@ -254,7 +254,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 
 		// Contest team updates reject unknown roles.
 		badContestTeamReq := httptest.NewRequest(http.MethodPatch,
-			fmt.Sprintf("/organizations/%s/contests/%s/teams?team_id=%s&role=invalid_role", org.Login, "align-contest", teamID), nil)
+			fmt.Sprintf("/contests/%s/teams?team_id=%s&role=invalid_role", contestID, teamID), nil)
 		badContestTeamReq.Header.Set("X-Test-User-ID", owner.Id.String())
 		badContestTeamReq.AddCookie(&http.Cookie{Name: "session_id", Value: uuid.NewString()})
 		badContestTeamRec := httptest.NewRecorder()

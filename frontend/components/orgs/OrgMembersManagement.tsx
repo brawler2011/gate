@@ -13,7 +13,7 @@ import {usePagedQuery} from "@/hooks/usePagedQuery";
 import {api, unwrap} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
-import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/schema";
+import type {ResolveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/schema";
 
 const ROLE_OPTIONS = [
   {label: "Владелец", value: "owner", color: "red"},
@@ -192,15 +192,10 @@ export const OrgMembersManagement = ({orgLogin, canManageMembers}: Props): React
       return;
     }
     const error = await mutateRequests(selectedRequest.id, async () => {
-      const {error} = await api.POST(
-        "/organizations/{login}/requests/{id}/approve",
-        {
-          params: {path: {login: orgLogin, id: selectedRequest.id}},
-          body: {
-            role: approveRole as ApproveOrganizationJoinRequestModel["role"],
-          },
-        },
-      );
+      const {error} = await api.PATCH("/organizations/{login}/requests/{id}", {
+        params: {path: {login: orgLogin, id: selectedRequest.id}},
+        body: {status: "approved", role: approveRole as ResolveOrganizationJoinRequestModel["role"]},
+      });
       return error;
     });
     closeApproveModal();
@@ -222,12 +217,10 @@ export const OrgMembersManagement = ({orgLogin, canManageMembers}: Props): React
 
   const handleRejectRequest = async (requestId: string, username: string) => {
     const error = await mutateRequests(requestId, async () => {
-      const {error} = await api.POST(
-        "/organizations/{login}/requests/{id}/reject",
-        {
-          params: {path: {login: orgLogin, id: requestId}},
-        },
-      );
+      const {error} = await api.PATCH("/organizations/{login}/requests/{id}", {
+        params: {path: {login: orgLogin, id: requestId}},
+        body: {status: "rejected" as const},
+      });
       return error;
     });
     if (error) {

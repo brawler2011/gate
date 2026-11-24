@@ -112,10 +112,6 @@ func permissionFills(response any, ids *access.PermissionIDs, parent ...uuid.UUI
 		for i := range r.Contests {
 			contest(r.Contests[i].ID, &r.Contests[i].Permissions)
 		}
-	case *corev1.ListUserContestsResponseModel:
-		for i := range r.Contests {
-			contest(r.Contests[i].ID, &r.Contests[i].Permissions)
-		}
 	case *corev1.GetContestResponseModel:
 		contest(r.Contest.ID, &r.Contest.Permissions)
 		for i := range r.Problems {
@@ -123,13 +119,6 @@ func permissionFills(response any, ids *access.PermissionIDs, parent ...uuid.UUI
 		}
 	case *corev1.GetContestProblemResponseModel:
 		contestProblem(parentID, r.Problem.ProblemID, &r.Problem.Permissions)
-	case *corev1.GetUserDashboardResponseModel:
-		for i := range r.RecentContests {
-			contest(r.RecentContests[i].ID, &r.RecentContests[i].Permissions)
-		}
-		for i := range r.MyProblems {
-			problem(r.MyProblems[i].ID, &r.MyProblems[i].Permissions)
-		}
 	case *corev1.ListOrganizationMembersResponseModel:
 		for i := range r.Members {
 			v := &r.Members[i]
