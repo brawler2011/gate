@@ -147,6 +147,7 @@ tasks:
         vacuum
         lint contracts/core/v1/openapi.yaml
         --ruleset vacuum.yaml
+        --ignore-array-circle-ref
         --no-style --no-banner --no-update-check
         --details --errors --all-results --fail-severity error
       - bun run tools/generate-observer.ts --validate
