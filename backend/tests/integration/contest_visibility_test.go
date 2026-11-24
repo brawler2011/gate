@@ -106,7 +106,7 @@ func (s *IntegrationTestSuite) TestGroupFeedbackHidesFailedTestInLists() {
 		"subtasks":[{"name":""},{"name":"secret","feedback":"points"}]}`)
 	s.Require().NoError(err)
 	listed := func() corev1.OptNilInt32 {
-		list, err := s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{ContestID: contestID})
+		list, err := s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{ContestID: contestID, UserId: corev1.NewOptUUID(participant.Id)})
 		s.Require().NoError(err)
 		s.Require().Len(list.Submissions, 1)
 		return list.Submissions[0].FailedTest
