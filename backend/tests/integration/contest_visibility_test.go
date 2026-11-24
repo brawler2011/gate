@@ -102,8 +102,8 @@ func (s *IntegrationTestSuite) TestGroupFeedbackHidesFailedTestInLists() {
 		corev1.CreateSubmissionParams{ProblemID: problem.ID, ContestID: contestID, Language: "python3"})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, `UPDATE submissions SET state=106, test_details=$2 WHERE id=$1`, created.ID,
-		`{"failed_test":2,"tests":[{"test_index":1,"verdict":"OK","subtask":""},{"test_index":2,"verdict":"WA","subtask":"secret"}],
-		"subtasks":[{"name":""},{"name":"secret","feedback":"points"}]}`)
+		`{"failed_test":2,"tests":[{"test_index":1,"verdict":"OK","group":""},{"test_index":2,"verdict":"WA","group":"secret"}],
+		"groups":[{"name":""},{"name":"secret","feedback":"points"}]}`)
 	s.Require().NoError(err)
 	listed := func() corev1.OptNilInt32 {
 		list, err := s.client.ListContestSubmissions(as, corev1.ListContestSubmissionsParams{ContestID: contestID, UserId: corev1.NewOptUUID(participant.Id)})

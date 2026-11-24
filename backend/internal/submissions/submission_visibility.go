@@ -90,13 +90,13 @@ func (v SubmissionVisibility) Report(details *submissionsmodel.SubmissionTestDet
 		if report.FailedTestDetails != nil && !samples[report.FailedTestDetails.TestIndex] {
 			report.FailedTestDetails = nil
 		}
-		report.Subtasks = nil
+		report.Groups = nil
 	case contestsmodel.FeedbackTests:
 		report.FailedTestDetails = nil
 	case contestsmodel.FeedbackFull:
 	default:
 		report.Tests = nil
-		report.Subtasks = nil
+		report.Groups = nil
 		report.FailedTestDetails = nil
 	}
 	return &report
@@ -109,23 +109,23 @@ func (p feedbackPolicy) complete() bool { return p == "" || p == "complete" }
 // limitGroups applies each group's feedback policy to a copy of the report.
 func limitGroups(report submissionsmodel.SubmissionTestDetails) submissionsmodel.SubmissionTestDetails {
 	policies := map[string]feedbackPolicy{}
-	report.Subtasks = slices.DeleteFunc(slices.Clone(report.Subtasks), func(s submissionsmodel.SubtaskResult) bool {
-		policies[s.Name] = feedbackPolicy(s.Feedback)
-		return s.Feedback == "none"
+	report.Groups = slices.DeleteFunc(slices.Clone(report.Groups), func(g submissionsmodel.GroupResult) bool {
+		policies[g.Name] = feedbackPolicy(g.Feedback)
+		return g.Feedback == "none"
 	})
 	failed := map[string]bool{}
 	var tests []submissionsmodel.TestDetailItem
 	for _, t := range report.Tests {
-		if report.FailedTestDetails != nil && t.TestIndex == report.FailedTestDetails.TestIndex && !policies[t.Subtask].complete() {
+		if report.FailedTestDetails != nil && t.TestIndex == report.FailedTestDetails.TestIndex && !policies[t.Group].complete() {
 			report.FailedTestDetails = nil
 		}
-		switch p := policies[t.Subtask]; {
+		switch p := policies[t.Group]; {
 		case p.complete():
 		case p == "icpc":
-			if failed[t.Subtask] {
+			if failed[t.Group] {
 				continue
 			}
-			failed[t.Subtask] = t.Verdict != "OK"
+			failed[t.Group] = t.Verdict != "OK"
 		default:
 			continue
 		}

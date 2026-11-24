@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/points"
 	"gopkg.in/yaml.v3"
 )
 
@@ -86,8 +85,8 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 	if p.Type != "pass-fail" && p.Type != "scoring" && p.Type != "interactive" {
 		return fmt.Errorf("invalid package type")
 	}
-	if p.Limits.TimeMs <= 0 || p.Limits.MemoryMb <= 0 || len(p.Subtasks) == 0 {
-		return fmt.Errorf("invalid package limits or subtasks")
+	if p.Limits.TimeMs <= 0 || p.Limits.MemoryMb <= 0 || p.Testset.Name != "" || len(p.Testset.Requires) > 0 {
+		return fmt.Errorf("invalid package limits or testset")
 	}
 	roles := map[string]int{}
 	for path, source := range p.Sources {
@@ -109,15 +108,18 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 		}
 	}
 	ordinals := map[int]bool{}
-	total := points.Value(0)
-	for _, s := range p.Subtasks {
-		if s.Policy != "complete" && s.Policy != "each" || s.Points < 0 || s.Feedback != "" && !slices.Contains(spec.FeedbackPolicies, s.Feedback) {
-			return fmt.Errorf("invalid package subtask")
+	groups := map[string]*Group{}
+	for g := range p.Testset.All() {
+		if g != &p.Testset && (g.Name == "" || groups[g.Name] != nil) {
+			return fmt.Errorf("package group names must be unique and non-empty")
 		}
-		total += s.Points
-		for _, t := range s.Tests {
-			if t.Ordinal <= 0 || ordinals[t.Ordinal] {
-				return fmt.Errorf("invalid test ordinal %d", t.Ordinal)
+		groups[g.Name] = g
+		if g.Aggregate != "" && !slices.Contains(spec.Aggregations, g.Aggregate) || g.Feedback != "" && !slices.Contains(spec.FeedbackPolicies, g.Feedback) {
+			return fmt.Errorf("invalid package group %q", g.Name)
+		}
+		for _, t := range g.Tests {
+			if t.Ordinal <= 0 || ordinals[t.Ordinal] || t.Points < 0 {
+				return fmt.Errorf("invalid test ordinal %d or points", t.Ordinal)
 			}
 			ordinals[t.Ordinal] = true
 			for _, name := range []string{t.Input, t.Answer} {
@@ -133,35 +135,37 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 	if len(ordinals) == 0 {
 		return fmt.Errorf("package has no tests")
 	}
-	if p.Type == "scoring" && (p.MaxScore == nil || *p.MaxScore != total) {
-		return fmt.Errorf("invalid package max score")
-	}
 	state := map[string]int{}
 	var visit func(string) error
 	visit = func(name string) error {
 		switch state[name] {
 		case 1:
-			return fmt.Errorf("package dependency cycle")
+			return fmt.Errorf("package group requirements form a cycle")
 		case 2:
 			return nil
 		}
-		s, ok := p.Subtasks[name]
-		if !ok {
-			return fmt.Errorf("unknown package subtask dependency")
+		g, ok := groups[name]
+		if !ok || name == "" {
+			return fmt.Errorf("package group requires unknown group %q", name)
 		}
 		state[name] = 1
-		for _, dep := range s.Dependencies {
-			if err := visit(dep); err != nil {
+		for _, required := range g.Requires {
+			if err := visit(required); err != nil {
 				return err
 			}
 		}
 		state[name] = 2
 		return nil
 	}
-	for name := range p.Subtasks {
-		if err := visit(name); err != nil {
-			return err
+	for name := range groups {
+		if name != "" {
+			if err := visit(name); err != nil {
+				return err
+			}
 		}
+	}
+	if max, _ := p.Grade(func(int) bool { return true }); p.Type == "scoring" && (p.MaxScore == nil || *p.MaxScore != max) {
+		return fmt.Errorf("invalid package max score")
 	}
 	return nil
 }

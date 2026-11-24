@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Fill every reachable field so model additions are covered automatically.
+// Fill every reachable field so model additions are covered automatically; recursive types nest once.
 func fill(v reflect.Value, n *int) {
 	*n++
 	switch v.Kind() {
@@ -18,6 +18,10 @@ func fill(v reflect.Value, n *int) {
 		fill(v.Elem(), n)
 	case reflect.Struct:
 		for i := range v.NumField() {
+			if f := v.Field(i); f.Kind() == reflect.Slice && f.Type().Elem() == v.Type() {
+				f.Set(reflect.MakeSlice(f.Type(), 0, 0))
+				continue
+			}
 			fill(v.Field(i), n)
 		}
 	case reflect.Slice:
@@ -44,7 +48,7 @@ func TestDraftSurvivesContractRoundTrip(t *testing.T) {
 	n := 0
 	fill(reflect.ValueOf(&d).Elem(), &n)
 	d.Type = "scoring"
-	d.Subtasks[0].Policy = "each"
+	d.Testset.Aggregate = "min"
 	d.Tests[0].Input.Mode = "generator"
 	d.Tests[0].Answer.Mode = "generated"
 

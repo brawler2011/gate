@@ -16,7 +16,7 @@ afterEach(() => {
 const draft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, input_file: "", output_file: "", max_score: null, checker: null, interactor: null, validators: [], generators: [],
-  solutions: [], main_solution: null, library: [], subtasks: [], tests: [],
+  solutions: [], main_solution: null, library: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [],
   assets: [{name: "график.png", object_id: "graph"}],
   statements: [{language: "ru", title: "", legend: "\\includegraphics{график.png}", input: "", output: "", notes: "", interaction: "", scoring: ""}],
 };

@@ -93,10 +93,10 @@ func TestSubmissionReportLevels(t *testing.T) {
 func TestSubmissionReportGroupFeedback(t *testing.T) {
 	failed := int32(4)
 	sub := submissionsmodel.Submission{FailedTest: &failed, TestDetails: &submissionsmodel.SubmissionTestDetails{Tests: []submissionsmodel.TestDetailItem{
-		{TestIndex: 1, Verdict: "OK", Subtask: "complete"},
-		{TestIndex: 2, Verdict: "OK", Subtask: "icpc"}, {TestIndex: 3, Verdict: "WA", Subtask: "icpc"}, {TestIndex: 4, Verdict: "WA", Subtask: "icpc"},
-		{TestIndex: 5, Verdict: "WA", Subtask: "points"}, {TestIndex: 6, Verdict: "OK", Subtask: "none"},
-	}, Subtasks: []submissionsmodel.SubtaskResult{{Name: "complete", Feedback: "complete"}, {Name: "icpc", Feedback: "icpc"}, {Name: "points", Feedback: "points"}, {Name: "none", Feedback: "none"}},
+		{TestIndex: 1, Verdict: "OK", Group: "complete"},
+		{TestIndex: 2, Verdict: "OK", Group: "icpc"}, {TestIndex: 3, Verdict: "WA", Group: "icpc"}, {TestIndex: 4, Verdict: "WA", Group: "icpc"},
+		{TestIndex: 5, Verdict: "WA", Group: "points"}, {TestIndex: 6, Verdict: "OK", Group: "none"},
+	}, Groups: []submissionsmodel.GroupResult{{Name: "complete", Feedback: "complete"}, {Name: "icpc", Feedback: "icpc"}, {Name: "points", Feedback: "points"}, {Name: "none", Feedback: "none"}},
 		FailedTestDetails: &submissionsmodel.FailedTestDetail{TestIndex: 3}}}
 	now := time.Now()
 	author := uuid.New()
@@ -122,7 +122,7 @@ func TestSubmissionReportGroupFeedback(t *testing.T) {
 				tests = append(tests, item.TestIndex)
 			}
 			var subtasks []string
-			for _, s := range visible.TestDetails.Subtasks {
+			for _, s := range visible.TestDetails.Groups {
 				subtasks = append(subtasks, s.Name)
 			}
 			require.Equal(t, test.tests, tests)

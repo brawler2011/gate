@@ -36,7 +36,7 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.Draft.Files > 0, "problems.draft.files", "must be positive")
 	v.check(p.Draft.Tests > 0, "problems.draft.tests", "must be positive")
 	v.check(p.Draft.Components > 0, "problems.draft.components", "must be positive")
-	v.check(p.Draft.Subtasks > 0, "problems.draft.subtasks", "must be positive")
+	v.check(p.Draft.Groups > 0, "problems.draft.groups", "must be positive")
 
 	v.check(p.Limits.DiskBytes > 0, "problems.limits.disk_bytes", "must be positive")
 	v.check(p.CacheBytes >= p.Limits.DiskBytes, "problems.cache_bytes", "must be at least problems.limits.disk_bytes")

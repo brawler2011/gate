@@ -32,7 +32,7 @@ func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.Probl
 	// Draft writes authorize the caller, so the fixture acts as the problem owner.
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
 	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Owner: owner, Title: "Initial", ShortName: "draft"}))
-	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10})
+	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Groups: 10})
 	d, err := repo.GetDraft(ctx, id)
 	require.NoError(t, err)
 	return ctx, pool, repo, org, d
@@ -40,8 +40,8 @@ func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.Probl
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	g := uuid.New()
 	d.Checker = checker("cpp17", "int main(){return 0;}")
-	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
+	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: g, Name: "All", Aggregate: "min", Feedback: "complete"}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d
 }
 func insertAvailableObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool, org uuid.UUID) uuid.UUID {
@@ -151,12 +151,12 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := draftObject(t, ctx, pool, org, d.ProblemID)
-	generator, subtask := "gen", uuid.New()
+	generator, group := "gen", uuid.New()
 	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
 	d.Generators = []model.DraftNamedProgram{named(generator, "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
-	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete", Feedback: "complete"}}
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
+	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "min", Feedback: "complete"}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	saved, err := repo.GetDraft(ctx, d.ProblemID)

@@ -145,7 +145,8 @@ export const SubmissionDetailsContent = ({
   const failedDetails = testDetails?.failed_test_details;
   const compilerOutput = testDetails?.compiler_output;
   const tests = testDetails?.tests;
-  const scoredSubtasks = testDetails?.subtasks?.filter((s) => s.score !== undefined) ?? [];
+  // The unnamed group is the testset, whose score is the submission's.
+  const scoredGroups = testDetails?.groups?.filter((g) => g.score !== undefined && g.name !== "") ?? [];
 
   const problemUrl =
     submission.organization_login && submission.contest_login
@@ -415,24 +416,24 @@ export const SubmissionDetailsContent = ({
         </Card>
       )}
 
-      {scoredSubtasks.length > 0 && (
+      {scoredGroups.length > 0 && (
         <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
           <Title order={4} mb="sm">
-            Подзадачи
+            Группы
           </Title>
           <Table striped withTableBorder verticalSpacing="xs">
             <TableThead>
               <TableTr>
-                <TableTh>Подзадача</TableTh>
+                <TableTh>Группа</TableTh>
                 <TableTh ta="center">Баллы</TableTh>
               </TableTr>
             </TableThead>
             <TableTbody>
-              {scoredSubtasks.map((s) => (
-                <TableTr key={s.name}>
-                  <TableTd>{s.name || "Без группы"}</TableTd>
+              {scoredGroups.map((g) => (
+                <TableTr key={g.name}>
+                  <TableTd>{g.name}</TableTd>
                   <TableTd ta="center">
-                    {s.score} / {s.points}
+                    {g.score} / {g.points}
                   </TableTd>
                 </TableTr>
               ))}

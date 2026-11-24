@@ -68,7 +68,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 		Limits:    limits, MaxAttempts: 1, Duration: 5 * time.Minute, Lease: 3 * time.Second,
 	}
 	uploads := &problems.DraftUseCase{
-		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10},
+		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Groups: 10},
 		Repo:        repo, Problems: fixedProblem{org}, Access: postgres.NewAccess(pool), Store: services.store, Bucket: "objects",
 		TempDir: work, UploadTTL: 5 * time.Minute, BuildOptions: options,
 		Languages: &sandbox.Config{Langs: services.langs},
@@ -135,14 +135,14 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	// Run sequentially because the heap measurement covers the entire process.
 	const perFile, tests = 24 << 20, 3
 	h := newPipelineHarness(t, 64<<20, 2<<30)
-	subtask := uuid.New()
+	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each", Feedback: "complete"}}
+		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	})
 	for i := 1; i <= tests; i++ {
 		h.uploadPair(t, model.DraftTest{
-			ID: uuid.New(), Ordinal: i, SubtaskID: subtask, Points: 100,
+			ID: uuid.New(), Ordinal: i, GroupID: group, Points: 100,
 			Input:  model.DraftInput{Mode: "manual"},
 			Answer: model.DraftAnswer{Mode: "provided"},
 		}, perFile)
@@ -196,12 +196,12 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 64<<20)
-	subtask := uuid.New()
+	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each", Feedback: "complete"}}
+		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	})
-	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
+	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
 
 	without := maps.Clone(h.options.Languages)
 	delete(without, "cpp17")
@@ -227,14 +227,14 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 
 func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
-	generator, solution, subtask := "gen", "main", uuid.New()
+	generator, solution, group := "gen", "main", uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
 		d.Generators = []model.DraftNamedProgram{named(generator, "python3", script)}
 		d.Solutions = []model.DraftSolution{solutionProgram(solution, "python3", "print(1)\n")}
 		d.MainSolution = &solution
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each", Feedback: "complete"}}
-		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,
+		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 1,
 			Input:  model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{}},
 			Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	})
@@ -366,12 +366,12 @@ func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 func TestPipelineBuildsTestsSharingAnInput(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 4<<20, 16<<20)
-	subtask := uuid.New()
+	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each", Feedback: "complete"}}
+		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	})
-	first := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
+	first := model.DraftTest{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
 	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, model.UploadChange{Test: &first},
@@ -395,12 +395,12 @@ func TestPipelineBuildsTestsSharingAnInput(t *testing.T) {
 func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 16<<20, 4<<20)
-	subtask := uuid.New()
+	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
-		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each", Feedback: "complete"}}
+		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	})
-	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)
+	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)
 	build := h.enqueueAndClaim(t)
 	_, err := h.pipeline().Execute(h.ctx, build)
 	require.Error(t, err)

@@ -32,7 +32,7 @@ problems:
     files: 1000
     tests: 10000
     components: 100
-    subtasks: 100
+    groups: 100
   limits:
     disk_bytes: 2GiB
     file_count: 25000

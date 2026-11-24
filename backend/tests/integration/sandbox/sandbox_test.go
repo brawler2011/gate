@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -270,24 +269,9 @@ func TestIntegrationSandbox(t *testing.T) {
 					Generate string
 				}
 				var testCases []TestCase
-				var subtaskKeys []string
-				for k := range pkg.Problem.Subtasks {
-					subtaskKeys = append(subtaskKeys, k)
-				}
-				sort.Slice(subtaskKeys, func(i, j int) bool {
-					if subtaskKeys[i] == "samples" {
-						return true
-					}
-					if subtaskKeys[j] == "samples" {
-						return false
-					}
-					return subtaskKeys[i] < subtaskKeys[j]
-				})
-
-				for _, subtaskKey := range subtaskKeys {
-					subtask := pkg.Problem.Subtasks[subtaskKey]
-					for idx, tc := range subtask.Tests {
-						name := fmt.Sprintf("%s_%d", subtaskKey, idx+1)
+				for group := range pkg.Problem.Testset.All() {
+					for idx, tc := range group.Tests {
+						name := fmt.Sprintf("%s_%d", group.Name, idx+1)
 						testCases = append(testCases, TestCase{
 							Name:     name,
 							Input:    tc.Input,

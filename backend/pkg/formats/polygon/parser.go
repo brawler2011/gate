@@ -106,13 +106,13 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			}
 		}
 	}
-	if p.Groups, err = groups(fsys, testset, generators); err != nil {
+	if p.Testset, err = groups(fsys, testset, generators); err != nil {
 		return nil, err
 	}
-	if err := markPretests(fsys, testset, prob.Judging.Testsets, p.Groups); err != nil {
+	if err := markPretests(fsys, testset, prob.Judging.Testsets, &p.Testset); err != nil {
 		return nil, err
 	}
-	p.Type = problemType(prob, p.Groups)
+	p.Type = problemType(prob, &p.Testset)
 	p.KeepInteractiveInputsPrivate()
 	// Well-formed Polygon tests are text; Windows packages use CRLF.
 	for _, property := range prob.Properties {
@@ -243,11 +243,11 @@ func mainSolution(solutions []Solution) string {
 	return ""
 }
 
-func problemType(prob Problem, groups []spec.Group) string {
+func problemType(prob Problem, root *spec.Group) string {
 	if prob.Interactive || (prob.Assets != nil && prob.Assets.Interactor != nil) {
 		return "interactive"
 	}
-	for _, g := range groups {
+	for g := range root.All() {
 		for _, t := range g.Tests {
 			if t.Points > 0 {
 				return "scoring"
@@ -257,70 +257,71 @@ func problemType(prob Problem, groups []spec.Group) string {
 	return "pass-fail"
 }
 
-// Groups follow their first test, preserving Polygon test numbering.
-func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.Group, error) {
+// Ungrouped tests stay in the root; groups follow their first test, preserving Polygon test numbering.
+func groups(fsys fs.FS, testset Testset, generators map[string]string) (spec.Group, error) {
 	definitions := map[string]Group{}
 	for _, g := range testset.Groups {
 		definitions[g.Name] = g
 	}
-	var result []spec.Group
+	root := spec.Group{}
 	index := map[string]int{}
 	for i, t := range testset.Tests {
 		test, err := convertTest(fsys, testset, i+1, t, generators)
 		if err != nil {
-			return nil, err
+			return root, err
 		}
-		name := t.Group
-		n, ok := index[name]
+		if t.Group == "" {
+			root.Tests = append(root.Tests, test)
+			continue
+		}
+		n, ok := index[t.Group]
 		if !ok {
-			n = len(result)
-			index[name] = n
-			result = append(result, newGroup(name, definitions, t.Group != ""))
+			n = len(root.Groups)
+			index[t.Group] = n
+			root.Groups = append(root.Groups, newGroup(t.Group, definitions))
 		}
-		result[n].Tests = append(result[n].Tests, test)
+		root.Groups[n].Tests = append(root.Groups[n].Tests, test)
 	}
-	for i := range result {
-		g := &result[i]
-		// Complete-group points are awarded on the last test only when the whole group passes.
-		total := points.Value(0)
-		for _, t := range g.Tests {
-			total += t.Points
-		}
-		if def, ok := definitions[g.Name]; ok && g.Policy == "complete" && total == 0 && def.Points > 0 {
-			value, err := parsePoints(def.Points)
-			if err != nil {
-				return nil, err
+	for i := range root.Groups {
+		g := &root.Groups[i]
+		// A complete group scores its points only when every test passes: the minimum of tests worth the whole group.
+		if g.Aggregate == "min" {
+			total := points.Value(0)
+			for _, t := range g.Tests {
+				total += t.Points
 			}
-			g.Tests[len(g.Tests)-1].Points = value
+			if def := definitions[g.Name]; total == 0 && def.Points > 0 {
+				value, err := parsePoints(def.Points)
+				if err != nil {
+					return root, err
+				}
+				total = value
+			}
+			for j := range g.Tests {
+				g.Tests[j].Points = total
+			}
 		}
 		if g.Feedback != "" && !slices.Contains(spec.FeedbackPolicies, g.Feedback) {
-			return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", g.Feedback, "group %s has unknown feedback policy %s", g.Name, g.Feedback)
+			return root, spec.Fail(pkg.ErrUnknown, "problem.xml", g.Feedback, "group %s has unknown feedback policy %s", g.Name, g.Feedback)
 		}
-		for _, dep := range g.DependsOn {
+		for _, dep := range g.Requires {
 			if _, ok := index[dep]; !ok {
-				return nil, spec.Fail(pkg.ErrUnknown, "problem.xml", dep, "group %s depends on unknown group %s", g.Name, dep)
+				return root, spec.Fail(pkg.ErrUnknown, "problem.xml", dep, "group %s depends on unknown group %s", g.Name, dep)
 			}
 		}
 	}
-	return result, nil
+	return root, nil
 }
 
-// Named groups score as a whole unless marked each-test; ungrouped tests score individually.
-func newGroup(name string, definitions map[string]Group, named bool) spec.Group {
+// Named groups score as a whole unless marked each-test.
+func newGroup(name string, definitions map[string]Group) spec.Group {
 	def, ok := definitions[name]
-	if !ok {
-		policy := "each"
-		if named {
-			policy = "complete"
-		}
-		return spec.Group{Name: name, Policy: policy}
-	}
-	g := spec.Group{Name: name, Policy: "complete", Feedback: def.FeedbackPolicy}
-	if def.PointsPolicy == "each-test" {
-		g.Policy = "each"
+	g := spec.Group{Name: name, Aggregate: "min", Feedback: def.FeedbackPolicy}
+	if ok && def.PointsPolicy == "each-test" {
+		g.Aggregate = "sum"
 	}
 	for _, dep := range def.Dependencies {
-		g.DependsOn = append(g.DependsOn, dep.Group)
+		g.Requires = append(g.Requires, dep.Group)
 	}
 	return g
 }
@@ -330,7 +331,7 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 	if err != nil {
 		return spec.Test{}, err
 	}
-	test := spec.Test{Points: weight, Sample: t.Sample}
+	test := spec.Test{Points: weight, Sample: t.Sample, Ordinal: number}
 	if t.Method == "generated" {
 		argv, err := spec.ParseCommand(t.Cmd)
 		if err != nil {
@@ -393,21 +394,21 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 }
 
 // markPretests marks the main tests a pretests testset repeats, by generator command or input bytes.
-func markPretests(fsys fs.FS, main Testset, testsets []Testset, groups []spec.Group) error {
+func markPretests(fsys fs.FS, main Testset, testsets []Testset, root *spec.Group) error {
 	i := slices.IndexFunc(testsets, func(ts Testset) bool { return ts.Name == "pretests" })
 	if i < 0 {
 		return nil
 	}
 	pretests := testsets[i]
 	// groups() appends tests in testset order, so a group's k-th test is its k-th main test.
-	group := map[string]int{}
-	for g := range groups {
-		group[groups[g].Name] = g
+	group := map[string]*spec.Group{}
+	for g := range root.All() {
+		group[g.Name] = g
 	}
 	seen := map[string]int{}
 	tests := make([]*spec.Test, len(main.Tests))
 	for n, t := range main.Tests {
-		tests[n] = &groups[group[t.Group]].Tests[seen[t.Group]]
+		tests[n] = &group[t.Group].Tests[seen[t.Group]]
 		seen[t.Group]++
 	}
 	for n, pre := range pretests.Tests {

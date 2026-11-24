@@ -1,6 +1,40 @@
-An ICPC scoring problem: its grader aggregation cannot be expressed with
-Gate's per-test points, so the package is rejected.
+An ICPC scoring problem: data/ ignores the sample and sums the rest, and each
+secret subgroup scores the minimum of its tests at its own accept_score.
 
 -- problem.yaml --
 name: Scoring
 type: scoring
+validation: custom
+-- data/testdata.yaml --
+on_reject: continue
+grader_flags: ignore_sample sum
+-- data/sample/1.in --
+1
+-- data/sample/1.ans --
+1
+-- data/secret/z.in --
+5
+-- data/secret/z.ans --
+5
+-- data/secret/group1/testdata.yaml --
+on_reject: break
+grader_flags: min
+accept_score: 30
+input_validator_flags: --max 10
+-- data/secret/group1/a.in --
+2
+-- data/secret/group1/a.ans --
+2
+-- data/secret/group1/b.in --
+3
+-- data/secret/group1/b.ans --
+3
+-- data/secret/group2/testdata.yaml --
+grader_flags: min
+accept_score: 70
+-- data/secret/group2/c.in --
+4
+-- data/secret/group2/c.ans --
+4
+-- output_validators/checker/checker.cpp --
+int main() {}

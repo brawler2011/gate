@@ -1,6 +1,7 @@
 package formats
 
 import (
+	"cmp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,7 @@ import (
 type summary struct {
 	Type, Checker, Interactor, Main             string
 	Validators, Generators, Library, Statements []string
-	// Groups lists "name/policy/tests/samples/points".
+	// Groups lists "name/aggregate/tests/samples/points" for the testset and its subgroups.
 	Groups []string
 }
 
@@ -40,7 +41,7 @@ func summarize(p *spec.Problem) summary {
 	for _, st := range p.Statements {
 		s.Statements = append(s.Statements, st.Language)
 	}
-	for _, g := range p.Groups {
+	for g := range p.Testset.All() {
 		samples, total := 0, points.Value(0)
 		for _, t := range g.Tests {
 			if t.Sample {
@@ -48,9 +49,18 @@ func summarize(p *spec.Problem) summary {
 			}
 			total += t.Points
 		}
-		s.Groups = append(s.Groups, g.Name+"/"+g.Policy+"/"+itoa(len(g.Tests))+"/"+itoa(samples)+"/"+total.String())
+		s.Groups = append(s.Groups, g.Name+"/"+cmp.Or(g.Aggregate, "sum")+"/"+itoa(len(g.Tests))+"/"+itoa(samples)+"/"+total.String())
 	}
 	return s
+}
+
+// tests lists the tests of the testset, parents' first.
+func tests(p *spec.Problem) []spec.Test {
+	var result []spec.Test
+	for g := range p.Testset.All() {
+		result = append(result, g.Tests...)
+	}
+	return result
 }
 
 func itoa(n int) string { return points.Value(n * int(points.Unit)).String() }
@@ -60,30 +70,30 @@ func TestReadTestdataPackages(t *testing.T) {
 	icpcLib := []string{"testlib.h", "testlib.h", "testlib.h"}
 	cases := map[string]summary{
 		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
-			Groups: []string{"samples/complete/3.00/3.00/0.00", "secret/each/6.00/0.00/0.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "samples/sum/3.00/3.00/0.00", "secret/sum/6.00/0.00/0.00"}},
 		"gfmt/interactive-guess": {Type: "interactive", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "solutions/ok.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"samples/complete/1.00/1.00/0.00", "secret/each/1.00/0.00/0.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "samples/sum/1.00/1.00/0.00", "secret/sum/1.00/0.00/0.00"}},
 		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
-			Groups: []string{"/each/12.00/3.00/0.00"}},
+			Groups: []string{"/sum/12.00/3.00/0.00"}},
 		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/each/2.00/0.00/0.00"}},
+			Groups: []string{"/sum/2.00/0.00/0.00"}},
 		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/each/4.00/2.00/0.00"}},
+			Groups: []string{"/sum/4.00/2.00/0.00"}},
 		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "1/min/1.00/1.00/40.00", "2/min/1.00/0.00/60.00"}},
 		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
-			Groups: []string{"sample/each/3.00/3.00/0.00", "secret/each/9.00/0.00/0.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/3.00/3.00/0.00", "secret/sum/9.00/0.00/0.00"}},
 		// An interactive input is what the interactor reads, so none is published.
 		"icpc/interactive-guess": {Type: "interactive", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
-			Groups: []string{"sample/each/1.00/0.00/0.00", "secret/each/1.00/0.00/0.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/0.00/0.00", "secret/sum/1.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
-			Groups: []string{"/each/12.00/3.00/0.00"}},
+			Groups: []string{"/sum/12.00/3.00/0.00"}},
 		"pcms2/interactive-guess": {Type: "interactive", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/each/2.00/0.00/0.00"}},
+			Groups: []string{"/sum/2.00/0.00/0.00"}},
 		"pcms2/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"/each/4.00/2.00/0.00"}},
+			Groups: []string{"/sum/4.00/2.00/0.00"}},
 		"pcms2/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
+			Groups: []string{"/sum/0.00/0.00/0.00", "1/min/1.00/1.00/40.00", "2/min/1.00/0.00/60.00"}},
 	}
 	for name, want := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -100,22 +110,21 @@ func TestPolygonGroups(t *testing.T) {
 	require.Equal(t, "scoring", p.Type)
 	require.Equal(t, [2]string{"input.txt", "output.txt"}, [2]string{p.InputFile, p.OutputFile})
 	require.Equal(t, "gen.cpp", p.Generators[0].Path)
-	require.Len(t, p.Groups, 2)
-	require.Equal(t, spec.Group{Name: "samples", Policy: "each", Feedback: "complete", Tests: []spec.Test{{Input: "tests/01", Sample: true}}}, p.Groups[0])
-	require.Equal(t, spec.Group{Name: "main", Policy: "complete", Feedback: "points", DependsOn: []string{"samples"}, Tests: []spec.Test{
-		{Generator: "gen.cpp", Args: []string{"a b", "2"}},
-		{Generator: "gen.cpp", Args: []string{"3"}, Points: 100 * points.Unit},
-	}}, p.Groups[1])
+	require.Equal(t, spec.Group{Groups: []spec.Group{
+		{Name: "samples", Aggregate: "sum", Feedback: "complete", Tests: []spec.Test{{Input: "tests/01", Sample: true, Ordinal: 1}}},
+		{Name: "main", Aggregate: "min", Feedback: "points", Requires: []string{"samples"}, Tests: []spec.Test{
+			{Generator: "gen.cpp", Args: []string{"a b", "2"}, Points: 100 * points.Unit, Ordinal: 2},
+			{Generator: "gen.cpp", Args: []string{"3"}, Points: 100 * points.Unit, Ordinal: 3},
+		}},
+	}}, p.Testset)
 }
 
 func TestPolygonPretests(t *testing.T) {
 	p, err := Read(filepath.Join("..", "testdata", "polygon", "subtasks-groups"))
 	require.NoError(t, err)
 	var marks []bool
-	for _, g := range p.Groups {
-		for _, test := range g.Tests {
-			marks = append(marks, test.Pretest)
-		}
+	for _, test := range tests(p) {
+		marks = append(marks, test.Pretest)
 	}
 	require.Equal(t, []bool{true, false}, marks, "the pretest repeats test 1's input")
 }
@@ -125,7 +134,7 @@ func TestPolygonPretestMatching(t *testing.T) {
 	p, err := Read(dir)
 	require.NoError(t, err)
 	var marks []bool
-	for _, test := range p.Groups[0].Tests {
+	for _, test := range tests(p) {
 		marks = append(marks, test.Pretest)
 	}
 	require.Equal(t, []bool{true, false, true, true}, marks)
@@ -145,9 +154,9 @@ func TestICPCGroups(t *testing.T) {
 	p, err := Read(unpack(t, "icpc-groups"))
 	require.NoError(t, err)
 	require.Equal(t, summary{Type: "pass-fail", Checker: "checker.cpp", Library: []string{"testlib.h"},
-		Groups: []string{"sample/each/1.00/1.00/0.00", "secret/group1/each/1.00/0.00/0.00", "secret/group2/nested/each/1.00/0.00/0.00"}}, summarize(p))
+		Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/0.00/0.00/0.00", "secret/group1/sum/1.00/0.00/0.00", "secret/group2/sum/0.00/0.00/0.00", "secret/group2/nested/sum/1.00/0.00/0.00"}}, summarize(p))
 	require.Equal(t, "output_validators/checker/checker.cpp", p.Checker.Path)
-	require.Empty(t, p.Groups[2].Tests[0].Answer)
+	require.Empty(t, tests(p)[2].Answer)
 }
 
 func TestICPCProtocols(t *testing.T) {
@@ -172,13 +181,46 @@ func TestICPCProtocols(t *testing.T) {
 	require.Equal(t, "default_validator.cpp", p.Checker.Name)
 	require.Equal(t, []string{"icpc", "float_tolerance", "1e-6"}, append(protocols(p), p.Checker.Args...))
 	write(t, dir, "data/secret/testdata.yaml", "output_validator_flags: float_tolerance 1e-3\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, []string{"float_tolerance", "1e-3"}, p.Testset.Groups[1].CheckerArgs, "group flags follow validator_flags")
+	write(t, dir, "data/secret/testdata.yaml", "output_validator_flags: {name: v, flags: x}\n")
 	_, err = Read(dir)
-	require.ErrorContains(t, err, "validator flags in data/secret/testdata.yaml are not supported")
+	require.ErrorContains(t, err, "output_validator_flags other than a string is not supported")
 }
 
-func TestICPCRejectsScoring(t *testing.T) {
-	_, err := Read(unpack(t, "icpc-scoring"))
-	require.ErrorContains(t, err, "ICPC scoring problems are not supported")
+// The ICPC default grader settings are inherited down data/ and resolved per group.
+func TestICPCScoring(t *testing.T) {
+	dir := unpack(t, "icpc-scoring")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "scoring", p.Type)
+	test := func(input string, ordinal int, score points.Value, sample bool) spec.Test {
+		return spec.Test{Input: input, Answer: strings.TrimSuffix(input, ".in") + ".ans", Points: score * points.Unit, Ordinal: ordinal, Sample: sample}
+	}
+	require.Equal(t, spec.Group{Aggregate: "sum", Groups: []spec.Group{
+		{Name: "sample", Aggregate: "sum", Tests: []spec.Test{test("data/sample/1.in", 1, 0, true)}},
+		{Name: "secret", Aggregate: "sum", Tests: []spec.Test{test("data/secret/z.in", 5, 1, false)}, Groups: []spec.Group{
+			{Name: "secret/group1", Aggregate: "min", StopOnFailure: true, ValidatorArgs: []string{"--max", "10"},
+				Tests: []spec.Test{test("data/secret/group1/a.in", 2, 30, false), test("data/secret/group1/b.in", 3, 30, false)}},
+			{Name: "secret/group2", Aggregate: "min", Tests: []spec.Test{test("data/secret/group2/c.in", 4, 70, false)}},
+		}},
+	}}, p.Testset)
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom\ngrading:\n  on_reject: first_error\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	for g := range p.Testset.All() {
+		require.True(t, g.StopOnFailure, "problem.yaml grading overrides every group as on_reject: break")
+	}
+	for config, feature := range map[string]string{
+		"grading: custom\n":                     "grading \"custom\" is not supported",
+		"grader_flags: accept_if_any_accepted\n": "grader flag \"accept_if_any_accepted\" is not supported",
+		"reject_score: 1\n":                      "reject_score other than 0 is not supported",
+	} {
+		write(t, dir, "data/secret/group2/testdata.yaml", config)
+		_, err := Read(dir)
+		require.ErrorContains(t, err, feature)
+	}
 }
 
 func TestICPCRejectsSeveralOutputValidators(t *testing.T) {
@@ -207,7 +249,7 @@ func TestReadersStayInsidePackage(t *testing.T) {
   <tests><test method="manual"/></tests></testset></judging></problem>`)
 		p, err := Read(dir)
 		require.NoError(t, err)
-		require.Empty(t, p.Groups[0].Tests[0].Answer, pattern)
+		require.Empty(t, tests(p)[0].Answer, pattern)
 	}
 }
 
@@ -221,7 +263,7 @@ func TestReadersBoundMetadata(t *testing.T) {
 	write(t, dir, "statements/english/problem.tex", "\\exmp{1}{1}"+strings.Repeat(" ", spec.MaxMetadataBytes))
 	p, err := Read(dir)
 	require.NoError(t, err)
-	require.False(t, p.Groups[0].Tests[0].Sample, "an oversized statement is not inspected")
+	require.False(t, tests(p)[0].Sample, "an oversized statement is not inspected")
 	write(t, dir, "problem.xml", "<problem>"+strings.Repeat(" ", spec.MaxMetadataBytes)+"</problem>")
 	_, err = Read(dir)
 	require.ErrorContains(t, err, "larger than")

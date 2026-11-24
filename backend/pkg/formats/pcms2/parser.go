@@ -51,10 +51,10 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Solutions, err = solutions(fsys); err != nil {
 		return nil, err
 	}
-	if p.Groups, err = groups(fsys, testset, samples(fsys)); err != nil {
+	if p.Testset, err = groups(fsys, testset, samples(fsys)); err != nil {
 		return nil, err
 	}
-	p.Type = problemType(run, p.Groups)
+	p.Type = problemType(run, &p.Testset)
 	p.KeepInteractiveInputsPrivate()
 	p.Statements = statements(fsys, p, prob.Statements)
 	for _, name := range prob.Names {
@@ -87,11 +87,11 @@ func title(prob Problem) string {
 	return prob.ID
 }
 
-func problemType(run Run, groups []spec.Group) string {
+func problemType(run Run, root *spec.Group) string {
 	if run.Interactor != nil {
 		return "interactive"
 	}
-	for _, g := range groups {
+	for g := range root.All() {
 		for _, t := range g.Tests {
 			if t.Points > 0 {
 				return "scoring"
@@ -198,18 +198,18 @@ func regular(fsys fs.FS, name string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-// Named groups score together; ungrouped testsets score test by test.
-func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
-	var result []spec.Group
+// Named groups score together; ungrouped tests stay in the root and score one by one.
+func groups(fsys fs.FS, testset Testset, samples int) (spec.Group, error) {
+	root := spec.Group{}
 	index := map[string]int{}
 	for i, t := range testset.Tests {
 		number := i + 1
 		text := strconv.FormatFloat(t.Points, 'f', -1, 64)
 		weight, err := points.Parse(text)
 		if err != nil {
-			return nil, spec.Fail(pkg.ErrFormat, "problem.xml", text, "test %d has invalid points %s: %v", number, text, err)
+			return root, spec.Fail(pkg.ErrFormat, "problem.xml", text, "test %d has invalid points %s: %v", number, text, err)
 		}
-		test := spec.Test{Input: t.Input, Answer: t.Outcome, Points: weight, Sample: i < samples}
+		test := spec.Test{Input: t.Input, Answer: t.Outcome, Points: weight, Sample: i < samples, Ordinal: number}
 		if test.Input == "" {
 			test.Input = fmt.Sprintf(testset.InputPathPattern, number)
 		}
@@ -219,19 +219,30 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 		if !regular(fsys, test.Answer) {
 			test.Answer = ""
 		}
-		name, policy := t.Group, "complete"
-		if name == "" {
-			policy = "each"
+		if t.Group == "" {
+			root.Tests = append(root.Tests, test)
+			continue
 		}
-		n, ok := index[name]
+		n, ok := index[t.Group]
 		if !ok {
-			n = len(result)
-			index[name] = n
-			result = append(result, spec.Group{Name: name, Policy: policy})
+			n = len(root.Groups)
+			index[t.Group] = n
+			root.Groups = append(root.Groups, spec.Group{Name: t.Group, Aggregate: "min"})
 		}
-		result[n].Tests = append(result[n].Tests, test)
+		root.Groups[n].Tests = append(root.Groups[n].Tests, test)
 	}
-	return result, nil
+	// A group scores the sum of its tests only when all pass: the minimum of tests worth the whole group.
+	for i := range root.Groups {
+		g := &root.Groups[i]
+		total := points.Value(0)
+		for _, t := range g.Tests {
+			total += t.Points
+		}
+		for j := range g.Tests {
+			g.Tests[j].Points = total
+		}
+	}
+	return root, nil
 }
 
 // Packages listing only rendered statements still carry statements/<language>/problem.tex.

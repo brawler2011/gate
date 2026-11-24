@@ -43,11 +43,11 @@ type TestDetailItem struct {
 	TimeMs    int32  `json:"time_ms"`
 	MemoryKb  int32  `json:"memory_kb"`
 	Sample    bool   `json:"sample,omitempty"`
-	Subtask   string `json:"subtask,omitempty"`
+	Group     string `json:"group,omitempty"`
 }
 
-// SubtaskResult scores of a pass-fail or interactive problem are nil.
-type SubtaskResult struct {
+// GroupResult scores of a pass-fail or interactive problem are nil; the unnamed one is the testset.
+type GroupResult struct {
 	Name     string        `json:"name"`
 	Feedback string        `json:"feedback,omitempty"`
 	Score    *points.Value `json:"score,omitempty"`
@@ -70,7 +70,7 @@ type SubmissionTestDetails struct {
 	FailedTest        *int32            `json:"failed_test,omitempty"`
 	CompilerOutput    *string           `json:"compiler_output,omitempty"`
 	Tests             []TestDetailItem  `json:"tests,omitempty"`
-	Subtasks          []SubtaskResult   `json:"subtasks,omitempty"`
+	Groups            []GroupResult     `json:"groups,omitempty"`
 	FailedTestDetails *FailedTestDetail `json:"failed_test_details,omitempty"`
 }
 
@@ -293,9 +293,9 @@ func (d *SubmissionTestDetails) Feedback(test int32) string {
 	}
 	for _, t := range d.Tests {
 		if t.TestIndex == test {
-			for _, s := range d.Subtasks {
-				if s.Name == t.Subtask {
-					return s.Feedback
+			for _, g := range d.Groups {
+				if g.Name == t.Group {
+					return g.Feedback
 				}
 			}
 		}

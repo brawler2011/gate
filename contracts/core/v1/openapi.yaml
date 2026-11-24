@@ -3549,7 +3549,7 @@ components:
           type: string
           description: How the result misses the expected verdicts or points; empty when it matches.
     ProblemDraftValidator:
-      description: A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name.
+      description: A validator; the build fails when it rejects a test input. testlib validators receive --group with the name of the test's group.
       type: object
       required:
       - name
@@ -3557,7 +3557,7 @@ components:
       - source
       - protocol
       - args
-      - subtasks
+      - groups
       - tests
       properties:
         name:
@@ -3575,9 +3575,9 @@ components:
           description: Arguments after those of the protocol; only ICPC programs take them.
           items:
             type: string
-        subtasks:
+        groups:
           type: array
-          description: IDs of the subtasks whose tests the validator checks; empty checks every test.
+          description: IDs of the groups whose tests, subgroups included, the validator checks; empty checks every test.
           items:
             type: string
             format: uuid
@@ -3638,53 +3638,74 @@ components:
           type: string
         scoring:
           type: string
-    ProblemDraftSubtask:
+    ProblemDraftGroup:
+      description: >-
+        A test group scoring its tests and subgroups, taken in the order of
+        their first tests. The testset is the unnamed root group; other
+        names are unique.
       type: object
       required:
       - id
-      - ordinal
       - name
-      - points
-      - policy
+      - aggregate
+      - stop_on_failure
+      - requires
       - feedback
-      - depends_on
+      - checker_args
+      - validator_args
+      - groups
       properties:
         id:
           type: string
           format: uuid
-        ordinal:
-          type: integer
-          format: int64
         name:
           type: string
-        points:
-          type: number
-          format: double
-        policy:
+        aggregate:
+          description: How the scores of the tests and subgroups combine into the group's score.
           type: string
           enum:
-          - complete
-          - each
+          - sum
+          - min
+          - max
+          - avg
+        stop_on_failure:
+          description: Results after the first failed test or subgroup are left out of the score.
+          type: boolean
+        requires:
+          description: IDs of groups that must pass completely, their own requirements included, for this group to score.
+          type: array
+          items:
+            type: string
+            format: uuid
         feedback:
-          description: "What participants see of the group while the contest runs: every test, tests up to the first failure, the group's points, or nothing."
+          description: "What participants see of the group's own tests while the contest runs: every test, tests up to the first failure, the group's points, or nothing."
           type: string
           enum:
           - complete
           - icpc
           - points
           - none
-        depends_on:
+        checker_args:
+          description: Passed after the ICPC checker's or interactor's own arguments on the group's own tests.
           type: array
           items:
             type: string
-            format: uuid
+        validator_args:
+          description: Passed after the ICPC validators' own arguments on the group's own tests.
+          type: array
+          items:
+            type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftGroup'
     ProblemDraftTest:
       type: object
       required:
       - points
       - id
       - ordinal
-      - subtask_id
+      - group_id
       - sample
       - pretest
       - input
@@ -3702,7 +3723,8 @@ components:
         ordinal:
           type: integer
           format: int64
-        subtask_id:
+        group_id:
+          description: The group holding the test directly.
           type: string
           format: uuid
         sample:
@@ -3730,7 +3752,7 @@ components:
       description: >-
         The editable problem as typed entries without package paths. Programs
         are referred to by their names, unique within a role, and library
-        files are included by their names; subtasks and tests are referred to
+        files are included by their names; groups and tests are referred to
         by ID.
       type: object
       required:
@@ -3753,7 +3775,7 @@ components:
       - library
       - statements
       - assets
-      - subtasks
+      - testset
       - tests
       properties:
         problem_id:
@@ -3824,10 +3846,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemDraftAsset'
-        subtasks:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProblemDraftSubtask'
+        testset:
+          $ref: '#/components/schemas/ProblemDraftGroup'
         tests:
           type: array
           items:
@@ -5388,10 +5408,10 @@ components:
           example: 2048
         sample:
           type: boolean
-        subtask:
+        group:
           type: string
-    SubtaskResultModel:
-      description: "A subtask's score; pass-fail and interactive problems have none."
+    GroupResultModel:
+      description: "A group's score; pass-fail and interactive problems have none. The unnamed group is the testset."
       type: object
       required:
         - name
@@ -5476,10 +5496,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestDetailItemModel"
-        subtasks:
+        groups:
           type: array
           items:
-            $ref: "#/components/schemas/SubtaskResultModel"
+            $ref: "#/components/schemas/GroupResultModel"
         failed_test_details:
           $ref: "#/components/schemas/FailedTestDetailModel"
     SubmissionModel:

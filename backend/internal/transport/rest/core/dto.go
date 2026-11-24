@@ -359,16 +359,16 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 				TimeMs:    t.TimeMs,
 				MemoryKB:  t.MemoryKb,
 				Sample:    corev1.NewOptBool(t.Sample),
-				Subtask:   corev1.NewOptString(t.Subtask),
+				Group:     corev1.NewOptString(t.Group),
 			}
 		}
 	}
-	subtasks := make([]corev1.SubtaskResultModel, len(td.Subtasks))
-	for i, s := range td.Subtasks {
-		subtasks[i] = corev1.SubtaskResultModel{Name: s.Name}
-		if s.Score != nil && s.Points != nil {
-			subtasks[i].Score = corev1.NewOptFloat64(s.Score.Float64())
-			subtasks[i].Points = corev1.NewOptFloat64(s.Points.Float64())
+	groups := make([]corev1.GroupResultModel, len(td.Groups))
+	for i, g := range td.Groups {
+		groups[i] = corev1.GroupResultModel{Name: g.Name}
+		if g.Score != nil && g.Points != nil {
+			groups[i].Score = corev1.NewOptFloat64(g.Score.Float64())
+			groups[i].Points = corev1.NewOptFloat64(g.Points.Float64())
 		}
 	}
 
@@ -388,7 +388,7 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 	return &corev1.SubmissionTestDetailsModel{
 		CompilerOutput:    stringPtrToOptNilString(td.CompilerOutput),
 		Tests:             tests,
-		Subtasks:          subtasks,
+		Groups:            groups,
 		FailedTestDetails: failedTestDetails,
 	}
 }

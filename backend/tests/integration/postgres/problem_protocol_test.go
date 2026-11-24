@@ -316,7 +316,7 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))
 	unused := f.pack(t, f.problem, time.Now().Add(-2*time.Hour))
-	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10})
+	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Groups: 10})
 
 	var unusedObject, pinnedObject uuid.UUID
 	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT object_id FROM problem_packages WHERE id=$1`, unused).Scan(&unusedObject))

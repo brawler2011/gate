@@ -24,7 +24,7 @@ import (
 	"golang.org/x/tools/txtar"
 )
 
-var importQuotas = model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 1000, Tests: 1000, Components: 100, Subtasks: 100}
+var importQuotas = model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 1000, Tests: 1000, Components: 100, Groups: 100}
 
 func newImportUseCase(t *testing.T) *DraftUseCase {
 	return &DraftUseCase{
@@ -428,8 +428,8 @@ func TestImportKeepsSeveralValidators(t *testing.T) {
 		result := map[string][]string{}
 		for _, v := range plan.draft.Validators {
 			result[v.Name] = []string{}
-			for _, id := range v.Subtasks {
-				result[v.Name] = append(result[v.Name], plan.draft.Subtask(id).Name)
+			for _, id := range v.Groups {
+				result[v.Name] = append(result[v.Name], plan.draft.Group(id).Name)
 			}
 		}
 		return result
