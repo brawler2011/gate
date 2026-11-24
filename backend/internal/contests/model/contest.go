@@ -120,6 +120,7 @@ type ContestUpdateInput struct {
 	ID           uuid.UUID
 	Login        *string
 	Title        *string
+	Place        *string
 	Description  *string
 	Visibility   *ContestVisibility
 	Settings     ContestSettingsPatch
@@ -201,13 +202,15 @@ type Contest struct {
 	OrganizationLogin string
 	Visibility        ContestVisibility
 	Title             string
-	Login             string
-	Description       string
-	Settings          ContestSettings
-	StartTime         *time.Time
-	EndTime           *time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	// Empty prints the organization name in booklets.
+	Place       string
+	Login       string
+	Description string
+	Settings    ContestSettings
+	StartTime   *time.Time
+	EndTime     *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ContestsList struct {

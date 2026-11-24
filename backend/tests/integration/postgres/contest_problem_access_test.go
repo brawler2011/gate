@@ -13,7 +13,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/postgres"
-	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -193,10 +192,6 @@ func (s *pinnedContestStatement) OpenPDF(context.Context, uuid.UUID, uuid.UUID, 
 	return nil, pkg.ErrNotFound
 }
 
-func (s *pinnedContestStatement) ReadPrinted(context.Context, uuid.UUID, uuid.UUID, string) (problems.Printed, error) {
-	return problems.Printed{}, pkg.ErrNotFound
-}
-
 func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 	t.Parallel()
 	f := newContestProblemFixture(t)
@@ -211,7 +206,7 @@ func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 	contest, err := f.repo.GetContest(f.ctx, f.contest)
 	require.NoError(t, err)
 	statements := &pinnedContestStatement{}
-	reader := contests.NewDetailsReader(f.repo, statements, f.loader, nil)
+	reader := contests.NewDetailsReader(f.repo, statements, f.loader)
 	details, err := reader.GetContestProblemDetails(visitor, contest.ID, f.problem)
 	require.NoError(t, err)
 	require.Equal(t, "Pinned statement", details.Statement.Legend)
@@ -261,7 +256,7 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 	contest, err := f.repo.GetContest(f.ctx, f.contest)
 	require.NoError(t, err)
 	statements := &pinnedContestStatement{}
-	reader := contests.NewDetailsReader(f.repo, statements, f.loader, nil)
+	reader := contests.NewDetailsReader(f.repo, statements, f.loader)
 	visitor := accessmodel.WithUser(context.Background(), accessmodel.Guest)
 	details, err := reader.GetContestProblemDetails(visitor, contest.ID, f.problem)
 	require.NoError(t, err)

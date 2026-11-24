@@ -46,6 +46,8 @@ type CommandTxStore interface {
 	UpdateContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	DeleteContestProblem(context.Context, contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(context.Context, uuid.UUID, []contestsmodel.ContestProblemReorderItem) error
+	// QueueBooklets runs after the contest's changes so it keys them in.
+	QueueBooklets(context.Context, uuid.UUID) error
 	UpdateContestMember(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestRole) error
 	GetContestTeam(context.Context, uuid.UUID, uuid.UUID) (contestsmodel.ContestTeam, error)
 	ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (contestsmodel.PackageRef, error)

@@ -20,7 +20,7 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
     view_problems: false, submit: false, list_own_submissions: false, list_submissions: false,
     view_submission_details: false, view_scoreboard: false, manage: false, delete: false, start_virtual: false,
   },
-  id, login: id, organization_id: "org", organization_login: "school", title: id,
+  id, login: id, organization_id: "org", organization_login: "school", title: id, place: "",
   description: "", visibility: "public", scoreboard_during: "public", scoreboard_after: "public",
   submissions_during: "public", submissions_after: "public", sources_during: "public", sources_after: "public",
   reports_during: "public", reports_after: "public", feedback_during: "full", feedback_after: "full",

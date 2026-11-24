@@ -14,7 +14,7 @@ const org: OrganizationModel = {
     manage: false, manage_members: false, delete: false, list_members: false,
     create: false, invite: false, join: false, request_join: false, leave: false,
   },
-  id: "org", login: "school", name: "School", join_policy: "by_request" as OrganizationModel["join_policy"],
+  id: "org", login: "school", name: "School", join_policy: "by_request" as OrganizationModel["join_policy"], time_zone: "UTC",
   created_at: "2026-10-01", updated_at: "2026-10-01",
 };
 const user: UserModel = {

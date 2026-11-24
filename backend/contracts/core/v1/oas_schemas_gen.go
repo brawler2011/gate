@@ -691,6 +691,109 @@ func (s *ContestAnnouncementModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Ref: #/components/schemas/ContestBooklet
+type ContestBooklet struct {
+	Language string `json:"language"`
+	// Building until the booklet for the contest's current problems and settings is built.
+	State ContestBookletState `json:"state"`
+	// Why the build failed; shown to contest managers only.
+	Diagnostic OptString `json:"diagnostic"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ContestBooklet) GetLanguage() string {
+	return s.Language
+}
+
+// GetState returns the value of State.
+func (s *ContestBooklet) GetState() ContestBookletState {
+	return s.State
+}
+
+// GetDiagnostic returns the value of Diagnostic.
+func (s *ContestBooklet) GetDiagnostic() OptString {
+	return s.Diagnostic
+}
+
+// SetLanguage sets the value of Language.
+func (s *ContestBooklet) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetState sets the value of State.
+func (s *ContestBooklet) SetState(val ContestBookletState) {
+	s.State = val
+}
+
+// SetDiagnostic sets the value of Diagnostic.
+func (s *ContestBooklet) SetDiagnostic(val OptString) {
+	s.Diagnostic = val
+}
+
+// Building until the booklet for the contest's current problems and settings is built.
+type ContestBookletState string
+
+const (
+	ContestBookletStateBuilding ContestBookletState = "building"
+	ContestBookletStateReady    ContestBookletState = "ready"
+	ContestBookletStateFailed   ContestBookletState = "failed"
+)
+
+// AllValues returns all ContestBookletState values.
+func (ContestBookletState) AllValues() []ContestBookletState {
+	return []ContestBookletState{
+		ContestBookletStateBuilding,
+		ContestBookletStateReady,
+		ContestBookletStateFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestBookletState) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestBookletStateBuilding:
+		return []byte(s), nil
+	case ContestBookletStateReady:
+		return []byte(s), nil
+	case ContestBookletStateFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestBookletState) UnmarshalText(data []byte) error {
+	switch ContestBookletState(data) {
+	case ContestBookletStateBuilding:
+		*s = ContestBookletStateBuilding
+		return nil
+	case ContestBookletStateReady:
+		*s = ContestBookletStateReady
+		return nil
+	case ContestBookletStateFailed:
+		*s = ContestBookletStateFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ContestBooklets
+type ContestBooklets struct {
+	Booklets []ContestBooklet `json:"booklets"`
+}
+
+// GetBooklets returns the value of Booklets.
+func (s *ContestBooklets) GetBooklets() []ContestBooklet {
+	return s.Booklets
+}
+
+// SetBooklets sets the value of Booklets.
+func (s *ContestBooklets) SetBooklets(val []ContestBooklet) {
+	s.Booklets = val
+}
+
 // Contest clarification data.
 // Ref: #/components/schemas/ContestClarificationModel
 type ContestClarificationModel struct {
@@ -1309,18 +1412,20 @@ type ContestModel struct {
 	OrganizationID    uuid.UUID               `json:"organization_id"`
 	OrganizationLogin string                  `json:"organization_login"`
 	Title             string                  `json:"title"`
-	Description       string                  `json:"description"`
-	Visibility        string                  `json:"visibility"`
-	ScoreboardDuring  ContestScope            `json:"scoreboard_during"`
-	ScoreboardAfter   ContestScope            `json:"scoreboard_after"`
-	SubmissionsDuring ContestScope            `json:"submissions_during"`
-	SubmissionsAfter  ContestScope            `json:"submissions_after"`
-	SourcesDuring     ContestScope            `json:"sources_during"`
-	SourcesAfter      ContestScope            `json:"sources_after"`
-	ReportsDuring     ContestScope            `json:"reports_during"`
-	ReportsAfter      ContestScope            `json:"reports_after"`
-	FeedbackDuring    FeedbackLevel           `json:"feedback_during"`
-	FeedbackAfter     FeedbackLevel           `json:"feedback_after"`
+	// Printed in booklet headers; empty prints the organization name.
+	Place             string        `json:"place"`
+	Description       string        `json:"description"`
+	Visibility        string        `json:"visibility"`
+	ScoreboardDuring  ContestScope  `json:"scoreboard_during"`
+	ScoreboardAfter   ContestScope  `json:"scoreboard_after"`
+	SubmissionsDuring ContestScope  `json:"submissions_during"`
+	SubmissionsAfter  ContestScope  `json:"submissions_after"`
+	SourcesDuring     ContestScope  `json:"sources_during"`
+	SourcesAfter      ContestScope  `json:"sources_after"`
+	ReportsDuring     ContestScope  `json:"reports_during"`
+	ReportsAfter      ContestScope  `json:"reports_after"`
+	FeedbackDuring    FeedbackLevel `json:"feedback_during"`
+	FeedbackAfter     FeedbackLevel `json:"feedback_after"`
 	// Hide attempts made after the freeze instead of showing them as pending.
 	FreezeHidesAttempts bool `json:"freeze_hides_attempts"`
 	// When the scoreboard unfreezes; null unfreezes it at the contest end.
@@ -1373,6 +1478,11 @@ func (s *ContestModel) GetOrganizationLogin() string {
 // GetTitle returns the value of Title.
 func (s *ContestModel) GetTitle() string {
 	return s.Title
+}
+
+// GetPlace returns the value of Place.
+func (s *ContestModel) GetPlace() string {
+	return s.Place
 }
 
 // GetDescription returns the value of Description.
@@ -1543,6 +1653,11 @@ func (s *ContestModel) SetOrganizationLogin(val string) {
 // SetTitle sets the value of Title.
 func (s *ContestModel) SetTitle(val string) {
 	s.Title = val
+}
+
+// SetPlace sets the value of Place.
+func (s *ContestModel) SetPlace(val string) {
+	s.Place = val
 }
 
 // SetDescription sets the value of Description.
@@ -3205,6 +3320,7 @@ const (
 	ErrorCodePackageNotReady             ErrorCode = "package_not_ready"
 	ErrorCodeStaleRevision               ErrorCode = "stale_revision"
 	ErrorCodeBuildFinished               ErrorCode = "build_finished"
+	ErrorCodeBookletNotReady             ErrorCode = "booklet_not_ready"
 	ErrorCodeRequired                    ErrorCode = "required"
 	ErrorCodeLength                      ErrorCode = "length"
 	ErrorCodeFormat                      ErrorCode = "format"
@@ -3272,6 +3388,7 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodePackageNotReady,
 		ErrorCodeStaleRevision,
 		ErrorCodeBuildFinished,
+		ErrorCodeBookletNotReady,
 		ErrorCodeRequired,
 		ErrorCodeLength,
 		ErrorCodeFormat,
@@ -3384,6 +3501,8 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeStaleRevision:
 		return []byte(s), nil
 	case ErrorCodeBuildFinished:
+		return []byte(s), nil
+	case ErrorCodeBookletNotReady:
 		return []byte(s), nil
 	case ErrorCodeRequired:
 		return []byte(s), nil
@@ -3561,6 +3680,9 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeBuildFinished:
 		*s = ErrorCodeBuildFinished
+		return nil
+	case ErrorCodeBookletNotReady:
+		*s = ErrorCodeBookletNotReady
 		return nil
 	case ErrorCodeRequired:
 		*s = ErrorCodeRequired
@@ -8168,8 +8290,10 @@ type OrganizationModel struct {
 	Name        string                       `json:"name"`
 	Description OptString                    `json:"description"`
 	JoinPolicy  OrganizationModelJoinPolicy  `json:"join_policy"`
-	CreatedAt   time.Time                    `json:"created_at"`
-	UpdatedAt   time.Time                    `json:"updated_at"`
+	// IANA time zone; booklets print contest dates in it.
+	TimeZone  string    `json:"time_zone"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // GetPermissions returns the value of Permissions.
@@ -8200,6 +8324,11 @@ func (s *OrganizationModel) GetDescription() OptString {
 // GetJoinPolicy returns the value of JoinPolicy.
 func (s *OrganizationModel) GetJoinPolicy() OrganizationModelJoinPolicy {
 	return s.JoinPolicy
+}
+
+// GetTimeZone returns the value of TimeZone.
+func (s *OrganizationModel) GetTimeZone() string {
+	return s.TimeZone
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -8240,6 +8369,11 @@ func (s *OrganizationModel) SetDescription(val OptString) {
 // SetJoinPolicy sets the value of JoinPolicy.
 func (s *OrganizationModel) SetJoinPolicy(val OrganizationModelJoinPolicy) {
 	s.JoinPolicy = val
+}
+
+// SetTimeZone sets the value of TimeZone.
+func (s *OrganizationModel) SetTimeZone(val string) {
+	s.TimeZone = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -13660,8 +13794,10 @@ type UpdateContestOK struct{}
 // Fields for the update contest request.
 // Ref: #/components/schemas/UpdateContestRequestModel
 type UpdateContestRequestModel struct {
-	Login             OptString        `json:"login"`
-	Title             OptString        `json:"title"`
+	Login OptString `json:"login"`
+	Title OptString `json:"title"`
+	// Printed in booklet headers; empty prints the organization name.
+	Place             OptString        `json:"place"`
 	Description       OptString        `json:"description"`
 	Visibility        OptString        `json:"visibility"`
 	ScoreboardDuring  OptContestScope  `json:"scoreboard_during"`
@@ -13705,6 +13841,11 @@ func (s *UpdateContestRequestModel) GetLogin() OptString {
 // GetTitle returns the value of Title.
 func (s *UpdateContestRequestModel) GetTitle() OptString {
 	return s.Title
+}
+
+// GetPlace returns the value of Place.
+func (s *UpdateContestRequestModel) GetPlace() OptString {
+	return s.Place
 }
 
 // GetDescription returns the value of Description.
@@ -13845,6 +13986,11 @@ func (s *UpdateContestRequestModel) SetLogin(val OptString) {
 // SetTitle sets the value of Title.
 func (s *UpdateContestRequestModel) SetTitle(val OptString) {
 	s.Title = val
+}
+
+// SetPlace sets the value of Place.
+func (s *UpdateContestRequestModel) SetPlace(val OptString) {
+	s.Place = val
 }
 
 // SetDescription sets the value of Description.
@@ -14087,6 +14233,8 @@ type UpdateOrganizationRequestModel struct {
 	Name        OptString                                   `json:"name"`
 	Description OptString                                   `json:"description"`
 	JoinPolicy  OptUpdateOrganizationRequestModelJoinPolicy `json:"join_policy"`
+	// IANA time zone name.
+	TimeZone OptString `json:"time_zone"`
 }
 
 // GetLogin returns the value of Login.
@@ -14109,6 +14257,11 @@ func (s *UpdateOrganizationRequestModel) GetJoinPolicy() OptUpdateOrganizationRe
 	return s.JoinPolicy
 }
 
+// GetTimeZone returns the value of TimeZone.
+func (s *UpdateOrganizationRequestModel) GetTimeZone() OptString {
+	return s.TimeZone
+}
+
 // SetLogin sets the value of Login.
 func (s *UpdateOrganizationRequestModel) SetLogin(val OptString) {
 	s.Login = val
@@ -14127,6 +14280,11 @@ func (s *UpdateOrganizationRequestModel) SetDescription(val OptString) {
 // SetJoinPolicy sets the value of JoinPolicy.
 func (s *UpdateOrganizationRequestModel) SetJoinPolicy(val OptUpdateOrganizationRequestModelJoinPolicy) {
 	s.JoinPolicy = val
+}
+
+// SetTimeZone sets the value of TimeZone.
+func (s *UpdateOrganizationRequestModel) SetTimeZone(val OptString) {
+	s.TimeZone = val
 }
 
 type UpdateOrganizationRequestModelJoinPolicy string

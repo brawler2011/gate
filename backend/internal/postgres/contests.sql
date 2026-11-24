@@ -30,6 +30,7 @@ WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2);
 UPDATE contests
 SET login = COALESCE(sqlc.narg('login'), login),
     title = COALESCE(sqlc.narg('title'), title),
+    place = COALESCE(sqlc.narg('place'), place),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
     join_policy = COALESCE(sqlc.narg('join_policy'), join_policy),

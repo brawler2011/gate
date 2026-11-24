@@ -79,7 +79,7 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 const createContest = `-- name: CreateContest :one
 INSERT INTO contests (id, organization_id, visibility, title, login, description, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, organization_id, visibility, title, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, pretests, languages, start_time, end_time, created_at, updated_at
+RETURNING id, organization_id, visibility, title, place, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, pretests, languages, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -110,6 +110,7 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.OrganizationID,
 		&i.Visibility,
 		&i.Title,
+		&i.Place,
 		&i.Login,
 		&i.Description,
 		&i.JoinPolicy,
@@ -235,7 +236,7 @@ func (q *Queries) FinishVirtualRun(ctx context.Context, arg FinishVirtualRunPara
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1
@@ -254,6 +255,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 		&i.Contest.OrganizationID,
 		&i.Contest.Visibility,
 		&i.Contest.Title,
+		&i.Contest.Place,
 		&i.Contest.Login,
 		&i.Contest.Description,
 		&i.Contest.JoinPolicy,
@@ -289,7 +291,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 }
 
 const getContestByLogin = `-- name: GetContestByLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2)
@@ -313,6 +315,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 		&i.Contest.OrganizationID,
 		&i.Contest.Visibility,
 		&i.Contest.Title,
+		&i.Contest.Place,
 		&i.Contest.Login,
 		&i.Contest.Description,
 		&i.Contest.JoinPolicy,
@@ -348,7 +351,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 }
 
 const getContestByOrgLoginAndContestLogin = `-- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2)
@@ -372,6 +375,7 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 		&i.Contest.OrganizationID,
 		&i.Contest.Visibility,
 		&i.Contest.Title,
+		&i.Contest.Place,
 		&i.Contest.Login,
 		&i.Contest.Description,
 		&i.Contest.JoinPolicy,
@@ -959,32 +963,33 @@ const updateContest = `-- name: UpdateContest :exec
 UPDATE contests
 SET login = COALESCE($2, login),
     title = COALESCE($3, title),
-    description = COALESCE($4, description),
-    visibility = COALESCE($5, visibility),
-    join_policy = COALESCE($6, join_policy),
-    scoreboard_during = COALESCE($7, scoreboard_during),
-    scoreboard_after = COALESCE($8, scoreboard_after),
-    submissions_during = COALESCE($9, submissions_during),
-    submissions_after = COALESCE($10, submissions_after),
-    sources_during = COALESCE($11, sources_during),
-    sources_after = COALESCE($12, sources_after),
-    reports_during = COALESCE($13, reports_during),
-    reports_after = COALESCE($14, reports_after),
-    feedback_during = COALESCE($15, feedback_during),
-    feedback_after = COALESCE($16, feedback_after),
-    freeze_status = COALESCE($17, freeze_status),
-    freeze_duration_minutes = CASE WHEN $18::boolean THEN $19::integer ELSE freeze_duration_minutes END,
-    freeze_hides_attempts = COALESCE($20, freeze_hides_attempts),
-    unfreeze_time = CASE WHEN $21::boolean THEN $22::timestamptz ELSE unfreeze_time END,
-    hide_statements = COALESCE($23, hide_statements),
-    allow_clarifications = COALESCE($24, allow_clarifications),
-    enable_drafts = COALESCE($25, enable_drafts),
-    enable_upsolving = COALESCE($26, enable_upsolving),
-    allow_virtual = COALESCE($27, allow_virtual),
-    pretests = COALESCE($28, pretests),
-    languages = COALESCE($29::text[], languages),
-    start_time = CASE WHEN $30::boolean THEN $31::timestamptz ELSE start_time END,
-    end_time = CASE WHEN $32::boolean THEN $33::timestamptz ELSE end_time END
+    place = COALESCE($4, place),
+    description = COALESCE($5, description),
+    visibility = COALESCE($6, visibility),
+    join_policy = COALESCE($7, join_policy),
+    scoreboard_during = COALESCE($8, scoreboard_during),
+    scoreboard_after = COALESCE($9, scoreboard_after),
+    submissions_during = COALESCE($10, submissions_during),
+    submissions_after = COALESCE($11, submissions_after),
+    sources_during = COALESCE($12, sources_during),
+    sources_after = COALESCE($13, sources_after),
+    reports_during = COALESCE($14, reports_during),
+    reports_after = COALESCE($15, reports_after),
+    feedback_during = COALESCE($16, feedback_during),
+    feedback_after = COALESCE($17, feedback_after),
+    freeze_status = COALESCE($18, freeze_status),
+    freeze_duration_minutes = CASE WHEN $19::boolean THEN $20::integer ELSE freeze_duration_minutes END,
+    freeze_hides_attempts = COALESCE($21, freeze_hides_attempts),
+    unfreeze_time = CASE WHEN $22::boolean THEN $23::timestamptz ELSE unfreeze_time END,
+    hide_statements = COALESCE($24, hide_statements),
+    allow_clarifications = COALESCE($25, allow_clarifications),
+    enable_drafts = COALESCE($26, enable_drafts),
+    enable_upsolving = COALESCE($27, enable_upsolving),
+    allow_virtual = COALESCE($28, allow_virtual),
+    pretests = COALESCE($29, pretests),
+    languages = COALESCE($30::text[], languages),
+    start_time = CASE WHEN $31::boolean THEN $32::timestamptz ELSE start_time END,
+    end_time = CASE WHEN $33::boolean THEN $34::timestamptz ELSE end_time END
 WHERE id = $1
 `
 
@@ -992,6 +997,7 @@ type UpdateContestParams struct {
 	ID                    uuid.UUID                        `json:"id"`
 	Login                 *string                          `json:"login"`
 	Title                 *string                          `json:"title"`
+	Place                 *string                          `json:"place"`
 	Description           *string                          `json:"description"`
 	Visibility            *contestsmodel.ContestVisibility `json:"visibility"`
 	JoinPolicy            *accessmodel.JoinPolicy          `json:"join_policy"`
@@ -1029,6 +1035,7 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.ID,
 		arg.Login,
 		arg.Title,
+		arg.Place,
 		arg.Description,
 		arg.Visibility,
 		arg.JoinPolicy,

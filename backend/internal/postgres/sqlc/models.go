@@ -634,6 +634,7 @@ type Contest struct {
 	OrganizationID        uuid.UUID                       `json:"organization_id"`
 	Visibility            contestsmodel.ContestVisibility `json:"visibility"`
 	Title                 string                          `json:"title"`
+	Place                 string                          `json:"place"`
 	Login                 string                          `json:"login"`
 	Description           string                          `json:"description"`
 	JoinPolicy            accessmodel.JoinPolicy          `json:"join_policy"`
@@ -680,6 +681,20 @@ type ContestAnnouncement struct {
 	Body      string     `json:"body"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type ContestBooklet struct {
+	ContestID      uuid.UUID  `json:"contest_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Language       string     `json:"language"`
+	Key            string     `json:"key"`
+	State          string     `json:"state"`
+	Attempt        int32      `json:"attempt"`
+	LeaseToken     *uuid.UUID `json:"lease_token"`
+	LeaseDeadline  *time.Time `json:"lease_deadline"`
+	ObjectID       *uuid.UUID `json:"object_id"`
+	Diagnostic     *string    `json:"diagnostic"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type ContestClarification struct {
@@ -803,6 +818,7 @@ type Organization struct {
 	CreatedAt   time.Time              `json:"created_at"`
 	UpdatedAt   time.Time              `json:"updated_at"`
 	JoinPolicy  accessmodel.JoinPolicy `json:"join_policy"`
+	TimeZone    string                 `json:"time_zone"`
 }
 
 type OrganizationJoinRequest struct {

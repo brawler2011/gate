@@ -51,6 +51,7 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *organ
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
 		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
+		TimeZone:    org.TimeZone,
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -72,6 +73,7 @@ func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUI
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
 		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
+		TimeZone:    org.TimeZone,
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -93,6 +95,7 @@ func (r *OrganizationsRepo) GetOrganizationByLogin(ctx context.Context, login st
 		Description: org.Description,
 		AvatarURL:   org.AvatarUrl,
 		JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
+		TimeZone:    org.TimeZone,
 		CreatedAt:   org.CreatedAt,
 		UpdatedAt:   org.UpdatedAt,
 	}, nil
@@ -127,6 +130,7 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *organ
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
 			JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
+			TimeZone:    org.TimeZone,
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}
@@ -155,6 +159,7 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 	if input.JoinPolicy != nil {
 		params.JoinPolicy = input.JoinPolicy
 	}
+	params.TimeZone = input.TimeZone
 
 	if err := r.q.UpdateOrganization(ctx, params); err != nil {
 		return dbError("update organization", err)
@@ -307,6 +312,7 @@ func (r *OrganizationsRepo) GetUserOrganizations(ctx context.Context, userID uui
 			Description: org.Description,
 			AvatarURL:   org.AvatarUrl,
 			JoinPolicy:  accessmodel.JoinPolicy(org.JoinPolicy),
+			TimeZone:    org.TimeZone,
 			CreatedAt:   org.CreatedAt,
 			UpdatedAt:   org.UpdatedAt,
 		}

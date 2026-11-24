@@ -173,6 +173,8 @@ CREATE TABLE organizations (
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     join_policy join_policy DEFAULT 'by_request'::join_policy NOT NULL,
+    -- IANA name; booklets print contest dates in it.
+    time_zone text DEFAULT 'UTC'::text NOT NULL,
     CONSTRAINT organizations_login_check CHECK ((length(login) > 0)),
     CONSTRAINT organizations_name_check CHECK ((length(name) > 0)),
     CONSTRAINT organizations_pkey PRIMARY KEY (id)
@@ -254,7 +256,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
@@ -438,6 +440,8 @@ CREATE TABLE contests (
     organization_id uuid NOT NULL,
     visibility contest_visibility DEFAULT 'private'::contest_visibility NOT NULL,
     title text NOT NULL,
+    -- Printed in booklet headers; empty prints the organization name.
+    place text DEFAULT ''::text NOT NULL,
     login varchar(64) NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     join_policy join_policy DEFAULT 'open'::join_policy NOT NULL,
@@ -526,6 +530,31 @@ CREATE TABLE contest_problems (
 );
 CREATE INDEX contest_problems_package_id_idx ON contest_problems USING btree (package_id);
 CREATE INDEX contest_problems_problem_id_idx ON contest_problems USING btree (problem_id);
+
+-- One booklet per contest and statement language; key hashes everything it prints, so a booklet is current iff its key matches.
+CREATE TABLE contest_booklets (
+    contest_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    language text NOT NULL,
+    key text NOT NULL,
+    state text DEFAULT 'queued'::text NOT NULL,
+    attempt integer DEFAULT 0 NOT NULL,
+    lease_token uuid,
+    lease_deadline timestamptz,
+    object_id uuid,
+    diagnostic text,
+    updated_at timestamptz DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT contest_booklets_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text]))),
+    CONSTRAINT contest_booklets_lease_check CHECK (((state = 'running'::text) = ((lease_token IS NOT NULL) AND (lease_deadline IS NOT NULL)))),
+    CONSTRAINT contest_booklets_object_check CHECK (((state = 'succeeded'::text) = (object_id IS NOT NULL))),
+    CONSTRAINT contest_booklets_diagnostic_check CHECK (((state = 'failed'::text) = (diagnostic IS NOT NULL))),
+    CONSTRAINT contest_booklets_key_check CHECK ((key ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT contest_booklets_pkey PRIMARY KEY (contest_id, language),
+    CONSTRAINT contest_booklets_contest_id_fkey FOREIGN KEY (contest_id, organization_id) REFERENCES contests(id, organization_id) ON DELETE CASCADE,
+    CONSTRAINT contest_booklets_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT
+);
+CREATE INDEX contest_booklets_queue ON contest_booklets USING btree (updated_at) WHERE (state = ANY (ARRAY['queued'::text, 'running'::text]));
+CREATE INDEX contest_booklets_object ON contest_booklets USING btree (object_id);
 
 CREATE TABLE contest_user_problem_blocks (
     contest_id uuid NOT NULL,

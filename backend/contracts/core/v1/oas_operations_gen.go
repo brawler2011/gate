@@ -88,6 +88,7 @@ const (
 	InviteContestParticipantOperation           OperationName = "InviteContestParticipant"
 	InviteOrganizationMemberOperation           OperationName = "InviteOrganizationMember"
 	ListContestAnnouncementsOperation           OperationName = "ListContestAnnouncements"
+	ListContestBookletsOperation                OperationName = "ListContestBooklets"
 	ListContestClarificationsOperation          OperationName = "ListContestClarifications"
 	ListContestDraftsOperation                  OperationName = "ListContestDrafts"
 	ListContestInvitationsOperation             OperationName = "ListContestInvitations"

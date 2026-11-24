@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -223,9 +222,12 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		}
 	}
 
-	var reqTitle, reqDesc, reqVisibility *string
+	var reqTitle, reqPlace, reqDesc, reqVisibility *string
 	if req.Title.IsSet() {
 		reqTitle = &req.Title.Value
+	}
+	if req.Place.IsSet() {
+		reqPlace = &req.Place.Value
 	}
 	if req.Description.IsSet() {
 		reqDesc = &req.Description.Value
@@ -246,6 +248,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		ID:           params.ContestID,
 		Login:        newLogin,
 		Title:        reqTitle,
+		Place:        reqPlace,
 		Description:  reqDesc,
 		Visibility:   reqVisibility,
 		Settings:     settings,
@@ -316,11 +319,30 @@ func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.G
 }
 
 func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params corev1.DownloadContestStatementsPdfParams) (corev1.DownloadContestStatementsPdfOK, error) {
-	data, err := h.ContestDetails.ReadBooklet(ctx, params.ContestID, params.Lang.Or("ru"))
+	file, err := h.Booklets.Open(ctx, params.ContestID, params.Lang)
 	if err != nil {
 		return corev1.DownloadContestStatementsPdfOK{}, err
 	}
-	return corev1.DownloadContestStatementsPdfOK{Data: bytes.NewReader(data)}, nil
+	return corev1.DownloadContestStatementsPdfOK{Data: file}, nil
+}
+
+func (h *CoreServer) ListContestBooklets(ctx context.Context, params corev1.ListContestBookletsParams) (*corev1.ContestBooklets, error) {
+	booklets, err := h.Booklets.List(ctx, params.ContestID)
+	if err != nil {
+		return nil, err
+	}
+	result := &corev1.ContestBooklets{Booklets: make([]corev1.ContestBooklet, len(booklets))}
+	for i, b := range booklets {
+		state := corev1.ContestBookletStateBuilding
+		switch b.State {
+		case contestsmodel.BookletSucceeded:
+			state = corev1.ContestBookletStateReady
+		case contestsmodel.BookletFailed:
+			state = corev1.ContestBookletStateFailed
+		}
+		result.Booklets[i] = corev1.ContestBooklet{Language: b.Language, State: state, Diagnostic: stringToOptString(b.Diagnostic)}
+	}
+	return result, nil
 }
 
 func (h *CoreServer) DownloadContestProblemStatementPdf(ctx context.Context, params corev1.DownloadContestProblemStatementPdfParams) (corev1.DownloadContestProblemStatementPdfOK, error) {

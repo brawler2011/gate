@@ -11,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access/accesstest"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -64,15 +63,17 @@ func (s *detailStatements) OpenPDF(context.Context, uuid.UUID, uuid.UUID, string
 	return io.NopCloser(strings.NewReader("pdf")), nil
 }
 
-func (s *detailStatements) ReadPrinted(context.Context, uuid.UUID, uuid.UUID, string) (problems.Printed, error) {
-	return problems.Printed{Statement: problemsmodel.DraftStatement{Legend: "Visible statement"}}, nil
+type detailBooklets struct{ downloads int }
+
+func (b *detailBooklets) ListBooklets(_ context.Context, contestID uuid.UUID) ([]contestsmodel.Booklet, error) {
+	booklet := contestsmodel.Booklet{BookletInputs: contestsmodel.BookletInputs{ContestID: contestID, Language: "ru"}}
+	booklet.Stored = &contestsmodel.StoredBooklet{Key: booklet.Key(), State: contestsmodel.BookletSucceeded, ObjectKey: "booklet"}
+	return []contestsmodel.Booklet{booklet}, nil
 }
 
-type detailCompiler struct{ calls int }
-
-func (c *detailCompiler) PDF(context.Context, string, map[string][]byte) ([]byte, error) {
-	c.calls++
-	return []byte("pdf"), nil
+func (b *detailBooklets) DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error) {
+	b.downloads++
+	return io.NopCloser(strings.NewReader("pdf")), "application/pdf", nil
 }
 
 func detailAccess(contest contestsmodel.Contest, actor uuid.UUID, role accessmodel.ContestRole) *accesstest.Loader {
@@ -103,9 +104,11 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			}
 			contest := contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start, Settings: contestsmodel.ContestSettings{HideStatements: tc.hidden}}
 			store := &detailStore{contest: contest, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
-			statements, compiler := &detailStatements{}, &detailCompiler{}
+			statements, stored := &detailStatements{}, &detailBooklets{}
 			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			reader := NewDetailsReader(store, statements, detailAccess(contest, actor.Id, tc.role), compiler)
+			loader := detailAccess(contest, actor.Id, tc.role)
+			reader := NewDetailsReader(store, statements, loader)
+			booklets := &Booklets{Store: stored, Files: stored, Access: loader}
 			ctx := accessmodel.WithUser(context.Background(), actor)
 
 			result, err := reader.GetContestProblemDetails(ctx, contest.ID, store.link.ProblemID)
@@ -131,16 +134,16 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			require.Equal(t, tc.statement, err == nil)
 			require.Equal(t, tc.statement, statements.pdfCalls == 1)
 
-			_, err = reader.ReadBooklet(ctx, contest.ID, "ru")
+			_, err = booklets.Open(ctx, contest.ID, "ru")
 			require.ErrorIs(t, err, tc.booklet)
-			require.Equal(t, tc.booklet == nil, compiler.calls == 1)
+			require.Equal(t, tc.booklet == nil, stored.downloads == 1)
 		})
 	}
 }
 
 func TestContestListUsesFlatProjection(t *testing.T) {
 	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), Visibility: contestsmodel.ContestVisibilityPublic}, link: contestsmodel.ContestProblem{Title: "Projected", TimeLimitMs: 1234, MemoryLimitMb: 512}}
-	reader := NewDetailsReader(store, nil, detailAccess(store.contest, uuid.Nil, ""), nil)
+	reader := NewDetailsReader(store, nil, detailAccess(store.contest, uuid.Nil, ""))
 	result, err := reader.GetContestDetails(context.Background(), "org", "contest")
 	require.NoError(t, err)
 	require.Len(t, result.Problems, 1)

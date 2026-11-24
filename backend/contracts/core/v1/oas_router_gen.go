@@ -23,19 +23,19 @@ var (
 	rn87AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn124AllowedHeaders = map[string]string{
+	rn125AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn133AllowedHeaders = map[string]string{
+	rn134AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn140AllowedHeaders = map[string]string{
+	rn141AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn142AllowedHeaders = map[string]string{
+	rn143AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn144AllowedHeaders = map[string]string{
+	rn145AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn46AllowedHeaders = map[string]string{
@@ -62,10 +62,10 @@ var (
 	rn27AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn136AllowedHeaders = map[string]string{
+	rn137AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn135AllowedHeaders = map[string]string{
+	rn136AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn50AllowedHeaders = map[string]string{
@@ -113,13 +113,13 @@ var (
 	rn101AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn131AllowedHeaders = map[string]string{
-		"POST": "Content-Type",
-	}
 	rn132AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn143AllowedHeaders = map[string]string{
+	rn133AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn144AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn110AllowedHeaders = map[string]string{
@@ -146,7 +146,7 @@ var (
 	rn41AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn138AllowedHeaders = map[string]string{
+	rn139AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn62AllowedHeaders = map[string]string{
@@ -470,7 +470,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn124AllowedHeaders,
+										allowedHeaders: rn125AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -534,7 +534,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn133AllowedHeaders,
+										allowedHeaders: rn134AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -571,7 +571,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn140AllowedHeaders,
+											allowedHeaders: rn141AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -596,7 +596,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn142AllowedHeaders,
+											allowedHeaders: rn143AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -625,7 +625,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn144AllowedHeaders,
+									allowedHeaders: rn145AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -782,6 +782,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									return
 								}
 
+							}
+
+						case 'b': // Prefix: "booklets"
+
+							if l := len("booklets"); len(elem) >= l && elem[0:l] == "booklets" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleListContestBookletsRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: nil,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
 							}
 
 						case 'c': // Prefix: "clarifications"
@@ -1192,7 +1219,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											default:
 												s.notAllowed(w, r, notAllowedParams{
 													allowedMethods: "PUT",
-													allowedHeaders: rn136AllowedHeaders,
+													allowedHeaders: rn137AllowedHeaders,
 													acceptPost:     "",
 													acceptPatch:    "",
 												})
@@ -1352,7 +1379,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn135AllowedHeaders,
+											allowedHeaders: rn136AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -2662,7 +2689,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn131AllowedHeaders,
+														allowedHeaders: rn132AllowedHeaders,
 														acceptPost:     "application/json",
 														acceptPatch:    "",
 													})
@@ -2689,7 +2716,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 													default:
 														s.notAllowed(w, r, notAllowedParams{
 															allowedMethods: "POST",
-															allowedHeaders: rn132AllowedHeaders,
+															allowedHeaders: rn133AllowedHeaders,
 															acceptPost:     "application/json",
 															acceptPatch:    "",
 														})
@@ -2718,7 +2745,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn143AllowedHeaders,
+														allowedHeaders: rn144AllowedHeaders,
 														acceptPost:     "multipart/form-data",
 														acceptPatch:    "",
 													})
@@ -3353,7 +3380,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn138AllowedHeaders,
+											allowedHeaders: rn139AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -4156,6 +4183,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 							}
 
+						case 'b': // Prefix: "booklets"
+
+							if l := len("booklets"); len(elem) >= l && elem[0:l] == "booklets" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = ListContestBookletsOperation
+									r.summary = "List contest booklets, one per statement language"
+									r.operationID = "ListContestBooklets"
+									r.operationGroup = ""
+									r.pathPattern = "/contests/{contest_id}/booklets"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
 						case 'c': // Prefix: "clarifications"
 
 							if l := len("clarifications"); len(elem) >= l && elem[0:l] == "clarifications" {
@@ -4872,7 +4924,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									switch method {
 									case "GET":
 										r.name = DownloadContestStatementsPdfOperation
-										r.summary = "Download PDF booklet with contest statements"
+										r.summary = "Download the PDF booklet built for the contest's current problems and settings"
 										r.operationID = "DownloadContestStatementsPdf"
 										r.operationGroup = ""
 										r.pathPattern = "/contests/{contest_id}/statements.pdf"

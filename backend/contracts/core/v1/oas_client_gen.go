@@ -300,7 +300,7 @@ type Invoker interface {
 	DownloadContestProblemStatementPdf(ctx context.Context, params DownloadContestProblemStatementPdfParams) (DownloadContestProblemStatementPdfOK, error)
 	// DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 	//
-	// Download PDF booklet with contest statements.
+	// Answers booklet_not_ready until that booklet is built.
 	//
 	// GET /contests/{contest_id}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
@@ -517,6 +517,12 @@ type Invoker interface {
 	//
 	// GET /contests/{contest_id}/announcements
 	ListContestAnnouncements(ctx context.Context, params ListContestAnnouncementsParams) (*ListContestAnnouncementsResponseModel, error)
+	// ListContestBooklets invokes ListContestBooklets operation.
+	//
+	// List contest booklets, one per statement language.
+	//
+	// GET /contests/{contest_id}/booklets
+	ListContestBooklets(ctx context.Context, params ListContestBookletsParams) (*ContestBooklets, error)
 	// ListContestClarifications invokes ListContestClarifications operation.
 	//
 	// List contest clarifications (for participant: own questions; for jury: all questions).
@@ -4292,7 +4298,7 @@ func (c *Client) sendDownloadContestProblemStatementPdf(ctx context.Context, par
 
 // DownloadContestStatementsPdf invokes DownloadContestStatementsPdf operation.
 //
-// Download PDF booklet with contest statements.
+// Answers booklet_not_ready until that booklet is built.
 //
 // GET /contests/{contest_id}/statements.pdf
 func (c *Client) DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error) {
@@ -4336,10 +4342,7 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Lang.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
+			return e.EncodeValue(conv.StringToString(params.Lang))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -6758,6 +6761,68 @@ func (c *Client) sendListContestAnnouncements(ctx context.Context, params ListCo
 	}()
 
 	result, err := decodeListContestAnnouncementsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListContestBooklets invokes ListContestBooklets operation.
+//
+// List contest booklets, one per statement language.
+//
+// GET /contests/{contest_id}/booklets
+func (c *Client) ListContestBooklets(ctx context.Context, params ListContestBookletsParams) (*ContestBooklets, error) {
+	res, err := c.sendListContestBooklets(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListContestBooklets(ctx context.Context, params ListContestBookletsParams) (res *ContestBooklets, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/contests/"
+	{
+		// Encode "contest_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ContestID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/booklets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeListContestBookletsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

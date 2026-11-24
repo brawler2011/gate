@@ -37,6 +37,7 @@ type Channel struct {
 var (
 	EventsChannel    = Channel{"events", (*sqlc.Queries).ListenEvents}
 	JudgeJobsChannel = Channel{"judge jobs", (*sqlc.Queries).ListenJudgeJobs}
+	BookletsChannel  = Channel{"booklets", (*sqlc.Queries).ListenBooklets}
 )
 
 // Listen calls handle for each notification on channel until ctx ends, reconnecting on failure.

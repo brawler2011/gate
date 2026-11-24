@@ -132,6 +132,9 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 		AvatarURL:   nil,
 		JoinPolicy:  joinPolicy,
 	}
+	if v, ok := req.TimeZone.Get(); ok {
+		input.TimeZone = &v
+	}
 
 	err := h.Organizations.UpdateOrganizationByLogin(ctx, params.Login, input)
 	if err != nil {

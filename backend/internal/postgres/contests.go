@@ -100,6 +100,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		ID:                    c.ID,
 		Login:                 c.Login,
 		Title:                 c.Title,
+		Place:                 c.Place,
 		Description:           c.Description,
 		Visibility:            c.Visibility,
 		JoinPolicy:            s.JoinPolicy,
@@ -457,6 +458,7 @@ func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 		OrganizationLogin: orgLogin,
 		Visibility:        c.Visibility,
 		Title:             c.Title,
+		Place:             c.Place,
 		Login:             c.Login,
 		Description:       c.Description,
 		Settings: contestsmodel.ContestSettings{

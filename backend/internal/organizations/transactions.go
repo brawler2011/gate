@@ -36,6 +36,7 @@ type OrganizationTxStore interface {
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	GetPendingJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationJoinRequest, error)
 	UpdateOrganization(context.Context, uuid.UUID, *organizationsmodel.UpdateOrganizationInput) error
+	QueueOrganizationBooklets(context.Context, uuid.UUID) error
 	DeleteOrganization(context.Context, uuid.UUID) error
 	UpdateMemberRole(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrganizationRole) error
 	RemoveMember(context.Context, uuid.UUID, uuid.UUID) error

@@ -186,6 +186,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 		OrganizationID:        c.OrganizationID,
 		OrganizationLogin:     c.OrganizationLogin,
 		Title:                 title,
+		Place:                 c.Place,
 		Description:           c.Description,
 		Visibility:            visibility,
 		ScoreboardDuring:      corev1.ContestScope(s.Scoreboard.During),
@@ -487,6 +488,7 @@ func organizationDTO(o organizationsmodel.Organization) corev1.OrganizationModel
 		Name:        o.Name,
 		Description: stringToOptString(o.Description),
 		JoinPolicy:  joinPolicy,
+		TimeZone:    o.TimeZone,
 		CreatedAt:   o.CreatedAt,
 		UpdatedAt:   o.UpdatedAt,
 	}

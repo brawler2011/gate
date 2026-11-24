@@ -13,6 +13,9 @@ import (
 //go:embed olymp.sty
 var OlympSty []byte
 
+// Version keys stored booklets: bump it whenever NewDocument or olymp.sty print differently.
+const Version = 1
+
 // Order is the order of sections in a statement; macros a section defines apply in the sections after it.
 var Order = []string{"legend", "input", "output", "interaction", "scoring", "notes"}
 
@@ -104,6 +107,9 @@ func NewDocument(c Contest) Document {
 	// SVG images arrive converted to PDF under their own names.
 	w.text("\\usepackage{amsmath,amssymb}\n\\usepackage{graphicx}\n\\DeclareGraphicsRule{.svg}{pdf}{*}{}\n\\usepackage{olymp}\n")
 	w.text(fmt.Sprintf("\\contest{%s}{%s}{%s}\n", escape(c.Title), escape(c.Place), escape(c.Date)))
+	if c.Date == "" {
+		w.text("\\DeclareRobustCommand{\\contestname}{\\thecontestname\\par\\thecontestlocation}\n")
+	}
 	w.text("\\binoppenalty=10000\n\\relpenalty=10000\n\\begin{document}\n")
 	for i, p := range c.Problems {
 		if i > 0 {
