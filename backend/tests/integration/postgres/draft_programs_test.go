@@ -4,14 +4,17 @@ package postgres_test
 
 import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
+
+var testlib = model.DraftJury{Protocol: sandbox.ProtocolTestlib}
 
 func program(language, source string) *model.DraftProgram {
 	return &model.DraftProgram{Language: language, Source: source}
 }
 
 func checker(language, source string) *model.DraftChecker {
-	return &model.DraftChecker{DraftProgram: *program(language, source)}
+	return &model.DraftChecker{DraftProgram: *program(language, source), DraftJury: testlib}
 }
 
 func named(name, language, source string) model.DraftNamedProgram {

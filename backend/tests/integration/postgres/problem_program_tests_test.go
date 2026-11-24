@@ -33,7 +33,7 @@ func TestProblemPipelineRunsCheckerAndValidatorTests(t *testing.T) {
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("python3", "import sys\nout, ans = (open(f).read().split() for f in sys.argv[2:4])\n"+
 			"sys.exit(2 if not all(t.isdigit() for t in out) else 0 if out == ans else 1)\n")
-		d.Validators = []model.DraftValidator{{DraftNamedProgram: named("v", "python3", "import sys\na, b = map(int, sys.stdin.read().split())\n"+
+		d.Validators = []model.DraftValidator{{DraftJury: testlib, DraftNamedProgram: named("v", "python3", "import sys\na, b = map(int, sys.stdin.read().split())\n"+
 			"assert 0 <= a <= 100 and 0 <= b <= 100\nassert sys.argv[1:] != ['--group', 'small'] or max(a, b) < 10\n")}}
 		d.Generators = []model.DraftNamedProgram{named(generator, "python3", "print(1, 2)\n")}
 		d.Solutions = []model.DraftSolution{solutionProgram(main, "python3", "print(sum(map(int, input().split())))\n")}

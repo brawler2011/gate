@@ -97,7 +97,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	generator, solution, group := "gen", "main", uuid.New()
-	d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}}
+	d.Checker = &problemsmodel.DraftChecker{DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}}
 	d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
 	d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}, Verdicts: []string{}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
@@ -400,7 +400,7 @@ func TestStandardCheckerE2E(t *testing.T) {
 	draft := func(standard, solution string) func(*problemsmodel.Draft) {
 		return func(d *problemsmodel.Draft) {
 			generator, main, group := "gen", "main", uuid.New()
-			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, Standard: standard}
+			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: standard}
 			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
 			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
