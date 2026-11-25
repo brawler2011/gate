@@ -123,6 +123,14 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, submissionsmodel.GotTL, verdict.State)
 	})
 
+	t.Run("StandardVerdict_OutputLimitExceeded", func(t *testing.T) {
+		calculator := NewVerdictCalculator(testProblem())
+		verdict := calculator.Calculate(award(testProblem(), []TestResult{{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "OLE"}}))
+		assert.Equal(t, submissionsmodel.GotOL, verdict.State)
+		require.NotNil(t, verdict.FailedTest)
+		assert.Equal(t, 2, *verdict.FailedTest)
+	})
+
 	t.Run("StandardVerdict_InternalError", func(t *testing.T) {
 		calculator := NewVerdictCalculator(testProblem())
 

@@ -24,6 +24,7 @@ const (
 	GotIE State = 107 // internal error
 	// Partial is a points submission that scored above zero but below the maximum.
 	Partial State = 108
+	GotOL   State = 109 // output limit exceeded
 
 	Accepted State = 200
 

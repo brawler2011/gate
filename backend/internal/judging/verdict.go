@@ -110,6 +110,8 @@ func MapSandboxVerdict(verdict string) submissionsmodel.State {
 		return submissionsmodel.GotTL
 	case "MLE", "Memory Limit Exceeded":
 		return submissionsmodel.GotML
+	case "OLE":
+		return submissionsmodel.GotOL
 	case "RE", "Runtime Error":
 		return submissionsmodel.GotRE
 	case "PE", "Presentation Error":

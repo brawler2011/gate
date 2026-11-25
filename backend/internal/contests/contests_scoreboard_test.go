@@ -250,7 +250,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	} {
 		f.submit(t, "alice", 0, s.state, s.offset)
 	}
-	for i, state := range []submissionsmodel.State{submissionsmodel.GotWA, submissionsmodel.GotTL, submissionsmodel.GotML, submissionsmodel.GotRE, submissionsmodel.GotPE, submissionsmodel.Partial} {
+	for i, state := range []submissionsmodel.State{submissionsmodel.GotWA, submissionsmodel.GotTL, submissionsmodel.GotML, submissionsmodel.GotRE, submissionsmodel.GotPE, submissionsmodel.Partial, submissionsmodel.GotOL} {
 		f.submit(t, "alice", 1, state, time.Duration(i+1)*5*time.Minute)
 	}
 	// Before the freeze CE and Saved do not count; after it every attempt is pending; the contest end is exclusive.
@@ -275,7 +275,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	require.Zero(t, a.PendingAttempts)
 	require.EqualValues(t, 59, *a.TimeMinutes)
 	require.False(t, b.Solved)
-	require.EqualValues(t, 6, b.FailedAttempts)
+	require.EqualValues(t, 7, b.FailedAttempts)
 	require.EqualValues(t, 2, b.PendingAttempts)
 	require.Zero(t, b.Penalty)
 	live := f.scoreboard(t, true).Items[0]
