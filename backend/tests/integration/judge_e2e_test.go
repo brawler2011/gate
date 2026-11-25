@@ -408,6 +408,15 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		assert.Equal(t, submissionsmodel.GotWA, zero.State)
 		assert.Equal(t, points.Value(0), zero.Score)
 	})
+	t.Run("CheckerJudgesFullPoints", func(t *testing.T) {
+		full := "import sys\na = int(open(sys.argv[1]).read())\nprint(a, flush=True)\nopen(sys.argv[2], 'w').write(input().strip() + '\\n')\nsys.stderr.write('points 100\\n')\nsys.exit(7)\n"
+		problemID := h.publish(t, "full-points-checker", func(d *problemsmodel.Draft) {
+			draft(full, "import sys\nout, ans = open(sys.argv[2]).read().split(), open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n")(d)
+			d.Grading = "points"
+		})
+		assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", correct).State)
+		assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", wrong).State)
+	})
 	t.Run("CheckerRejectingMainSolutionFailsBuild", func(t *testing.T) {
 		_, _, err := h.build(t, "checker-rejects", draft(interactor("0"), "import sys\nsys.exit(1)\n"))
 		var failure *builder.Failure

@@ -69,7 +69,7 @@ func (r *TestResult) Award(max points.Value, grading string) {
 	default:
 		earned, ok := points.FromFloat(*r.Score)
 		switch {
-		case !ok || earned > max:
+		case !ok || *r.Score > max.Float64() || earned > max:
 			r.Verdict, r.Message = "FAIL", fmt.Sprintf("the jury gave %g points, the test has %s", *r.Score, max)
 		case earned == max:
 			r.Verdict, r.Points = "OK", earned

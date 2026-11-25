@@ -267,13 +267,14 @@ func TestAwardTakesJuryPointsAsPolygon(t *testing.T) {
 		verdict string
 		points  points.Value
 	}{
-		"partial":           {"points", score(2.5), "POINTS", 250},
-		"all points pass":   {"points", score(4), "OK", 400},
-		"zero points":       {"points", score(0), "POINTS", 0},
-		"above the test":    {"points", score(4.01), "FAIL", 0},
-		"negative":          {"points", score(-1), "FAIL", 0},
-		"no number":         {"points", nil, "FAIL", 0},
-		"pass-fail problem": {"pass-fail", score(2), "FAIL", 0},
+		"partial":            {"points", score(2.5), "POINTS", 250},
+		"all points pass":    {"points", score(4), "OK", 400},
+		"zero points":        {"points", score(0), "POINTS", 0},
+		"above the test":     {"points", score(4.01), "FAIL", 0},
+		"rounds to the test": {"points", score(4.004), "FAIL", 0},
+		"negative":           {"points", score(-1), "FAIL", 0},
+		"no number":          {"points", nil, "FAIL", 0},
+		"pass-fail problem":  {"pass-fail", score(2), "FAIL", 0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := TestResult{Verdict: "POINTS", Score: c.score}
