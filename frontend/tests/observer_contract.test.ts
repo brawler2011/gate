@@ -38,7 +38,7 @@ describe("observer message contract", () => {
     const event = {event_type: "scoreboard.updated", payload: {
       user_id: id, unfrozen: false, replace: false, scoreboard: {
         contest_id: id, contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
-        is_frozen: false, problems: [], items: [],
+        ranking: "icpc", tie_break: "shared", is_frozen: false, problems: [], items: [],
       },
     }};
     expect(submissions(event)).toBe(true);

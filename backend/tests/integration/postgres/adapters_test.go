@@ -332,6 +332,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Tutorials:    contestsmodel.Phased[contestsmodel.ContestScope]{During: contestsmodel.ScopeModerator, After: contestsmodel.ScopeParticipant},
 		Feedback:     contestsmodel.Phased[contestsmodel.FeedbackLevel]{During: contestsmodel.FeedbackVerdict, After: contestsmodel.FeedbackFull},
 		FreezeStatus: contestsmodel.FreezeStatusAuto, AllowClarifications: true, EnableDrafts: true, EnableUpsolving: true, Languages: []string{},
+		Ranking: contestsmodel.RankingICPC, TieBreak: contestsmodel.TieBreakShared,
 	}, c.Settings)
 
 	// Duplicate contest logins map to ErrConflict.

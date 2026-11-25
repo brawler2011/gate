@@ -15343,6 +15343,126 @@ func decodeUpdateContestMemberParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
+// UpdateContestProblemParams is parameters of UpdateContestProblem operation.
+type UpdateContestProblemParams struct {
+	// UUID of the contest.
+	ContestID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
+}
+
+func unpackUpdateContestProblemParams(packed middleware.Parameters) (params UpdateContestProblemParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "contest_id",
+			In:   "path",
+		}
+		params.ContestID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "problem_id",
+			In:   "path",
+		}
+		params.ProblemID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeUpdateContestProblemParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateContestProblemParams, _ error) {
+	// Decode path: contest_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "contest_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ContestID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "contest_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: problem_id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "problem_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProblemID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "problem_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // UpdateContestTeamParams is parameters of UpdateContestTeam operation.
 type UpdateContestTeamParams struct {
 	// UUID of the contest.

@@ -1251,6 +1251,15 @@ func (UnimplementedHandler) UpdateContestMember(ctx context.Context, params Upda
 	return ht.ErrNotImplemented
 }
 
+// UpdateContestProblem implements UpdateContestProblem operation.
+//
+// Update contest problem.
+//
+// PATCH /contests/{contest_id}/problems/{problem_id}
+func (UnimplementedHandler) UpdateContestProblem(ctx context.Context, req *UpdateContestProblemRequestModel, params UpdateContestProblemParams) error {
+	return ht.ErrNotImplemented
+}
+
 // UpdateContestTeam implements UpdateContestTeam operation.
 //
 // Update contest team.

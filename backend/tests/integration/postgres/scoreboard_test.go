@@ -18,6 +18,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -121,12 +122,61 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 					require.Len(t, row.Items, 1)
 					actual := row.Items[0]
 					require.ElementsMatch(t, item.ProblemResults, actual.ProblemResults)
-					actual.ProblemResults = item.ProblemResults
+					actual.ProblemResults, actual.Rank = item.ProblemResults, item.Rank
 					require.Equal(t, item, actual)
 				}
 			}
 		})
 	}
+}
+
+func TestScoreboardPointsRankingPostgres(t *testing.T) {
+	t.Parallel()
+	pool := getTestPool(t)
+	ctx := context.Background()
+	exec := func(query string, args ...any) {
+		_, err := pool.Exec(ctx, query, args...)
+		require.NoError(t, err)
+	}
+	suffix := uuid.NewString()
+	org := helperCreateOrg(t, ctx, pool, "points_"+suffix, "Points")
+	owner := helperOrgOwner(t, ctx, pool, org)
+	repo := postgres.NewContestsRepo(pool)
+	start := time.Date(2020, 1, 1, 10, 0, 0, 0, time.UTC)
+	end := start.Add(2 * time.Hour)
+	contest := uuid.New()
+	require.NoError(t, dbfixtures.CreateContest(ctx, pool, contestsmodel.CreateContestParams{ID: contest, OrganizationID: org, Title: "Points", Login: contest.String(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &start, EndTime: &end}, owner))
+	ranking := contestsmodel.RankingPoints
+	require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contest, Settings: contestsmodel.ContestSettingsPatch{Ranking: &ranking}}))
+	var problems []uuid.UUID
+	for i := range 2 {
+		problem := uuid.New()
+		require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org, Owner: owner, Title: "Problem", ShortName: fmt.Sprint(i)}))
+		pack, err := dbfixtures.InsertPackage(ctx, pool, problem, org, time.Time{})
+		require.NoError(t, err)
+		require.NoError(t, repo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: pack}))
+		if i == 1 {
+			exec(`UPDATE problem_packages SET grading='points', max_score=80 WHERE id=$1`, pack)
+		}
+		problems = append(problems, problem)
+	}
+	require.NoError(t, repo.UpdateContestProblemPoints(ctx, contest, problems[0], 30*points.Unit))
+	user := uuid.New()
+	exec(`INSERT INTO users(id,username,password_hash) VALUES ($1,$2,'unused')`, user, "points_"+suffix)
+	require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user, Role: accessmodel.ContestParticipant}))
+	add := func(p uuid.UUID, state submissionsmodel.State, score string, minute int) {
+		exec(`INSERT INTO submissions(contest_id,owner_id,problem_id,kind,source,language,state,score,created_at) VALUES ($1,$2,$3,'contest','print(1)',30,$4,$5::numeric,$6)`, contest, user, p, state, score, start.Add(time.Duration(minute)*time.Minute))
+	}
+	add(problems[0], submissionsmodel.Accepted, "0", 10)
+	add(problems[1], submissionsmodel.Partial, "55.5", 20)
+	add(problems[1], submissionsmodel.Partial, "40", 30)
+
+	sb, err := contests.NewContestsUseCase(repo, nil, nil, nil).ProjectScoreboard(accessmodel.WithReadTime(ctx, end.Add(-time.Nanosecond)), contest, false)
+	require.NoError(t, err)
+	require.Equal(t, []points.Value{30 * points.Unit, 80 * points.Unit}, []points.Value{sb.Problems[0].MaxScore, sb.Problems[1].MaxScore})
+	require.Len(t, sb.Items, 1)
+	require.Equal(t, 8550*points.Unit/100, *sb.Items[0].Score)
+	require.True(t, start.Add(20*time.Minute).Equal(*sb.Items[0].ScoredAt))
 }
 
 // ICPC freeze: only submissions made after the freeze stay hidden; earlier ones show whenever they are judged or rejudged.

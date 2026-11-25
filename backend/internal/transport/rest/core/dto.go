@@ -215,6 +215,8 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 		EnableUpsolving:       s.EnableUpsolving,
 		AllowVirtual:          s.AllowVirtual,
 		Pretests:              s.Pretests,
+		Ranking:               corev1.ContestRanking(s.Ranking),
+		TieBreak:              corev1.ContestTieBreak(s.TieBreak),
 		JoinPolicy:            corev1.ContestModelJoinPolicy(s.JoinPolicy),
 		HideStatements:        s.HideStatements,
 		Languages:             append([]string{}, s.Languages...),
@@ -228,7 +230,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
-	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), Grading: corev1.ProblemGrading(t.Grading), Languages: append([]string{}, t.Languages...), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), Grading: corev1.ProblemGrading(t.Grading), MaxScore: t.MaxScore.Float64(), Languages: append([]string{}, t.Languages...), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 }
 func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
 	result := make([]corev1.ProblemSampleModel, len(samples))
@@ -599,6 +601,7 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 			Title:     p.Title,
 			ShortName: p.ShortName,
 			Ordinal:   p.Ordinal,
+			MaxScore:  p.MaxScore.Float64(),
 		}
 	}
 
@@ -621,6 +624,10 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 				FirstAcTime:     timePtrToOptDateTime(r.FirstACTime),
 				TimeMinutes:     timeMinOpt,
 				Penalty:         penaltyOpt,
+				ScoredAt:        timePtrToOptDateTime(r.ScoredAt),
+			}
+			if r.Score != nil {
+				pResults[j].Score = corev1.NewOptFloat64(r.Score.Float64())
 			}
 		}
 
@@ -630,7 +637,12 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 			ProblemsSolved: item.ProblemsSolved,
 			TotalPenalty:   item.TotalPenalty,
 			LastAcceptedAt: timePtrToOptDateTime(item.LastAcceptedAt),
+			ScoredAt:       timePtrToOptDateTime(item.ScoredAt),
+			Rank:           item.Rank,
 			ProblemResults: pResults,
+		}
+		if item.Score != nil {
+			items[i].Score = corev1.NewOptFloat64(item.Score.Float64())
 		}
 		if item.Virtual {
 			items[i].Virtual = corev1.NewOptBool(true)
@@ -642,6 +654,8 @@ func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.Scor
 		ContestLogin:      sb.ContestLogin,
 		OrganizationLogin: sb.OrganizationLogin,
 		PenaltyPerAttempt: sb.PenaltyPerAttempt,
+		Ranking:           corev1.ContestRanking(sb.Ranking),
+		TieBreak:          corev1.ContestTieBreak(sb.TieBreak),
 		IsFrozen:          sb.IsFrozen,
 		FreezeTime:        timePtrToOptNilDateTime(sb.FreezeTime),
 		Problems:          problems,

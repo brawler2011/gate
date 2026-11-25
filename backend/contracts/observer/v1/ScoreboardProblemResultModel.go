@@ -16,5 +16,7 @@ type ScoreboardProblemResultModel struct {
 	FirstAcTime          *time.Time             `json:"first_ac_time,omitempty"`
 	TimeMinutes          *int32                 `json:"time_minutes,omitempty"`
 	Penalty              *int32                 `json:"penalty,omitempty"`
+	Score                *float64               `json:"score,omitempty"`
+	ScoredAt             *time.Time             `json:"scored_at,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-,omitempty"`
 }

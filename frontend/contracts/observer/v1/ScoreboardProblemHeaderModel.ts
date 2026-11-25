@@ -5,6 +5,7 @@ interface ScoreboardProblemHeaderModel {
   'title': string;
   'short_name': string;
   'ordinal': number;
+  'max_score': number;
   'additionalProperties'?: Map<string, any>;
 }
 export default ScoreboardProblemHeaderModel;

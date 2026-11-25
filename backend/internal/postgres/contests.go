@@ -12,6 +12,7 @@ import (
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -128,6 +129,8 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		EnableUpsolving:       s.EnableUpsolving,
 		AllowVirtual:          s.AllowVirtual,
 		Pretests:              s.Pretests,
+		Ranking:               (*string)(s.Ranking),
+		TieBreak:              (*string)(s.TieBreak),
 		Languages:             s.Languages,
 		StartTime:             c.StartTime,
 		StartTimeSet:          c.StartTimeSet,
@@ -194,6 +197,17 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 		return contestsmodel.PackageRef{}, dbError("resolve contest problem package", err)
 	}
 	return contestsmodel.PackageRef{ID: row.ID, ProblemID: row.ProblemID}, nil
+}
+
+func (r *ContestsRepo) UpdateContestProblemPoints(ctx context.Context, contestID, problemID uuid.UUID, value points.Value) error {
+	n, err := r.queries.UpdateContestProblemPoints(ctx, sqlc.UpdateContestProblemPointsParams{ContestID: contestID, ProblemID: problemID, Points: value})
+	if err != nil {
+		return dbError("update contest problem points", err)
+	}
+	if n == 0 {
+		return pkg.ErrNotFound
+	}
+	return nil
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
@@ -482,6 +496,8 @@ func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 			EnableUpsolving:       c.EnableUpsolving,
 			AllowVirtual:          c.AllowVirtual,
 			Pretests:              c.Pretests,
+			Ranking:               contestsmodel.Ranking(c.Ranking),
+			TieBreak:              contestsmodel.TieBreak(c.TieBreak),
 			Languages:             c.Languages,
 		},
 		StartTime: c.StartTime,
@@ -493,7 +509,7 @@ func mapContest(c sqlc.Contest, orgLogin string) contestsmodel.Contest {
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestProblem {
 	return contestsmodel.ContestProblem{
-		Type: c.Type, Grading: c.Grading, TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, Languages: c.Languages, Files: c.Files, UpdatedAt: c.ProblemUpdatedAt,
+		Type: c.Type, Grading: c.Grading, MaxScore: c.MaxScore, TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, Languages: c.Languages, Files: c.Files, UpdatedAt: c.ProblemUpdatedAt,
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,
@@ -507,7 +523,7 @@ func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestP
 
 func mapListContestProblemsRow(c sqlc.ListContestProblemsRow) contestsmodel.ContestProblem {
 	return contestsmodel.ContestProblem{
-		Type: c.Type, Grading: c.Grading, TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, Languages: c.Languages, Files: c.Files, UpdatedAt: c.ProblemUpdatedAt,
+		Type: c.Type, Grading: c.Grading, MaxScore: c.MaxScore, TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, Languages: c.Languages, Files: c.Files, UpdatedAt: c.ProblemUpdatedAt,
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,
@@ -559,7 +575,7 @@ func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, cont
 	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
 	for i, row := range rows {
 		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
-			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, Score: row.Score, CreatedAt: row.CreatedAt}}
 	}
 	return subs, nil
 }
@@ -572,7 +588,7 @@ func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contest
 	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
 	for i, row := range rows {
 		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
-			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, Score: row.Score, CreatedAt: row.CreatedAt}}
 	}
 	return subs, nil
 }
@@ -838,7 +854,7 @@ func (r *ContestsRepo) GetVirtualScoreboardSubmissions(ctx context.Context, cont
 	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
 	for i, row := range rows {
 		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
-			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, Score: row.Score, CreatedAt: row.CreatedAt}}
 	}
 	return subs, nil
 }

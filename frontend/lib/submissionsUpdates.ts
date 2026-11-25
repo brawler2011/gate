@@ -44,14 +44,33 @@ export const applyScoreboardEvent = (data: LiveScoreboard | undefined,
   const next = payload.scoreboard;
   const items = payload.replace ? [...next.items]
     : [...data.items.filter(row => row.user_id !== payload.user_id), ...next.items];
-  items.sort((a, b) => {
-    const rank = b.problems_solved - a.problems_solved || a.total_penalty - b.total_penalty;
-    if (rank) {
-      return rank;
+  return {...next, items: rankScoreboard(items, next.ranking, next.tie_break)};
+};
+
+type ScoreboardItem = LiveScoreboard['items'][number];
+
+// Mirrors the backend's rankItems: rows equal on every ranking key share a place.
+const rankScoreboard = (items: ScoreboardItem[], ranking: LiveScoreboard['ranking'],
+  tieBreak: LiveScoreboard['tie_break']): ScoreboardItem[] => {
+  // Backend times carry microseconds, which Date.parse drops.
+  const time = (at?: string) => at
+    ? Date.parse(at) * 1000 + Number((/\.\d{3}(\d{0,3})/.exec(at)?.[1] ?? '').padEnd(3, '0'))
+    : Infinity;
+  // Infinity - Infinity is NaN, so two missing times compare equal.
+  const byTime = (a?: string, b?: string) => Math.sign(time(a) - time(b)) || 0;
+  const compare = (a: ScoreboardItem, b: ScoreboardItem): number => {
+    if (ranking === 'points') {
+      const score = (b.score ?? 0) - (a.score ?? 0);
+      return score || (tieBreak === 'time' ? byTime(a.scored_at, b.scored_at) : 0);
     }
-    const lastA = a.last_accepted_at ? Date.parse(a.last_accepted_at) : Infinity;
-    const lastB = b.last_accepted_at ? Date.parse(b.last_accepted_at) : Infinity;
-    return lastA - lastB || Number(a.username > b.username) - Number(a.username < b.username);
+    return b.problems_solved - a.problems_solved || a.total_penalty - b.total_penalty
+      || byTime(a.last_accepted_at, b.last_accepted_at);
+  };
+  const sorted = [...items].sort((a, b) =>
+    compare(a, b) || Number(a.username > b.username) - Number(a.username < b.username));
+  const ranked: ScoreboardItem[] = [];
+  sorted.forEach((item, i) => {
+    ranked.push({...item, rank: i > 0 && compare(sorted[i - 1], item) === 0 ? ranked[i - 1].rank : i + 1});
   });
-  return {...next, items};
+  return ranked;
 };

@@ -1776,6 +1776,12 @@ func encodeUpdateContestMemberResponse(response *UpdateContestMemberOK, w http.R
 	return nil
 }
 
+func encodeUpdateContestProblemResponse(response *UpdateContestProblemNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
+
+	return nil
+}
+
 func encodeUpdateContestTeamResponse(response *UpdateContestTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 

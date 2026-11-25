@@ -14,6 +14,7 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -198,6 +199,14 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		AllowVirtual:        optBool(req.AllowVirtual),
 		Pretests:            optBool(req.Pretests),
 	}
+	if v, ok := req.Ranking.Get(); ok {
+		ranking := contestsmodel.Ranking(v)
+		settings.Ranking = &ranking
+	}
+	if v, ok := req.TieBreak.Get(); ok {
+		tieBreak := contestsmodel.TieBreak(v)
+		settings.TieBreak = &tieBreak
+	}
 	if v, ok := req.FreezeDurationMinutes.Get(); ok {
 		settings.FreezeDurationMinutes = &v
 	}
@@ -373,6 +382,14 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.Del
 	}
 
 	return nil
+}
+
+func (h *CoreServer) UpdateContestProblem(ctx context.Context, req *corev1.UpdateContestProblemRequestModel, params corev1.UpdateContestProblemParams) error {
+	value, ok := points.FromFloat(req.Points)
+	if !ok {
+		return pkg.Wrap(pkg.ErrInvalid, nil, "points are out of range")
+	}
+	return h.Contests.UpdateContestProblemPoints(ctx, params.ContestID, params.ProblemID, value)
 }
 
 func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.ReorderContestProblemsRequestModel, params corev1.ReorderContestProblemsParams) error {

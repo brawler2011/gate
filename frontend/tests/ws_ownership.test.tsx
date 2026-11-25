@@ -76,7 +76,7 @@ it("uses one contest socket and one notification while refreshing only the affec
 it("loads one scoreboard snapshot per socket connection", async () => {
   renderWithProviders(<Monitor orgLogin="org" contestLogin="round" contestId="contest"
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
-      items: [], problems: [], is_frozen: false}} />);
+      ranking: "icpc", tie_break: "shared", items: [], problems: [], is_frozen: false}} />);
   await act(flushMicrotasks);
   expect(fetch).not.toHaveBeenCalled();
   expect(TestWebSocket.instances).toHaveLength(1);
@@ -109,7 +109,7 @@ it("keeps the monitor socket while loading each selected snapshot once", async (
     {preconnect: () => {}}));
   const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round" contestId="contest" isManager
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
-      items: [], problems: [], is_frozen: true}} />);
+      ranking: "icpc", tie_break: "shared", items: [], problems: [], is_frozen: true}} />);
   await act(flushMicrotasks);
   const socket = TestWebSocket.instances[0];
   await act(async () => socket.open());

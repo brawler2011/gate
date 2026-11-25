@@ -143,6 +143,7 @@ const (
 	UnblockProblemForUserOperation              OperationName = "UnblockProblemForUser"
 	UpdateContestOperation                      OperationName = "UpdateContest"
 	UpdateContestMemberOperation                OperationName = "UpdateContestMember"
+	UpdateContestProblemOperation               OperationName = "UpdateContestProblem"
 	UpdateContestTeamOperation                  OperationName = "UpdateContestTeam"
 	UpdateOrganizationOperation                 OperationName = "UpdateOrganization"
 	UpdateProblemOperation                      OperationName = "UpdateProblem"

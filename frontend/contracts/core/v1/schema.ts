@@ -469,7 +469,8 @@ export interface paths {
         delete: operations["DeleteContestProblem"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update contest problem */
+        patch: operations["UpdateContestProblem"];
         trace?: never;
     };
     "/contests/{contest_id}/problems/{problem_id}/assets/{sha256}": {
@@ -2623,6 +2624,8 @@ export interface components {
          *       "allow_clarifications": true,
          *       "enable_drafts": true,
          *       "enable_upsolving": true,
+         *       "ranking": "icpc",
+         *       "tie_break": "shared",
          *       "languages": [],
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z"
@@ -2686,6 +2689,8 @@ export interface components {
             allow_virtual: boolean;
             /** @description Contest submissions are judged on pretests until the end, then on all tests. */
             pretests: boolean;
+            ranking: components["schemas"]["ContestRanking"];
+            tie_break: components["schemas"]["ContestTieBreak"];
             /** @enum {string} */
             join_policy: "open" | "by_request" | "invite_only";
             hide_statements: boolean;
@@ -2769,6 +2774,11 @@ export interface components {
             title: string;
             type: components["schemas"]["ProblemType"];
             grading: components["schemas"]["ProblemGrading"];
+            /**
+             * Format: double
+             * @description What full marks score under points ranking; the contest sets it for a pass-fail problem.
+             */
+            max_score: number;
             /** @description Languages the problem accepts, within the contest's; empty accepts every language. */
             languages: string[];
             /**
@@ -2785,6 +2795,31 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        /**
+         * ContestRanking
+         * @description icpc ranks by solved problems and penalty; points by the sum of each problem's best score.
+         * @enum {string}
+         */
+        ContestRanking: "icpc" | "points";
+        /**
+         * ContestTieBreak
+         * @description How points ranking orders equal totals: shared places, or the earlier last score improvement first.
+         * @enum {string}
+         */
+        ContestTieBreak: "shared" | "time";
+        /**
+         * @description Fields for the update contest problem request.
+         * @example {
+         *       "points": 100
+         *     }
+         */
+        UpdateContestProblemRequestModel: {
+            /**
+             * Format: double
+             * @description What solving a pass-fail problem scores under points ranking.
+             */
+            points: number;
         };
         /**
          * @description Result of get contest.
@@ -2965,6 +3000,8 @@ export interface components {
             allow_virtual?: boolean;
             /** @description Requires an end time. */
             pretests?: boolean;
+            ranking?: components["schemas"]["ContestRanking"];
+            tie_break?: components["schemas"]["ContestTieBreak"];
             enable_upsolving?: boolean;
             /** @enum {string} */
             join_policy?: "open" | "by_request" | "invite_only";
@@ -3606,6 +3643,16 @@ export interface components {
             time_minutes?: number;
             /** Format: int32 */
             penalty?: number;
+            /**
+             * Format: double
+             * @description Best score; set under points ranking.
+             */
+            score?: number;
+            /**
+             * Format: date-time
+             * @description When the best score was first reached.
+             */
+            scored_at?: string;
         };
         /**
          * ScoreboardItemModel
@@ -3615,6 +3662,7 @@ export interface components {
          *       "username": "alice",
          *       "problems_solved": 1,
          *       "total_penalty": 1,
+         *       "rank": 1,
          *       "problem_results": [
          *         {
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3635,6 +3683,21 @@ export interface components {
             total_penalty: number;
             /** Format: date-time */
             last_accepted_at?: string;
+            /**
+             * Format: double
+             * @description Total of the best problem scores; set under points ranking.
+             */
+            score?: number;
+            /**
+             * Format: date-time
+             * @description When the total was last raised.
+             */
+            scored_at?: string;
+            /**
+             * Format: int32
+             * @description Place in the standings, shared by rows equal on every ranking key; a single-row update leaves it 0 for the client to rank.
+             */
+            rank: number;
             problem_results: components["schemas"]["ScoreboardProblemResultModel"][];
             /** @description The row is a virtual run, ranked by its own timeline. */
             virtual?: boolean;
@@ -3646,7 +3709,8 @@ export interface components {
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "title": "A + B",
          *       "short_name": "example",
-         *       "ordinal": 1
+         *       "ordinal": 1,
+         *       "max_score": 100
          *     }
          */
         ScoreboardProblemHeaderModel: {
@@ -3656,6 +3720,8 @@ export interface components {
             short_name: string;
             /** Format: int32 */
             ordinal: number;
+            /** Format: double */
+            max_score: number;
         };
         /**
          * ScoreboardResponseModel
@@ -3665,13 +3731,16 @@ export interface components {
          *       "contest_login": "contest-1",
          *       "organization_login": "yandex",
          *       "penalty_per_attempt": 1,
+         *       "ranking": "icpc",
+         *       "tie_break": "shared",
          *       "is_frozen": false,
          *       "problems": [
          *         {
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "title": "A + B",
          *           "short_name": "example",
-         *           "ordinal": 1
+         *           "ordinal": 1,
+         *           "max_score": 100
          *         }
          *       ],
          *       "items": [
@@ -3680,6 +3749,7 @@ export interface components {
          *           "username": "alice",
          *           "problems_solved": 1,
          *           "total_penalty": 1,
+         *           "rank": 1,
          *           "problem_results": [
          *             {
          *               "problem_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3701,6 +3771,8 @@ export interface components {
             organization_login: string;
             /** Format: int32 */
             penalty_per_attempt: number;
+            ranking: components["schemas"]["ContestRanking"];
+            tie_break: components["schemas"]["ContestTieBreak"];
             /** @description Whether the scoreboard is currently frozen */
             is_frozen: boolean;
             /**
@@ -5531,6 +5603,9 @@ export type FeedbackLevel = components['schemas']['FeedbackLevel'];
 export type ContestModel = components['schemas']['ContestModel'];
 export type ListContestsResponseModel = components['schemas']['ListContestsResponseModel'];
 export type ContestProblemListItemModel = components['schemas']['ContestProblemListItemModel'];
+export type ContestRanking = components['schemas']['ContestRanking'];
+export type ContestTieBreak = components['schemas']['ContestTieBreak'];
+export type UpdateContestProblemRequestModel = components['schemas']['UpdateContestProblemRequestModel'];
 export type GetContestResponseModel = components['schemas']['GetContestResponseModel'];
 export type ReorderContestProblemsRequestModel = components['schemas']['ReorderContestProblemsRequestModel'];
 export type ContestProblemReorderItemModel = components['schemas']['ContestProblemReorderItemModel'];
@@ -6636,6 +6711,35 @@ export interface operations {
         responses: {
             /** @description OK */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    UpdateContestProblem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the contest. */
+                contest_id: components["parameters"]["ContestIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
+            };
+            cookie?: never;
+        };
+        /** @description Request payload for update contest problem. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateContestProblemRequestModel"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

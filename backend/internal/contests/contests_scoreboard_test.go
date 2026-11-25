@@ -13,6 +13,8 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -75,7 +77,7 @@ func (r *scoreboardRepo) scoreboardHistory(contest uuid.UUID, user *uuid.UUID) [
 			continue
 		}
 		rows = append(rows, contestsmodel.ScoreboardSubmission{UserID: *sub.CreatedBy, ProblemID: *sub.ProblemID,
-			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: sub.State, CreatedAt: sub.CreatedAt}})
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: sub.State, Score: sub.Score, CreatedAt: sub.CreatedAt}})
 	}
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].UserID != rows[j].UserID {
@@ -139,6 +141,64 @@ func (f *scoreboardFixture) scoreboard(t *testing.T, unfrozen bool) *contestsmod
 	result, err := f.uc.ProjectScoreboard(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, unfrozen)
 	require.NoError(t, err)
 	return result
+}
+
+func TestScoreboardPointsRanking(t *testing.T) {
+	f := newScoreboardFixture("alice", "bob", "carol", "dave", "eve")
+	f.repo.contest.Settings.Ranking = contestsmodel.RankingPoints
+	f.repo.problems[0].Grading, f.repo.problems[0].MaxScore = spec.GradingPoints, 100*points.Unit
+	f.repo.problems[1].Grading, f.repo.problems[1].MaxScore = "pass-fail", 50*points.Unit
+	scored := func(user string, problem int, state submissionsmodel.State, score points.Value, minute int) {
+		id := f.submit(t, user, problem, state, time.Duration(minute)*time.Minute)
+		sub := f.repo.submissions[id]
+		sub.Score = score * points.Unit
+		f.repo.submissions[id] = sub
+	}
+	scored("alice", 0, submissionsmodel.Partial, 40, 10)
+	scored("alice", 0, submissionsmodel.Partial, 30, 20)
+	scored("alice", 0, submissionsmodel.Partial, 70, 30)
+	scored("alice", 1, submissionsmodel.Accepted, 0, 40)
+	scored("bob", 0, submissionsmodel.Partial, 70, 5)
+	scored("bob", 1, submissionsmodel.GotWA, 0, 6)
+	scored("bob", 1, submissionsmodel.Accepted, 0, 15)
+	scored("carol", 0, submissionsmodel.Disqualified, 90, 10)
+	scored("eve", 0, submissionsmodel.Partial, 50, 70)
+
+	type row struct {
+		name  string
+		rank  int32
+		score points.Value
+	}
+	rows := func(sb *contestsmodel.ScoreboardResponse) []row {
+		var out []row
+		for _, item := range sb.Items {
+			out = append(out, row{item.Username, item.Rank, *item.Score / points.Unit})
+		}
+		return out
+	}
+	sb := f.scoreboard(t, false)
+	require.Equal(t, []row{{"alice", 1, 120}, {"bob", 1, 120}, {"eve", 3, 50}, {"carol", 4, 0}, {"dave", 4, 0}}, rows(sb))
+	alice := sb.Items[0].ProblemResults
+	require.Equal(t, 70*points.Unit, *alice[0].Score)
+	require.False(t, alice[0].Solved)
+	require.EqualValues(t, 30, *alice[0].TimeMinutes)
+	require.Equal(t, 50*points.Unit, *alice[1].Score)
+	require.True(t, alice[1].Solved)
+	require.Zero(t, sb.Items[0].TotalPenalty)
+
+	f.repo.contest.Settings.TieBreak = contestsmodel.TieBreakTime
+	require.Equal(t, []row{{"bob", 1, 120}, {"alice", 2, 120}, {"eve", 3, 50}, {"carol", 4, 0}, {"dave", 4, 0}}, rows(f.scoreboard(t, false)))
+
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusAuto
+	frozen := f.scoreboard(t, false)
+	require.Equal(t, []row{{"bob", 1, 120}, {"alice", 2, 120}, {"carol", 3, 0}, {"dave", 3, 0}, {"eve", 3, 0}}, rows(frozen))
+	require.EqualValues(t, 1, frozen.Items[4].ProblemResults[0].PendingAttempts)
+
+	// A relinked package with a higher max lets a later acceptance score more.
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusUnfrozen
+	scored("dave", 0, submissionsmodel.Accepted, 50, 10)
+	scored("dave", 0, submissionsmodel.Accepted, 100, 20)
+	require.Contains(t, rows(f.scoreboard(t, false)), row{"dave", 3, 100})
 }
 
 func TestScoreboardRecomputesAfterEveryVerdict(t *testing.T) {
@@ -365,7 +425,8 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 					require.Len(t, update.Items, 1)
 					actual := update.Items[0]
 					require.ElementsMatch(t, item.ProblemResults, actual.ProblemResults)
-					actual.ProblemResults = item.ProblemResults
+					// A single row cannot know its place; clients rank merged rows themselves.
+					actual.ProblemResults, actual.Rank = item.ProblemResults, item.Rank
 					require.Equal(t, item, actual)
 				}
 			}

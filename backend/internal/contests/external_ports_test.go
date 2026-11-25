@@ -10,6 +10,7 @@ import (
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -35,6 +36,7 @@ type ContestsRepo interface {
 	CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error
 	GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error
+	UpdateContestProblemPoints(ctx context.Context, contestID, problemID uuid.UUID, value points.Value) error
 	DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error
 

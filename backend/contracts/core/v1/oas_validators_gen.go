@@ -427,6 +427,28 @@ func (s *ContestModel) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.Ranking.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "ranking",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.TieBreak.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tie_break",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.JoinPolicy.Validate(); err != nil {
 			return err
 		}
@@ -509,6 +531,17 @@ func (s *ContestProblemListItemModel) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := (validate.Float{}).Validate(float64(s.MaxScore)); err != nil {
+			return errors.Wrap(err, "float")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "max_score",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Languages == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -579,6 +612,17 @@ func (s *ContestProblemModel) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ContestRanking) Validate() error {
+	switch s {
+	case "icpc":
+		return nil
+	case "points":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s ContestRoleQuery) Validate() error {
@@ -657,6 +701,17 @@ func (s ContestTeamRoleQuery) Validate() error {
 	case "moderator":
 		return nil
 	case "participant":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ContestTieBreak) Validate() error {
+	switch s {
+	case "shared":
+		return nil
+	case "time":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -3718,13 +3773,101 @@ func (s *ScoreboardItemModel) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Score.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "score",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.ProblemResults == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.ProblemResults {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "problem_results",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ScoreboardProblemHeaderModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Float{}).Validate(float64(s.MaxScore)); err != nil {
+			return errors.Wrap(err, "float")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "max_score",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ScoreboardProblemResultModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Score.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "score",
 			Error: err,
 		})
 	}
@@ -3741,8 +3884,47 @@ func (s *ScoreboardResponseModel) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if err := s.Ranking.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "ranking",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.TieBreak.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tie_break",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Problems == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Problems {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -4217,6 +4399,39 @@ func (s *TestDetailItemModel) Validate() error {
 	return nil
 }
 
+func (s *UpdateContestProblemRequestModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Float{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    nil,
+			Pattern:       nil,
+		}).Validate(float64(s.Points)); err != nil {
+			return errors.Wrap(err, "float")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "points",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *UpdateContestRequestModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -4482,6 +4697,42 @@ func (s *UpdateContestRequestModel) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "freeze_status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Ranking.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "ranking",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.TieBreak.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "tie_break",
 			Error: err,
 		})
 	}

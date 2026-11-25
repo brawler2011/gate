@@ -31,6 +31,29 @@ const formatTimeMinutes = (timeMinutes?: number | null): string => {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 };
 
+const formatScore = (score: number): string => Number.isInteger(score) ? String(score) : score.toFixed(2);
+
+const PointsCell = ({result}: {result: ScoreboardProblemResultModel}): React.ReactNode => {
+  const score = result.score ?? 0;
+  const pending = result.pending_attempts || 0;
+  if (score === 0 && !result.failed_attempts && !pending) {
+    return null;
+  }
+  let cellClass = score > 0 ? classes.cellPartial : classes.cellFailed;
+  if (pending > 0) {
+    cellClass = classes.cellFrozenPending;
+  } else if (result.solved) {
+    cellClass = classes.cellSolved;
+  }
+  const timeStr = score > 0 ? formatTimeMinutes(result.time_minutes) : "";
+  return (
+    <div className={cellClass}>
+      <span>{pending > 0 ? `${formatScore(score)} ${pending}?` : formatScore(score)}</span>
+      {timeStr && <span className={classes.cellTime}>{timeStr}</span>}
+    </div>
+  );
+};
+
 export const ContestMonitorTable = ({
   orgLogin,
   contestLogin,
@@ -99,6 +122,7 @@ export const ContestMonitorTable = ({
     return <QueryState error={scoreboard.error} />;
   }
   const {problems, is_frozen: isFrozen} = scoreboard.data;
+  const byPoints = scoreboard.data.ranking === "points";
   return (
     <Box className={classes.container}>
       <Group justify="space-between" align="center" className={classes.topBar}>
@@ -151,12 +175,20 @@ export const ContestMonitorTable = ({
             <Table.Tr>
               <Table.Th style={{width: "50px"}}>№</Table.Th>
               <Table.Th>Название</Table.Th>
-              <Table.Th className={classes.thCenter} style={{width: "50px"}}>
-                =
-              </Table.Th>
-              <Table.Th className={classes.thCenter} style={{width: "80px"}}>
-                Штраф
-              </Table.Th>
+              {byPoints ? (
+                <Table.Th className={classes.thCenter} style={{width: "70px"}}>
+                  Баллы
+                </Table.Th>
+              ) : (
+                <>
+                  <Table.Th className={classes.thCenter} style={{width: "50px"}}>
+                    =
+                  </Table.Th>
+                  <Table.Th className={classes.thCenter} style={{width: "80px"}}>
+                    Штраф
+                  </Table.Th>
+                </>
+              )}
               {problems.map((p) => {
                 const letter = numberToLetters(p.ordinal);
                 return (
@@ -167,6 +199,7 @@ export const ContestMonitorTable = ({
                         style={{color: "inherit", textDecoration: "none"}}
                       >
                         <span>{letter}</span>
+                        {byPoints && <span className={classes.cellTime}>{formatScore(p.max_score)}</span>}
                       </Link>
                     </Tooltip>
                   </Table.Th>
@@ -183,7 +216,7 @@ export const ContestMonitorTable = ({
 
               return (
                 <Table.Tr key={`${item.user_id}:${item.virtual ? "virtual" : "official"}`}>
-                  <Table.Td>{index + 1}</Table.Td>
+                  <Table.Td>{item.rank || index + 1}</Table.Td>
                   <Table.Td>
                     <Group gap={6} wrap="nowrap">
                       <Text fw={500} size="sm">
@@ -192,18 +225,35 @@ export const ContestMonitorTable = ({
                       {item.virtual && <Badge size="xs" variant="light" color="violet" tt="none">виртуально</Badge>}
                     </Group>
                   </Table.Td>
-                  <Table.Td className={classes.tdCenter}>
-                    <Text fw={700} size="sm">
-                      {item.problems_solved}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td className={classes.tdCenter}>
-                    <Text size="sm">{item.total_penalty}</Text>
-                  </Table.Td>
+                  {byPoints ? (
+                    <Table.Td className={classes.tdCenter}>
+                      <Text fw={700} size="sm">
+                        {formatScore(item.score ?? 0)}
+                      </Text>
+                    </Table.Td>
+                  ) : (
+                    <>
+                      <Table.Td className={classes.tdCenter}>
+                        <Text fw={700} size="sm">
+                          {item.problems_solved}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td className={classes.tdCenter}>
+                        <Text size="sm">{item.total_penalty}</Text>
+                      </Table.Td>
+                    </>
+                  )}
                   {problems.map((prob) => {
                     const res = resultMap.get(prob.problem_id);
                     if (!res) {
                       return <Table.Td key={prob.problem_id} className={classes.tdCenter} />;
+                    }
+                    if (byPoints) {
+                      return (
+                        <Table.Td key={prob.problem_id} className={classes.tdCenter}>
+                          <PointsCell result={res} />
+                        </Table.Td>
+                      );
                     }
 
                     const hasPending = (res.pending_attempts || 0) > 0;
@@ -263,7 +313,7 @@ export const ContestMonitorTable = ({
                 <Text className={classes.summaryLabelSolved}>Сдали</Text>
               </Table.Td>
               <Table.Td />
-              <Table.Td />
+              {!byPoints && <Table.Td />}
               {problems.map((prob) => (
                 <Table.Td key={prob.problem_id} className={classes.tdCenter}>
                   <Text className={classes.summaryLabelSolved}>
@@ -278,7 +328,7 @@ export const ContestMonitorTable = ({
                 <Text className={classes.summaryLabelAttempted}>Пытались</Text>
               </Table.Td>
               <Table.Td />
-              <Table.Td />
+              {!byPoints && <Table.Td />}
               {problems.map((prob) => (
                 <Table.Td key={prob.problem_id} className={classes.tdCenter}>
                   <Text className={classes.summaryLabelAttempted}>

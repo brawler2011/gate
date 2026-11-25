@@ -24,7 +24,7 @@ const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel
   description: "", visibility: "public", scoreboard_during: "public", scoreboard_after: "public",
   submissions_during: "public", submissions_after: "public", sources_during: "public", sources_after: "public",
   reports_during: "public", reports_after: "public", tutorials_during: "public", tutorials_after: "public", feedback_during: "full", feedback_after: "full",
-  freeze_hides_attempts: false, freeze_status: "auto" as ContestModel["freeze_status"],
+  freeze_hides_attempts: false, freeze_status: "auto" as ContestModel["freeze_status"], ranking: "icpc", tie_break: "shared",
   hide_statements: false,
   enable_drafts: true,
   allow_clarifications: true,

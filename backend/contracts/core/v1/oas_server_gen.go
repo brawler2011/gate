@@ -835,6 +835,12 @@ type Handler interface {
 	//
 	// PATCH /contests/{contest_id}/members
 	UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error
+	// UpdateContestProblem implements UpdateContestProblem operation.
+	//
+	// Update contest problem.
+	//
+	// PATCH /contests/{contest_id}/problems/{problem_id}
+	UpdateContestProblem(ctx context.Context, req *UpdateContestProblemRequestModel, params UpdateContestProblemParams) error
 	// UpdateContestTeam implements UpdateContestTeam operation.
 	//
 	// Update contest team.

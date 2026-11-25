@@ -661,6 +661,8 @@ type Contest struct {
 	EnableUpsolving       bool                            `json:"enable_upsolving"`
 	AllowVirtual          bool                            `json:"allow_virtual"`
 	Pretests              bool                            `json:"pretests"`
+	Ranking               string                          `json:"ranking"`
+	TieBreak              string                          `json:"tie_break"`
 	Languages             []string                        `json:"languages"`
 	StartTime             *time.Time                      `json:"start_time"`
 	EndTime               *time.Time                      `json:"end_time"`
@@ -741,11 +743,12 @@ type ContestMember struct {
 }
 
 type ContestProblem struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-	PackageID uuid.UUID `json:"package_id"`
-	Ordinal   int32     `json:"ordinal"`
-	CreatedAt time.Time `json:"created_at"`
+	ContestID uuid.UUID    `json:"contest_id"`
+	ProblemID uuid.UUID    `json:"problem_id"`
+	PackageID uuid.UUID    `json:"package_id"`
+	Ordinal   int32        `json:"ordinal"`
+	Points    points.Value `json:"points"`
+	CreatedAt time.Time    `json:"created_at"`
 }
 
 type ContestTeam struct {
@@ -923,26 +926,27 @@ type ProblemMember struct {
 }
 
 type ProblemPackage struct {
-	ID             uuid.UUID  `json:"id"`
-	ProblemID      uuid.UUID  `json:"problem_id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	PackageHash    string     `json:"package_hash"`
-	CreatedAt      time.Time  `json:"created_at"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	Type           string     `json:"type"`
-	Grading        string     `json:"grading"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
-	InputFile      string     `json:"input_file"`
-	OutputFile     string     `json:"output_file"`
-	BuildID        uuid.UUID  `json:"build_id"`
-	ObjectID       uuid.UUID  `json:"object_id"`
-	Revision       int64      `json:"revision"`
-	Samples        []byte     `json:"samples"`
-	Statements     []byte     `json:"statements"`
-	FilesObjectID  *uuid.UUID `json:"files_object_id"`
-	Languages      []string   `json:"languages"`
+	ID             uuid.UUID     `json:"id"`
+	ProblemID      uuid.UUID     `json:"problem_id"`
+	OrganizationID uuid.UUID     `json:"organization_id"`
+	PackageHash    string        `json:"package_hash"`
+	CreatedAt      time.Time     `json:"created_at"`
+	Title          string        `json:"title"`
+	ShortName      string        `json:"short_name"`
+	Type           string        `json:"type"`
+	Grading        string        `json:"grading"`
+	TimeLimitMs    int32         `json:"time_limit_ms"`
+	MemoryLimitMb  int32         `json:"memory_limit_mb"`
+	MaxScore       *points.Value `json:"max_score"`
+	InputFile      string        `json:"input_file"`
+	OutputFile     string        `json:"output_file"`
+	BuildID        uuid.UUID     `json:"build_id"`
+	ObjectID       uuid.UUID     `json:"object_id"`
+	Revision       int64         `json:"revision"`
+	Samples        []byte        `json:"samples"`
+	Statements     []byte        `json:"statements"`
+	FilesObjectID  *uuid.UUID    `json:"files_object_id"`
+	Languages      []string      `json:"languages"`
 }
 
 type ProblemPackageAsset struct {

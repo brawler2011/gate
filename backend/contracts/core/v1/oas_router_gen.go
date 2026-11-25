@@ -65,6 +65,9 @@ var (
 	rn141AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
+	rn71AllowedHeaders = map[string]string{
+		"PATCH": "Content-Type",
+	}
 	rn140AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
@@ -1254,12 +1257,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												args[0],
 												args[1],
 											}, elemIsEscaped, w, r)
+										case "PATCH":
+											s.handleUpdateContestProblemRequest([2]string{
+												args[0],
+												args[1],
+											}, elemIsEscaped, w, r)
 										default:
 											s.notAllowed(w, r, notAllowedParams{
-												allowedMethods: "DELETE,GET",
-												allowedHeaders: nil,
+												allowedMethods: "DELETE,GET,PATCH",
+												allowedHeaders: rn71AllowedHeaders,
 												acceptPost:     "",
-												acceptPatch:    "",
+												acceptPatch:    "application/json",
 											})
 										}
 
@@ -4785,6 +4793,15 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.name = GetContestProblemOperation
 											r.summary = "Get contest problem"
 											r.operationID = "GetContestProblem"
+											r.operationGroup = ""
+											r.pathPattern = "/contests/{contest_id}/problems/{problem_id}"
+											r.args = args
+											r.count = 2
+											return r, true
+										case "PATCH":
+											r.name = UpdateContestProblemOperation
+											r.summary = "Update contest problem"
+											r.operationID = "UpdateContestProblem"
 											r.operationGroup = ""
 											r.pathPattern = "/contests/{contest_id}/problems/{problem_id}"
 											r.args = args

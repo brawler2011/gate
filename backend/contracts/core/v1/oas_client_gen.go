@@ -849,6 +849,12 @@ type Invoker interface {
 	//
 	// PATCH /contests/{contest_id}/members
 	UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error
+	// UpdateContestProblem invokes UpdateContestProblem operation.
+	//
+	// Update contest problem.
+	//
+	// PATCH /contests/{contest_id}/problems/{problem_id}
+	UpdateContestProblem(ctx context.Context, request *UpdateContestProblemRequestModel, params UpdateContestProblemParams) error
 	// UpdateContestTeam invokes UpdateContestTeam operation.
 	//
 	// Update contest team.
@@ -11405,6 +11411,89 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 	}()
 
 	result, err := decodeUpdateContestMemberResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateContestProblem invokes UpdateContestProblem operation.
+//
+// Update contest problem.
+//
+// PATCH /contests/{contest_id}/problems/{problem_id}
+func (c *Client) UpdateContestProblem(ctx context.Context, request *UpdateContestProblemRequestModel, params UpdateContestProblemParams) error {
+	_, err := c.sendUpdateContestProblem(ctx, request, params)
+	return err
+}
+
+func (c *Client) sendUpdateContestProblem(ctx context.Context, request *UpdateContestProblemRequestModel, params UpdateContestProblemParams) (res *UpdateContestProblemNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/contests/"
+	{
+		// Encode "contest_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ContestID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/problems/"
+	{
+		// Encode "problem_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "problem_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ProblemID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateContestProblemRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeUpdateContestProblemResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
