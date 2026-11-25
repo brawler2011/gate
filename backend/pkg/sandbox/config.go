@@ -32,15 +32,19 @@ type Graders struct {
 
 var solutionName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 
+// reserved holds Python and Java keywords and literals, which neither takes as a module or class name.
+var reserved = strings.Fields(`False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield
+	_ abstract boolean byte case catch char const default do double enum extends false final float goto implements instanceof int interface long native new null package private protected public short static strictfp super switch synchronized this throw throws transient true void volatile`)
+
 // ValidSolutionName accepts identifiers that every language takes as a module or class name.
-func ValidSolutionName(name string) bool { return solutionName.MatchString(name) }
+func ValidSolutionName(name string) bool { return solutionName.MatchString(name) && !slices.Contains(reserved, name) }
 
 // LanguageGraders replace the language's settings for solutions with graders.
 type LanguageGraders struct {
-	CodeFile string `toml:"code_file"`
-	Compile  string `toml:"compile"`
+	CodeFile string `toml:"code_file" json:"code_file"`
+	Compile  string `toml:"compile" json:"compile"`
 	// Entry is the grader that starts the program; an interpreter runs it in place of the solution.
-	Entry string `toml:"entry"`
+	Entry string `toml:"entry" json:"entry"`
 }
 
 type Language struct {
@@ -55,7 +59,7 @@ type Language struct {
 	CompileFile string `toml:"compile_file" json:"compile_file"`
 	Execute     string `toml:"execute" json:"execute"`
 	// Graders is unset for languages that link graders through ${graders} in Compile alone.
-	Graders *LanguageGraders `toml:"graders" json:"-"`
+	Graders *LanguageGraders `toml:"graders" json:"graders,omitempty"`
 }
 
 type Config struct {

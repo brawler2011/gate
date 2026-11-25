@@ -84,6 +84,7 @@ func TestGradedLanguagesOfRepositoryCatalog(t *testing.T) {
 		{"every grader", all, "aplusb", append(slices.Clone(cpp), "python3", "pypy3", "java")},
 		{"no solution name", all, "", cpp},
 		{"invalid solution name", all, "a-b", cpp},
+		{"reserved solution name", all, "class", cpp},
 		{"python without entry", []string{"lib.py"}, "aplusb", []string{}},
 		{"solution named like the entry", []string{"grader.py"}, "grader", []string{}},
 		{"solution named like the interpreted file", []string{"grader.py"}, "foo", []string{}},
