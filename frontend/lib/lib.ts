@@ -53,6 +53,8 @@ export const StateColor = (state?: number | string): string => {
       return "red";
     case 107:
       return "purple";
+    case 108:
+      return "yellow";
     case 200:
       return "green";
     case 300:
@@ -90,6 +92,8 @@ export const StateString = (state?: number | string, failedTest?: number | null,
     case 107:
       baseString = "Ошибка тестирующей системы";
       break;
+    case 108:
+      return "Частичное решение";
     case 200:
       return pretests ? "Претесты пройдены" : "Принято";
     case 300:
@@ -126,6 +130,8 @@ export const ShortVerdictString = (state?: number | string, failedTest?: number 
       return `WA${testSuffix}`;
     case 107:
       return "IE";
+    case 108:
+      return "PT";
     case 200:
       return pretests ? "PP" : "AC";
     case 300:

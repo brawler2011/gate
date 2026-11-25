@@ -41,6 +41,7 @@ func Fail(code *pkg.Error, path, value, format string, args ...any) error {
 type Problem struct {
 	Title         string
 	Type          string // one of ProblemTypes
+	Grading       string // one of Gradings
 	TimeLimitMs   int
 	MemoryLimitMb int
 	Checker       *Program
@@ -194,11 +195,25 @@ func (g *Group) walk(yield func(*Group) bool) bool {
 // Aggregations combine the scores of a group's tests and subgroups.
 var Aggregations = []string{"sum", "min", "max", "avg"}
 
-// ProblemTypes lists every problem type; an output-only problem judges submitted outputs instead of running a program.
-var ProblemTypes = []string{"pass-fail", "scoring", "interactive", "communication", "output-only"}
+// ProblemTypes lists how a solution runs; an output-only problem judges submitted outputs instead of running a program.
+var ProblemTypes = []string{"standard", "interactive", "communication", "output-only"}
 
-// Scored reports whether a problem type earns points per test rather than all or nothing.
-func Scored(problemType string) bool { return problemType == "scoring" || problemType == "output-only" }
+// Gradings list how tests score, whatever the type: all or nothing, or points per test.
+var Gradings = []string{"pass-fail", "points"}
+
+const GradingPoints = "points"
+
+// TestGrading is points when some test has them, for formats that only say so through test points.
+func TestGrading(root *Group) string {
+	for g := range root.All() {
+		for _, t := range g.Tests {
+			if t.Points > 0 {
+				return GradingPoints
+			}
+		}
+	}
+	return "pass-fail"
+}
 
 // Interactive reports whether the interactor, a manager on communication problems, talks to the running solution.
 func Interactive(problemType string) bool {

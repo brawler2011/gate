@@ -4,6 +4,7 @@ package points
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -44,6 +45,14 @@ func Parse(text string) (Value, error) {
 	}
 	return value, nil
 }
+// FromFloat rounds a number a program printed to hundredths; ok is false when it is out of range.
+func FromFloat(f float64) (Value, bool) {
+	if !(f >= 0 && f*float64(Unit) <= float64(Max)) {
+		return 0, false
+	}
+	return Value(math.Round(f * float64(Unit))), true
+}
+
 func (v Value) String() string   { return fmt.Sprintf("%d.%02d", int64(v)/100, int64(v)%100) }
 func (v Value) Float64() float64 { return float64(v) / 100 }
 func (v Value) MarshalJSON() ([]byte, error) {

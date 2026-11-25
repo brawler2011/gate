@@ -388,6 +388,35 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 			assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", wrong).State)
 		})
 	}
+	t.Run("InteractorGivesPoints", func(t *testing.T) {
+		// testlib quitp: exit 7 with the test's points, here 30 of 100 for an answer one off.
+		scorer := "import sys\na = int(open(sys.argv[1]).read())\nprint(a, flush=True)\nreply = int(input())\nopen(sys.argv[2], 'w').write(str(reply) + '\\n')\n" +
+			"if reply == a + 1:\n    sys.stderr.write('points 30\\n')\n    sys.exit(7)\nsys.exit(0 if reply == 2 * a else 1)\n"
+		problemID := h.publish(t, "interactor-points", func(d *problemsmodel.Draft) {
+			draft(scorer, acceptAll)(d)
+			d.Grading = "points"
+		})
+		full := h.submit(t, problemID, "python3", correct)
+		assert.Equal(t, submissionsmodel.Accepted, full.State)
+		assert.Equal(t, 100*points.Unit, full.Score)
+		partial := h.submit(t, problemID, "python3", wrong)
+		assert.Equal(t, submissionsmodel.Partial, partial.State)
+		assert.Equal(t, 30*points.Unit, partial.Score)
+		require.NotNil(t, partial.TestDetails)
+		assert.Equal(t, "POINTS", partial.TestDetails.Tests[0].Verdict)
+		zero := h.submit(t, problemID, "python3", "print(0, flush=True)")
+		assert.Equal(t, submissionsmodel.GotWA, zero.State)
+		assert.Equal(t, points.Value(0), zero.Score)
+	})
+	t.Run("CheckerJudgesFullPoints", func(t *testing.T) {
+		full := "import sys\na = int(open(sys.argv[1]).read())\nprint(a, flush=True)\nopen(sys.argv[2], 'w').write(input().strip() + '\\n')\nsys.stderr.write('points 100\\n')\nsys.exit(7)\n"
+		problemID := h.publish(t, "full-points-checker", func(d *problemsmodel.Draft) {
+			draft(full, "import sys\nout, ans = open(sys.argv[2]).read().split(), open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n")(d)
+			d.Grading = "points"
+		})
+		assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", correct).State)
+		assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", wrong).State)
+	})
 	t.Run("CheckerRejectingMainSolutionFailsBuild", func(t *testing.T) {
 		_, _, err := h.build(t, "checker-rejects", draft(interactor("0"), "import sys\nsys.exit(1)\n"))
 		var failure *builder.Failure
@@ -479,7 +508,7 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 	h := newJudgeHarness(t)
 	problemID := h.publish(t, "output-only", func(d *problemsmodel.Draft) {
 		generator, main, group := "gen", "main", uuid.New()
-		d.Type = "output-only"
+		d.Type, d.Grading = "output-only", "points"
 		d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: "wcmp"}
 		d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
 		d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()))\n"}}, Verdicts: []string{}}}
@@ -519,7 +548,7 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 	judgeNow(t, h.ctx, h.pool, h.judge, id)
 	sub, err := h.submissions.GetSubmission(h.ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, submissionsmodel.GotWA, sub.State)
+	assert.Equal(t, submissionsmodel.Partial, sub.State)
 	assert.Equal(t, 20*points.Unit, sub.Score)
 	require.NotNil(t, sub.TestDetails)
 	verdicts := []string{}

@@ -11,18 +11,22 @@ import {api, unwrap} from "@/lib/api";
 import {problemMessage} from "@/lib/problemText";
 
 import {DraftGate} from "./draft/DraftGate";
-import {formatPoints, isInteractive, isScored} from "./draft/draftOps";
+import {formatPoints, isInteractive} from "./draft/draftOps";
 import {useSaveDraft} from "./draft/useDraft";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 const PROBLEM_TYPE_OPTIONS = [
-  {value: "pass-fail", label: "Pass-Fail"},
-  {value: "scoring", label: "Scoring"},
-  {value: "interactive", label: "Interactive"},
-  {value: "communication", label: "Communication"},
-  {value: "output-only", label: "Output-only"},
+  {value: "standard", label: "Стандартная"},
+  {value: "interactive", label: "Интерактивная"},
+  {value: "communication", label: "Коммуникационная"},
+  {value: "output-only", label: "Только вывод"},
+];
+
+const GRADING_OPTIONS = [
+  {value: "pass-fail", label: "Всё или ничего"},
+  {value: "points", label: "Баллы за тесты"},
 ];
 
 type Props = {
@@ -34,6 +38,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [title, setTitle] = useState(draft.title);
   const [shortName, setShortName] = useState(draft.short_name);
   const [type, setType] = useState<ProblemDraft["type"]>(draft.type);
+  const [grading, setGrading] = useState<ProblemDraft["grading"]>(draft.grading);
   const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
   const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
   const [mainSolution, setMainSolution] = useState(draft.main_solution);
@@ -45,6 +50,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
     title !== draft.title ||
     shortName !== draft.short_name ||
     type !== draft.type ||
+    grading !== draft.grading ||
     timeLimit !== draft.time_limit_ms ||
     memoryLimit !== draft.memory_limit_mb ||
     mainSolution !== draft.main_solution ||
@@ -58,6 +64,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       title: title.trim(),
       short_name: shortName.trim(),
       type,
+      grading,
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
       main_solution: mainSolution,
@@ -86,10 +93,20 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
               data={PROBLEM_TYPE_OPTIONS}
               value={type}
               allowDeselect={false}
-              onChange={(value) => setType((value as ProblemDraft["type"] | null) ?? "pass-fail")}
+              onChange={(value) => setType((value as ProblemDraft["type"] | null) ?? "standard")}
             />
           </Grid.Col>
-          {isScored(type) && (
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <Select
+              label="Оценивание"
+              description="Частичные баллы чекера, интерактора или менеджера считаются только с баллами за тесты"
+              data={GRADING_OPTIONS}
+              value={grading}
+              allowDeselect={false}
+              onChange={(value) => setGrading((value as ProblemDraft["grading"] | null) ?? "pass-fail")}
+            />
+          </Grid.Col>
+          {grading === "points" && (
             <Grid.Col span={{base: 12, sm: 6}}>
               <TextInput
                 label="Максимальный балл"

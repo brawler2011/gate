@@ -267,8 +267,8 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 
 const insertProblemPackage = `-- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+ title,short_name,type,grading,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 `
 
 type InsertProblemPackageParams struct {
@@ -282,6 +282,7 @@ type InsertProblemPackageParams struct {
 	Title          string     `json:"title"`
 	ShortName      string     `json:"short_name"`
 	Type           string     `json:"type"`
+	Grading        string     `json:"grading"`
 	TimeLimitMs    int32      `json:"time_limit_ms"`
 	MemoryLimitMb  int32      `json:"memory_limit_mb"`
 	InputFile      string     `json:"input_file"`
@@ -304,6 +305,7 @@ func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPac
 		arg.Title,
 		arg.ShortName,
 		arg.Type,
+		arg.Grading,
 		arg.TimeLimitMs,
 		arg.MemoryLimitMb,
 		arg.InputFile,
@@ -742,8 +744,8 @@ func (q *Queries) SucceededBuildPackageID(ctx context.Context, id uuid.UUID) (uu
 }
 
 const updateProblemDraftRow = `-- name: UpdateProblemDraftRow :exec
-UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- content=$9,object_ids=$10 WHERE problem_id=$1
+UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,grading=$6,time_limit_ms=$7,memory_limit_mb=$8,max_score=$9,
+ content=$10,object_ids=$11 WHERE problem_id=$1
 `
 
 type UpdateProblemDraftRowParams struct {
@@ -752,6 +754,7 @@ type UpdateProblemDraftRowParams struct {
 	Title         string        `json:"title"`
 	ShortName     string        `json:"short_name"`
 	Type          string        `json:"type"`
+	Grading       string        `json:"grading"`
 	TimeLimitMs   int32         `json:"time_limit_ms"`
 	MemoryLimitMb int32         `json:"memory_limit_mb"`
 	MaxScore      *points.Value `json:"max_score"`
@@ -766,6 +769,7 @@ func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDr
 		arg.Title,
 		arg.ShortName,
 		arg.Type,
+		arg.Grading,
 		arg.TimeLimitMs,
 		arg.MemoryLimitMb,
 		arg.MaxScore,

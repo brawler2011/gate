@@ -84,8 +84,8 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 	if p.FormatVersion != FormatVersion {
 		return fmt.Errorf("unsupported package format version %q", p.FormatVersion)
 	}
-	if !slices.Contains(spec.ProblemTypes, p.Type) {
-		return fmt.Errorf("invalid package type")
+	if !slices.Contains(spec.ProblemTypes, p.Type) || !slices.Contains(spec.Gradings, p.Grading) {
+		return fmt.Errorf("invalid package type or grading")
 	}
 	if p.Limits.TimeMs <= 0 || p.Limits.MemoryMb <= 0 || p.Testset.Name != "" || len(p.Testset.Requires) > 0 {
 		return fmt.Errorf("invalid package limits or testset")
@@ -169,7 +169,7 @@ func (p *Problem) CheckBuilt(regular func(string) error) error {
 			}
 		}
 	}
-	if max, _ := p.Grade(func(int) bool { return true }); spec.Scored(p.Type) && (p.MaxScore == nil || *p.MaxScore != max) {
+	if max, _ := p.Grade(Full); p.Grading == spec.GradingPoints && (p.MaxScore == nil || *p.MaxScore != max) || p.Grading != spec.GradingPoints && p.MaxScore != nil {
 		return fmt.Errorf("invalid package max score")
 	}
 	return nil

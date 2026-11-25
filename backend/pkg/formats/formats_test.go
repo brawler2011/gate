@@ -21,7 +21,7 @@ type summary struct {
 }
 
 func summarize(p *spec.Problem) summary {
-	s := summary{Type: p.Type, Main: p.MainSolution}
+	s := summary{Type: p.Type + "/" + p.Grading, Main: p.MainSolution}
 	name := func(program *spec.Program) string {
 		if program == nil {
 			return ""
@@ -69,30 +69,30 @@ func TestReadTestdataPackages(t *testing.T) {
 	testlib := []string{"testlib.h"}
 	icpcLib := []string{"testlib.h", "testlib.h", "testlib.h"}
 	cases := map[string]summary{
-		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"gfmt/a-plus-b": {Type: "standard/pass-fail", Checker: "checker.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "samples/sum/3.00/3.00/0.00", "secret/sum/6.00/0.00/0.00"}},
-		"gfmt/interactive-guess": {Type: "interactive", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "solutions/ok.cpp", Library: testlib, Statements: []string{"en"},
+		"gfmt/interactive-guess": {Type: "interactive/pass-fail", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "solutions/ok.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "samples/sum/1.00/1.00/0.00", "secret/sum/1.00/0.00/0.00"}},
-		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"polygon/a-plus-b": {Type: "standard/pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/12.00/3.00/0.00"}},
-		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/interactive-guess": {Type: "interactive/pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/2.00/1.00/0.00"}},
-		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
+		"polygon/max-subarray": {Type: "standard/pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/4.00/2.00/0.00"}},
-		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/subtasks-groups": {Type: "standard/points", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "1/min/1.00/1.00/40.00", "2/min/1.00/0.00/60.00"}},
-		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
+		"icpc/a-plus-b": {Type: "standard/pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/3.00/3.00/0.00", "secret/sum/9.00/0.00/0.00"}},
 		// An interactive input is what the interactor reads, so none is published.
-		"icpc/interactive-guess": {Type: "interactive", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
+		"icpc/interactive-guess": {Type: "interactive/pass-fail", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/1.00/0.00/0.00"}},
-		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
+		"pcms2/a-plus-b": {Type: "standard/pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/12.00/3.00/0.00"}},
-		"pcms2/interactive-guess": {Type: "interactive", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
+		"pcms2/interactive-guess": {Type: "interactive/pass-fail", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/2.00/1.00/0.00"}},
-		"pcms2/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
+		"pcms2/max-subarray": {Type: "standard/pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/4.00/2.00/0.00"}},
-		"pcms2/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
+		"pcms2/subtasks-groups": {Type: "standard/points", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "1/min/1.00/1.00/40.00", "2/min/1.00/0.00/60.00"}},
 	}
 	for name, want := range cases {
@@ -107,7 +107,7 @@ func TestReadTestdataPackages(t *testing.T) {
 func TestPolygonGroups(t *testing.T) {
 	p, err := Read(unpack(t, "polygon-groups"))
 	require.NoError(t, err)
-	require.Equal(t, "scoring", p.Type)
+	require.Equal(t, [2]string{"standard", "points"}, [2]string{p.Type, p.Grading})
 	require.Equal(t, [2]string{"input.txt", "output.txt"}, [2]string{p.InputFile, p.OutputFile})
 	require.Equal(t, "gen.cpp", p.Generators[0].Path)
 	require.Equal(t, spec.Group{Groups: []spec.Group{
@@ -179,7 +179,7 @@ func TestPolygonResources(t *testing.T) {
 func TestICPCGroups(t *testing.T) {
 	p, err := Read(unpack(t, "icpc-groups"))
 	require.NoError(t, err)
-	require.Equal(t, summary{Type: "pass-fail", Checker: "checker.cpp", Library: []string{"testlib.h"},
+	require.Equal(t, summary{Type: "standard/pass-fail", Checker: "checker.cpp", Library: []string{"testlib.h"},
 		Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/0.00/0.00/0.00", "secret/group1/sum/1.00/0.00/0.00", "secret/group2/sum/0.00/0.00/0.00", "secret/group2/nested/sum/1.00/0.00/0.00"}}, summarize(p))
 	require.Equal(t, "output_validators/checker/checker.cpp", p.Checker.Path)
 	require.Empty(t, tests(p)[2].Answer)
@@ -220,7 +220,7 @@ func TestICPCScoring(t *testing.T) {
 	dir := unpack(t, "icpc-scoring")
 	p, err := Read(dir)
 	require.NoError(t, err)
-	require.Equal(t, "scoring", p.Type)
+	require.Equal(t, [2]string{"standard", "points"}, [2]string{p.Type, p.Grading})
 	test := func(input string, ordinal int, score points.Value, sample bool) spec.Test {
 		return spec.Test{Input: input, Answer: strings.TrimSuffix(input, ".in") + ".ans", Points: score * points.Unit, Ordinal: ordinal, Sample: sample}
 	}
@@ -235,11 +235,14 @@ func TestICPCScoring(t *testing.T) {
 	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring submit-answer\nvalidation: custom\n")
 	p, err = Read(dir)
 	require.NoError(t, err)
-	require.Equal(t, "output-only", p.Type)
+	require.Equal(t, [2]string{"output-only", "points"}, [2]string{p.Type, p.Grading})
 	require.Equal(t, 30*points.Unit, p.Testset.Groups[1].Groups[0].Tests[0].Points, "submit-answer keeps the scoring testset")
-	write(t, dir, "problem.yaml", "name: Scoring\ntype: submit-answer\nvalidation: custom\n")
-	_, err = Read(dir)
-	require.ErrorContains(t, err, "submit-answer problems must be scoring")
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom interactive\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, [2]string{"interactive", "points"}, [2]string{p.Type, p.Grading})
+	require.NotNil(t, p.Interactor)
+	require.Equal(t, 30*points.Unit, p.Testset.Groups[1].Groups[0].Tests[0].Points, "an interactive problem keeps the scoring testset")
 	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom\ngrading:\n  on_reject: first_error\n")
 	p, err = Read(dir)
 	require.NoError(t, err)

@@ -141,6 +141,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
 			Type:         corev1.ProblemType(contestProblem.Type),
+			Grading:      corev1.ProblemGrading(contestProblem.Grading),
 			ProblemID:    contestProblem.ProblemID,
 			Title:        title,
 			TimeLimit:    safeInt32(problem.TimeLimitMs),
@@ -227,7 +228,7 @@ func ContestDTO(c contestsmodel.Contest) corev1.ContestModel {
 }
 
 func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
-	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), Languages: append([]string{}, t.Languages...), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	return corev1.ContestProblemListItemModel{Type: corev1.ProblemType(t.Type), Grading: corev1.ProblemGrading(t.Grading), Languages: append([]string{}, t.Languages...), ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 }
 func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
 	result := make([]corev1.ProblemSampleModel, len(samples))
@@ -366,6 +367,9 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 				MemoryKB:  t.MemoryKb,
 				Sample:    corev1.NewOptBool(t.Sample),
 				Group:     corev1.NewOptString(t.Group),
+			}
+			if t.Points != nil {
+				tests[i].Points = corev1.NewOptFloat64(t.Points.Float64())
 			}
 		}
 	}

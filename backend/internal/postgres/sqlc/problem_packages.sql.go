@@ -24,7 +24,7 @@ func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID)
 }
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages WHERE id = $1
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, grading, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages WHERE id = $1
 `
 
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
@@ -39,6 +39,7 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.Title,
 		&i.ShortName,
 		&i.Type,
+		&i.Grading,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
 		&i.InputFile,
@@ -55,7 +56,7 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, grading, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages
 WHERE problem_id = $1
 ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT 1
@@ -73,6 +74,7 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.Title,
 		&i.ShortName,
 		&i.Type,
+		&i.Grading,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
 		&i.InputFile,
@@ -89,7 +91,7 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, type, grading, time_limit_ms, memory_limit_mb, input_file, output_file, build_id, object_id, revision, samples, statements, files_object_id, languages FROM problem_packages
 WHERE problem_id = $1
 ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT $3::int OFFSET $2::bigint
@@ -119,6 +121,7 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.Title,
 			&i.ShortName,
 			&i.Type,
+			&i.Grading,
 			&i.TimeLimitMs,
 			&i.MemoryLimitMb,
 			&i.InputFile,

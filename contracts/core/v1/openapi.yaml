@@ -3877,6 +3877,7 @@ components:
       - title
       - short_name
       - type
+      - grading
       - time_limit_ms
       - memory_limit_mb
       - max_score
@@ -3909,6 +3910,8 @@ components:
           type: string
         type:
           $ref: "#/components/schemas/ProblemType"
+        grading:
+          $ref: "#/components/schemas/ProblemGrading"
         time_limit_ms:
           type: integer
           format: int64
@@ -3916,6 +3919,7 @@ components:
           type: integer
           format: int64
         max_score:
+          description: Computed from the testset on a points problem; null on a pass-fail one, and ignored on save.
           type: number
           format: double
           nullable: true
@@ -4292,7 +4296,8 @@ components:
         id: builtin:a-plus-b
         title: Стандартная задача (A+B)
         description: Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов
-        problem_type: pass-fail
+        problem_type: standard
+        grading: pass-fail
         is_builtin: false
       type: object
       required:
@@ -4300,6 +4305,7 @@ components:
         - title
         - description
         - problem_type
+        - grading
         - is_builtin
       properties:
         id:
@@ -4312,8 +4318,9 @@ components:
           type: string
           example: Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов
         problem_type:
-          type: string
-          example: pass-fail
+          $ref: "#/components/schemas/ProblemType"
+        grading:
+          $ref: "#/components/schemas/ProblemGrading"
         is_builtin:
           type: boolean
     OrganizationPermissionsModel:
@@ -4636,20 +4643,26 @@ components:
         statement:
           $ref: "#/components/schemas/ProblemStatementModel"
     ProblemType:
-      description: "An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager."
+      description: "How a solution runs. An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager."
       type: string
       enum:
-        - pass-fail
-        - scoring
+        - standard
         - interactive
         - communication
         - output-only
+    ProblemGrading:
+      description: "How tests score, whatever the type. On a pass-fail problem a submission takes the verdict of the first failed test. On a points problem each test earns its points; a checker, interactor or manager may give part of them with the testlib POINTS verdict, as in Polygon. A points submission is accepted at full score, partial (state 108) above zero, and otherwise takes the verdict of the first failed test."
+      type: string
+      enum:
+        - pass-fail
+        - points
     ProblemStatementModel:
       description: "Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview."
       type: object
       required:
         - title
         - type
+        - grading
         - time_limit
         - memory_limit
         - input_file
@@ -4669,6 +4682,8 @@ components:
           type: string
         type:
           $ref: "#/components/schemas/ProblemType"
+        grading:
+          $ref: "#/components/schemas/ProblemGrading"
         time_limit:
           type: integer
           format: int32
@@ -4732,6 +4747,7 @@ components:
         - problem_id
         - title
         - type
+        - grading
         - time_limit
         - memory_limit
         - input_file
@@ -4761,6 +4777,8 @@ components:
           example: Test problem
         type:
           $ref: "#/components/schemas/ProblemType"
+        grading:
+          $ref: "#/components/schemas/ProblemGrading"
         time_limit:
           type: integer
           format: int32
@@ -5124,6 +5142,7 @@ components:
         - position
         - title
         - type
+        - grading
         - languages
         - memory_limit
         - time_limit
@@ -5143,6 +5162,8 @@ components:
           example: Test task
         type:
           $ref: "#/components/schemas/ProblemType"
+        grading:
+          $ref: "#/components/schemas/ProblemGrading"
         languages:
           type: array
           description: Languages the problem accepts, within the contest's; empty accepts every language.
@@ -5600,8 +5621,12 @@ components:
           type: boolean
         group:
           type: string
+        points:
+          description: Points the test earned on a points problem.
+          type: number
+          format: double
     GroupResultModel:
-      description: "A group's score; pass-fail and interactive problems have none. The unnamed group is the testset."
+      description: "A group's score; pass-fail problems have none. The unnamed group is the testset."
       type: object
       required:
         - name

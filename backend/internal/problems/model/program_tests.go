@@ -2,7 +2,6 @@ package problemsmodel
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -44,11 +43,11 @@ type ProgramTestResult struct {
 func (t *DraftCheckerTest) Check(verdict string, score *float64) ProgramTestResult {
 	result := ProgramTestResult{ID: t.ID, Verdict: verdict}
 	if score != nil {
-		if !(*score >= 0 && *score*100 <= float64(points.Max)) {
+		value, ok := points.FromFloat(*score)
+		if !ok {
 			result.Mismatch = fmt.Sprintf("checker printed invalid points %g", *score)
 			return result
 		}
-		value := points.Value(math.Round(*score * 100))
 		result.Points = &value
 	}
 	switch {

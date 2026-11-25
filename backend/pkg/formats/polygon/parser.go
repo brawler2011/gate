@@ -112,7 +112,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if err := markPretests(fsys, testset, prob.Judging.Testsets, &p.Testset); err != nil {
 		return nil, err
 	}
-	p.Type = problemType(prob, &p.Testset)
+	p.Type, p.Grading = problemType(prob), spec.TestGrading(&p.Testset)
 	// Well-formed Polygon tests are text; Windows packages use CRLF.
 	for _, property := range prob.Properties {
 		if property.Name == "tests-wellformed" && property.Value == "true" {
@@ -245,18 +245,11 @@ func mainSolution(solutions []Solution) string {
 	return ""
 }
 
-func problemType(prob Problem, root *spec.Group) string {
+func problemType(prob Problem) string {
 	if prob.Interactive || (prob.Assets != nil && prob.Assets.Interactor != nil) {
 		return "interactive"
 	}
-	for g := range root.All() {
-		for _, t := range g.Tests {
-			if t.Points > 0 {
-				return "scoring"
-			}
-		}
-	}
-	return "pass-fail"
+	return "standard"
 }
 
 // Ungrouped tests stay in the root; groups follow their first test, preserving Polygon test numbering.

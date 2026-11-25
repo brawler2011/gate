@@ -134,8 +134,8 @@ func seedSubmissions(tb testing.TB, pool *pgxpool.Pool, size int) submissionBenc
  INSERT INTO contest_members(contest_id,user_id,role) SELECT id,md5('owner')::uuid,'owner' FROM c`, f.contest, org)
 	fixtureExec(tb, pool, `WITH p AS (INSERT INTO problems(id,organization_id) SELECT md5('problem'||i)::uuid,$1 FROM generate_series(1,10) i RETURNING id)
  INSERT INTO problem_members(problem_id,user_id,role) SELECT id,md5('owner')::uuid,'owner' FROM p`, org)
-	fixtureExec(tb, pool, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
- SELECT md5('problem'||i)::uuid,$1,'Problem '||i,'p'||i,'pass-fail',1000,256 FROM generate_series(1,10) i`, org)
+	fixtureExec(tb, pool, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,grading,time_limit_ms,memory_limit_mb)
+ SELECT md5('problem'||i)::uuid,$1,'Problem '||i,'p'||i,'standard','pass-fail',1000,256 FROM generate_series(1,10) i`, org)
 	for i := 1; i <= 10; i++ {
 		var problem uuid.UUID
 		require.NoError(tb, pool.QueryRow(ctx, `SELECT md5('problem'||$1::int)::uuid`, i).Scan(&problem))

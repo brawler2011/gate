@@ -45,7 +45,7 @@ const history = (page: number) => ({
 
 // A draft with every component a build requires, so the build button is enabled.
 const buildableDraft = {
-  problem_id: "problem", revision: 7, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
+  problem_id: "problem", revision: 7, title: "A", short_name: "a", type: "standard", grading: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, input_file: "", output_file: "", max_score: null,
   main_solution: null, files: {"checkers/check.cpp": ""}, assets: [],
   components: [{id: "checker", role: "checker", path: "checkers/check.cpp", dependencies: {}}],

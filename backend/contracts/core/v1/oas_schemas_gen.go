@@ -2031,6 +2031,7 @@ type ContestProblemListItemModel struct {
 	Position    int32                          `json:"position"`
 	Title       string                         `json:"title"`
 	Type        ProblemType                    `json:"type"`
+	Grading     ProblemGrading                 `json:"grading"`
 	// Languages the problem accepts, within the contest's; empty accepts every language.
 	Languages   []string  `json:"languages"`
 	MemoryLimit int32     `json:"memory_limit"`
@@ -2062,6 +2063,11 @@ func (s *ContestProblemListItemModel) GetTitle() string {
 // GetType returns the value of Type.
 func (s *ContestProblemListItemModel) GetType() ProblemType {
 	return s.Type
+}
+
+// GetGrading returns the value of Grading.
+func (s *ContestProblemListItemModel) GetGrading() ProblemGrading {
+	return s.Grading
 }
 
 // GetLanguages returns the value of Languages.
@@ -2114,6 +2120,11 @@ func (s *ContestProblemListItemModel) SetType(val ProblemType) {
 	s.Type = val
 }
 
+// SetGrading sets the value of Grading.
+func (s *ContestProblemListItemModel) SetGrading(val ProblemGrading) {
+	s.Grading = val
+}
+
 // SetLanguages sets the value of Languages.
 func (s *ContestProblemListItemModel) SetLanguages(val []string) {
 	s.Languages = val
@@ -2146,6 +2157,7 @@ type ContestProblemModel struct {
 	ProblemID   uuid.UUID                      `json:"problem_id"`
 	Title       string                         `json:"title"`
 	Type        ProblemType                    `json:"type"`
+	Grading     ProblemGrading                 `json:"grading"`
 	TimeLimit   int32                          `json:"time_limit"`
 	MemoryLimit int32                          `json:"memory_limit"`
 	// File the solution reads instead of standard input; empty for standard input.
@@ -2191,6 +2203,11 @@ func (s *ContestProblemModel) GetTitle() string {
 // GetType returns the value of Type.
 func (s *ContestProblemModel) GetType() ProblemType {
 	return s.Type
+}
+
+// GetGrading returns the value of Grading.
+func (s *ContestProblemModel) GetGrading() ProblemGrading {
+	return s.Grading
 }
 
 // GetTimeLimit returns the value of TimeLimit.
@@ -2301,6 +2318,11 @@ func (s *ContestProblemModel) SetTitle(val string) {
 // SetType sets the value of Type.
 func (s *ContestProblemModel) SetType(val ProblemType) {
 	s.Type = val
+}
+
+// SetGrading sets the value of Grading.
+func (s *ContestProblemModel) SetGrading(val ProblemGrading) {
+	s.Grading = val
 }
 
 // SetTimeLimit sets the value of TimeLimit.
@@ -4647,7 +4669,7 @@ func (s *GetUserResponseModel) SetUser(val UserModel) {
 	s.User = val
 }
 
-// A group's score; pass-fail and interactive problems have none. The unnamed group is the testset.
+// A group's score; pass-fail problems have none. The unnamed group is the testset.
 // Ref: #/components/schemas/GroupResultModel
 type GroupResultModel struct {
 	Name   string     `json:"name"`
@@ -9574,19 +9596,21 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 // referred to by ID.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
-	ProblemID     uuid.UUID                  `json:"problem_id"`
-	Revision      int64                      `json:"revision"`
-	Title         string                     `json:"title"`
-	ShortName     string                     `json:"short_name"`
-	Type          ProblemType                `json:"type"`
-	TimeLimitMs   int64                      `json:"time_limit_ms"`
-	MemoryLimitMB int64                      `json:"memory_limit_mb"`
-	MaxScore      NilFloat64                 `json:"max_score"`
-	Checker       NilProblemDraftChecker     `json:"checker"`
-	Interactor    NilProblemDraftInteractor  `json:"interactor"`
-	Validators    []ProblemDraftValidator    `json:"validators"`
-	Generators    []ProblemDraftNamedProgram `json:"generators"`
-	Solutions     []ProblemDraftSolution     `json:"solutions"`
+	ProblemID     uuid.UUID      `json:"problem_id"`
+	Revision      int64          `json:"revision"`
+	Title         string         `json:"title"`
+	ShortName     string         `json:"short_name"`
+	Type          ProblemType    `json:"type"`
+	Grading       ProblemGrading `json:"grading"`
+	TimeLimitMs   int64          `json:"time_limit_ms"`
+	MemoryLimitMB int64          `json:"memory_limit_mb"`
+	// Computed from the testset on a points problem; null on a pass-fail one, and ignored on save.
+	MaxScore   NilFloat64                 `json:"max_score"`
+	Checker    NilProblemDraftChecker     `json:"checker"`
+	Interactor NilProblemDraftInteractor  `json:"interactor"`
+	Validators []ProblemDraftValidator    `json:"validators"`
+	Generators []ProblemDraftNamedProgram `json:"generators"`
+	Solutions  []ProblemDraftSolution     `json:"solutions"`
 	// Name of a solution of the draft.
 	MainSolution NilString `json:"main_solution"`
 	// File the solution reads instead of standard input; empty for standard input.
@@ -9631,6 +9655,11 @@ func (s *ProblemDraft) GetShortName() string {
 // GetType returns the value of Type.
 func (s *ProblemDraft) GetType() ProblemType {
 	return s.Type
+}
+
+// GetGrading returns the value of Grading.
+func (s *ProblemDraft) GetGrading() ProblemGrading {
+	return s.Grading
 }
 
 // GetTimeLimitMs returns the value of TimeLimitMs.
@@ -9751,6 +9780,11 @@ func (s *ProblemDraft) SetShortName(val string) {
 // SetType sets the value of Type.
 func (s *ProblemDraft) SetType(val ProblemType) {
 	s.Type = val
+}
+
+// SetGrading sets the value of Grading.
+func (s *ProblemDraft) SetGrading(val ProblemGrading) {
+	s.Grading = val
 }
 
 // SetTimeLimitMs sets the value of TimeLimitMs.
@@ -11124,6 +11158,53 @@ func (s *ProblemDraftValidatorTest) SetGroup(val string) {
 	s.Group = val
 }
 
+// How tests score, whatever the type. On a pass-fail problem a submission takes the verdict of the
+// first failed test. On a points problem each test earns its points; a checker, interactor or manager
+// may give part of them with the testlib POINTS verdict, as in Polygon. A points submission is
+// accepted at full score, partial (state 108) above zero, and otherwise takes the verdict of the first
+// failed test.
+// Ref: #/components/schemas/ProblemGrading
+type ProblemGrading string
+
+const (
+	ProblemGradingPassFail ProblemGrading = "pass-fail"
+	ProblemGradingPoints   ProblemGrading = "points"
+)
+
+// AllValues returns all ProblemGrading values.
+func (ProblemGrading) AllValues() []ProblemGrading {
+	return []ProblemGrading{
+		ProblemGradingPassFail,
+		ProblemGradingPoints,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemGrading) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemGradingPassFail:
+		return []byte(s), nil
+	case ProblemGradingPoints:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemGrading) UnmarshalText(data []byte) error {
+	switch ProblemGrading(data) {
+	case ProblemGradingPassFail:
+		*s = ProblemGradingPassFail
+		return nil
+	case ProblemGradingPoints:
+		*s = ProblemGradingPoints
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {
@@ -11714,10 +11795,11 @@ func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
 // StatementPreview.
 // Ref: #/components/schemas/ProblemStatementModel
 type ProblemStatementModel struct {
-	Title       string      `json:"title"`
-	Type        ProblemType `json:"type"`
-	TimeLimit   int32       `json:"time_limit"`
-	MemoryLimit int32       `json:"memory_limit"`
+	Title       string         `json:"title"`
+	Type        ProblemType    `json:"type"`
+	Grading     ProblemGrading `json:"grading"`
+	TimeLimit   int32          `json:"time_limit"`
+	MemoryLimit int32          `json:"memory_limit"`
 	// File the solution reads instead of standard input; empty for standard input.
 	InputFile string `json:"input_file"`
 	// File the solution writes instead of standard output; empty for standard output.
@@ -11744,6 +11826,11 @@ func (s *ProblemStatementModel) GetTitle() string {
 // GetType returns the value of Type.
 func (s *ProblemStatementModel) GetType() ProblemType {
 	return s.Type
+}
+
+// GetGrading returns the value of Grading.
+func (s *ProblemStatementModel) GetGrading() ProblemGrading {
+	return s.Grading
 }
 
 // GetTimeLimit returns the value of TimeLimit.
@@ -11824,6 +11911,11 @@ func (s *ProblemStatementModel) SetTitle(val string) {
 // SetType sets the value of Type.
 func (s *ProblemStatementModel) SetType(val ProblemType) {
 	s.Type = val
+}
+
+// SetGrading sets the value of Grading.
+func (s *ProblemStatementModel) SetGrading(val ProblemGrading) {
+	s.Grading = val
 }
 
 // SetTimeLimit sets the value of TimeLimit.
@@ -11948,11 +12040,12 @@ func (s *ProblemStatusCodeWithHeaders) SetResponse(val Problem) {
 // Problem template data.
 // Ref: #/components/schemas/ProblemTemplateModel
 type ProblemTemplateModel struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	ProblemType string `json:"problem_type"`
-	IsBuiltin   bool   `json:"is_builtin"`
+	ID          string         `json:"id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	ProblemType ProblemType    `json:"problem_type"`
+	Grading     ProblemGrading `json:"grading"`
+	IsBuiltin   bool           `json:"is_builtin"`
 }
 
 // GetID returns the value of ID.
@@ -11971,8 +12064,13 @@ func (s *ProblemTemplateModel) GetDescription() string {
 }
 
 // GetProblemType returns the value of ProblemType.
-func (s *ProblemTemplateModel) GetProblemType() string {
+func (s *ProblemTemplateModel) GetProblemType() ProblemType {
 	return s.ProblemType
+}
+
+// GetGrading returns the value of Grading.
+func (s *ProblemTemplateModel) GetGrading() ProblemGrading {
+	return s.Grading
 }
 
 // GetIsBuiltin returns the value of IsBuiltin.
@@ -11996,8 +12094,13 @@ func (s *ProblemTemplateModel) SetDescription(val string) {
 }
 
 // SetProblemType sets the value of ProblemType.
-func (s *ProblemTemplateModel) SetProblemType(val string) {
+func (s *ProblemTemplateModel) SetProblemType(val ProblemType) {
 	s.ProblemType = val
+}
+
+// SetGrading sets the value of Grading.
+func (s *ProblemTemplateModel) SetGrading(val ProblemGrading) {
+	s.Grading = val
 }
 
 // SetIsBuiltin sets the value of IsBuiltin.
@@ -12005,15 +12108,14 @@ func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 	s.IsBuiltin = val
 }
 
-// An output-only problem judges the outputs participants submit, one file per test, instead of running
-// a program. A communication problem runs several copies of the solution at once, each talking to the
-// interactor, its manager.
+// How a solution runs. An output-only problem judges the outputs participants submit, one file per
+// test, instead of running a program. A communication problem runs several copies of the solution at
+// once, each talking to the interactor, its manager.
 // Ref: #/components/schemas/ProblemType
 type ProblemType string
 
 const (
-	ProblemTypePassFail      ProblemType = "pass-fail"
-	ProblemTypeScoring       ProblemType = "scoring"
+	ProblemTypeStandard      ProblemType = "standard"
 	ProblemTypeInteractive   ProblemType = "interactive"
 	ProblemTypeCommunication ProblemType = "communication"
 	ProblemTypeOutputOnly    ProblemType = "output-only"
@@ -12022,8 +12124,7 @@ const (
 // AllValues returns all ProblemType values.
 func (ProblemType) AllValues() []ProblemType {
 	return []ProblemType{
-		ProblemTypePassFail,
-		ProblemTypeScoring,
+		ProblemTypeStandard,
 		ProblemTypeInteractive,
 		ProblemTypeCommunication,
 		ProblemTypeOutputOnly,
@@ -12033,9 +12134,7 @@ func (ProblemType) AllValues() []ProblemType {
 // MarshalText implements encoding.TextMarshaler.
 func (s ProblemType) MarshalText() ([]byte, error) {
 	switch s {
-	case ProblemTypePassFail:
-		return []byte(s), nil
-	case ProblemTypeScoring:
+	case ProblemTypeStandard:
 		return []byte(s), nil
 	case ProblemTypeInteractive:
 		return []byte(s), nil
@@ -12051,11 +12150,8 @@ func (s ProblemType) MarshalText() ([]byte, error) {
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *ProblemType) UnmarshalText(data []byte) error {
 	switch ProblemType(data) {
-	case ProblemTypePassFail:
-		*s = ProblemTypePassFail
-		return nil
-	case ProblemTypeScoring:
-		*s = ProblemTypeScoring
+	case ProblemTypeStandard:
+		*s = ProblemTypeStandard
 		return nil
 	case ProblemTypeInteractive:
 		*s = ProblemTypeInteractive
@@ -14164,6 +14260,8 @@ type TestDetailItemModel struct {
 	MemoryKB  int32     `json:"memory_kb"`
 	Sample    OptBool   `json:"sample"`
 	Group     OptString `json:"group"`
+	// Points the test earned on a points problem.
+	Points OptFloat64 `json:"points"`
 }
 
 // GetTestIndex returns the value of TestIndex.
@@ -14196,6 +14294,11 @@ func (s *TestDetailItemModel) GetGroup() OptString {
 	return s.Group
 }
 
+// GetPoints returns the value of Points.
+func (s *TestDetailItemModel) GetPoints() OptFloat64 {
+	return s.Points
+}
+
 // SetTestIndex sets the value of TestIndex.
 func (s *TestDetailItemModel) SetTestIndex(val int32) {
 	s.TestIndex = val
@@ -14224,6 +14327,11 @@ func (s *TestDetailItemModel) SetSample(val OptBool) {
 // SetGroup sets the value of Group.
 func (s *TestDetailItemModel) SetGroup(val OptString) {
 	s.Group = val
+}
+
+// SetPoints sets the value of Points.
+func (s *TestDetailItemModel) SetPoints(val OptFloat64) {
+	s.Points = val
 }
 
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.

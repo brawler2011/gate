@@ -145,6 +145,7 @@ export const SubmissionDetailsContent = ({
   const failedDetails = testDetails?.failed_test_details;
   const compilerOutput = testDetails?.compiler_output;
   const tests = testDetails?.tests;
+  const scoredTests = tests?.some((t) => t.points !== undefined) ?? false;
   // The unnamed group is the testset, whose score is the submission's.
   const scoredGroups = testDetails?.groups?.filter((g) => g.score !== undefined && g.name !== "") ?? [];
 
@@ -453,6 +454,7 @@ export const SubmissionDetailsContent = ({
                 <TableTr>
                   <TableTh ta="center" style={{width: 60}}>#</TableTh>
                   <TableTh ta="center">Вердикт</TableTh>
+                  {scoredTests && <TableTh ta="center">Баллы</TableTh>}
                   <TableTh ta="center">Время</TableTh>
                   <TableTh ta="center">Память</TableTh>
                 </TableTr>
@@ -480,6 +482,7 @@ export const SubmissionDetailsContent = ({
                           {t.verdict}
                         </Badge>
                       </TableTd>
+                      {scoredTests && <TableTd ta="center">{t.points ?? "—"}</TableTd>}
                       <TableTd ta="center">{t.time_ms} ms</TableTd>
                       <TableTd ta="center">{t.memory_kb} КБ</TableTd>
                     </TableTr>

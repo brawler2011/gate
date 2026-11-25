@@ -22,6 +22,8 @@ const (
 	GotPE State = 105 // presentation error
 	GotWA State = 106 // wrong answer
 	GotIE State = 107 // internal error
+	// Partial is a points submission that scored above zero but below the maximum.
+	Partial State = 108
 
 	Accepted State = 200
 
@@ -44,9 +46,11 @@ type TestDetailItem struct {
 	MemoryKb  int32  `json:"memory_kb"`
 	Sample    bool   `json:"sample,omitempty"`
 	Group     string `json:"group,omitempty"`
+	// Points the test earned on a points problem.
+	Points *points.Value `json:"points,omitempty"`
 }
 
-// GroupResult scores of a pass-fail or interactive problem are nil; the unnamed one is the testset.
+// GroupResult scores of a pass-fail problem are nil; the unnamed one is the testset.
 type GroupResult struct {
 	Name     string        `json:"name"`
 	Feedback string        `json:"feedback,omitempty"`

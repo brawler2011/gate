@@ -121,6 +121,7 @@ type ProblemPackage struct {
 	PackageHash    string
 	CreatedAt      time.Time
 	Title, Type    string
+	Grading        string
 	Statements     []BuiltStatement
 	TimeLimitMs    int32
 	MemoryLimitMb  int32

@@ -178,11 +178,11 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 			hasFailureDetails = true
 		}
 		results = append(results, result)
-		if result.Verdict != "OK" && p.Type != "scoring" {
+		if result.Verdict != "OK" && p.Grading != spec.GradingPoints {
 			break
 		}
 	}
-	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict := NewVerdictCalculator(p).Calculate(results)
 	verdict.Calibration = calib
 	verdict.Pretests = pretests
 	return verdict, nil
@@ -226,6 +226,8 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		return result, err
 	}
 	defer j.release(output)
+	// An interactor's full points still leave the checker to judge the dialogue.
+	result.Award(test.Test.Points, p.Grading)
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
 		check, err := sb.CheckFiles(ctx, checker.With(test.Group.CheckerArgs), input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
 		if err != nil {
@@ -235,6 +237,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Message = check.Message
 		result.CheckerOutput = check.Message
 		result.Score = check.Score
+		result.Award(test.Test.Points, p.Grading)
 	}
 	if details && result.Verdict != "OK" {
 		if interactor == nil {
@@ -288,7 +291,7 @@ func (j *PackageJudge) JudgeOutputs(ctx context.Context, pkg *LoadedPackage, sub
 		details = details && result.Verdict == "OK"
 		results = append(results, result)
 	}
-	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict := NewVerdictCalculator(p).Calculate(results)
 	verdict.Pretests = pretests
 	return verdict, nil
 }
@@ -312,6 +315,7 @@ func (j *PackageJudge) checkOutput(ctx context.Context, sb *sandbox.Sandbox, pkg
 			return result, err
 		}
 		result.Verdict, result.Message, result.CheckerOutput, result.Score = string(check.Status), check.Message, check.Message, check.Score
+		result.Award(test.Test.Points, p.Grading)
 	}
 	if !details || result.Verdict == "OK" {
 		return result, nil

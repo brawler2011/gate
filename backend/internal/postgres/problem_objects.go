@@ -97,7 +97,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	pid := uuid.New()
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
 		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision,
-		Title: index.Title, ShortName: index.ShortName, Type: index.Type, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
+		Title: index.Title, ShortName: index.ShortName, Type: index.Type, Grading: index.Grading, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
 		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples), FilesObjectID: files, Languages: index.Languages,
 	}); err != nil {
 		return uuid.Nil, dbError("insert package", err)

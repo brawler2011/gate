@@ -781,7 +781,7 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 				timeMinutes = &zero
 			}
 		} else if sub.State == submissionsmodel.GotTL || sub.State == submissionsmodel.GotML ||
-			sub.State == submissionsmodel.GotRE || sub.State == submissionsmodel.GotPE || sub.State == submissionsmodel.GotWA || sub.State == submissionsmodel.Disqualified {
+			sub.State == submissionsmodel.GotRE || sub.State == submissionsmodel.GotPE || sub.State == submissionsmodel.GotWA || sub.State == submissionsmodel.Partial || sub.State == submissionsmodel.Disqualified {
 			failedAttempts++
 		}
 	}

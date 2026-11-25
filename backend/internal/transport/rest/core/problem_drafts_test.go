@@ -47,7 +47,7 @@ func TestDraftSurvivesContractRoundTrip(t *testing.T) {
 	var d model.Draft
 	n := 0
 	fill(reflect.ValueOf(&d).Elem(), &n)
-	d.Type = "scoring"
+	d.Type, d.Grading = "standard", "points"
 	d.Testset.Aggregate = "min"
 	d.Tests[0].Input.Mode = "generator"
 	d.Tests[0].Answer.Mode = "generated"

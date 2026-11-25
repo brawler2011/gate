@@ -24,8 +24,8 @@ func (q *Queries) DraftObjectIDs(ctx context.Context, problemID uuid.UUID) ([]uu
 }
 
 const insertProblemDraft = `-- name: InsertProblemDraft :exec
-INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
-SELECT id,organization_id,$1,$2,'pass-fail',1000,256 FROM problems WHERE id=$3
+INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,grading,time_limit_ms,memory_limit_mb)
+SELECT id,organization_id,$1,$2,'standard','pass-fail',1000,256 FROM problems WHERE id=$3
 `
 
 type InsertProblemDraftParams struct {
@@ -118,7 +118,7 @@ func (q *Queries) ReadProblemBuild(ctx context.Context, id uuid.UUID) (ProblemBu
 }
 
 const readProblemDraft = `-- name: ReadProblemDraft :one
-SELECT problem_id,revision,title,short_name,type,time_limit_ms,memory_limit_mb,max_score,content FROM problem_drafts WHERE problem_id=$1
+SELECT problem_id,revision,title,short_name,type,grading,time_limit_ms,memory_limit_mb,max_score,content FROM problem_drafts WHERE problem_id=$1
 `
 
 type ReadProblemDraftRow struct {
@@ -127,6 +127,7 @@ type ReadProblemDraftRow struct {
 	Title         string        `json:"title"`
 	ShortName     string        `json:"short_name"`
 	Type          string        `json:"type"`
+	Grading       string        `json:"grading"`
 	TimeLimitMs   int32         `json:"time_limit_ms"`
 	MemoryLimitMb int32         `json:"memory_limit_mb"`
 	MaxScore      *points.Value `json:"max_score"`
@@ -142,6 +143,7 @@ func (q *Queries) ReadProblemDraft(ctx context.Context, problemID uuid.UUID) (Re
 		&i.Title,
 		&i.ShortName,
 		&i.Type,
+		&i.Grading,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
 		&i.MaxScore,

@@ -595,8 +595,8 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
 		ids = append(ids, result.OutputID)
-		if result.Status != sandbox.StatusOK {
-			return tr, fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
+		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
+			return tr, fail("interact", test.Ordinal, r.Verdict, errors.New(r.Message))
 		}
 		outputID = result.OutputID
 		// Without a provided answer, the main solution's interactor output becomes the answer for later judging.
@@ -645,15 +645,15 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		if err != nil {
 			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
-		if result.Status != sandbox.StatusOK {
-			return tr, fail("check", test.Ordinal, string(result.Status), errors.New(result.Message))
+		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
+			return tr, fail("check", test.Ordinal, r.Verdict, errors.New(r.Message))
 		}
 	}
 	for _, sol := range s.Draft.Solutions {
 		if !sol.Runs() || e.uncompiled[sol.Name] {
 			continue
 		}
-		result, err := e.judge(ctx, sol.Name, test.Ordinal, group.CheckerArgs, inputID, answerID)
+		result, err := e.judge(ctx, sol.Name, test, group.CheckerArgs, inputID, answerID)
 		if err != nil {
 			return tr, fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
 		}
@@ -686,21 +686,28 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 
 // judge runs a solution on a test as the judge runs submissions. A TLE runs again before it counts,
 // since concurrent steps contend for the CPU.
-func (e *execution) judge(ctx context.Context, name string, ordinal int, args []string, inputID, answerID string) (judging.TestResult, error) {
+func (e *execution) judge(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string) (judging.TestResult, error) {
 	for rerun := true; ; rerun = false {
-		result, err := e.judgeOnce(ctx, name, ordinal, args, inputID, answerID)
+		result, err := e.judgeOnce(ctx, name, test, args, inputID, answerID)
 		if err != nil || !rerun || result.Verdict != string(sandbox.StatusTLE) {
 			return result, err
 		}
 	}
 }
 
+// award grades a jury verdict on the main solution, which must earn every point of the test.
+func (e *execution) award(test model.DraftTest, status string, score *float64, message string) judging.TestResult {
+	r := judging.TestResult{Verdict: status, Score: score, Message: message}
+	r.Award(test.Points, e.build.Snapshot.Draft.Grading)
+	return r
+}
+
 // judgeOnce passes args, those of the test's group, to the checker or interactor.
-func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, args []string, inputID, answerID string) (judging.TestResult, error) {
+func (e *execution) judgeOnce(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string) (judging.TestResult, error) {
 	s := e.build.Snapshot
 	aux := s.Limits.Auxiliary
 	sol := e.compiled[programKey("solution", name)]
-	result := judging.TestResult{TestNumber: ordinal}
+	result := judging.TestResult{TestNumber: test.Ordinal}
 	var outputID string
 	if spec.Interactive(s.Draft.Type) {
 		intr := e.compiled["interactor"]
@@ -709,7 +716,8 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, arg
 			return result, err
 		}
 		defer e.release(r.OutputID)
-		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), e.pipeline.Calibration().Normalize(r.SolutionResult.Time).Nanoseconds()
+		outputID, result.Verdict, result.Score, result.Time = r.OutputID, string(r.Status), r.Score, e.pipeline.Calibration().Normalize(r.SolutionResult.Time).Nanoseconds()
+		result.Award(test.Points, s.Draft.Grading)
 	} else {
 		r, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
 		if err != nil {
@@ -724,7 +732,8 @@ func (e *execution) judgeOnce(ctx context.Context, name string, ordinal int, arg
 		if err != nil {
 			return result, err
 		}
-		result.Verdict = string(r.Status)
+		result.Verdict, result.Score = string(r.Status), r.Score
+		result.Award(test.Points, s.Draft.Grading)
 	}
 	return result, nil
 }
@@ -750,8 +759,8 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 		}
 		if e.uncompiled[sol.Name] {
 			result.Verdict = string(sandbox.StatusCE)
-		} else if spec.Scored(d.Type) {
-			score := judging.NewVerdictCalculator(d.Type, e.pkg.Manifest).Calculate(tests).Score
+		} else if d.Grading == spec.GradingPoints {
+			score := judging.NewVerdictCalculator(e.pkg.Manifest).Calculate(tests).Score
 			result.Points = &score
 		}
 		result.Mismatch = sol.Mismatch(!e.uncompiled[sol.Name], verdicts, result.Points)

@@ -12,9 +12,6 @@ import type {
   ProblemDraftValidatorTest,
 } from "@/contracts/core/v1/schema";
 
-// Output-only problems score submitted outputs test by test, as scoring ones do.
-export const isScored = (type: ProblemDraft["type"]): boolean => type === "scoring" || type === "output-only";
-
 // A communication problem's interactor is the manager of several solution copies.
 export const isInteractive = (type: ProblemDraft["type"]): boolean => type === "interactive" || type === "communication";
 
