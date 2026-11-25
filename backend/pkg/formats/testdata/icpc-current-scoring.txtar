@@ -52,8 +52,6 @@ description: smallest
 -- submissions/submissions.yaml --
 "{accepted,partial}/*":
   authors: Author
-accepted/ok.cpp:
-  model_solution: true
 partial:
   permitted: [AC, WA]
   required: [WA]

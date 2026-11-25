@@ -2,7 +2,6 @@
 package icpc
 
 import (
-	"cmp"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -204,10 +203,9 @@ func program(source string, headers []spec.File) spec.Program {
 
 // expectation is a submissions.yaml rule; the verdicts are AC, WA, TLE and RTE.
 type expectation struct {
-	Permitted     []string `yaml:"permitted"`
-	Required      []string `yaml:"required"`
-	Score         any      `yaml:"score"`
-	ModelSolution bool     `yaml:"model_solution"`
+	Permitted []string `yaml:"permitted"`
+	Required  []string `yaml:"required"`
+	Score     any      `yaml:"score"`
 }
 
 // Solutions in other folders are built only when submissions.yaml sets their verdicts.
@@ -270,7 +268,7 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error), scori
 		}
 	}
 	var result []spec.Program
-	main, model := "", ""
+	main := ""
 	for _, dir := range verdictDirs {
 		if !dir.IsDir() {
 			continue
@@ -295,9 +293,6 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error), scori
 				if score, ok := exactScore(r.Score); ok && scoring {
 					list[i].Points = &score
 				}
-				if r.ModelSolution && dir.Name() == "accepted" && model == "" {
-					model = list[i].Path
-				}
 			}
 		}
 		if dir.Name() == "accepted" && len(list) > 0 {
@@ -305,7 +300,7 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error), scori
 		}
 		result = append(result, list...)
 	}
-	return result, cmp.Or(model, main), nil
+	return result, main, nil
 }
 
 // matches reports whether a submissions.yaml glob names the submission or a directory above it.

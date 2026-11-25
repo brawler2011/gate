@@ -293,7 +293,7 @@ func TestICPCCurrentScoring(t *testing.T) {
 	require.Equal(t, []string{"submissions/accepted/first.cpp OK", "submissions/accepted/ok.cpp OK", "submissions/partial/half.py WA,PE,OLE",
 		"submissions/scored/third.cpp OK,WA,PE,OLE,TLE,RE,MLE"}, solutions, "a rule with only a score runs the submission too")
 	require.Equal(t, &half, p.Solutions[2].Points)
-	require.Equal(t, "submissions/accepted/ok.cpp", p.MainSolution, "the model solution is the main one")
+	require.Equal(t, "submissions/accepted/first.cpp", p.MainSolution)
 	require.Equal(t, "Scoring", p.Title)
 	require.Equal(t, []spec.Statement{{Language: "en", Markdown: "statement/problem.en.md"}, {Language: "ru", Title: "Баллы", PDF: "problem.ru.pdf"}}, p.Statements)
 	require.Equal(t, []spec.File{{Name: "tool.py", Path: "attachments/tool.py"}}, p.Attachments)

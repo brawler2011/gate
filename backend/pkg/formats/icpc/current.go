@@ -199,20 +199,20 @@ func attachments(fsys fs.FS) ([]spec.File, error) {
 
 // GroupConfig is a test_group.yaml, called testdata.yaml in the 2023-07 draft.
 type GroupConfig struct {
-	MaxScore              any  `yaml:"max_score"`
+	MaxScore              any    `yaml:"max_score"`
 	ScoreAggregation      string `yaml:"score_aggregation"`
 	ScoreMode             string `yaml:"score_mode"`
-	StaticValidationScore any  `yaml:"static_validation_score"`
-	RequirePass           list `yaml:"require_pass"`
-	Args                  any  `yaml:"args"`
-	InputValidatorArgs    any  `yaml:"input_validator_args"`
-	OutputValidatorArgs   any  `yaml:"output_validator_args"`
-	StaticValidatorArgs   any  `yaml:"static_validator_args"`
-	InputVisualizerArgs   any  `yaml:"input_visualizer_args"`
-	OutputVisualizerArgs  any  `yaml:"output_visualizer_args"`
-	FullFeedback          any  `yaml:"full_feedback"`
-	InputValidatorFlags   any  `yaml:"input_validator_flags"`
-	OutputValidatorFlags  any  `yaml:"output_validator_flags"`
+	StaticValidationScore any    `yaml:"static_validation_score"`
+	RequirePass           list   `yaml:"require_pass"`
+	Args                  any    `yaml:"args"`
+	InputValidatorArgs    any    `yaml:"input_validator_args"`
+	OutputValidatorArgs   any    `yaml:"output_validator_args"`
+	StaticValidatorArgs   any    `yaml:"static_validator_args"`
+	InputVisualizerArgs   any    `yaml:"input_visualizer_args"`
+	OutputVisualizerArgs  any    `yaml:"output_visualizer_args"`
+	FullFeedback          any    `yaml:"full_feedback"`
+	InputValidatorFlags   any    `yaml:"input_validator_flags"`
+	OutputValidatorFlags  any    `yaml:"output_validator_flags"`
 }
 
 // TestConfig is the .yaml of one test case.
@@ -520,4 +520,3 @@ func (d *currentData) testConfig(stem string) error {
 	}
 	return nil
 }
-
