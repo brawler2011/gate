@@ -50,7 +50,7 @@ export const applyScoreboardEvent = (data: LiveScoreboard | undefined,
 type ScoreboardItem = LiveScoreboard['items'][number];
 
 // Mirrors the backend's rankItems: rows equal on every ranking key share a place.
-export const rankScoreboard = (items: ScoreboardItem[], ranking: LiveScoreboard['ranking'],
+const rankScoreboard = (items: ScoreboardItem[], ranking: LiveScoreboard['ranking'],
   tieBreak: LiveScoreboard['tie_break']): ScoreboardItem[] => {
   const time = (at?: string) => at ? Date.parse(at) : Infinity;
   // Infinity - Infinity is NaN, so two missing times compare equal.
