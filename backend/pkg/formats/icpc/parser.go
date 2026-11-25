@@ -1,4 +1,4 @@
-// Package icpc reads legacy ICPC packages.
+// Package icpc reads ICPC packages: legacy ones and those of version 2025-09, which completed the 2023-07 draft.
 package icpc
 
 import (
@@ -14,15 +14,31 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"gopkg.in/yaml.v3"
 )
 
-// Each directory under data/ becomes a test group.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, err
 	}
+	var version struct {
+		Version string `yaml:"problem_format_version"`
+	}
+	// A problem.yaml that is not a mapping is reported by the legacy reader.
+	_ = yaml.Unmarshal(data, &version)
+	switch version.Version {
+	case "", "legacy", "legacy-icpc":
+		return readLegacy(fsys, data)
+	case "2023-07-draft", "2025-09":
+		return readCurrent(fsys, data)
+	}
+	return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", version.Version, "problem format version %s is not supported", version.Version)
+}
+
+// Each directory under data/ becomes a test group.
+func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	var prob *Problem
 	if err := yaml.Unmarshal(data, &prob); err != nil {
 		return nil, spec.Syntax("problem.yaml", err)
@@ -94,7 +110,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Generators, err = collect("generators"); err != nil {
 		return nil, err
 	}
-	if p.Solutions, p.MainSolution, err = submissions(fsys, collect); err != nil {
+	if p.Solutions, p.MainSolution, err = submissions(fsys, collect, scoring); err != nil {
 		return nil, err
 	}
 	tree := testdata{fsys: fsys, scoring: scoring, legacy: prob.Grading}
@@ -185,36 +201,101 @@ func program(source string, headers []spec.File) spec.Program {
 	return spec.Program{File: spec.File{Name: path.Base(source), Path: source}, Dependencies: deps}
 }
 
-// Solutions in other folders are kept out of the build.
-var folderVerdicts = map[string][]string{
-	"accepted":            {"OK"},
-	"wrong_answer":        {"WA"},
-	"time_limit_exceeded": {"TLE"},
-	"run_time_error":      {"RE"},
+// expectation is a submissions.yaml rule; the verdicts are AC, WA, TLE and RTE.
+type expectation struct {
+	Permitted []string `yaml:"permitted"`
+	Required  []string `yaml:"required"`
+	Score     any      `yaml:"score"`
 }
 
-func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
-	verdicts, err := fs.ReadDir(fsys, "submissions")
+// Solutions in other folders are built only when submissions.yaml sets their verdicts.
+var folderRules = map[string]expectation{
+	"accepted":            {Permitted: []string{"AC"}},
+	"rejected":            {Required: []string{"RTE", "TLE", "WA"}},
+	"wrong_answer":        {Permitted: []string{"AC", "WA"}, Required: []string{"WA"}},
+	"time_limit_exceeded": {Permitted: []string{"AC", "TLE"}, Required: []string{"TLE"}},
+	"run_time_error":      {Permitted: []string{"AC", "RTE"}, Required: []string{"RTE"}},
+	"brute_force":         {Permitted: []string{"AC", "RTE", "TLE"}, Required: []string{"RTE", "TLE"}},
+}
+
+var verdictClasses = []struct {
+	icpc string
+	gate []string
+}{{"AC", []string{"OK"}}, {"WA", []string{"WA", "PE", "OLE"}}, {"TLE", []string{"TLE"}}, {"RTE", []string{"RE", "MLE"}}}
+
+// verdicts approximates the rules by Gate's expectation: every test in the permitted set, and some failing unless AC is required.
+// A rule setting none of these still runs the submission, with every verdict permitted.
+func verdicts(rules []expectation) []string {
+	permitted := []string{"AC", "WA", "TLE", "RTE"}
+	fails, set := false, false
+	for _, r := range rules {
+		if r.Permitted != nil {
+			permitted = slices.DeleteFunc(permitted, func(v string) bool { return !slices.Contains(r.Permitted, v) })
+		}
+		if r.Required != nil {
+			fails = fails || !slices.Contains(r.Required, "AC")
+		}
+		set = set || r.Permitted != nil || r.Required != nil || r.Score != nil
+	}
+	if !set {
+		return nil
+	}
+	var result []string
+	for _, class := range verdictClasses {
+		if slices.Contains(permitted, class.icpc) && (class.icpc != "AC" || !fails) {
+			result = append(result, class.gate...)
+		}
+	}
+	return result
+}
+
+func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error), scoring bool) ([]spec.Program, string, error) {
+	verdictDirs, err := fs.ReadDir(fsys, "submissions")
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, "", nil
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("read submissions: %w", err)
 	}
+	rules := map[string]expectation{}
+	if regular(fsys, "submissions/submissions.yaml") {
+		data, err := spec.ReadFile(fsys, "submissions/submissions.yaml")
+		if err != nil {
+			return nil, "", err
+		}
+		if err := yaml.Unmarshal(data, &rules); err != nil {
+			return nil, "", spec.Syntax("submissions/submissions.yaml", err)
+		}
+	}
 	var result []spec.Program
 	main := ""
-	for _, verdict := range verdicts {
-		if !verdict.IsDir() {
+	for _, dir := range verdictDirs {
+		if !dir.IsDir() {
 			continue
 		}
-		list, err := collect(path.Join("submissions", verdict.Name()))
+		list, err := collect(path.Join("submissions", dir.Name()))
 		if err != nil {
 			return nil, "", err
 		}
 		for i := range list {
-			list[i].Verdicts = folderVerdicts[verdict.Name()]
+			name := strings.TrimPrefix(list[i].Path, "submissions/")
+			var matched []expectation
+			if r, ok := folderRules[dir.Name()]; ok {
+				matched = append(matched, r)
+			}
+			for _, pattern := range slices.Sorted(maps.Keys(rules)) {
+				if matches(pattern, name) {
+					matched = append(matched, rules[pattern])
+				}
+			}
+			list[i].Verdicts = verdicts(matched)
+			for _, r := range matched {
+				if score, ok := exactScore(r.Score); ok && scoring {
+					list[i].Points = &score
+				}
+			}
 		}
-		if verdict.Name() == "accepted" && len(list) > 0 {
+		if dir.Name() == "accepted" && len(list) > 0 {
 			main = list[0].Path
 		}
 		result = append(result, list...)
@@ -222,12 +303,64 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 	return result, main, nil
 }
 
+// matches reports whether a submissions.yaml glob names the submission or a directory above it.
+func matches(pattern, name string) bool {
+	for _, p := range expandBraces(pattern) {
+		for candidate := name; candidate != "."; candidate = path.Dir(candidate) {
+			if ok, _ := path.Match(p, candidate); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func expandBraces(pattern string) []string {
+	open := strings.IndexByte(pattern, '{')
+	end := strings.IndexByte(pattern[open+1:], '}')
+	if open < 0 || end < 0 {
+		return []string{pattern}
+	}
+	end += open + 1
+	var result []string
+	for _, alt := range strings.Split(pattern[open+1:end], ",") {
+		result = append(result, expandBraces(pattern[:open]+alt+pattern[end+1:])...)
+	}
+	return result
+}
+
+// exactScore reads a score given as one number or a range of one number; Gate expects exact points.
+func exactScore(score any) (points.Value, bool) {
+	number := func(v any) (float64, bool) {
+		switch n := v.(type) {
+		case int:
+			return float64(n), true
+		case float64:
+			return n, true
+		}
+		return 0, false
+	}
+	if r, ok := score.([]any); ok && len(r) == 2 {
+		low, okLow := number(r[0])
+		high, okHigh := number(r[1])
+		if !okLow || !okHigh || low != high {
+			return 0, false
+		}
+		score = r[0]
+	}
+	f, ok := number(score)
+	if !ok {
+		return 0, false
+	}
+	return points.FromFloat(f)
+}
+
 // Legacy packages keep LaTeX in problem_statement/, 2023-07 ones Markdown in statement/; other files there are images.
 // Tutorials are solution.<language> files there or in solution/.
 func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
-	tutorials := map[string]string{}
+	tutorials, pdfs := map[string]string{}, map[string]string{}
 	for _, dir := range []string{"statement", "problem_statement", "solution"} {
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {
@@ -259,9 +392,18 @@ func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 					s.Markdown = path.Join(dir, name)
 				}
 				result = append(result, s)
+			case named && ext == ".pdf" && dir == "statement" && pdfs[language] == "":
+				pdfs[language] = name
+				p.AddAsset(name, path.Join(dir, name))
 			case spec.IsImage(name):
 				p.AddAsset(name, path.Join(dir, name))
 			}
+		}
+	}
+	// A PDF is the statement only of languages without LaTeX or Markdown.
+	for _, language := range slices.Sorted(maps.Keys(pdfs)) {
+		if !seen[language] {
+			result = append(result, spec.Statement{Language: language, PDF: pdfs[language]})
 		}
 	}
 	for _, language := range slices.Sorted(maps.Keys(tutorials)) {

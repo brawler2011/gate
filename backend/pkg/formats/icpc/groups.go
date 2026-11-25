@@ -199,14 +199,24 @@ func (t *testdata) grade(dir string, s settings, group *spec.Group, isRoot bool)
 	return accept, nil
 }
 
-// flags reads validator flags given as a string; the per-validator map form is not supported.
+// flags reads validator flags given as a string or a sequence; the per-validator map form is not supported.
 func flags(dir, key string, value any) ([]string, error) {
 	switch v := value.(type) {
 	case nil:
 		return nil, nil
 	case string:
 		return strings.Fields(v), nil
+	case []any:
+		var result []string
+		for _, arg := range v {
+			s, ok := arg.(string)
+			if !ok {
+				s = fmt.Sprint(arg)
+			}
+			result = append(result, s)
+		}
+		return result, nil
 	default:
-		return nil, spec.Fail(pkg.ErrUnsupported, dir, key, "%s: %s other than a string is not supported", dir, key)
+		return nil, spec.Fail(pkg.ErrUnsupported, dir, key, "%s: %s per validator is not supported", dir, key)
 	}
 }

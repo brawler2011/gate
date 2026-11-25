@@ -86,6 +86,11 @@ func TestReadTestdataPackages(t *testing.T) {
 		// An interactive input is what the interactor reads, so none is published.
 		"icpc/interactive-guess": {Type: "interactive/pass-fail", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
 			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/1.00/0.00/0.00"}},
+		// Kattis packages of version 2025-09; the .ctd input validator is not a program Gate runs.
+		"icpc/different": {Type: "standard/pass-fail", Checker: "validate.cc", Validators: []string{"validate.py"}, Main: "submissions/accepted/different.c", Library: []string{"validate.h"}, Statements: []string{"en"},
+			Groups: []string{"/sum/0.00/0.00/0.00", "sample/sum/1.00/1.00/0.00", "secret/sum/2.00/0.00/0.00"}},
+		"icpc/guess": {Type: "interactive/pass-fail", Validators: []string{"validate.py"}, Interactor: "validate.cc", Main: "submissions/accepted/guess.cc", Library: []string{"validate.h"}, Statements: []string{"en"},
+			Groups: []string{"/sum/0.00/0.00/0.00", "secret/sum/10.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "standard/pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"/sum/12.00/3.00/0.00"}},
 		"pcms2/interactive-guess": {Type: "interactive/pass-fail", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
@@ -212,7 +217,7 @@ func TestICPCProtocols(t *testing.T) {
 	require.Equal(t, []string{"float_tolerance", "1e-3"}, p.Testset.Groups[1].CheckerArgs, "group flags follow validator_flags")
 	write(t, dir, "data/secret/testdata.yaml", "output_validator_flags: {name: v, flags: x}\n")
 	_, err = Read(dir)
-	require.ErrorContains(t, err, "output_validator_flags other than a string is not supported")
+	require.ErrorContains(t, err, "output_validator_flags per validator is not supported")
 }
 
 // The ICPC default grader settings are inherited down data/ and resolved per group.
@@ -258,6 +263,69 @@ func TestICPCScoring(t *testing.T) {
 		_, err := Read(dir)
 		require.ErrorContains(t, err, feature)
 	}
+}
+
+// 2025-09 scores map onto the group tree: all-or-nothing and min groups give each test the group's score, sum groups average it.
+func TestICPCCurrentScoring(t *testing.T) {
+	dir := unpack(t, "icpc-current-scoring")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, [3]string{"standard", "points", "default_validator.cpp"}, [3]string{p.Type, p.Grading, p.Checker.Name})
+	test := func(stem string, ordinal int, score points.Value) spec.Test {
+		return spec.Test{Input: "data/" + stem + ".in", Answer: "data/" + stem + ".ans", Points: score * points.Unit, Ordinal: ordinal}
+	}
+	sample := test("sample/1", 1, 0)
+	sample.Sample, sample.StatementOutput = true, "data/sample/1.out"
+	require.Equal(t, spec.Group{Aggregate: "sum", Groups: []spec.Group{
+		{Name: "sample", Aggregate: "sum", Tests: []spec.Test{sample}},
+		{Name: "secret", Aggregate: "sum", CheckerArgs: []string{"case_sensitive"}, Groups: []spec.Group{
+			{Name: "secret/1-easy", Aggregate: "min", StopOnFailure: true, Requires: []string{"sample"},
+				Tests: []spec.Test{test("secret/1-easy/a", 2, 30), test("secret/1-easy/nested/b", 3, 30)}},
+			{Name: "secret/2-sum", Aggregate: "avg", Requires: []string{"secret/1-easy"}, CheckerArgs: []string{"float_tolerance", "1e-6"},
+				Tests: []spec.Test{test("secret/2-sum/c", 4, 70), test("secret/2-sum/d", 5, 70)}},
+		}},
+	}}, p.Testset)
+	half := 65 * points.Unit
+	var solutions []string
+	for _, s := range p.Solutions {
+		solutions = append(solutions, s.Path+" "+strings.Join(s.Verdicts, ","))
+	}
+	require.Equal(t, []string{"submissions/accepted/first.cpp OK", "submissions/accepted/ok.cpp OK", "submissions/partial/half.py WA,PE,OLE",
+		"submissions/scored/third.cpp OK,WA,PE,OLE,TLE,RE,MLE"}, solutions, "a rule with only a score runs the submission too")
+	require.Equal(t, &half, p.Solutions[2].Points)
+	require.Equal(t, "submissions/accepted/first.cpp", p.MainSolution)
+	require.Equal(t, "Scoring", p.Title)
+	require.Equal(t, []spec.Statement{{Language: "en", Markdown: "statement/problem.en.md"}, {Language: "ru", Title: "Баллы", PDF: "problem.ru.pdf"}}, p.Statements)
+	require.Equal(t, []spec.File{{Name: "tool.py", Path: "attachments/tool.py"}}, p.Attachments)
+
+	write(t, dir, "data/secret/test_group.yaml", "score_aggregation: pass-fail\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	secret := p.Testset.Groups[1]
+	require.Equal(t, [2]string{"min", "min"}, [2]string{secret.Aggregate, secret.Groups[1].Aggregate}, "all-or-nothing secret makes every group so")
+	require.Equal(t, 100*points.Unit, secret.Groups[1].Tests[0].Points)
+	write(t, dir, "data/secret/test_group.yaml", "")
+
+	for file, change := range map[string][2]string{
+		"problem.yaml":                       {"problem_format_version: 2025-09\nname: X\ntype: [pass-fail, multi-pass]\n", "multi-pass problems are not supported"},
+		"data/secret/2-sum/test_group.yaml":  {"max_score: 70\nscore_aggregation: sum\nscore_mode: absolute\n", "score_mode absolute is not supported"},
+		"data/secret/1-easy/test_group.yaml": {"score_aggregation: min\n", "unbounded max_score"},
+		"data/secret/2-sum/c.yaml":           {"args: [x]\n", "args of a single test case are not supported"},
+		"data/secret/2-sum/c.files/f.txt":    {"x", "input files are not supported"},
+		"include/cpp/grader.h":               {"", "included files are not supported"},
+		"data/secret/1-easy/nested/test_group.yaml": {"", "test data groups cannot nest"},
+		"data/sample/test_group.yaml":        {"scoring: {score: 1}\n", "field scoring not found"},
+	} {
+		t.Run(change[1], func(t *testing.T) {
+			dir := unpack(t, "icpc-current-scoring")
+			write(t, dir, file, change[0])
+			_, err := Read(dir)
+			require.ErrorContains(t, err, change[1])
+		})
+	}
+	write(t, dir, "problem.yaml", "problem_format_version: 2026-01\nname: X\n")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "problem format version 2026-01 is not supported")
 }
 
 func TestICPCRejectsSeveralOutputValidators(t *testing.T) {

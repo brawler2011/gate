@@ -1,0 +1,27 @@
+# problem.yaml
+
+
+problem_format_version: 2025-09
+type: pass-fail
+name:
+  en: A Different Problem
+## At least one of author, source, or rights_owner must be provided.
+
+## Where the problem was first used (default: null)
+source: Kattis
+
+# Unique problem uuid
+uuid: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+
+## Who owns the rights to the problem (default: value of author, or
+## value of source if no author given).
+# rights_owner:
+
+license: cc by-sa
+
+# Override standard limits: say that the TLE solutions provided should
+# be at least 4 times above the time limit in order for us to be
+# happy.
+limits:
+  time_multipliers:
+    time_limit_to_tle: 4.0
