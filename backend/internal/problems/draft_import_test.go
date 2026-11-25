@@ -39,8 +39,9 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 
 // testCatalog has two configurations for .cpp; the extension suggests the first.
 var testCatalog = &sandbox.Config{
-	Order: []string{"cpp17", "cpp20", "python3", "go", "java"},
+	Order: []string{"c", "cpp17", "cpp20", "python3", "go", "java"},
 	Langs: map[string]sandbox.Language{
+		"c":       {Extensions: []string{"c"}},
 		"cpp17":   {Extensions: []string{"cpp", "cc", "cxx"}},
 		"cpp20":   {Extensions: []string{"cpp", "cc", "cxx"}},
 		"python3": {Extensions: []string{"py"}},
@@ -95,7 +96,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 			require.NotEmpty(t, d.Statements)
 			for _, s := range d.Statements {
 				require.NotEmpty(t, s.Legend, s.Language)
-				require.NotEmpty(t, s.Output, s.Language)
+				require.NotEmpty(t, s.Output+s.Interaction, s.Language)
 			}
 			// testlib programs keep the library file they include.
 			if (d.Checker != nil && d.Checker.Protocol == sandbox.ProtocolTestlib) || (d.Interactor != nil && d.Interactor.Protocol == sandbox.ProtocolTestlib) {

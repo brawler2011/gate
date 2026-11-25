@@ -1,0 +1,66 @@
+A 2025-09 scoring problem: an all-or-nothing group worth 30 and a sum group worth 70.
+
+-- problem.yaml --
+problem_format_version: 2025-09
+type: scoring
+name:
+  en: Scoring
+  ru: Баллы
+uuid: 00000000-0000-0000-0000-000000000000
+-- statement/problem.en.md --
+Add the numbers.
+-- statement/problem.ru.pdf --
+%PDF-1.4
+-- attachments/tool.py --
+print(1)
+-- attachments/templates/cpp/template.cpp --
+int main() {}
+-- data/sample/1.in --
+1
+-- data/sample/1.ans --
+1
+-- data/sample/1.out --
+1.0
+-- data/secret/test_group.yaml --
+output_validator_args: [case_sensitive]
+-- data/secret/1-easy/test_group.yaml --
+max_score: 30
+require_pass: sample
+-- data/secret/1-easy/a.in --
+2
+-- data/secret/1-easy/a.ans --
+2
+-- data/secret/1-easy/nested/b.in --
+3
+-- data/secret/1-easy/nested/b.ans --
+3
+-- data/secret/2-sum/test_group.yaml --
+max_score: 70
+score_aggregation: sum
+require_pass: [secret/1-easy]
+output_validator_args: [float_tolerance, "1e-6"]
+-- data/secret/2-sum/c.in --
+4
+-- data/secret/2-sum/c.ans --
+4
+-- data/secret/2-sum/c.yaml --
+description: smallest
+-- data/secret/2-sum/d.in --
+5
+-- data/secret/2-sum/d.ans --
+5
+-- submissions/submissions.yaml --
+"{accepted,partial}/*":
+  authors: Author
+accepted/ok.cpp:
+  model_solution: true
+partial:
+  permitted: [AC, WA]
+  required: [WA]
+  score: 65
+-- submissions/accepted/first.cpp --
+int main() {}
+-- submissions/accepted/ok.cpp --
+int main() {}
+-- submissions/partial/half.py --
+print(1)
