@@ -62,7 +62,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 	}
 	result := make([]corev1.ProblemTemplateModel, len(templates))
 	for i, template := range templates {
-		result[i] = corev1.ProblemTemplateModel{ID: template.ID, Title: template.Title, Description: template.Description, ProblemType: template.ProblemType, IsBuiltin: template.IsBuiltin}
+		result[i] = corev1.ProblemTemplateModel{ID: template.ID, Title: template.Title, Description: template.Description, ProblemType: corev1.ProblemType(template.ProblemType), Grading: corev1.ProblemGrading(template.Grading), IsBuiltin: template.IsBuiltin}
 	}
 	return result, nil
 }
@@ -97,7 +97,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 	if ok {
 		s := content.Statement
 		response.Statement.SetTo(corev1.ProblemStatementModel{
-			Type: corev1.ProblemType(ready.Type), Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Interaction: s.Interaction, Scoring: s.Scoring, Tutorial: s.Tutorial,
+			Type: corev1.ProblemType(ready.Type), Grading: corev1.ProblemGrading(ready.Grading), Title: s.Title, Legend: s.Legend, InputFormat: s.InputFormat, OutputFormat: s.OutputFormat, Notes: s.Notes, Interaction: s.Interaction, Scoring: s.Scoring, Tutorial: s.Tutorial,
 			TimeLimit: ready.TimeLimitMs, MemoryLimit: ready.MemoryLimitMb, InputFile: ready.InputFile, OutputFile: ready.OutputFile, Files: ready.Files,
 			Samples: SamplesDTO(content.Samples), Assets: content.Assets,
 		})

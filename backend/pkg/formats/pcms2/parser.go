@@ -54,7 +54,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Testset, err = groups(fsys, testset, samples(fsys)); err != nil {
 		return nil, err
 	}
-	p.Type = problemType(run, &p.Testset)
+	p.Type, p.Grading = problemType(run), spec.TestGrading(&p.Testset)
 	p.Statements = statements(fsys, p, prob.Statements)
 	p.SetExamples(fsys, spec.ExampleDir(fsys, "statements"), func(t spec.Test) (string, string) { return t.Input, t.Answer })
 	for _, name := range prob.Names {
@@ -87,18 +87,11 @@ func title(prob Problem) string {
 	return prob.ID
 }
 
-func problemType(run Run, root *spec.Group) string {
+func problemType(run Run) string {
 	if run.Interactor != nil {
 		return "interactive"
 	}
-	for g := range root.All() {
-		for _, t := range g.Tests {
-			if t.Points > 0 {
-				return "scoring"
-			}
-		}
-	}
-	return "pass-fail"
+	return "standard"
 }
 
 // A named binary without a corresponding source is an error.

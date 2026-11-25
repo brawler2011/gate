@@ -1,6 +1,7 @@
 format_version: "2.0"
 title: "Interactive Guessing"
 type: "interactive"
+grading: "pass-fail"
 
 limits:
   time_ms: 2000

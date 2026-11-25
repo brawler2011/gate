@@ -1,6 +1,7 @@
 format_version: "2.0"
 title: "Maximum Subarray Sum"
-type: "pass-fail"
+type: "standard"
+grading: "pass-fail"
 
 limits:
   time_ms: 1000

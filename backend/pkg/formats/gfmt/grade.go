@@ -33,8 +33,11 @@ type GroupResult struct {
 	Passed bool
 }
 
-// Grade scores the testset of a checked package; results list every group with tests, parents first.
-func (p *Problem) Grade(passed func(ordinal int) bool) (points.Value, []GroupResult) {
+// Full grades every test as passed with all its points.
+func Full(t Test) (points.Value, bool) { return t.Points, true }
+
+// Grade scores the testset of a checked package from what each test earned and whether it passed; results list every group with tests, parents first.
+func (p *Problem) Grade(earned func(Test) (points.Value, bool)) (points.Value, []GroupResult) {
 	type item struct {
 		first      int
 		score, max points.Value
@@ -47,7 +50,8 @@ func (p *Problem) Grade(passed func(ordinal int) bool) (points.Value, []GroupRes
 		byName[g.Name] = g
 		ok := true
 		for _, t := range g.Tests {
-			ok = passed(t.Ordinal) && ok
+			_, passed := earned(t)
+			ok = passed && ok
 		}
 		for i := range g.Groups {
 			ok = check(&g.Groups[i]) && ok
@@ -75,8 +79,8 @@ func (p *Problem) Grade(passed func(ordinal int) bool) (points.Value, []GroupRes
 	grade = func(g *Group) (item, bool) {
 		var items []item
 		for _, t := range g.Tests {
-			ok := passed(t.Ordinal)
-			items = append(items, item{first: t.Ordinal, score: map[bool]points.Value{true: t.Points}[ok], max: t.Points, passed: ok})
+			score, ok := earned(t)
+			items = append(items, item{first: t.Ordinal, score: score, max: t.Points, passed: ok})
 		}
 		at := len(results)
 		results = append(results, GroupResult{Group: g})

@@ -17,6 +17,7 @@ type BuiltinTemplate struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	ProblemType string `json:"problem_type"`
+	Grading     string `json:"grading"`
 	DirName     string `json:"-"`
 }
 
@@ -25,7 +26,8 @@ var builtinTemplates = []BuiltinTemplate{
 		ID:          "builtin:a-plus-b",
 		Title:       "Стандартная задача (A+B)",
 		Description: "Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов",
-		ProblemType: "pass-fail",
+		ProblemType: "standard",
+		Grading:     "pass-fail",
 		DirName:     "a-plus-b",
 	},
 	{
@@ -33,13 +35,15 @@ var builtinTemplates = []BuiltinTemplate{
 		Title:       "Интерактивная задача (Угадай число)",
 		Description: "Интерактивная задача с интерактором и чекером на testlib.h",
 		ProblemType: "interactive",
+		Grading:     "pass-fail",
 		DirName:     "interactive-guess",
 	},
 	{
 		ID:          "builtin:subtasks-groups",
 		Title:       "Задача с подзадачами (Баллы за группы)",
 		Description: "Задача с разделением тестов на группы (подзадачи) и начислением баллов",
-		ProblemType: "scoring",
+		ProblemType: "standard",
+		Grading:     "points",
 		DirName:     "subtasks-groups",
 	},
 }

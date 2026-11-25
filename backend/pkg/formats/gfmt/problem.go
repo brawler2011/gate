@@ -9,7 +9,7 @@ import (
 )
 
 type Problem struct {
-	// Gate writes the max score of scoring problems for the judge; imports recompute it.
+	// Gate writes the max score of points problems for the judge; imports recompute it.
 	MaxScore      *points.Value      `yaml:"max_score,omitempty" json:"max_score,omitempty"`
 	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
 	FormatVersion string             `yaml:"format_version" json:"format_version"`
@@ -17,6 +17,7 @@ type Problem struct {
 	// Titles by statement language override Title for that statement.
 	Titles   map[string]string  `yaml:"titles,omitempty" json:"titles,omitempty"`
 	Type     string             `yaml:"type" json:"type"` // one of spec.ProblemTypes
+	Grading  string             `yaml:"grading" json:"grading"` // one of spec.Gradings
 	Limits   Limits             `yaml:"limits" json:"limits"`
 	// Testset is the root group; only it is unnamed.
 	Testset Group `yaml:"testset" json:"testset"`

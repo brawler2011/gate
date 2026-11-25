@@ -46,8 +46,8 @@ VALUES($1,$2,$3,$4,$5::jsonb,'running',$6,clock_timestamp()+interval '1 hour',1,
 	if created.IsZero() {
 		created = time.Now()
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at,revision,title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pass-fail',$11,$12,'','','[]','[]')`,
+	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at,revision,title,short_name,type,grading,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'standard','pass-fail',$11,$12,'','','[]','[]')`,
 		packageID, problemID, organizationID, buildID, objectID, hash, created, revision, title, shortName, timeMs, memoryMb); err != nil {
 		return uuid.Nil, fmt.Errorf("package: %w", err)
 	}
@@ -84,8 +84,8 @@ INSERT INTO problem_members(problem_id,user_id,role) SELECT id,$5,'owner' FROM p
 		spec.ID, spec.OrganizationID, spec.Visibility, spec.CreatedAt, spec.Owner); err != nil {
 		return fmt.Errorf("problem: %w", err)
 	}
-	if _, err := db.Exec(ctx, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
-VALUES($1,$2,$3,$4,'pass-fail',1000,256)`, spec.ID, spec.OrganizationID, spec.Title, spec.ShortName); err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,grading,time_limit_ms,memory_limit_mb)
+VALUES($1,$2,$3,$4,'standard','pass-fail',1000,256)`, spec.ID, spec.OrganizationID, spec.Title, spec.ShortName); err != nil {
 		return fmt.Errorf("draft: %w", err)
 	}
 	return nil

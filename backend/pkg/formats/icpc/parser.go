@@ -30,24 +30,23 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
-	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	p := &spec.Problem{Title: prob.Name, Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
 	validation := strings.Fields(prob.Validation)
 	interactive := slices.Contains(validation, "interactive")
 	types := strings.Fields(prob.Type)
 	scoring := slices.Contains(types, "scoring")
+	if scoring {
+		p.Grading = spec.GradingPoints
+	}
 	switch {
 	case slices.Contains(validation, "score"):
 		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "score", "output validators that score are not supported")
-	case slices.Contains(types, "submit-answer") && (!scoring || interactive):
-		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "submit-answer", "submit-answer problems must be scoring and not interactive")
+	case slices.Contains(types, "submit-answer") && interactive:
+		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "submit-answer", "submit-answer problems cannot be interactive")
 	case slices.Contains(types, "submit-answer"):
 		p.Type = "output-only"
-	case interactive && scoring:
-		return nil, spec.Fail(pkg.ErrUnsupported, "problem.yaml", "scoring", "interactive scoring problems are not supported")
 	case interactive:
 		p.Type = "interactive"
-	case scoring:
-		p.Type = "scoring"
 	}
 	custom := len(validation) > 0 && validation[0] == "custom"
 	if prob.Limits != nil {

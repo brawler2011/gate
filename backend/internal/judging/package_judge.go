@@ -177,12 +177,13 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if result.Verdict != "OK" && !hasFailureDetails {
 			hasFailureDetails = true
 		}
+		result.Award(test.Test.Points, p.Grading)
 		results = append(results, result)
-		if result.Verdict != "OK" && p.Type != "scoring" {
+		if result.Verdict != "OK" && p.Grading != spec.GradingPoints {
 			break
 		}
 	}
-	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict := NewVerdictCalculator(p).Calculate(results)
 	verdict.Calibration = calib
 	verdict.Pretests = pretests
 	return verdict, nil
@@ -285,10 +286,11 @@ func (j *PackageJudge) JudgeOutputs(ctx context.Context, pkg *LoadedPackage, sub
 		if err != nil {
 			return nil, err
 		}
+		result.Award(test.Test.Points, p.Grading)
 		details = details && result.Verdict == "OK"
 		results = append(results, result)
 	}
-	verdict := NewVerdictCalculator(p.Type, p).Calculate(results)
+	verdict := NewVerdictCalculator(p).Calculate(results)
 	verdict.Pretests = pretests
 	return verdict, nil
 }

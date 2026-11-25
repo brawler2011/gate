@@ -1969,11 +1969,15 @@ export interface components {
             title: string;
             short_name: string;
             type: components["schemas"]["ProblemType"];
+            grading: components["schemas"]["ProblemGrading"];
             /** Format: int64 */
             time_limit_ms: number;
             /** Format: int64 */
             memory_limit_mb: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Computed from the testset on a points problem; null on a pass-fail one, and ignored on save.
+             */
             max_score: number | null;
             checker: components["schemas"]["ProblemDraftChecker"] | null;
             interactor: components["schemas"]["ProblemDraftInteractor"] | null;
@@ -2163,7 +2167,8 @@ export interface components {
          *       "id": "builtin:a-plus-b",
          *       "title": "Стандартная задача (A+B)",
          *       "description": "Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов",
-         *       "problem_type": "pass-fail",
+         *       "problem_type": "standard",
+         *       "grading": "pass-fail",
          *       "is_builtin": false
          *     }
          */
@@ -2174,8 +2179,8 @@ export interface components {
             title: string;
             /** @example Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов */
             description: string;
-            /** @example pass-fail */
-            problem_type: string;
+            problem_type: components["schemas"]["ProblemType"];
+            grading: components["schemas"]["ProblemGrading"];
             is_builtin: boolean;
         };
         /** @description What the caller may do with the organization. */
@@ -2412,14 +2417,20 @@ export interface components {
             statement?: components["schemas"]["ProblemStatementModel"];
         };
         /**
-         * @description An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager.
+         * @description How a solution runs. An output-only problem judges the outputs participants submit, one file per test, instead of running a program. A communication problem runs several copies of the solution at once, each talking to the interactor, its manager.
          * @enum {string}
          */
-        ProblemType: "pass-fail" | "scoring" | "interactive" | "communication" | "output-only";
+        ProblemType: "standard" | "interactive" | "communication" | "output-only";
+        /**
+         * @description How tests score, whatever the type. On a pass-fail problem a submission takes the verdict of the first failed test. On a points problem each test earns its points; a checker, interactor or manager may give part of them with the testlib POINTS verdict, as in Polygon. A points submission is accepted at full score, partial (state 108) above zero, and otherwise takes the verdict of the first failed test.
+         * @enum {string}
+         */
+        ProblemGrading: "pass-fail" | "points";
         /** @description Statement of the problem's latest package; absent until a package is built. Sections are HTML as in StatementPreview. */
         ProblemStatementModel: {
             title: string;
             type: components["schemas"]["ProblemType"];
+            grading: components["schemas"]["ProblemGrading"];
             /** Format: int32 */
             time_limit: number;
             /** Format: int32 */
@@ -2478,6 +2489,7 @@ export interface components {
             /** @example Test problem */
             title: string;
             type: components["schemas"]["ProblemType"];
+            grading: components["schemas"]["ProblemGrading"];
             /**
              * Format: int32
              * @example 1000
@@ -2756,6 +2768,7 @@ export interface components {
             /** @example Test task */
             title: string;
             type: components["schemas"]["ProblemType"];
+            grading: components["schemas"]["ProblemGrading"];
             /** @description Languages the problem accepts, within the contest's; empty accepts every language. */
             languages: string[];
             /**
@@ -3139,8 +3152,13 @@ export interface components {
             memory_kb: number;
             sample?: boolean;
             group?: string;
+            /**
+             * Format: double
+             * @description Points the test earned on a points problem.
+             */
+            points?: number;
         };
-        /** @description A group's score; pass-fail and interactive problems have none. The unnamed group is the testset. */
+        /** @description A group's score; pass-fail problems have none. The unnamed group is the testset. */
         GroupResultModel: {
             name: string;
             /** Format: double */
@@ -5502,6 +5520,7 @@ export type ProblemsListItemModel = components['schemas']['ProblemsListItemModel
 export type ListProblemsResponseModel = components['schemas']['ListProblemsResponseModel'];
 export type GetProblemResponseModel = components['schemas']['GetProblemResponseModel'];
 export type ProblemType = components['schemas']['ProblemType'];
+export type ProblemGrading = components['schemas']['ProblemGrading'];
 export type ProblemStatementModel = components['schemas']['ProblemStatementModel'];
 export type ContestProblemModel = components['schemas']['ContestProblemModel'];
 export type GetContestProblemResponseModel = components['schemas']['GetContestProblemResponseModel'];

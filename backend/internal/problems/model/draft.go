@@ -28,6 +28,7 @@ type Draft struct {
 	Title         string        `json:"title"`
 	ShortName     string        `json:"short_name"`
 	Type          string        `json:"type"`
+	Grading       string        `json:"grading"`
 	TimeLimitMs   int           `json:"time_limit_ms"`
 	MemoryLimitMb int           `json:"memory_limit_mb"`
 	MaxScore      *points.Value `json:"max_score"`
@@ -680,6 +681,9 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if !slices.Contains(spec.ProblemTypes, d.Type) {
 		v.fail("/type", pkg.ErrUnknown, value(d.Type), "invalid problem type %q", d.Type)
 	}
+	if !slices.Contains(spec.Gradings, d.Grading) {
+		v.fail("/grading", pkg.ErrUnknown, value(d.Grading), "invalid grading %q", d.Grading)
+	}
 	if d.TimeLimitMs <= 0 {
 		v.fail("/time_limit_ms", pkg.ErrRange, positive(), "time limit must be positive")
 	}
@@ -812,8 +816,8 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		}
 		if s.Points != nil {
 			switch {
-			case !spec.Scored(d.Type):
-				v.fail(at+"/points", pkg.ErrInconsistent, with("/type"), "expected points need a scoring problem")
+			case d.Grading != spec.GradingPoints:
+				v.fail(at+"/points", pkg.ErrInconsistent, with("/grading"), "expected points need a points problem")
 			case len(s.Verdicts) == 0:
 				v.fail(at+"/points", pkg.ErrInconsistent, with(at+"/verdicts"), "expected points need a solution that runs")
 			case *s.Points < 0 || *s.Points > points.Max:
@@ -956,10 +960,10 @@ func (d *Draft) validateGroups(v *validation, q DraftQuotas) {
 	switch {
 	case err != nil:
 		v.fail("/tests", pkg.ErrRange, maximum(points.Max), "test points exceed the score limit")
-	case spec.Scored(d.Type) && (d.MaxScore == nil || *d.MaxScore != max):
+	case d.Grading == spec.GradingPoints && (d.MaxScore == nil || *d.MaxScore != max):
 		v.fail("/max_score", pkg.ErrInconsistent, with("/testset"), "max score must equal the testset score")
-	case !spec.Scored(d.Type) && d.MaxScore != nil:
-		v.fail("/max_score", pkg.ErrInconsistent, with("/type"), "max score requires scoring type")
+	case d.Grading != spec.GradingPoints && d.MaxScore != nil:
+		v.fail("/max_score", pkg.ErrInconsistent, with("/grading"), "max score requires points grading")
 	}
 }
 
@@ -1130,7 +1134,7 @@ func (d *Draft) ComputeScores() error {
 		return err
 	}
 	d.MaxScore = nil
-	if spec.Scored(d.Type) {
+	if d.Grading == spec.GradingPoints {
 		d.MaxScore = &max
 	}
 	return nil

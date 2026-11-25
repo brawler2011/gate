@@ -29,7 +29,7 @@ func readProblemDraft(ctx context.Context, q *sqlc.Queries, id uuid.UUID) (model
 	if err != nil {
 		return model.Draft{}, dbError("read problem draft", err)
 	}
-	d := model.Draft{ProblemID: row.ProblemID, Revision: row.Revision, Title: row.Title, ShortName: row.ShortName, Type: row.Type,
+	d := model.Draft{ProblemID: row.ProblemID, Revision: row.Revision, Title: row.Title, ShortName: row.ShortName, Type: row.Type, Grading: row.Grading,
 		TimeLimitMs: int(row.TimeLimitMs), MemoryLimitMb: int(row.MemoryLimitMb), MaxScore: row.MaxScore}
 	if err := json.Unmarshal(row.Content, &d.DraftContent); err != nil {
 		return d, dbError("decode draft content", err)
@@ -141,7 +141,7 @@ func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft, known []uuid.UUID
 		return dbError("encode draft content", err)
 	}
 	if err := sqlc.New(tx).UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
-		ProblemID: d.ProblemID, Revision: d.Revision, Title: d.Title, ShortName: d.ShortName, Type: d.Type,
+		ProblemID: d.ProblemID, Revision: d.Revision, Title: d.Title, ShortName: d.ShortName, Type: d.Type, Grading: d.Grading,
 		TimeLimitMs: int32(d.TimeLimitMs), MemoryLimitMb: int32(d.MemoryLimitMb), MaxScore: d.MaxScore, //nolint:gosec // validated against quotas
 		Content: content, ObjectIds: objects,
 	}); err != nil {

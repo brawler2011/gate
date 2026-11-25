@@ -384,11 +384,12 @@ func TestPublicationCommitFailure(t *testing.T) {
 
 func TestPublicationSupportedTypes(t *testing.T) {
 	h := publicationHarness(t)
-	for _, kind := range []string{"pass-fail", "scoring", "interactive"} {
+	for _, kind := range []string{"pass-fail", "points", "interactive"} {
 		t.Run(kind, func(t *testing.T) {
 			h.save(t, func(d *model.Draft) {
-				d.Type = kind
-				if kind == "scoring" {
+				d.Type, d.Grading = "standard", "pass-fail"
+				if kind == "points" {
+					d.Grading = "points"
 					// Publication preserves group requirements and authored test membership.
 					first, second := uuid.New(), uuid.New()
 					d.Testset.Groups = []model.DraftGroup{{ID: first, Name: "first", Aggregate: "sum", Feedback: "complete"},
@@ -401,6 +402,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 					d.Tests = append(d.Tests, test)
 				}
 				if kind == "interactive" {
+					d.Type = "interactive"
 					solution := "main"
 					d.Interactor = &model.DraftInteractor{DraftProgram: *program("python3", "print('hello', flush=True)\n"), DraftJury: model.DraftJury{Protocol: sandbox.ProtocolTestlib}}
 					d.Solutions = append(d.Solutions, solutionProgram(solution, "python3", "input()\n"))
@@ -414,7 +416,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 			pid, err := h.pipeline().Execute(h.ctx, b)
 			require.NoError(t, err)
 			files, manifest := publishedFiles(t, h, pid)
-			require.Equal(t, kind, manifest.Type)
+			require.Equal(t, [2]string{b.Snapshot.Draft.Type, b.Snapshot.Draft.Grading}, [2]string{manifest.Type, manifest.Grading})
 			d := b.Snapshot.Draft
 			builtGroups := map[string]*gfmt.Group{}
 			for g := range manifest.Testset.All() {

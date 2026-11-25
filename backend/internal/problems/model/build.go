@@ -93,7 +93,7 @@ type PackageDescriptor struct {
 
 // PackageIndex is written once at publication so reads need not open the package archive.
 type PackageIndex struct {
-	Title, ShortName, Type     string
+	Title, ShortName, Type, Grading string
 	TimeLimitMs, MemoryLimitMb int
 	InputFile, OutputFile      string
 	Statements                 []BuiltStatement
@@ -107,6 +107,6 @@ type PackageIndex struct {
 }
 
 func NewPackageIndex(d Draft, statements []BuiltStatement, pdfs []StatementPDF, samples []Sample, files *StoredObject) PackageIndex {
-	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb,
+	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, Grading: d.Grading, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb,
 		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: statements, PDFs: pdfs, Samples: samples, Assets: d.Assets, Files: files}
 }

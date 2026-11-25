@@ -14,7 +14,7 @@ import (
 )
 
 type Template struct {
-	ID, Title, Description, ProblemType string
+	ID, Title, Description, ProblemType, Grading string
 	IsBuiltin                           bool
 }
 
@@ -62,7 +62,7 @@ func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) (
 	}
 	result := make([]Template, 0)
 	for _, b := range templates.ListBuiltinTemplates() {
-		result = append(result, Template{ID: b.ID, Title: b.Title, Description: b.Description, ProblemType: b.ProblemType, IsBuiltin: true})
+		result = append(result, Template{ID: b.ID, Title: b.Title, Description: b.Description, ProblemType: b.ProblemType, Grading: b.Grading, IsBuiltin: true})
 	}
 	if orgID == uuid.Nil {
 		return result, nil
@@ -73,14 +73,14 @@ func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) (
 		return nil, err
 	}
 	for _, p := range list.Problems {
-		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "pass-fail"}
+		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "standard", Grading: "pass-fail"}
 		// New problems copy the template's latest package, so the list shows that package too.
 		ready, err := uc.templates.GetReadyPackage(ctx, p.ID)
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
 			return nil, err
 		}
 		if err == nil {
-			template.Title, template.ProblemType = ready.Title, ready.Type
+			template.Title, template.ProblemType, template.Grading = ready.Title, ready.Type, ready.Grading
 			if s := pickStatement(ready.Statements, ""); s != nil && s.Legend != "" {
 				template.Description = s.Legend
 			}

@@ -66,8 +66,8 @@ SELECT id FROM problem_packages WHERE build_id=$1;
 
 -- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18);
+ title,short_name,type,grading,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19);
 
 -- name: InsertPackageAssets :exec
 INSERT INTO problem_package_assets(package_id,name,object_id)
@@ -158,6 +158,6 @@ UPDATE problem_builds SET state='cancelled',lease_token=NULL,lease_deadline=NULL
 SELECT id FROM problem_builds WHERE problem_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100;
 
 -- name: UpdateProblemDraftRow :exec
-UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- content=$9,object_ids=$10 WHERE problem_id=$1;
+UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,grading=$6,time_limit_ms=$7,memory_limit_mb=$8,max_score=$9,
+ content=$10,object_ids=$11 WHERE problem_id=$1;
 
