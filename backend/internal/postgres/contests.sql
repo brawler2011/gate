@@ -144,6 +144,8 @@ SET package_id = $3
 WHERE contest_id = $1 AND problem_id = $2;
 
 -- name: UpdateContestProblemPoints :execrows
+-- Touching the contest makes live scoreboards replace their rows on the next update.
+WITH touched AS (UPDATE contests SET updated_at = now() WHERE id = $1)
 UPDATE contest_problems SET points = $3 WHERE contest_id = $1 AND problem_id = $2;
 
 -- name: RemoveContestProblem :exec

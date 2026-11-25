@@ -52,7 +52,10 @@ type ScoreboardItem = LiveScoreboard['items'][number];
 // Mirrors the backend's rankItems: rows equal on every ranking key share a place.
 const rankScoreboard = (items: ScoreboardItem[], ranking: LiveScoreboard['ranking'],
   tieBreak: LiveScoreboard['tie_break']): ScoreboardItem[] => {
-  const time = (at?: string) => at ? Date.parse(at) : Infinity;
+  // Backend times carry microseconds, which Date.parse drops.
+  const time = (at?: string) => at
+    ? Date.parse(at) * 1000 + Number((/\.\d{3}(\d{0,3})/.exec(at)?.[1] ?? '').padEnd(3, '0'))
+    : Infinity;
   // Infinity - Infinity is NaN, so two missing times compare equal.
   const byTime = (a?: string, b?: string) => Math.sign(time(a) - time(b)) || 0;
   const compare = (a: ScoreboardItem, b: ScoreboardItem): number => {

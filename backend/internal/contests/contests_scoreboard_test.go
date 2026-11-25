@@ -193,6 +193,12 @@ func TestScoreboardPointsRanking(t *testing.T) {
 	frozen := f.scoreboard(t, false)
 	require.Equal(t, []row{{"bob", 1, 120}, {"alice", 2, 120}, {"carol", 3, 0}, {"dave", 3, 0}, {"eve", 3, 0}}, rows(frozen))
 	require.EqualValues(t, 1, frozen.Items[4].ProblemResults[0].PendingAttempts)
+
+	// A relinked package with a higher max lets a later acceptance score more.
+	f.repo.contest.Settings.FreezeStatus = contestsmodel.FreezeStatusUnfrozen
+	scored("dave", 0, submissionsmodel.Accepted, 50, 10)
+	scored("dave", 0, submissionsmodel.Accepted, 100, 20)
+	require.Contains(t, rows(f.scoreboard(t, false)), row{"dave", 3, 100})
 }
 
 func TestScoreboardRecomputesAfterEveryVerdict(t *testing.T) {

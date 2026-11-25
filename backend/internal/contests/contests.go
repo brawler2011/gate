@@ -792,7 +792,8 @@ func calculateScoreboardProblem(rules scoreboardRules, userID uuid.UUID, problem
 		}
 		considered++
 
-		if solved {
+		// A later acceptance can still score more, as when the contest switches to a package with a higher max.
+		if solved && !scored {
 			continue
 		}
 		// ICPC freeze: verdicts of submissions made after the freeze stay hidden, earlier ones show whenever judged.
@@ -809,6 +810,9 @@ func calculateScoreboardProblem(rules scoreboardRules, userID uuid.UUID, problem
 			best, scoredAt = score, &sub.CreatedAt
 		}
 
+		if solved {
+			continue
+		}
 		if sub.State == submissionsmodel.Accepted {
 			solved = true
 			firstACTime = &sub.CreatedAt

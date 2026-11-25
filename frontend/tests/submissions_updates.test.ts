@@ -41,6 +41,14 @@ describe('authoritative scoreboard updates', () => {
     expect(places(ContestTieBreak.TIME)).toEqual([['carol', 1], ['alice', 2], ['bob', 3]]);
   });
 
+  it('breaks time ties within a millisecond as the backend does', () => {
+    const snapshot = {...scoreboard(scored('bob', 10, '2026-01-01T00:00:00.1239Z')), ranking: ContestRanking.POINTS,
+      tie_break: ContestTieBreak.TIME};
+    const update = {user_id: 'zed', unfrozen: false, replace: false,
+      scoreboard: {...snapshot, items: [scored('zed', 10, '2026-01-01T00:00:00.1231Z')]}};
+    expect(applyScoreboardEvent(snapshot, update)!.items.map(s => [s.user_id, s.rank])).toEqual([['zed', 1], ['bob', 2]]);
+  });
+
   it('replaces all rows at freeze transitions and removes participants excluded by the server', () => {
     const snapshot = scoreboard(row('alice', 1), row('bob'));
     const frozen = {...scoreboard(row('bob')), is_frozen: true};

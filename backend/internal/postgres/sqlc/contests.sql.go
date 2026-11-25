@@ -1181,6 +1181,7 @@ func (q *Queries) UpdateContestProblemPackage(ctx context.Context, arg UpdateCon
 }
 
 const updateContestProblemPoints = `-- name: UpdateContestProblemPoints :execrows
+WITH touched AS (UPDATE contests SET updated_at = now() WHERE id = $1)
 UPDATE contest_problems SET points = $3 WHERE contest_id = $1 AND problem_id = $2
 `
 
@@ -1190,6 +1191,7 @@ type UpdateContestProblemPointsParams struct {
 	Points    points.Value `json:"points"`
 }
 
+// Touching the contest makes live scoreboards replace their rows on the next update.
 func (q *Queries) UpdateContestProblemPoints(ctx context.Context, arg UpdateContestProblemPointsParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateContestProblemPoints, arg.ContestID, arg.ProblemID, arg.Points)
 	if err != nil {
