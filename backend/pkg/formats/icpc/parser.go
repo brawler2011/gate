@@ -226,6 +226,7 @@ var verdictClasses = []struct {
 }{{"AC", []string{"OK"}}, {"WA", []string{"WA", "PE", "OLE"}}, {"TLE", []string{"TLE"}}, {"RTE", []string{"RE", "MLE"}}}
 
 // verdicts approximates the rules by Gate's expectation: every test in the permitted set, and some failing unless AC is required.
+// A rule setting none of these still runs the submission, with every verdict permitted.
 func verdicts(rules []expectation) []string {
 	permitted := []string{"AC", "WA", "TLE", "RTE"}
 	fails, set := false, false
@@ -236,7 +237,7 @@ func verdicts(rules []expectation) []string {
 		if r.Required != nil {
 			fails = fails || !slices.Contains(r.Required, "AC")
 		}
-		set = set || r.Permitted != nil || r.Required != nil
+		set = set || r.Permitted != nil || r.Required != nil || r.Score != nil
 	}
 	if !set {
 		return nil

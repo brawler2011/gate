@@ -279,7 +279,7 @@ func TestICPCCurrentScoring(t *testing.T) {
 	require.Equal(t, spec.Group{Aggregate: "sum", Groups: []spec.Group{
 		{Name: "sample", Aggregate: "sum", Tests: []spec.Test{sample}},
 		{Name: "secret", Aggregate: "sum", CheckerArgs: []string{"case_sensitive"}, Groups: []spec.Group{
-			{Name: "secret/1-easy", Aggregate: "min", StopOnFailure: true, Requires: []string{"sample"}, CheckerArgs: []string{"case_sensitive"},
+			{Name: "secret/1-easy", Aggregate: "min", StopOnFailure: true, Requires: []string{"sample"},
 				Tests: []spec.Test{test("secret/1-easy/a", 2, 30), test("secret/1-easy/nested/b", 3, 30)}},
 			{Name: "secret/2-sum", Aggregate: "avg", Requires: []string{"secret/1-easy"}, CheckerArgs: []string{"float_tolerance", "1e-6"},
 				Tests: []spec.Test{test("secret/2-sum/c", 4, 70), test("secret/2-sum/d", 5, 70)}},
@@ -290,7 +290,8 @@ func TestICPCCurrentScoring(t *testing.T) {
 	for _, s := range p.Solutions {
 		solutions = append(solutions, s.Path+" "+strings.Join(s.Verdicts, ","))
 	}
-	require.Equal(t, []string{"submissions/accepted/first.cpp OK", "submissions/accepted/ok.cpp OK", "submissions/partial/half.py WA,PE,OLE"}, solutions)
+	require.Equal(t, []string{"submissions/accepted/first.cpp OK", "submissions/accepted/ok.cpp OK", "submissions/partial/half.py WA,PE,OLE",
+		"submissions/scored/third.cpp OK,WA,PE,OLE,TLE,RE,MLE"}, solutions, "a rule with only a score runs the submission too")
 	require.Equal(t, &half, p.Solutions[2].Points)
 	require.Equal(t, "submissions/accepted/ok.cpp", p.MainSolution, "the model solution is the main one")
 	require.Equal(t, "Scoring", p.Title)

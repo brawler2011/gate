@@ -58,6 +58,10 @@ partial:
   permitted: [AC, WA]
   required: [WA]
   score: 65
+scored:
+  score: 30
+-- submissions/scored/third.cpp --
+int main() {}
 -- submissions/accepted/first.cpp --
 int main() {}
 -- submissions/accepted/ok.cpp --

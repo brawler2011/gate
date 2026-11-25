@@ -241,7 +241,7 @@ func strict(fsys fs.FS, name string, v any) error {
 	return nil
 }
 
-// arguments are the validator arguments inherited down data/.
+// arguments are the validator arguments of a group's own tests; groups do not inherit them.
 type arguments struct{ input, output []string }
 
 // currentData reads data/sample and data/secret; validation test data is not imported.
@@ -251,57 +251,54 @@ type currentData struct {
 	count   int
 }
 
-func (d *currentData) config(dir string, inherited arguments) (*GroupConfig, arguments, error) {
+func (d *currentData) config(dir string) (*GroupConfig, arguments, error) {
+	var args arguments
 	name := path.Join(dir, "test_group.yaml")
 	if !regular(d.fsys, name) {
 		name = path.Join(dir, "testdata.yaml")
 	}
 	if !regular(d.fsys, name) {
-		return nil, inherited, nil
+		return nil, args, nil
 	}
 	var c GroupConfig
 	if err := strict(d.fsys, name, &c); err != nil {
-		return nil, inherited, err
+		return nil, args, err
 	}
 	unsupported := func(key string) error {
 		return spec.Fail(pkg.ErrUnsupported, name, key, "%s: %s is not supported", name, key)
 	}
 	switch {
 	case c.Args != nil:
-		return nil, inherited, unsupported("args")
+		return nil, args, unsupported("args")
 	case c.StaticValidationScore != nil:
-		return nil, inherited, unsupported("static_validation_score")
+		return nil, args, unsupported("static_validation_score")
 	case c.ScoreMode != "" && c.ScoreMode != "none":
-		return nil, inherited, unsupported("score_mode " + c.ScoreMode)
+		return nil, args, unsupported("score_mode " + c.ScoreMode)
 	}
 	var err error
 	for _, a := range []struct {
 		key    string
 		values []any
 		target *[]string
-	}{{"input_validator_args", []any{c.InputValidatorArgs, c.InputValidatorFlags}, &inherited.input}, {"output_validator_args", []any{c.OutputValidatorArgs, c.OutputValidatorFlags}, &inherited.output}} {
+	}{{"input_validator_args", []any{c.InputValidatorArgs, c.InputValidatorFlags}, &args.input}, {"output_validator_args", []any{c.OutputValidatorArgs, c.OutputValidatorFlags}, &args.output}} {
 		for _, v := range a.values {
 			if v == nil {
 				continue
 			}
 			if *a.target, err = flags(name, a.key, v); err != nil {
-				return nil, inherited, err
+				return nil, args, err
 			}
 		}
 	}
-	return &c, inherited, nil
+	return &c, args, nil
 }
 
 func (d *currentData) read() (spec.Group, error) {
-	_, base, err := d.config("data", arguments{})
-	if err != nil {
-		return spec.Group{}, err
-	}
 	var root spec.Group
 	if d.scoring {
 		root.Aggregate = "sum"
 	}
-	_, args, err := d.config("data/sample", base)
+	_, args, err := d.config("data/sample")
 	if err != nil {
 		return root, err
 	}
@@ -315,7 +312,7 @@ func (d *currentData) read() (spec.Group, error) {
 	if len(sample.Tests) > 0 {
 		root.Groups = append(root.Groups, sample)
 	}
-	secret, err := d.secret(base)
+	secret, err := d.secret()
 	if err != nil {
 		return root, err
 	}
@@ -329,9 +326,9 @@ func (d *currentData) read() (spec.Group, error) {
 }
 
 // secret maps the ICPC scores, of whole numbers, onto Gate's group tree.
-func (d *currentData) secret(base arguments) (spec.Group, error) {
+func (d *currentData) secret() (spec.Group, error) {
 	const dir = "data/secret"
-	config, args, err := d.config(dir, base)
+	config, args, err := d.config(dir)
 	if err != nil {
 		return spec.Group{}, err
 	}
@@ -368,7 +365,7 @@ func (d *currentData) secret(base arguments) (spec.Group, error) {
 	}
 	for _, name := range groups {
 		full := path.Join(dir, name)
-		config, args, err := d.config(full, args)
+		config, args, err := d.config(full)
 		if err != nil {
 			return secret, err
 		}
