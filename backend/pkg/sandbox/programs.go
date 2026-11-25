@@ -23,8 +23,8 @@ type Program struct {
 	Source   []byte
 	Language string
 	Deps     map[string][]byte
-	// Graders, when set, are linked with the source instead of Deps.
-	Graders map[string][]byte
+	// Graders, when set, are built with the source instead of Deps.
+	Graders *Graders
 }
 
 func (p Program) key(compiler string) string {
@@ -47,9 +47,10 @@ func (p Program) key(compiler string) string {
 	}
 	if p.Graders != nil {
 		field(h, []byte("graders"))
-		for _, name := range slices.Sorted(maps.Keys(p.Graders)) {
+		field(h, []byte(p.Graders.Solution))
+		for _, name := range slices.Sorted(maps.Keys(p.Graders.Files)) {
 			field(h, []byte(name))
-			field(h, p.Graders[name])
+			field(h, p.Graders.Files[name])
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil))

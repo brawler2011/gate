@@ -42,7 +42,7 @@
           }
           ''
             jlink --module-path ${jdk}/lib/openjdk/jmods \
-              --add-modules java.se,jdk.compiler,jdk.localedata,jdk.unsupported \
+              --add-modules java.se,jdk.compiler,jdk.jartool,jdk.localedata,jdk.unsupported \
               --strip-debug --no-man-pages --no-header-files --generate-cds-archive \
               --output $out
             # Drop the full JDK reference from RPATH; $ORIGIN already finds the copied libraries.
@@ -50,6 +50,8 @@
           '';
 
       go = pkgs.${langs.go.package};
+
+      javacJar = pkgs.writeShellScriptBin "javac-jar" (builtins.readFile ./javac-jar.sh);
 
       # Copy content only: checkout file modes must not affect image identity.
       source = name: pkgs.writeText name (builtins.readFile (./. + "/${name}"));
@@ -61,6 +63,7 @@
         paths = [
           pkgs.bash
           pkgs.coreutils
+          javacJar
         ]
         ++ builtins.attrValues langPackages;
       };

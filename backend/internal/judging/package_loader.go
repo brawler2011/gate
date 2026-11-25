@@ -18,6 +18,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
@@ -37,7 +38,7 @@ type LoadedPackage struct {
 func (l *LoadedPackage) Release() { l.handle.Release() }
 
 // Graders is nil for a package without graders.
-func (l *LoadedPackage) Graders() (map[string][]byte, error) {
+func (l *LoadedPackage) Graders() (*sandbox.Graders, error) {
 	dir := filepath.Join(l.Format.Path, gfmt.GraderFolder)
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -52,7 +53,7 @@ func (l *LoadedPackage) Graders() (map[string][]byte, error) {
 			return nil, fmt.Errorf("read grader: %w", err)
 		}
 	}
-	return graders, nil
+	return &sandbox.Graders{Files: graders, Solution: l.Format.Problem.SolutionName}, nil
 }
 
 // PackageLoader keeps packages extracted after first use; they are immutable, so entries are only evicted.

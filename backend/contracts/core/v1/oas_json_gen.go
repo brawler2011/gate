@@ -17204,6 +17204,10 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		e.FieldStart("solution_name")
+		e.Str(s.SolutionName)
+	}
+	{
 		e.FieldStart("attachments")
 		e.ArrStart()
 		for _, elem := range s.Attachments {
@@ -17241,7 +17245,7 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraft = [25]string{
+var jsonFieldsNameOfProblemDraft = [26]string{
 	0:  "problem_id",
 	1:  "revision",
 	2:  "title",
@@ -17262,11 +17266,12 @@ var jsonFieldsNameOfProblemDraft = [25]string{
 	17: "processes",
 	18: "library",
 	19: "graders",
-	20: "attachments",
-	21: "statements",
-	22: "assets",
-	23: "testset",
-	24: "tests",
+	20: "solution_name",
+	21: "attachments",
+	22: "statements",
+	23: "assets",
+	24: "testset",
+	25: "tests",
 }
 
 // Decode decodes ProblemDraft from json.
@@ -17536,8 +17541,20 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"graders\"")
 			}
-		case "attachments":
+		case "solution_name":
 			requiredBitSet[2] |= 1 << 4
+			if err := func() error {
+				v, err := d.Str()
+				s.SolutionName = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"solution_name\"")
+			}
+		case "attachments":
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				s.Attachments = make([]ProblemDraftFile, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17555,7 +17572,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachments\"")
 			}
 		case "statements":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				s.Statements = make([]ProblemDraftStatement, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17573,7 +17590,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"statements\"")
 			}
 		case "assets":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				s.Assets = make([]ProblemDraftAsset, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17591,7 +17608,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"assets\"")
 			}
 		case "testset":
-			requiredBitSet[2] |= 1 << 7
+			requiredBitSet[3] |= 1 << 0
 			if err := func() error {
 				if err := s.Testset.Decode(d); err != nil {
 					return err
@@ -17601,7 +17618,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"testset\"")
 			}
 		case "tests":
-			requiredBitSet[3] |= 1 << 0
+			requiredBitSet[3] |= 1 << 1
 			if err := func() error {
 				s.Tests = make([]ProblemDraftTest, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -17631,7 +17648,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 		0b11111111,
 		0b11111111,
 		0b11111111,
-		0b00000001,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

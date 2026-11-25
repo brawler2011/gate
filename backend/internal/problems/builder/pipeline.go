@@ -200,7 +200,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	}
 	index := model.NewPackageIndex(s.Draft, statements, pdfs, e.samples, files)
 	if len(s.Draft.Graders) > 0 {
-		index.Languages = p.Languages.Graded(s.Draft.GraderNames())
+		index.Languages = p.Languages.Graded(s.Draft.GraderNames(), s.Draft.SolutionName)
 	}
 	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, index)
 	if err != nil {

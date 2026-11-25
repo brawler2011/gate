@@ -26,6 +26,8 @@ type Problem struct {
 	OutputFile string `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 	// Processes is the number of solution copies a communication problem runs at once.
 	Processes int `yaml:"processes,omitempty" json:"processes,omitempty"`
+	// SolutionName is the module or class name under which graders import the solution.
+	SolutionName string `yaml:"solution_name,omitempty" json:"solution_name,omitempty"`
 	// MainSolution names the solutions/ file whose output answers tests without an answer.
 	MainSolution string                 `yaml:"main_solution,omitempty" json:"main_solution,omitempty"`
 	Solutions    map[string]Expectation `yaml:"solutions,omitempty" json:"solutions,omitempty"`

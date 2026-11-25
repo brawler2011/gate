@@ -46,6 +46,8 @@ type DraftContent struct {
 	Library      []DraftLibraryFile  `json:"library"`
 	// Graders are linked with every solution; only languages that compile one of them can be submitted.
 	Graders []DraftFile `json:"graders"`
+	// SolutionName is the module or class name under which graders import the solution; languages that need it are unavailable while it is empty.
+	SolutionName string `json:"solution_name"`
 	// Attachments are given to participants with the statement.
 	Attachments  []DraftFile         `json:"attachments"`
 	Statements   []DraftStatement    `json:"statements"`
@@ -143,7 +145,7 @@ type DraftFile struct {
 }
 
 // GraderFiles is nil for a problem without graders, so solutions compile alone.
-func (d *Draft) GraderFiles() map[string][]byte {
+func (d *Draft) GraderFiles() *sandbox.Graders {
 	if len(d.Graders) == 0 {
 		return nil
 	}
@@ -151,7 +153,7 @@ func (d *Draft) GraderFiles() map[string][]byte {
 	for _, f := range d.Graders {
 		files[f.Name] = []byte(f.Content)
 	}
-	return files
+	return &sandbox.Graders{Files: files, Solution: d.SolutionName}
 }
 
 func (d *Draft) GraderNames() []string {
@@ -624,7 +626,7 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 		graders := d.GraderNames()
 		graded := false
 		for _, lang := range languages {
-			graded = graded || lang.Graded(graders)
+			graded = graded || lang.Graded(graders, d.SolutionName)
 		}
 		if !graded {
 			v.fail("/graders", pkg.ErrInconsistent, nil, "no language compiles a solution with these graders")
@@ -633,7 +635,7 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 			v.fail("/main_solution", pkg.ErrRequired, with("/graders"), "a problem with graders needs a main solution, whose build checks that they compile")
 		}
 		for i, s := range d.Solutions {
-			if lang, ok := languages[s.Language]; ok && !lang.Graded(graders) {
+			if lang, ok := languages[s.Language]; ok && !lang.Graded(graders, d.SolutionName) {
 				v.fail(fmt.Sprintf("/solutions/%d/language", i), pkg.ErrInconsistent, with("/graders"), "language %q does not compile with the graders", s.Language)
 			}
 		}
@@ -742,6 +744,9 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	if d.Type == "output-only" && len(d.Graders) > 0 {
 		v.fail("/graders", pkg.ErrInconsistent, with("/type"), "an output-only problem runs no solutions to link with graders")
+	}
+	if d.SolutionName != "" && !sandbox.ValidSolutionName(d.SolutionName) {
+		v.fail("/solution_name", pkg.ErrFormat, nil, "a solution name is a letter or underscore followed by up to 63 letters, digits or underscores")
 	}
 	program := func(at string, p DraftProgram) {
 		if !languageKey.MatchString(p.Language) {

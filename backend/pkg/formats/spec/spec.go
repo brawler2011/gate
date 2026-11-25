@@ -56,6 +56,8 @@ type Problem struct {
 	MainSolution string
 	Library      []File
 	Graders      []File
+	// SolutionName is the module or class name under which graders import the solution.
+	SolutionName string
 	Attachments  []File
 	Statements   []Statement
 	Assets       []File
