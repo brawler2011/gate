@@ -3911,6 +3911,7 @@ components:
       - processes
       - library
       - graders
+      - solution_name
       - attachments
       - statements
       - assets
@@ -3987,6 +3988,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemDraftFile'
+        solution_name:
+          type: string
+          description: Module or class name under which graders import the solution, such as aplusb for import aplusb; empty makes the languages that need it unavailable.
         attachments:
           description: Files participants download with the statement.
           type: array

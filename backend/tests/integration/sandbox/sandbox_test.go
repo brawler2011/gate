@@ -501,7 +501,7 @@ public class Main {
 			"cpp23":   cppSum,
 			"python3": pythonSum,
 			"pypy3":   pythonSum,
-			"java":    "import java.util.Scanner;\npublic class Main { public static void main(String[] args) { Scanner s = new Scanner(System.in); System.out.println(s.nextLong() + s.nextLong()); } }",
+			"java":    "import java.util.Scanner;\npublic class Main { record Pair(long a, long b) {} public static void main(String[] args) { Scanner s = new Scanner(System.in); Pair p = new Pair(s.nextLong(), s.nextLong()); System.out.println(p.a() + p.b()); } }",
 			"go":      "package main\nimport \"fmt\"\nfunc main() { var a, b int64; fmt.Scan(&a, &b); fmt.Println(a + b) }",
 			"rust":    "use std::io::Read;\nfn main() { let mut s = String::new(); std::io::stdin().read_to_string(&mut s).unwrap(); let n: i64 = s.split_whitespace().map(|x| x.parse::<i64>().unwrap()).sum(); println!(\"{n}\"); }",
 			"node":    "const [a, b] = require(\"fs\").readFileSync(0, \"utf8\").trim().split(/\\s+/).map(BigInt);\nconsole.log((a + b).toString());",

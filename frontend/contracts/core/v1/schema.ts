@@ -1999,6 +1999,8 @@ export interface components {
             library: components["schemas"]["ProblemDraftLibraryFile"][];
             /** @description Files linked with every solution; only languages that compile one of them can be submitted. */
             graders: components["schemas"]["ProblemDraftFile"][];
+            /** @description Module or class name under which graders import the solution, such as aplusb for import aplusb; empty makes the languages that need it unavailable. */
+            solution_name: string;
             /** @description Files participants download with the statement. */
             attachments: components["schemas"]["ProblemDraftFile"][];
             statements: components["schemas"]["ProblemDraftStatement"][];

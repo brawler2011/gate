@@ -22,7 +22,7 @@ const draft: ProblemDraft = {
   memory_limit_mb: 256, input_file: "", output_file: "", processes: 0, max_score: null, checker: null, interactor: null, validators: [], generators: [],
   solutions: [], main_solution: null, statements: [], assets: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [],
   library: [{name: "testlib.h", content: "", auto_update: true}],
-  graders: [],
+  graders: [], solution_name: "",
   attachments: [],
 };
 

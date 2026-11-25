@@ -559,6 +559,7 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 }
 
 // A grader problem links each solution with the jury's grader; a solution with its own main does not link.
+// Python and Java graders import the solution by the problem's solution name, as in CMS.
 func TestGraderJudgingE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
@@ -571,7 +572,10 @@ func TestGraderJudgingE2E(t *testing.T) {
 		generator, main, group := "gen", "main", uuid.New()
 		d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, DraftJury: problemsmodel.DraftJury{Protocol: sandbox.ProtocolTestlib}, Standard: "wcmp"}
 		d.Graders = []problemsmodel.DraftFile{{Name: "sum.h", Content: header},
-			{Name: "grader.cpp", Content: "#include <cstdio>\n#include \"sum.h\"\nint main() { long long a, b; scanf(\"%lld %lld\", &a, &b); printf(\"%lld\\n\", sum(a, b)); }\n"}}
+			{Name: "grader.cpp", Content: "#include <cstdio>\n#include \"sum.h\"\nint main() { long long a, b; scanf(\"%lld %lld\", &a, &b); printf(\"%lld\\n\", sum(a, b)); }\n"},
+			{Name: "grader.py", Content: "import aplusb\na, b = map(int, input().split())\nprint(aplusb.sum(a, b))\n"},
+			{Name: "grader.java", Content: "import java.util.Scanner;\npublic class grader { public static void main(String[] args) { Scanner s = new Scanner(System.in); System.out.println(aplusb.sum(s.nextLong(), s.nextLong())); } }\n"}}
+		d.SolutionName = "aplusb"
 		d.Attachments = []problemsmodel.DraftFile{{Name: "sum.h", Content: header}}
 		d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
 		d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: solution("a + b")}}, Verdicts: []string{}}}
@@ -588,8 +592,16 @@ func TestGraderJudgingE2E(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, link.Languages, "cpp17")
 	assert.NotContains(t, link.Languages, "c")
-	assert.NotContains(t, link.Languages, "python3")
+	assert.Contains(t, link.Languages, "python3")
+	assert.Contains(t, link.Languages, "java")
+	assert.NotContains(t, link.Languages, "go")
 	assert.True(t, link.Files)
+
+	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", "def sum(a, b):\n    return a + b\n").State)
+	assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "pypy3", "def sum(a, b):\n    return a - b\n").State)
+	// The nested class only loads if the build keeps every class file.
+	java := "public class aplusb { record Pair(long a, long b) { long sum() { return a + b; } } public static long sum(long a, long b) { return new Pair(a, b).sum(); } }\n"
+	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "java", java).State)
 
 	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "cpp17", solution("a + b")).State)
 	assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "cpp17", solution("a - b")).State)

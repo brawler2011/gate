@@ -125,7 +125,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	}
 	var sol sandbox.Executable
 	if graders != nil {
-		sol, err = sb.CompileWithGraders(ctx, []byte(source), lang, graders, j.Limits.Compile)
+		sol, err = sb.CompileWithGraders(ctx, []byte(source), lang, *graders, j.Limits.Compile)
 	} else {
 		sol, err = sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Limits.Compile)
 	}

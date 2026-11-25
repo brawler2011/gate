@@ -44,6 +44,30 @@ const RenameFile = ({name, description = "Под этим именем прог�
   );
 };
 
+const SolutionName = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const [value, setValue] = useState(draft.solution_name);
+  return (
+    <Stack gap="xs">
+      <TextInput
+        label="Имя решения"
+        description="Под этим именем грейдер на Python или Java импортирует решение (import aplusb, класс aplusb); точка входа — grader.py или grader.java. Без имени эти языки недоступны."
+        placeholder="aplusb"
+        value={value}
+        onChange={(e) => setValue(e.currentTarget.value)}
+      />
+      <Button
+        variant="default"
+        disabled={value.trim() === draft.solution_name}
+        loading={isSaving}
+        onClick={() => void save((current) => ({...current, solution_name: value.trim()}))}
+      >
+        Сохранить имя
+      </Button>
+    </Stack>
+  );
+};
+
 type SystemFileProps = {
   file: ProblemDraftLibraryFile;
   saving: boolean;
@@ -304,6 +328,7 @@ const FilesPanel = ({draft, problemId, list}: {draft: ProblemDraft; problemId: s
             <Button variant="light" disabled={newName.trim() === ""} loading={isSaving} onClick={() => void handleCreate()}>
               Создать
             </Button>
+            {list === "graders" && <SolutionName key={draft.solution_name} draft={draft} problemId={problemId} />}
           </Stack>
         </SectionPaper>
       </Grid.Col>

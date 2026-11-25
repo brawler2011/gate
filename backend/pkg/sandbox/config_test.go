@@ -3,6 +3,7 @@ package sandbox
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -65,6 +66,34 @@ func TestLoadConfigRepositoryLangs(t *testing.T) {
 	cfg, err := LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
 	require.Len(t, cfg.Order, len(cfg.Langs))
+}
+
+// Each grader-capable language needs its own entry grader or linked source, and Python and Java also the solution name.
+func TestGradedLanguagesOfRepositoryCatalog(t *testing.T) {
+	cfg, err := LoadConfig("../../../judge/langs.toml")
+	require.NoError(t, err)
+	cpp := []string{"cpp23", "cpp20", "cpp17"}
+	all := []string{"grader.cpp", "grader.h", "grader.py", "grader.java"}
+	for _, tc := range []struct {
+		name     string
+		graders  []string
+		solution string
+		want     []string
+	}{
+		{"c++ only", []string{"grader.cpp", "grader.h"}, "aplusb", cpp},
+		{"every grader", all, "aplusb", append(slices.Clone(cpp), "python3", "pypy3", "java")},
+		{"no solution name", all, "", cpp},
+		{"invalid solution name", all, "a-b", cpp},
+		{"reserved solution name", all, "class", cpp},
+		{"python without entry", []string{"lib.py"}, "aplusb", []string{}},
+		{"solution named like the entry", []string{"grader.py"}, "grader", []string{}},
+		{"solution named like the interpreted file", []string{"grader.py"}, "foo", []string{}},
+		{"grader named like the solution", []string{"grader.py", "aplusb.py"}, "aplusb", []string{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, cfg.Graded(tc.graders, tc.solution))
+		})
+	}
 }
 
 // Extension suggestions follow catalog order rather than identifier order.

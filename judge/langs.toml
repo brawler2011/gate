@@ -54,6 +54,10 @@ type = "interpreter"
 code_file = "foo.py"
 execute = "/usr/bin/python3 ${dir}/foo.py"
 
+[python3.graders]
+code_file = "${solution}.py"
+entry = "grader.py"
+
 [pypy3]
 name = "Python 3.11 (PyPy 7.3)"
 extensions = ["py"]
@@ -62,6 +66,10 @@ package = "pypy3"
 type = "interpreter"
 code_file = "foo.py"
 execute = "/usr/bin/pypy3 ${dir}/foo.py"
+
+[pypy3.graders]
+code_file = "${solution}.py"
+entry = "grader.py"
 
 [go]
 name = "Go 1.26"
@@ -81,9 +89,14 @@ syntax = "java"
 package = "jdk25_headless"
 type = "compiler"
 code_file = "Main.java"
-compile = "/usr/bin/javac Main.java"
-compile_file = "Main.class"
-execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -cp ${dir} Main"
+compile = "/usr/bin/javac-jar ${name} Main Main.java"
+compile_file = "Main.jar"
+execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -jar ${dir}/Main.jar"
+
+[java.graders]
+code_file = "${solution}.java"
+compile = "/usr/bin/javac-jar ${name} grader ${solution}.java ${graders}"
+entry = "grader.java"
 
 [rust]
 name = "Rust 1.95"

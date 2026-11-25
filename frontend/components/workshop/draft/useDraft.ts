@@ -28,6 +28,7 @@ const FIELD_LABELS: Record<string, string> = {
   memory_limit_mb: "ограничение памяти",
   input_file: "входной файл",
   output_file: "выходной файл",
+  solution_name: "имя решения",
   max_score: "максимальный балл",
   name: "имя",
   language: "язык",

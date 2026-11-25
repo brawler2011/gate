@@ -112,12 +112,12 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 	return s.compile(ctx, sourceCode, langKey, dependencies, nil, limits)
 }
 
-// CompileWithGraders links the source with the grader files of its language; a language without ${graders} in its command cannot.
-func (s *Sandbox) CompileWithGraders(ctx context.Context, sourceCode []byte, langKey string, graders map[string][]byte, limits FileRunLimits) (Executable, error) {
-	return s.compile(ctx, sourceCode, langKey, nil, graders, limits)
+// CompileWithGraders builds the source with the graders as its language's configuration says; other languages cannot.
+func (s *Sandbox) CompileWithGraders(ctx context.Context, sourceCode []byte, langKey string, graders Graders, limits FileRunLimits) (Executable, error) {
+	return s.compile(ctx, sourceCode, langKey, nil, &graders, limits)
 }
 
-func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string, dependencies, graders map[string][]byte, limits FileRunLimits) (Executable, error) {
+func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte, graders *Graders, limits FileRunLimits) (Executable, error) {
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return Executable{}, fmt.Errorf("invalid compilation limits")
 	}
@@ -127,24 +127,33 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
 	}
 	outputName := cmp.Or(lang.CompileFile, "solution")
+	codeFile, compileCmd := lang.CodeFile, lang.Compile
 	var linked []string
 	if graders != nil {
-		if !lang.Graded(slices.Collect(maps.Keys(graders))) {
+		g, ok := lang.graded(graders.Solution)
+		if !ok || !lang.Graded(slices.Collect(maps.Keys(graders.Files)), graders.Solution) {
 			return Executable{}, fmt.Errorf("%w: %s", ErrGradersUnsupported, langKey)
 		}
-		for _, name := range slices.Sorted(maps.Keys(graders)) {
+		for _, name := range slices.Sorted(maps.Keys(graders.Files)) {
 			if lang.compiles(name) {
 				linked = append(linked, name)
 			}
 		}
-		dependencies = graders
+		dependencies = maps.Clone(graders.Files)
+		codeFile, compileCmd = g.codeFile, g.compile
+		if g.entry != "" && lang.Type == "interpreter" {
+			// The entry grader runs under the solution's usual name, so running needs no grader settings.
+			delete(dependencies, g.entry)
+			dependencies[g.codeFile] = sourceCode
+			codeFile, sourceCode = lang.CodeFile, graders.Files[g.entry]
+		}
 	}
 
 	var uploaded []string
 	defer func() { s.client.release(uploaded...) }()
 	copyIn := make(map[string]cmdFile)
 	var err error
-	if copyIn[lang.CodeFile], err = s.inline(ctx, sourceCode, &uploaded); err != nil {
+	if copyIn[codeFile], err = s.inline(ctx, sourceCode, &uploaded); err != nil {
 		return Executable{}, err
 	}
 	for depName, depContent := range dependencies {
@@ -153,8 +162,8 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		}
 	}
 
-	if lang.Type == "interpreter" || lang.Compile == "" {
-		copyOutCached := []string{lang.CodeFile}
+	if lang.Type == "interpreter" || compileCmd == "" {
+		copyOutCached := []string{codeFile}
 		for depName := range dependencies {
 			copyOutCached = append(copyOutCached, depName)
 		}
@@ -179,9 +188,9 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 				res.Status, res.ExitStatus, res.Files["stderr"])
 		}
 
-		fileID, ok := res.FileIDs[lang.CodeFile]
+		fileID, ok := res.FileIDs[codeFile]
 		if !ok {
-			return Executable{}, fmt.Errorf("fileID not found for cached script %s", lang.CodeFile)
+			return Executable{}, fmt.Errorf("fileID not found for cached script %s", codeFile)
 		}
 
 		cachedDeps := make(map[string]string)
@@ -199,9 +208,8 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		}, nil
 	}
 
-	compileCmd := strings.ReplaceAll(lang.Compile, "${name}", outputName)
 	args := []string{}
-	for arg := range strings.FieldsSeq(compileCmd) {
+	for arg := range strings.FieldsSeq(strings.ReplaceAll(compileCmd, "${name}", outputName)) {
 		if arg == gradersArg {
 			args = append(args, linked...)
 		} else {

@@ -20,7 +20,7 @@ const solution = (name: string, verdicts: ProblemDraft["solutions"][number]["ver
 const draft: ProblemDraft = {
   problem_id: "problem", revision: 5, title: "A", short_name: "a", type: "standard", grading: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, input_file: "", output_file: "", processes: 0, max_score: null, checker: null, interactor: null, validators: [], generators: [],
-  solutions: [solution("wrong", ["WA"])], main_solution: null, statements: [], assets: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [], library: [], graders: [], attachments: [],
+  solutions: [solution("wrong", ["WA"])], main_solution: null, statements: [], assets: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [], library: [], graders: [], solution_name: "", attachments: [],
 };
 
 const build = (revision: number, solutions: ProblemBuild["solutions"]): ProblemBuild => ({

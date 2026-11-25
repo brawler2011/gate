@@ -9836,6 +9836,9 @@ type ProblemDraft struct {
 	Library   []ProblemDraftLibraryFile `json:"library"`
 	// Files linked with every solution; only languages that compile one of them can be submitted.
 	Graders []ProblemDraftFile `json:"graders"`
+	// Module or class name under which graders import the solution, such as aplusb for import aplusb;
+	// empty makes the languages that need it unavailable.
+	SolutionName string `json:"solution_name"`
 	// Files participants download with the statement.
 	Attachments []ProblemDraftFile      `json:"attachments"`
 	Statements  []ProblemDraftStatement `json:"statements"`
@@ -9942,6 +9945,11 @@ func (s *ProblemDraft) GetLibrary() []ProblemDraftLibraryFile {
 // GetGraders returns the value of Graders.
 func (s *ProblemDraft) GetGraders() []ProblemDraftFile {
 	return s.Graders
+}
+
+// GetSolutionName returns the value of SolutionName.
+func (s *ProblemDraft) GetSolutionName() string {
+	return s.SolutionName
 }
 
 // GetAttachments returns the value of Attachments.
@@ -10067,6 +10075,11 @@ func (s *ProblemDraft) SetLibrary(val []ProblemDraftLibraryFile) {
 // SetGraders sets the value of Graders.
 func (s *ProblemDraft) SetGraders(val []ProblemDraftFile) {
 	s.Graders = val
+}
+
+// SetSolutionName sets the value of SolutionName.
+func (s *ProblemDraft) SetSolutionName(val string) {
+	s.SolutionName = val
 }
 
 // SetAttachments sets the value of Attachments.
