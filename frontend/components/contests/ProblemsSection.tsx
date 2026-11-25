@@ -1,4 +1,4 @@
-import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
+import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, NumberInput, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconDeviceFloppy, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
@@ -22,7 +22,42 @@ interface ProblemsSectionProps {
   contestLogin: string;
   contestId: string;
   initialProblems: Array<corev1.ContestProblemListItemModel>;
+  ranking: corev1.ContestRanking;
 }
+
+interface PointsCellProps {
+  contestId: string;
+  problem: corev1.ContestProblemListItemModel;
+  onSaved: () => void;
+}
+
+const PointsCell = ({contestId, problem, onSaved}: PointsCellProps): ReactNode => {
+  const [value, setValue] = useState<string | number>(problem.max_score);
+  useEffect(() => setValue(problem.max_score), [problem.max_score]);
+  if (problem.grading === "points" || !problem.permissions.manage) {
+    return <Text size="sm">{problem.max_score}</Text>;
+  }
+  const save = async () => {
+    if (value === "" || Number(value) === problem.max_score) {
+      setValue(problem.max_score);
+      return;
+    }
+    const {error} = await api.PATCH("/contests/{contest_id}/problems/{problem_id}", {
+      params: {path: {contest_id: contestId, problem_id: problem.problem_id}},
+      body: {points: Number(value)},
+    });
+    if (error) {
+      notifications.show({title: "Ошибка", message: problemMessage(error, "Не удалось сохранить баллы"), color: "red"});
+      setValue(problem.max_score);
+      return;
+    }
+    onSaved();
+  };
+  return (
+    <NumberInput size="xs" w={90} min={0} decimalScale={2} aria-label={`Баллы за ${problem.title}`}
+      value={value} onChange={setValue} onBlur={() => void save()} />
+  );
+};
 
 const checkHasChanges = (
   current: corev1.ContestProblemListItemModel[],
@@ -47,6 +82,7 @@ export const ProblemsSection = ({
   contestLogin,
   contestId,
   initialProblems,
+  ranking,
 }: ProblemsSectionProps): ReactNode => {
   const revalidator = useRevalidator();
   const queryClient = useQueryClient();
@@ -470,6 +506,13 @@ export const ProblemsSection = ({
                 <Table.Th>Название</Table.Th>
                 <Table.Th style={{width: 120}}>Время</Table.Th>
                 <Table.Th style={{width: 120}}>Память</Table.Th>
+                {ranking === "points" && (
+                  <Table.Th style={{width: 110}}>
+                    <Tooltip label="Задача по баллам стоит свой максимум; pass-fail — сколько указано" withArrow>
+                      <span>Баллы</span>
+                    </Tooltip>
+                  </Table.Th>
+                )}
                 <Table.Th style={{width: 130}}>Действия</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -513,6 +556,14 @@ export const ProblemsSection = ({
                   <Table.Td>
                     <Text size="sm">{problem.memory_limit}MB</Text>
                   </Table.Td>
+                  {ranking === "points" && (
+                    <Table.Td>
+                      <PointsCell contestId={contestId} problem={problem} onSaved={() => {
+                        void queryClient.invalidateQueries({queryKey: contestQueryKey});
+                        void revalidator.revalidate();
+                      }} />
+                    </Table.Td>
+                  )}
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
                       <Tooltip label="Заменить пакет" withArrow>

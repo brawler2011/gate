@@ -11,5 +11,6 @@ type ScoreboardProblemHeaderModel struct {
 	Title                string                 `json:"title" binding:"required"`
 	ShortName            string                 `json:"short_name" binding:"required"`
 	Ordinal              int32                  `json:"ordinal" binding:"required"`
+	MaxScore             float64                `json:"max_score" binding:"required"`
 	AdditionalProperties map[string]interface{} `json:"-,omitempty"`
 }

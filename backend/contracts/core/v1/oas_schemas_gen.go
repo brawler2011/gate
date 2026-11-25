@@ -1446,6 +1446,8 @@ type ContestModel struct {
 	AllowVirtual        bool                     `json:"allow_virtual"`
 	// Contest submissions are judged on pretests until the end, then on all tests.
 	Pretests       bool                   `json:"pretests"`
+	Ranking        ContestRanking         `json:"ranking"`
+	TieBreak       ContestTieBreak        `json:"tie_break"`
 	JoinPolicy     ContestModelJoinPolicy `json:"join_policy"`
 	HideStatements bool                   `json:"hide_statements"`
 	// Language configurations contestants may submit in; empty allows the whole catalog.
@@ -1620,6 +1622,16 @@ func (s *ContestModel) GetAllowVirtual() bool {
 // GetPretests returns the value of Pretests.
 func (s *ContestModel) GetPretests() bool {
 	return s.Pretests
+}
+
+// GetRanking returns the value of Ranking.
+func (s *ContestModel) GetRanking() ContestRanking {
+	return s.Ranking
+}
+
+// GetTieBreak returns the value of TieBreak.
+func (s *ContestModel) GetTieBreak() ContestTieBreak {
+	return s.TieBreak
 }
 
 // GetJoinPolicy returns the value of JoinPolicy.
@@ -1805,6 +1817,16 @@ func (s *ContestModel) SetAllowVirtual(val bool) {
 // SetPretests sets the value of Pretests.
 func (s *ContestModel) SetPretests(val bool) {
 	s.Pretests = val
+}
+
+// SetRanking sets the value of Ranking.
+func (s *ContestModel) SetRanking(val ContestRanking) {
+	s.Ranking = val
+}
+
+// SetTieBreak sets the value of TieBreak.
+func (s *ContestModel) SetTieBreak(val ContestTieBreak) {
+	s.TieBreak = val
 }
 
 // SetJoinPolicy sets the value of JoinPolicy.
@@ -2032,6 +2054,8 @@ type ContestProblemListItemModel struct {
 	Title       string                         `json:"title"`
 	Type        ProblemType                    `json:"type"`
 	Grading     ProblemGrading                 `json:"grading"`
+	// What full marks score under points ranking; the contest sets it for a pass-fail problem.
+	MaxScore float64 `json:"max_score"`
 	// Languages the problem accepts, within the contest's; empty accepts every language.
 	Languages   []string  `json:"languages"`
 	MemoryLimit int32     `json:"memory_limit"`
@@ -2068,6 +2092,11 @@ func (s *ContestProblemListItemModel) GetType() ProblemType {
 // GetGrading returns the value of Grading.
 func (s *ContestProblemListItemModel) GetGrading() ProblemGrading {
 	return s.Grading
+}
+
+// GetMaxScore returns the value of MaxScore.
+func (s *ContestProblemListItemModel) GetMaxScore() float64 {
+	return s.MaxScore
 }
 
 // GetLanguages returns the value of Languages.
@@ -2123,6 +2152,11 @@ func (s *ContestProblemListItemModel) SetType(val ProblemType) {
 // SetGrading sets the value of Grading.
 func (s *ContestProblemListItemModel) SetGrading(val ProblemGrading) {
 	s.Grading = val
+}
+
+// SetMaxScore sets the value of MaxScore.
+func (s *ContestProblemListItemModel) SetMaxScore(val float64) {
+	s.MaxScore = val
 }
 
 // SetLanguages sets the value of Languages.
@@ -2494,6 +2528,49 @@ func (s *ContestProblemReorderItemModel) SetPosition(val int32) {
 	s.Position = val
 }
 
+// Icpc ranks by solved problems and penalty; points by the sum of each problem's best score.
+// Ref: #/components/schemas/ContestRanking
+type ContestRanking string
+
+const (
+	ContestRankingIcpc   ContestRanking = "icpc"
+	ContestRankingPoints ContestRanking = "points"
+)
+
+// AllValues returns all ContestRanking values.
+func (ContestRanking) AllValues() []ContestRanking {
+	return []ContestRanking{
+		ContestRankingIcpc,
+		ContestRankingPoints,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestRanking) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestRankingIcpc:
+		return []byte(s), nil
+	case ContestRankingPoints:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestRanking) UnmarshalText(data []byte) error {
+	switch ContestRanking(data) {
+	case ContestRankingIcpc:
+		*s = ContestRankingIcpc
+		return nil
+	case ContestRankingPoints:
+		*s = ContestRankingPoints
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ContestRoleQuery string
 
 const (
@@ -2793,6 +2870,49 @@ func (s *ContestTeamRoleQuery) UnmarshalText(data []byte) error {
 		return nil
 	case ContestTeamRoleQueryParticipant:
 		*s = ContestTeamRoleQueryParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// How points ranking orders equal totals: shared places, or the earlier last score improvement first.
+// Ref: #/components/schemas/ContestTieBreak
+type ContestTieBreak string
+
+const (
+	ContestTieBreakShared ContestTieBreak = "shared"
+	ContestTieBreakTime   ContestTieBreak = "time"
+)
+
+// AllValues returns all ContestTieBreak values.
+func (ContestTieBreak) AllValues() []ContestTieBreak {
+	return []ContestTieBreak{
+		ContestTieBreakShared,
+		ContestTieBreakTime,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestTieBreak) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestTieBreakShared:
+		return []byte(s), nil
+	case ContestTieBreakTime:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestTieBreak) UnmarshalText(data []byte) error {
+	switch ContestTieBreak(data) {
+	case ContestTieBreakShared:
+		*s = ContestTieBreakShared
+		return nil
+	case ContestTieBreakTime:
+		*s = ContestTieBreakTime
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -6431,6 +6551,52 @@ func (o OptContestJoinRequestModel) Or(d ContestJoinRequestModel) ContestJoinReq
 	return d
 }
 
+// NewOptContestRanking returns new OptContestRanking with value set to v.
+func NewOptContestRanking(v ContestRanking) OptContestRanking {
+	return OptContestRanking{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptContestRanking is optional ContestRanking.
+type OptContestRanking struct {
+	Value ContestRanking
+	Set   bool
+}
+
+// IsSet returns true if OptContestRanking was set.
+func (o OptContestRanking) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptContestRanking) Reset() {
+	var v ContestRanking
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptContestRanking) SetTo(v ContestRanking) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptContestRanking) Get() (v ContestRanking, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptContestRanking) Or(d ContestRanking) ContestRanking {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptContestScope returns new OptContestScope with value set to v.
 func NewOptContestScope(v ContestScope) OptContestScope {
 	return OptContestScope{
@@ -6517,6 +6683,52 @@ func (o OptContestSortOrderQuery) Get() (v ContestSortOrderQuery, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptContestSortOrderQuery) Or(d ContestSortOrderQuery) ContestSortOrderQuery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptContestTieBreak returns new OptContestTieBreak with value set to v.
+func NewOptContestTieBreak(v ContestTieBreak) OptContestTieBreak {
+	return OptContestTieBreak{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptContestTieBreak is optional ContestTieBreak.
+type OptContestTieBreak struct {
+	Value ContestTieBreak
+	Set   bool
+}
+
+// IsSet returns true if OptContestTieBreak was set.
+func (o OptContestTieBreak) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptContestTieBreak) Reset() {
+	var v ContestTieBreak
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptContestTieBreak) SetTo(v ContestTieBreak) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptContestTieBreak) Get() (v ContestTieBreak, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptContestTieBreak) Or(d ContestTieBreak) ContestTieBreak {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12716,11 +12928,18 @@ func (s *RespondInvitationRequestModelStatus) UnmarshalText(data []byte) error {
 // Scoreboard item data.
 // Ref: #/components/schemas/ScoreboardItemModel
 type ScoreboardItemModel struct {
-	UserID         uuid.UUID                      `json:"user_id"`
-	Username       string                         `json:"username"`
-	ProblemsSolved int32                          `json:"problems_solved"`
-	TotalPenalty   int32                          `json:"total_penalty"`
-	LastAcceptedAt OptDateTime                    `json:"last_accepted_at"`
+	UserID         uuid.UUID   `json:"user_id"`
+	Username       string      `json:"username"`
+	ProblemsSolved int32       `json:"problems_solved"`
+	TotalPenalty   int32       `json:"total_penalty"`
+	LastAcceptedAt OptDateTime `json:"last_accepted_at"`
+	// Total of the best problem scores; set under points ranking.
+	Score OptFloat64 `json:"score"`
+	// When the total was last raised.
+	ScoredAt OptDateTime `json:"scored_at"`
+	// Place in the standings, shared by rows equal on every ranking key; a single-row update leaves it 0
+	// for the client to rank.
+	Rank           int32                          `json:"rank"`
 	ProblemResults []ScoreboardProblemResultModel `json:"problem_results"`
 	// The row is a virtual run, ranked by its own timeline.
 	Virtual OptBool `json:"virtual"`
@@ -12749,6 +12968,21 @@ func (s *ScoreboardItemModel) GetTotalPenalty() int32 {
 // GetLastAcceptedAt returns the value of LastAcceptedAt.
 func (s *ScoreboardItemModel) GetLastAcceptedAt() OptDateTime {
 	return s.LastAcceptedAt
+}
+
+// GetScore returns the value of Score.
+func (s *ScoreboardItemModel) GetScore() OptFloat64 {
+	return s.Score
+}
+
+// GetScoredAt returns the value of ScoredAt.
+func (s *ScoreboardItemModel) GetScoredAt() OptDateTime {
+	return s.ScoredAt
+}
+
+// GetRank returns the value of Rank.
+func (s *ScoreboardItemModel) GetRank() int32 {
+	return s.Rank
 }
 
 // GetProblemResults returns the value of ProblemResults.
@@ -12786,6 +13020,21 @@ func (s *ScoreboardItemModel) SetLastAcceptedAt(val OptDateTime) {
 	s.LastAcceptedAt = val
 }
 
+// SetScore sets the value of Score.
+func (s *ScoreboardItemModel) SetScore(val OptFloat64) {
+	s.Score = val
+}
+
+// SetScoredAt sets the value of ScoredAt.
+func (s *ScoreboardItemModel) SetScoredAt(val OptDateTime) {
+	s.ScoredAt = val
+}
+
+// SetRank sets the value of Rank.
+func (s *ScoreboardItemModel) SetRank(val int32) {
+	s.Rank = val
+}
+
 // SetProblemResults sets the value of ProblemResults.
 func (s *ScoreboardItemModel) SetProblemResults(val []ScoreboardProblemResultModel) {
 	s.ProblemResults = val
@@ -12803,6 +13052,7 @@ type ScoreboardProblemHeaderModel struct {
 	Title     string    `json:"title"`
 	ShortName string    `json:"short_name"`
 	Ordinal   int32     `json:"ordinal"`
+	MaxScore  float64   `json:"max_score"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -12825,6 +13075,11 @@ func (s *ScoreboardProblemHeaderModel) GetOrdinal() int32 {
 	return s.Ordinal
 }
 
+// GetMaxScore returns the value of MaxScore.
+func (s *ScoreboardProblemHeaderModel) GetMaxScore() float64 {
+	return s.MaxScore
+}
+
 // SetProblemID sets the value of ProblemID.
 func (s *ScoreboardProblemHeaderModel) SetProblemID(val uuid.UUID) {
 	s.ProblemID = val
@@ -12845,6 +13100,11 @@ func (s *ScoreboardProblemHeaderModel) SetOrdinal(val int32) {
 	s.Ordinal = val
 }
 
+// SetMaxScore sets the value of MaxScore.
+func (s *ScoreboardProblemHeaderModel) SetMaxScore(val float64) {
+	s.MaxScore = val
+}
+
 // Scoreboard problem result data.
 // Ref: #/components/schemas/ScoreboardProblemResultModel
 type ScoreboardProblemResultModel struct {
@@ -12856,6 +13116,10 @@ type ScoreboardProblemResultModel struct {
 	FirstAcTime     OptDateTime `json:"first_ac_time"`
 	TimeMinutes     OptInt32    `json:"time_minutes"`
 	Penalty         OptInt32    `json:"penalty"`
+	// Best score; set under points ranking.
+	Score OptFloat64 `json:"score"`
+	// When the best score was first reached.
+	ScoredAt OptDateTime `json:"scored_at"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -12893,6 +13157,16 @@ func (s *ScoreboardProblemResultModel) GetPenalty() OptInt32 {
 	return s.Penalty
 }
 
+// GetScore returns the value of Score.
+func (s *ScoreboardProblemResultModel) GetScore() OptFloat64 {
+	return s.Score
+}
+
+// GetScoredAt returns the value of ScoredAt.
+func (s *ScoreboardProblemResultModel) GetScoredAt() OptDateTime {
+	return s.ScoredAt
+}
+
 // SetProblemID sets the value of ProblemID.
 func (s *ScoreboardProblemResultModel) SetProblemID(val uuid.UUID) {
 	s.ProblemID = val
@@ -12928,13 +13202,25 @@ func (s *ScoreboardProblemResultModel) SetPenalty(val OptInt32) {
 	s.Penalty = val
 }
 
+// SetScore sets the value of Score.
+func (s *ScoreboardProblemResultModel) SetScore(val OptFloat64) {
+	s.Score = val
+}
+
+// SetScoredAt sets the value of ScoredAt.
+func (s *ScoreboardProblemResultModel) SetScoredAt(val OptDateTime) {
+	s.ScoredAt = val
+}
+
 // Result of scoreboard.
 // Ref: #/components/schemas/ScoreboardResponseModel
 type ScoreboardResponseModel struct {
-	ContestID         uuid.UUID `json:"contest_id"`
-	ContestLogin      string    `json:"contest_login"`
-	OrganizationLogin string    `json:"organization_login"`
-	PenaltyPerAttempt int32     `json:"penalty_per_attempt"`
+	ContestID         uuid.UUID       `json:"contest_id"`
+	ContestLogin      string          `json:"contest_login"`
+	OrganizationLogin string          `json:"organization_login"`
+	PenaltyPerAttempt int32           `json:"penalty_per_attempt"`
+	Ranking           ContestRanking  `json:"ranking"`
+	TieBreak          ContestTieBreak `json:"tie_break"`
 	// Whether the scoreboard is currently frozen.
 	IsFrozen bool `json:"is_frozen"`
 	// RFC3339 timestamp when scoreboard was or will be frozen.
@@ -12961,6 +13247,16 @@ func (s *ScoreboardResponseModel) GetOrganizationLogin() string {
 // GetPenaltyPerAttempt returns the value of PenaltyPerAttempt.
 func (s *ScoreboardResponseModel) GetPenaltyPerAttempt() int32 {
 	return s.PenaltyPerAttempt
+}
+
+// GetRanking returns the value of Ranking.
+func (s *ScoreboardResponseModel) GetRanking() ContestRanking {
+	return s.Ranking
+}
+
+// GetTieBreak returns the value of TieBreak.
+func (s *ScoreboardResponseModel) GetTieBreak() ContestTieBreak {
+	return s.TieBreak
 }
 
 // GetIsFrozen returns the value of IsFrozen.
@@ -13001,6 +13297,16 @@ func (s *ScoreboardResponseModel) SetOrganizationLogin(val string) {
 // SetPenaltyPerAttempt sets the value of PenaltyPerAttempt.
 func (s *ScoreboardResponseModel) SetPenaltyPerAttempt(val int32) {
 	s.PenaltyPerAttempt = val
+}
+
+// SetRanking sets the value of Ranking.
+func (s *ScoreboardResponseModel) SetRanking(val ContestRanking) {
+	s.Ranking = val
+}
+
+// SetTieBreak sets the value of TieBreak.
+func (s *ScoreboardResponseModel) SetTieBreak(val ContestTieBreak) {
+	s.TieBreak = val
 }
 
 // SetIsFrozen sets the value of IsFrozen.
@@ -14359,6 +14665,26 @@ type UpdateContestMemberOK struct{}
 // UpdateContestOK is response for UpdateContest operation.
 type UpdateContestOK struct{}
 
+// UpdateContestProblemNoContent is response for UpdateContestProblem operation.
+type UpdateContestProblemNoContent struct{}
+
+// Fields for the update contest problem request.
+// Ref: #/components/schemas/UpdateContestProblemRequestModel
+type UpdateContestProblemRequestModel struct {
+	// What solving a pass-fail problem scores under points ranking.
+	Points float64 `json:"points"`
+}
+
+// GetPoints returns the value of Points.
+func (s *UpdateContestProblemRequestModel) GetPoints() float64 {
+	return s.Points
+}
+
+// SetPoints sets the value of Points.
+func (s *UpdateContestProblemRequestModel) SetPoints(val float64) {
+	s.Points = val
+}
+
 // Fields for the update contest request.
 // Ref: #/components/schemas/UpdateContestRequestModel
 type UpdateContestRequestModel struct {
@@ -14395,6 +14721,8 @@ type UpdateContestRequestModel struct {
 	AllowVirtual        OptBool                                  `json:"allow_virtual"`
 	// Requires an end time.
 	Pretests        OptBool                                `json:"pretests"`
+	Ranking         OptContestRanking                      `json:"ranking"`
+	TieBreak        OptContestTieBreak                     `json:"tie_break"`
 	EnableUpsolving OptBool                                `json:"enable_upsolving"`
 	JoinPolicy      OptUpdateContestRequestModelJoinPolicy `json:"join_policy"`
 	HideStatements  OptBool                                `json:"hide_statements"`
@@ -14536,6 +14864,16 @@ func (s *UpdateContestRequestModel) GetAllowVirtual() OptBool {
 // GetPretests returns the value of Pretests.
 func (s *UpdateContestRequestModel) GetPretests() OptBool {
 	return s.Pretests
+}
+
+// GetRanking returns the value of Ranking.
+func (s *UpdateContestRequestModel) GetRanking() OptContestRanking {
+	return s.Ranking
+}
+
+// GetTieBreak returns the value of TieBreak.
+func (s *UpdateContestRequestModel) GetTieBreak() OptContestTieBreak {
+	return s.TieBreak
 }
 
 // GetEnableUpsolving returns the value of EnableUpsolving.
@@ -14691,6 +15029,16 @@ func (s *UpdateContestRequestModel) SetAllowVirtual(val OptBool) {
 // SetPretests sets the value of Pretests.
 func (s *UpdateContestRequestModel) SetPretests(val OptBool) {
 	s.Pretests = val
+}
+
+// SetRanking sets the value of Ranking.
+func (s *UpdateContestRequestModel) SetRanking(val OptContestRanking) {
+	s.Ranking = val
+}
+
+// SetTieBreak sets the value of TieBreak.
+func (s *UpdateContestRequestModel) SetTieBreak(val OptContestTieBreak) {
+	s.TieBreak = val
 }
 
 // SetEnableUpsolving sets the value of EnableUpsolving.

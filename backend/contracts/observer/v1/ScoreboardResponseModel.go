@@ -13,6 +13,8 @@ type ScoreboardResponseModel struct {
 	ContestLogin         string                         `json:"contest_login" binding:"required"`
 	OrganizationLogin    string                         `json:"organization_login" binding:"required"`
 	PenaltyPerAttempt    int32                          `json:"penalty_per_attempt" binding:"required"`
+	Ranking              *ContestRanking                `json:"ranking" binding:"required"`
+	TieBreak             *ContestTieBreak               `json:"tie_break" binding:"required"`
 	IsFrozen             bool                           `json:"is_frozen" binding:"required"`
 	FreezeTime           *time.Time                     `json:"freeze_time,omitempty"`
 	Problems             []ScoreboardProblemHeaderModel `json:"problems" binding:"required"`

@@ -391,6 +391,7 @@ CREATE TABLE problem_packages (
     grading text NOT NULL,
     time_limit_ms integer NOT NULL,
     memory_limit_mb integer NOT NULL,
+    max_score numeric(12,2),
     input_file text NOT NULL,
     output_file text NOT NULL,
     build_id uuid NOT NULL,
@@ -409,6 +410,7 @@ CREATE TABLE problem_packages (
     CONSTRAINT problem_packages_statements_check CHECK ((jsonb_typeof(statements) = 'array'::text)),
     CONSTRAINT problem_packages_type_check CHECK ((type = ANY (ARRAY['standard'::text, 'interactive'::text, 'communication'::text, 'output-only'::text]))),
     CONSTRAINT problem_packages_grading_check CHECK ((grading = ANY (ARRAY['pass-fail'::text, 'points'::text]))),
+    CONSTRAINT problem_packages_max_score_check CHECK (((grading = 'points'::text) = (max_score IS NOT NULL))),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
@@ -482,6 +484,10 @@ CREATE TABLE contests (
     allow_virtual boolean DEFAULT false NOT NULL,
     -- Contest submissions are judged on pretests until the end, then on all tests.
     pretests boolean DEFAULT false NOT NULL,
+    -- icpc ranks by solved problems and penalty; points by the sum of each problem's best score.
+    ranking text DEFAULT 'icpc'::text NOT NULL,
+    -- How points ranking orders equal totals: shared places, or earlier last score improvement first.
+    tie_break text DEFAULT 'shared'::text NOT NULL,
     languages text[] DEFAULT '{}'::text[] NOT NULL,
     start_time timestamptz,
     end_time timestamptz,
@@ -492,6 +498,8 @@ CREATE TABLE contests (
     CONSTRAINT contests_freeze_started_check CHECK (((freeze_status = 'frozen'::freeze_status) = (freeze_started_at IS NOT NULL))),
     CONSTRAINT contests_unfreeze_time_check CHECK ((unfreeze_time >= end_time)),
     CONSTRAINT contests_pretests_check CHECK (((NOT pretests) OR (end_time IS NOT NULL))),
+    CONSTRAINT contests_ranking_check CHECK ((ranking = ANY (ARRAY['icpc'::text, 'points'::text]))),
+    CONSTRAINT contests_tie_break_check CHECK ((tie_break = ANY (ARRAY['shared'::text, 'time'::text]))),
     CONSTRAINT contests_login_check CHECK (((length((login)::text) >= 3) AND (length((login)::text) <= 64))),
     CONSTRAINT contests_pkey PRIMARY KEY (id),
     CONSTRAINT contests_id_organization_unique UNIQUE (id, organization_id),
@@ -533,8 +541,11 @@ CREATE TABLE contest_problems (
     problem_id uuid NOT NULL,
     package_id uuid NOT NULL,
     ordinal integer NOT NULL,
+    -- What solving a pass-fail problem scores under points ranking; points problems score their package max.
+    points numeric(12,2) DEFAULT 100 NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT contest_problems_ordinal_check CHECK ((ordinal >= 0)),
+    CONSTRAINT contest_problems_points_check CHECK ((points >= (0)::numeric)),
     CONSTRAINT contest_problems_contest_id_ordinal_key UNIQUE (contest_id, ordinal),
     CONSTRAINT contest_problems_pkey PRIMARY KEY (contest_id, problem_id),
     CONSTRAINT contest_problems_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,

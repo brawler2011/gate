@@ -56,6 +56,8 @@ SET login = COALESCE(sqlc.narg('login'), login),
     enable_upsolving = COALESCE(sqlc.narg('enable_upsolving'), enable_upsolving),
     allow_virtual = COALESCE(sqlc.narg('allow_virtual'), allow_virtual),
     pretests = COALESCE(sqlc.narg('pretests'), pretests),
+    ranking = COALESCE(sqlc.narg('ranking'), ranking),
+    tie_break = COALESCE(sqlc.narg('tie_break'), tie_break),
     languages = COALESCE(sqlc.narg('languages')::text[], languages),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END
@@ -116,13 +118,13 @@ VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems 
 ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id;
 
 -- name: GetContestProblem :one
-SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, COALESCE(pp.max_score, cp.points)::numeric AS max_score, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, COALESCE(pp.max_score, cp.points)::numeric AS max_score, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
@@ -141,6 +143,9 @@ UPDATE contest_problems
 SET package_id = $3
 WHERE contest_id = $1 AND problem_id = $2;
 
+-- name: UpdateContestProblemPoints :execrows
+UPDATE contest_problems SET points = $3 WHERE contest_id = $1 AND problem_id = $2;
+
 -- name: RemoveContestProblem :exec
 DELETE FROM contest_problems
 WHERE contest_id = $1 AND problem_id = $2;
@@ -156,7 +161,7 @@ WHERE cm.contest_id = $1 AND cm.role = 'participant';
 
 -- name: GetContestScoreboardSubmissions :many
 SELECT s.owner_id, s.problem_id,
- s.state,
+ s.state, s.score,
  s.created_at
 FROM submissions s
 WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.kind = 'contest' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
@@ -164,7 +169,7 @@ ORDER BY s.owner_id, s.problem_id, s.created_at ASC;
 
 -- name: GetUserScoreboardSubmissions :many
 SELECT s.owner_id, s.problem_id,
- s.state,
+ s.state, s.score,
  s.created_at
 FROM submissions s
 WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id = sqlc.arg('owner_id')::uuid AND s.kind = 'contest' AND s.problem_id IS NOT NULL
@@ -206,7 +211,7 @@ FROM contest_virtual_runs r JOIN users u ON u.id = r.user_id
 WHERE r.contest_id = $1;
 
 -- name: GetVirtualScoreboardSubmissions :many
-SELECT s.owner_id, s.problem_id, s.state, s.created_at
+SELECT s.owner_id, s.problem_id, s.state, s.score, s.created_at
 FROM submissions s
 WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.kind = 'virtual' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
 ORDER BY s.owner_id, s.problem_id, s.created_at ASC;

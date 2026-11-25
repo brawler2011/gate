@@ -66,8 +66,8 @@ SELECT id FROM problem_packages WHERE build_id=$1;
 
 -- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,grading,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19);
+ title,short_name,type,grading,time_limit_ms,memory_limit_mb,max_score,input_file,output_file,statements,samples,files_object_id,languages)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20);
 
 -- name: InsertPackageAssets :exec
 INSERT INTO problem_package_assets(package_id,name,object_id)

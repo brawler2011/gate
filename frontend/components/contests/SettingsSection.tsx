@@ -52,6 +52,16 @@ const JOIN_POLICY_OPTIONS = [
   {label: "Только по приглашению", value: "invite_only", color: "orange"},
 ];
 
+const RANKING_OPTIONS = [
+  {label: "ICPC: решённые задачи и штраф", value: "icpc", color: "blue"},
+  {label: "IOI: сумма лучших баллов по задачам", value: "points", color: "green"},
+];
+
+const TIE_BREAK_OPTIONS = [
+  {label: "Делят место", value: "shared", color: "gray"},
+  {label: "Выше тот, кто раньше набрал итоговый балл", value: "time", color: "blue"},
+];
+
 const FREEZE_STATUS_OPTIONS = [
   {label: "Автоматически по таймеру", value: "auto", color: "blue"},
   {label: "Заморожен", value: "frozen", color: "orange"},
@@ -169,6 +179,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     enable_upsolving: boolean;
     allow_virtual: boolean;
     pretests: boolean;
+    ranking: corev1.ContestRanking;
+    tie_break: corev1.ContestTieBreak;
     hide_statements: boolean;
     languages: string[];
   }>({
@@ -183,6 +195,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_upsolving: contest.enable_upsolving,
       allow_virtual: contest.allow_virtual,
       pretests: contest.pretests,
+      ranking: contest.ranking,
+      tie_break: contest.tie_break,
       hide_statements: contest.hide_statements,
       languages: contest.languages,
       scoreboard_during: contest.scoreboard_during,
@@ -424,6 +438,23 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             </Stack>
             <Switch checked={form.values.pretests} onChange={(event) => form.setFieldValue("pretests", event.currentTarget.checked)} />
           </Group>
+
+          <CustomSelect
+            label="Ранжирование"
+            description="Баллы за pass-fail задачу задаются в разделе задач"
+            value={form.values.ranking}
+            onChange={(value) => form.setFieldValue("ranking", value as corev1.ContestRanking)}
+            options={RANKING_OPTIONS}
+          />
+
+          {form.values.ranking === "points" && (
+            <CustomSelect
+              label="Равные суммы баллов"
+              value={form.values.tie_break}
+              onChange={(value) => form.setFieldValue("tie_break", value as corev1.ContestTieBreak)}
+              options={TIE_BREAK_OPTIONS}
+            />
+          )}
 
           <Group justify="space-between">
             <Text size="sm">Разрешить виртуальное участие после окончания</Text>

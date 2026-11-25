@@ -267,30 +267,31 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 
 const insertProblemPackage = `-- name: InsertProblemPackage :exec
 INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
- title,short_name,type,grading,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples,files_object_id,languages)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+ title,short_name,type,grading,time_limit_ms,memory_limit_mb,max_score,input_file,output_file,statements,samples,files_object_id,languages)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
 `
 
 type InsertProblemPackageParams struct {
-	ID             uuid.UUID  `json:"id"`
-	ProblemID      uuid.UUID  `json:"problem_id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	BuildID        uuid.UUID  `json:"build_id"`
-	ObjectID       uuid.UUID  `json:"object_id"`
-	PackageHash    string     `json:"package_hash"`
-	Revision       int64      `json:"revision"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	Type           string     `json:"type"`
-	Grading        string     `json:"grading"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
-	InputFile      string     `json:"input_file"`
-	OutputFile     string     `json:"output_file"`
-	Statements     []byte     `json:"statements"`
-	Samples        []byte     `json:"samples"`
-	FilesObjectID  *uuid.UUID `json:"files_object_id"`
-	Languages      []string   `json:"languages"`
+	ID             uuid.UUID     `json:"id"`
+	ProblemID      uuid.UUID     `json:"problem_id"`
+	OrganizationID uuid.UUID     `json:"organization_id"`
+	BuildID        uuid.UUID     `json:"build_id"`
+	ObjectID       uuid.UUID     `json:"object_id"`
+	PackageHash    string        `json:"package_hash"`
+	Revision       int64         `json:"revision"`
+	Title          string        `json:"title"`
+	ShortName      string        `json:"short_name"`
+	Type           string        `json:"type"`
+	Grading        string        `json:"grading"`
+	TimeLimitMs    int32         `json:"time_limit_ms"`
+	MemoryLimitMb  int32         `json:"memory_limit_mb"`
+	MaxScore       *points.Value `json:"max_score"`
+	InputFile      string        `json:"input_file"`
+	OutputFile     string        `json:"output_file"`
+	Statements     []byte        `json:"statements"`
+	Samples        []byte        `json:"samples"`
+	FilesObjectID  *uuid.UUID    `json:"files_object_id"`
+	Languages      []string      `json:"languages"`
 }
 
 func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPackageParams) error {
@@ -308,6 +309,7 @@ func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPac
 		arg.Grading,
 		arg.TimeLimitMs,
 		arg.MemoryLimitMb,
+		arg.MaxScore,
 		arg.InputFile,
 		arg.OutputFile,
 		arg.Statements,

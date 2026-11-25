@@ -20,6 +20,7 @@ import (
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -54,6 +55,7 @@ type ContestsUC interface {
 
 	DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error
+	UpdateContestProblemPoints(ctx context.Context, contestID, problemID uuid.UUID, value points.Value) error
 
 	GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen, virtual bool) (*contestsmodel.ScoreboardResponse, error)
 	StartVirtualRun(ctx context.Context, contestID uuid.UUID) (contestsmodel.VirtualRun, error)

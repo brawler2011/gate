@@ -120,6 +120,7 @@ var endpointPolicies = map[string]level{
 	"DownloadContestProblemStatementPdf": public,
 	"DeleteContestProblem":               authenticated,
 	"ReorderContestProblems":             authenticated,
+	"UpdateContestProblem":               authenticated,
 	"UpdateContestMember":                authenticated,
 	"DeleteContestMember":                authenticated,
 	"ListContestMembers":                 authenticated,

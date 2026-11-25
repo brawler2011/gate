@@ -8,6 +8,8 @@ interface ScoreboardProblemResultModel {
   'first_ac_time'?: string;
   'time_minutes'?: number;
   'penalty'?: number;
+  'score'?: number;
+  'scored_at'?: string;
   'additionalProperties'?: Map<string, any>;
 }
 export default ScoreboardProblemResultModel;

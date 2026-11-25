@@ -15,6 +15,7 @@ import (
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -44,6 +45,8 @@ type CommandTxStore interface {
 	DeleteContest(context.Context, uuid.UUID) error
 	CreateContestProblem(context.Context, contestsmodel.ContestProblemCreation) error
 	UpdateContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
+	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
+	UpdateContestProblemPoints(context.Context, uuid.UUID, uuid.UUID, points.Value) error
 	DeleteContestProblem(context.Context, contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(context.Context, uuid.UUID, []contestsmodel.ContestProblemReorderItem) error
 	// QueueBooklets runs after the contest's changes so it keys them in.

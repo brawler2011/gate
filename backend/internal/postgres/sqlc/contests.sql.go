@@ -12,6 +12,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -79,7 +80,7 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 const createContest = `-- name: CreateContest :one
 INSERT INTO contests (id, organization_id, visibility, title, login, description, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, organization_id, visibility, title, place, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, tutorials_during, tutorials_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, pretests, languages, start_time, end_time, created_at, updated_at
+RETURNING id, organization_id, visibility, title, place, login, description, join_policy, scoreboard_during, scoreboard_after, submissions_during, submissions_after, sources_during, sources_after, reports_during, reports_after, tutorials_during, tutorials_after, feedback_during, feedback_after, freeze_status, freeze_duration_minutes, freeze_started_at, freeze_hides_attempts, unfreeze_time, hide_statements, allow_clarifications, enable_drafts, enable_upsolving, allow_virtual, pretests, ranking, tie_break, languages, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -137,6 +138,8 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.EnableUpsolving,
 		&i.AllowVirtual,
 		&i.Pretests,
+		&i.Ranking,
+		&i.TieBreak,
 		&i.Languages,
 		&i.StartTime,
 		&i.EndTime,
@@ -238,7 +241,7 @@ func (q *Queries) FinishVirtualRun(ctx context.Context, arg FinishVirtualRunPara
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.ranking, c.tie_break, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1
@@ -284,6 +287,8 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 		&i.Contest.EnableUpsolving,
 		&i.Contest.AllowVirtual,
 		&i.Contest.Pretests,
+		&i.Contest.Ranking,
+		&i.Contest.TieBreak,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -295,7 +300,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 }
 
 const getContestByLogin = `-- name: GetContestByLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.ranking, c.tie_break, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2)
@@ -346,6 +351,8 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 		&i.Contest.EnableUpsolving,
 		&i.Contest.AllowVirtual,
 		&i.Contest.Pretests,
+		&i.Contest.Ranking,
+		&i.Contest.TieBreak,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -357,7 +364,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 }
 
 const getContestByOrgLoginAndContestLogin = `-- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
+SELECT c.id, c.organization_id, c.visibility, c.title, c.place, c.login, c.description, c.join_policy, c.scoreboard_during, c.scoreboard_after, c.submissions_during, c.submissions_after, c.sources_during, c.sources_after, c.reports_during, c.reports_after, c.tutorials_during, c.tutorials_after, c.feedback_during, c.feedback_after, c.freeze_status, c.freeze_duration_minutes, c.freeze_started_at, c.freeze_hides_attempts, c.unfreeze_time, c.hide_statements, c.allow_clarifications, c.enable_drafts, c.enable_upsolving, c.allow_virtual, c.pretests, c.ranking, c.tie_break, c.languages, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2)
@@ -408,6 +415,8 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 		&i.Contest.EnableUpsolving,
 		&i.Contest.AllowVirtual,
 		&i.Contest.Pretests,
+		&i.Contest.Ranking,
+		&i.Contest.TieBreak,
 		&i.Contest.Languages,
 		&i.Contest.StartTime,
 		&i.Contest.EndTime,
@@ -452,7 +461,7 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.points, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, COALESCE(pp.max_score, cp.points)::numeric AS max_score, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2
@@ -464,23 +473,25 @@ type GetContestProblemParams struct {
 }
 
 type GetContestProblemRow struct {
-	ContestID        uuid.UUID `json:"contest_id"`
-	ProblemID        uuid.UUID `json:"problem_id"`
-	PackageID        uuid.UUID `json:"package_id"`
-	Ordinal          int32     `json:"ordinal"`
-	CreatedAt        time.Time `json:"created_at"`
-	Title            string    `json:"title"`
-	ShortName        string    `json:"short_name"`
-	Visibility       string    `json:"visibility"`
-	Type             string    `json:"type"`
-	Grading          string    `json:"grading"`
-	TimeLimitMs      int32     `json:"time_limit_ms"`
-	MemoryLimitMb    int32     `json:"memory_limit_mb"`
-	InputFile        string    `json:"input_file"`
-	OutputFile       string    `json:"output_file"`
-	Languages        []string  `json:"languages"`
-	Files            bool      `json:"files"`
-	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
+	ContestID        uuid.UUID    `json:"contest_id"`
+	ProblemID        uuid.UUID    `json:"problem_id"`
+	PackageID        uuid.UUID    `json:"package_id"`
+	Ordinal          int32        `json:"ordinal"`
+	Points           points.Value `json:"points"`
+	CreatedAt        time.Time    `json:"created_at"`
+	Title            string       `json:"title"`
+	ShortName        string       `json:"short_name"`
+	Visibility       string       `json:"visibility"`
+	Type             string       `json:"type"`
+	Grading          string       `json:"grading"`
+	MaxScore         points.Value `json:"max_score"`
+	TimeLimitMs      int32        `json:"time_limit_ms"`
+	MemoryLimitMb    int32        `json:"memory_limit_mb"`
+	InputFile        string       `json:"input_file"`
+	OutputFile       string       `json:"output_file"`
+	Languages        []string     `json:"languages"`
+	Files            bool         `json:"files"`
+	ProblemUpdatedAt time.Time    `json:"problem_updated_at"`
 }
 
 func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error) {
@@ -491,12 +502,14 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 		&i.ProblemID,
 		&i.PackageID,
 		&i.Ordinal,
+		&i.Points,
 		&i.CreatedAt,
 		&i.Title,
 		&i.ShortName,
 		&i.Visibility,
 		&i.Type,
 		&i.Grading,
+		&i.MaxScore,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
 		&i.InputFile,
@@ -510,7 +523,7 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 
 const getContestScoreboardSubmissions = `-- name: GetContestScoreboardSubmissions :many
 SELECT s.owner_id, s.problem_id,
- s.state,
+ s.state, s.score,
  s.created_at
 FROM submissions s
 WHERE s.contest_id = $1::uuid AND s.kind = 'contest' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
@@ -521,6 +534,7 @@ type GetContestScoreboardSubmissionsRow struct {
 	OwnerID   *uuid.UUID             `json:"owner_id"`
 	ProblemID *uuid.UUID             `json:"problem_id"`
 	State     submissionsmodel.State `json:"state"`
+	Score     points.Value           `json:"score"`
 	CreatedAt time.Time              `json:"created_at"`
 }
 
@@ -537,6 +551,7 @@ func (q *Queries) GetContestScoreboardSubmissions(ctx context.Context, contestID
 			&i.OwnerID,
 			&i.ProblemID,
 			&i.State,
+			&i.Score,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -588,7 +603,7 @@ func (q *Queries) GetMaxContestProblemOrdinal(ctx context.Context, contestID uui
 
 const getUserScoreboardSubmissions = `-- name: GetUserScoreboardSubmissions :many
 SELECT s.owner_id, s.problem_id,
- s.state,
+ s.state, s.score,
  s.created_at
 FROM submissions s
 WHERE s.contest_id = $1::uuid AND s.owner_id = $2::uuid AND s.kind = 'contest' AND s.problem_id IS NOT NULL
@@ -604,6 +619,7 @@ type GetUserScoreboardSubmissionsRow struct {
 	OwnerID   *uuid.UUID             `json:"owner_id"`
 	ProblemID *uuid.UUID             `json:"problem_id"`
 	State     submissionsmodel.State `json:"state"`
+	Score     points.Value           `json:"score"`
 	CreatedAt time.Time              `json:"created_at"`
 }
 
@@ -620,6 +636,7 @@ func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserS
 			&i.OwnerID,
 			&i.ProblemID,
 			&i.State,
+			&i.Score,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -633,7 +650,7 @@ func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserS
 }
 
 const getVirtualScoreboardSubmissions = `-- name: GetVirtualScoreboardSubmissions :many
-SELECT s.owner_id, s.problem_id, s.state, s.created_at
+SELECT s.owner_id, s.problem_id, s.state, s.score, s.created_at
 FROM submissions s
 WHERE s.contest_id = $1::uuid AND s.kind = 'virtual' AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
 ORDER BY s.owner_id, s.problem_id, s.created_at ASC
@@ -643,6 +660,7 @@ type GetVirtualScoreboardSubmissionsRow struct {
 	OwnerID   *uuid.UUID             `json:"owner_id"`
 	ProblemID *uuid.UUID             `json:"problem_id"`
 	State     submissionsmodel.State `json:"state"`
+	Score     points.Value           `json:"score"`
 	CreatedAt time.Time              `json:"created_at"`
 }
 
@@ -659,6 +677,7 @@ func (q *Queries) GetVirtualScoreboardSubmissions(ctx context.Context, contestID
 			&i.OwnerID,
 			&i.ProblemID,
 			&i.State,
+			&i.Score,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -779,7 +798,7 @@ func (q *Queries) ListContestParticipants(ctx context.Context, contestID uuid.UU
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.points, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.type, pp.grading, COALESCE(pp.max_score, cp.points)::numeric AS max_score, pp.time_limit_ms, pp.memory_limit_mb, pp.input_file, pp.output_file, pp.languages, (pp.files_object_id IS NOT NULL)::boolean AS files, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
@@ -787,23 +806,25 @@ ORDER BY cp.ordinal
 `
 
 type ListContestProblemsRow struct {
-	ContestID        uuid.UUID `json:"contest_id"`
-	ProblemID        uuid.UUID `json:"problem_id"`
-	PackageID        uuid.UUID `json:"package_id"`
-	Ordinal          int32     `json:"ordinal"`
-	CreatedAt        time.Time `json:"created_at"`
-	Title            string    `json:"title"`
-	ShortName        string    `json:"short_name"`
-	Visibility       string    `json:"visibility"`
-	Type             string    `json:"type"`
-	Grading          string    `json:"grading"`
-	TimeLimitMs      int32     `json:"time_limit_ms"`
-	MemoryLimitMb    int32     `json:"memory_limit_mb"`
-	InputFile        string    `json:"input_file"`
-	OutputFile       string    `json:"output_file"`
-	Languages        []string  `json:"languages"`
-	Files            bool      `json:"files"`
-	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
+	ContestID        uuid.UUID    `json:"contest_id"`
+	ProblemID        uuid.UUID    `json:"problem_id"`
+	PackageID        uuid.UUID    `json:"package_id"`
+	Ordinal          int32        `json:"ordinal"`
+	Points           points.Value `json:"points"`
+	CreatedAt        time.Time    `json:"created_at"`
+	Title            string       `json:"title"`
+	ShortName        string       `json:"short_name"`
+	Visibility       string       `json:"visibility"`
+	Type             string       `json:"type"`
+	Grading          string       `json:"grading"`
+	MaxScore         points.Value `json:"max_score"`
+	TimeLimitMs      int32        `json:"time_limit_ms"`
+	MemoryLimitMb    int32        `json:"memory_limit_mb"`
+	InputFile        string       `json:"input_file"`
+	OutputFile       string       `json:"output_file"`
+	Languages        []string     `json:"languages"`
+	Files            bool         `json:"files"`
+	ProblemUpdatedAt time.Time    `json:"problem_updated_at"`
 }
 
 func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error) {
@@ -820,12 +841,14 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.ProblemID,
 			&i.PackageID,
 			&i.Ordinal,
+			&i.Points,
 			&i.CreatedAt,
 			&i.Title,
 			&i.ShortName,
 			&i.Visibility,
 			&i.Type,
 			&i.Grading,
+			&i.MaxScore,
 			&i.TimeLimitMs,
 			&i.MemoryLimitMb,
 			&i.InputFile,
@@ -1013,9 +1036,11 @@ SET login = COALESCE($2, login),
     enable_upsolving = COALESCE($29, enable_upsolving),
     allow_virtual = COALESCE($30, allow_virtual),
     pretests = COALESCE($31, pretests),
-    languages = COALESCE($32::text[], languages),
-    start_time = CASE WHEN $33::boolean THEN $34::timestamptz ELSE start_time END,
-    end_time = CASE WHEN $35::boolean THEN $36::timestamptz ELSE end_time END
+    ranking = COALESCE($32, ranking),
+    tie_break = COALESCE($33, tie_break),
+    languages = COALESCE($34::text[], languages),
+    start_time = CASE WHEN $35::boolean THEN $36::timestamptz ELSE start_time END,
+    end_time = CASE WHEN $37::boolean THEN $38::timestamptz ELSE end_time END
 WHERE id = $1
 `
 
@@ -1051,6 +1076,8 @@ type UpdateContestParams struct {
 	EnableUpsolving       *bool                            `json:"enable_upsolving"`
 	AllowVirtual          *bool                            `json:"allow_virtual"`
 	Pretests              *bool                            `json:"pretests"`
+	Ranking               *string                          `json:"ranking"`
+	TieBreak              *string                          `json:"tie_break"`
 	Languages             []string                         `json:"languages"`
 	StartTimeSet          bool                             `json:"start_time_set"`
 	StartTime             *time.Time                       `json:"start_time"`
@@ -1091,6 +1118,8 @@ func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) er
 		arg.EnableUpsolving,
 		arg.AllowVirtual,
 		arg.Pretests,
+		arg.Ranking,
+		arg.TieBreak,
 		arg.Languages,
 		arg.StartTimeSet,
 		arg.StartTime,
@@ -1149,4 +1178,22 @@ type UpdateContestProblemPackageParams struct {
 func (q *Queries) UpdateContestProblemPackage(ctx context.Context, arg UpdateContestProblemPackageParams) error {
 	_, err := q.db.Exec(ctx, updateContestProblemPackage, arg.ContestID, arg.ProblemID, arg.PackageID)
 	return err
+}
+
+const updateContestProblemPoints = `-- name: UpdateContestProblemPoints :execrows
+UPDATE contest_problems SET points = $3 WHERE contest_id = $1 AND problem_id = $2
+`
+
+type UpdateContestProblemPointsParams struct {
+	ContestID uuid.UUID    `json:"contest_id"`
+	ProblemID uuid.UUID    `json:"problem_id"`
+	Points    points.Value `json:"points"`
+}
+
+func (q *Queries) UpdateContestProblemPoints(ctx context.Context, arg UpdateContestProblemPointsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateContestProblemPoints, arg.ContestID, arg.ProblemID, arg.Points)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

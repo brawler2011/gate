@@ -14,6 +14,9 @@ type ScoreboardItemModel struct {
 	ProblemsSolved       int32                          `json:"problems_solved" binding:"required"`
 	TotalPenalty         int32                          `json:"total_penalty" binding:"required"`
 	LastAcceptedAt       *time.Time                     `json:"last_accepted_at,omitempty"`
+	Score                *float64                       `json:"score,omitempty"`
+	ScoredAt             *time.Time                     `json:"scored_at,omitempty"`
+	Rank                 int32                          `json:"rank" binding:"required"`
 	ProblemResults       []ScoreboardProblemResultModel `json:"problem_results" binding:"required"`
 	Virtual              *bool                          `json:"virtual,omitempty"`
 	AdditionalProperties map[string]interface{}         `json:"-,omitempty"`

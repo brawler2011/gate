@@ -13942,6 +13942,120 @@ func (s *Server) handleUpdateContestMemberRequest(args [1]string, argsEscaped bo
 	}
 }
 
+// handleUpdateContestProblemRequest handles UpdateContestProblem operation.
+//
+// Update contest problem.
+//
+// PATCH /contests/{contest_id}/problems/{problem_id}
+func (s *Server) handleUpdateContestProblemRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: UpdateContestProblemOperation,
+			ID:   "UpdateContestProblem",
+		}
+	)
+	params, err := decodeUpdateContestProblemParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateContestProblemRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *UpdateContestProblemNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    UpdateContestProblemOperation,
+			OperationSummary: "Update contest problem",
+			OperationID:      "UpdateContestProblem",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "contest_id",
+					In:   "path",
+				}: params.ContestID,
+				{
+					Name: "problem_id",
+					In:   "path",
+				}: params.ProblemID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *UpdateContestProblemRequestModel
+			Params   = UpdateContestProblemParams
+			Response = *UpdateContestProblemNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackUpdateContestProblemParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.UpdateContestProblem(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.UpdateContestProblem(ctx, request, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeUpdateContestProblemResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleUpdateContestTeamRequest handles UpdateContestTeam operation.
 //
 // Update contest team.

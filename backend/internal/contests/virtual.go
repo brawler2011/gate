@@ -80,7 +80,7 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 	items := make([]contestsmodel.ScoreboardItem, 0, len(participants)+len(runs))
 	results := rulesResults(rules, problems, participants, official)
 	for id, username := range participants {
-		items = append(items, scoreboardItem(id, username, nonNil(results[id])))
+		items = append(items, scoreboardItem(contest.Settings.Ranking, id, username, nonNil(results[id])))
 	}
 	response := uc.scoreboardResponse(contest, problems, rules.frozen, contest.GetFreezeTime())
 	offsets := map[uuid.UUID]time.Duration{}
@@ -98,20 +98,20 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 		runRules := newScoreboardRules(shifted, !unfrozen && shifted.IsFrozenAt(at(run.StartedAt)))
 		runRules.cutoff = &cutoff
 		user := map[uuid.UUID]string{run.UserID: run.Username}
-		item := scoreboardItem(run.UserID, run.Username, nonNil(rulesResults(runRules, problems, user, ownSubmissions(replays, run.UserID))[run.UserID]))
+		item := scoreboardItem(contest.Settings.Ranking, run.UserID, run.Username, nonNil(rulesResults(runRules, problems, user, ownSubmissions(replays, run.UserID))[run.UserID]))
 		item.Virtual = true
 		items = append(items, item)
 		if own && elapsed != nil {
 			response.IsFrozen, response.FreezeTime = runRules.frozen, shifted.GetFreezeTime()
 		}
 	}
-	// Ties on the last acceptance compare elapsed time, so virtual rows move onto the official timeline.
-	sortRanked(items, func(item contestsmodel.ScoreboardItem) *time.Time {
-		if !item.Virtual || item.LastAcceptedAt == nil {
-			return item.LastAcceptedAt
+	// Time tie-breaks compare elapsed time, so virtual rows move onto the official timeline.
+	rankItems(items, contest.Settings, func(item contestsmodel.ScoreboardItem, t *time.Time) *time.Time {
+		if !item.Virtual || t == nil {
+			return t
 		}
-		t := item.LastAcceptedAt.Add(-offsets[item.UserID])
-		return &t
+		shifted := t.Add(-offsets[item.UserID])
+		return &shifted
 	})
 	response.Items = items
 	return response, nil
@@ -120,10 +120,10 @@ func (uc *ContestsUseCase) virtualScoreboard(ctx context.Context, a access.Conte
 func (uc *ContestsUseCase) scoreboardResponse(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, frozen bool, freezeTime *time.Time) *contestsmodel.ScoreboardResponse {
 	headers := make([]contestsmodel.ScoreboardProblemHeader, len(problems))
 	for i, p := range problems {
-		headers[i] = contestsmodel.ScoreboardProblemHeader{ProblemID: p.ProblemID, Title: p.Title, ShortName: p.ShortName, Ordinal: int32(p.Ordinal)} // #nosec G115
+		headers[i] = contestsmodel.ScoreboardProblemHeader{ProblemID: p.ProblemID, Title: p.Title, ShortName: p.ShortName, Ordinal: int32(p.Ordinal), MaxScore: p.MaxScore} // #nosec G115
 	}
 	return &contestsmodel.ScoreboardResponse{ContestID: contest.ID, ContestLogin: contest.Login, OrganizationLogin: contest.OrganizationLogin,
-		PenaltyPerAttempt: contestsmodel.PenaltyPerAttempt, IsFrozen: frozen, FreezeTime: freezeTime, Problems: headers}
+		PenaltyPerAttempt: contestsmodel.PenaltyPerAttempt, Ranking: contest.Settings.Ranking, TieBreak: contest.Settings.TieBreak, IsFrozen: frozen, FreezeTime: freezeTime, Problems: headers}
 }
 
 func ownSubmissions(subs []contestsmodel.ScoreboardSubmission, user uuid.UUID) []contestsmodel.ScoreboardSubmission {

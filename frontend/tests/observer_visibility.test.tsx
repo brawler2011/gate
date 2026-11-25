@@ -64,8 +64,9 @@ describe("Observer visibility in production components", () => {
     const wsUrl = spyOn(env, "getWebSocketUrl").mockReturnValue("ws://localhost/ws");
     const snapshot: ScoreboardResponseModel = {
       contest_id: "contest", contest_login: "contest", organization_login: "org", is_frozen: true, penalty_per_attempt: 20,
-      problems: [{problem_id: "problem", title: "A+B", short_name: "A", ordinal: 1}],
-      items: [{user_id: "user", username: "alice", problems_solved: 0, total_penalty: 0,
+      ranking: "icpc", tie_break: "shared",
+      problems: [{problem_id: "problem", title: "A+B", short_name: "A", ordinal: 1, max_score: 100}],
+      items: [{user_id: "user", username: "alice", problems_solved: 0, total_penalty: 0, rank: 1,
         problem_results: [{problem_id: "problem", solved: false, failed_attempts: 0, pending_attempts: 1}]}],
     };
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));

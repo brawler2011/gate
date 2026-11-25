@@ -6,6 +6,9 @@ interface ScoreboardItemModel {
   'problems_solved': number;
   'total_penalty': number;
   'last_accepted_at'?: string;
+  'score'?: number;
+  'scored_at'?: string;
+  'rank': number;
   'problem_results': ScoreboardProblemResultModel[];
   'virtual'?: boolean;
   'additionalProperties'?: Map<string, any>;

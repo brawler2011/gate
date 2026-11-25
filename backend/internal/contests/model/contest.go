@@ -8,6 +8,7 @@ import (
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -83,6 +84,22 @@ func (p Phased[T]) At(after bool) T {
 }
 
 const PenaltyPerAttempt int32 = 20
+
+type Ranking string
+
+const (
+	RankingICPC   Ranking = "icpc"
+	RankingPoints Ranking = "points"
+)
+
+// TieBreak orders equal totals under points ranking.
+type TieBreak string
+
+const (
+	TieBreakShared TieBreak = "shared"
+	// TieBreakTime ranks the earlier last score improvement first.
+	TieBreakTime TieBreak = "time"
+)
 
 type CreateContestParams struct {
 	ID             uuid.UUID
@@ -219,8 +236,10 @@ type ContestsList struct {
 }
 
 type ContestProblem struct {
-	Type          string
-	Grading       string
+	Type    string
+	Grading string
+	// MaxScore is what full marks score under points ranking: the package max, or the contest's value for a pass-fail problem.
+	MaxScore      points.Value
 	TimeLimitMs   int
 	MemoryLimitMb int
 	InputFile     string
@@ -293,6 +312,8 @@ type ContestSettings struct {
 	EnableUpsolving       bool
 	AllowVirtual          bool
 	Pretests              bool
+	Ranking               Ranking
+	TieBreak              TieBreak
 	Languages             []string
 }
 
@@ -323,6 +344,8 @@ type ContestSettingsPatch struct {
 	EnableUpsolving       *bool
 	AllowVirtual          *bool
 	Pretests              *bool
+	Ranking               *Ranking
+	TieBreak              *TieBreak
 	Languages             []string
 }
 
@@ -412,6 +435,9 @@ type ContestProblemResult struct {
 	FirstACTime     *time.Time `json:"first_ac_time,omitempty"`
 	TimeMinutes     *int32     `json:"time_minutes,omitempty"`
 	Penalty         int32      `json:"penalty"`
+	// Score and ScoredAt, the first time the best score was reached, are set under points ranking.
+	Score    *points.Value `json:"score,omitempty"`
+	ScoredAt *time.Time    `json:"scored_at,omitempty"`
 }
 
 type ScoreboardItem struct {
@@ -420,6 +446,9 @@ type ScoreboardItem struct {
 	ProblemsSolved int32                  `json:"problems_solved"`
 	TotalPenalty   int32                  `json:"total_penalty"`
 	LastAcceptedAt *time.Time             `json:"last_accepted_at,omitempty"`
+	Score          *points.Value          `json:"score,omitempty"`
+	ScoredAt       *time.Time             `json:"scored_at,omitempty"`
+	Rank           int32                  `json:"rank"`
 	ProblemResults []ContestProblemResult `json:"problem_results"`
 	Virtual        bool                   `json:"virtual,omitempty"`
 }
@@ -429,6 +458,7 @@ type ScoreboardProblemHeader struct {
 	Title     string    `json:"title"`
 	ShortName string    `json:"short_name"`
 	Ordinal   int32     `json:"ordinal"`
+	MaxScore  points.Value `json:"max_score"`
 }
 
 type ScoreboardResponse struct {
@@ -436,6 +466,8 @@ type ScoreboardResponse struct {
 	ContestLogin      string                    `json:"contest_login"`
 	OrganizationLogin string                    `json:"organization_login"`
 	PenaltyPerAttempt int32                     `json:"penalty_per_attempt"`
+	Ranking           Ranking                   `json:"ranking"`
+	TieBreak          TieBreak                  `json:"tie_break"`
 	IsFrozen          bool                      `json:"is_frozen"`
 	FreezeTime        *time.Time                `json:"freeze_time,omitempty"`
 	Problems          []ScoreboardProblemHeader `json:"problems"`
@@ -450,6 +482,7 @@ type ScoreboardSubmission struct {
 
 type SubmissionForScoreboard struct {
 	State     submissionsmodel.State
+	Score     points.Value
 	CreatedAt time.Time
 }
 

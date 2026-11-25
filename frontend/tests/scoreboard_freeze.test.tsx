@@ -13,11 +13,11 @@ import type {ScoreboardProblemResultModel, ScoreboardResponseModel} from "@/cont
 
 const scoreboard = (results: ScoreboardProblemResultModel[]): ScoreboardResponseModel => ({
   contest_id: "contest", contest_login: "round", organization_login: "org", is_frozen: true,
-  penalty_per_attempt: 20,
-  problems: [{problem_id: "p", title: "A+B", ordinal: 1, short_name: "A"}],
+  penalty_per_attempt: 20, ranking: "icpc", tie_break: "shared",
+  problems: [{problem_id: "p", title: "A+B", ordinal: 1, short_name: "A", max_score: 100}],
   items: results.map((result, index) => ({
     user_id: `u${index}`, username: `User ${index}`, problems_solved: Number(result.solved),
-    total_penalty: 40, problem_results: [result],
+    total_penalty: 40, rank: 0, problem_results: [result],
   })),
 });
 

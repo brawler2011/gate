@@ -73,7 +73,7 @@ const ContestManagePage = (): ReactNode => {
             {activeSection === SECTIONS.SETTINGS && <SettingsSection contest={contest} />}
             {activeSection === SECTIONS.PROBLEMS && (
               <ProblemsSection orgLogin={slug} contestLogin={contestLogin} contestId={contest.id}
-                initialProblems={problems} />
+                initialProblems={problems} ranking={contest.ranking} />
             )}
             {activeSection === SECTIONS.PARTICIPANTS && (
               <ParticipantsSection orgLogin={slug} contestLogin={contestLogin} contestId={contest.id} />
