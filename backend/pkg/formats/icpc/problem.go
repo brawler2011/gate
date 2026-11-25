@@ -2,10 +2,7 @@ package icpc
 
 type Problem struct {
 	Type   string  `yaml:"type"` // "pass-fail" or "scoring", optionally with "submit-answer"
-	Name   string  `yaml:"name"`
-	Author string  `yaml:"author"`
-	Source string  `yaml:"source"`
-	Rights string  `yaml:"rights"`
+	Name   names   `yaml:"name"`
 	Limits *Limits `yaml:"limits"`
 	// Validation accepts default or custom followed by optional score and interactive flags.
 	Validation string `yaml:"validation"`

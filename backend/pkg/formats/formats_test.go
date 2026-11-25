@@ -274,6 +274,15 @@ func TestICPCScoring(t *testing.T) {
 	}
 }
 
+// Legacy packages name problems per language and list authors, as Kattis accepts.
+func TestICPCLegacyMetadata(t *testing.T) {
+	dir := unpack(t, "icpc-scoring")
+	write(t, dir, "problem.yaml", "name:\n  sv: Multationer\n  en: Multations\nauthor:\n  - A\n  - B\ntype: scoring\nvalidation: custom\n")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, "Multations", p.Title)
+}
+
 // 2025-09 scores map onto the group tree: all-or-nothing and min groups give each test the group's score, sum groups average it.
 func TestICPCCurrentScoring(t *testing.T) {
 	dir := unpack(t, "icpc-current-scoring")
