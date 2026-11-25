@@ -114,7 +114,7 @@ func (t *testdata) group(dir string, parent settings, isRoot bool) (spec.Group, 
 	if group.CheckerArgs, err = flags(dir, "output_validator_flags", s.outputFlags); err != nil {
 		return group, false, err
 	}
-	accept, err := t.grade(dir, s, &group, isRoot)
+	accept, err := t.grade(dir, s, &group, isRoot, !isRoot && parent.onReject == "break")
 	if err != nil {
 		return group, false, err
 	}
@@ -158,7 +158,7 @@ func (t *testdata) group(dir string, parent settings, isRoot bool) (spec.Group, 
 }
 
 // grade maps the default grader settings of a group of a scoring problem to its accept score.
-func (t *testdata) grade(dir string, s settings, group *spec.Group, isRoot bool) (points.Value, error) {
+func (t *testdata) grade(dir string, s settings, group *spec.Group, isRoot, parentBreaks bool) (points.Value, error) {
 	if !t.scoring {
 		return 0, nil
 	}
@@ -183,6 +183,11 @@ func (t *testdata) grade(dir string, s settings, group *spec.Group, isRoot bool)
 		// The flag applies to data/ only, though its subgroups inherit it.
 		case "ignore_sample":
 			t.ignoreSample = t.ignoreSample || isRoot
+		// They decide only whether the group counts as accepted, which Gate's scores ignore unless the parent stops on rejection.
+		case "accept_if_any_accepted", "always_accept":
+			if parentBreaks {
+				return 0, unsupported("grader flag %q under on_reject: break is not supported", flag)
+			}
 		default:
 			return 0, unsupported("grader flag %q is not supported", flag)
 		}
