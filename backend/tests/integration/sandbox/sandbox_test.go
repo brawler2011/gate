@@ -518,6 +518,18 @@ public class Main {
 		}
 	})
 
+	t.Run("java deep recursion", func(t *testing.T) {
+		source := "public class Main { static int depth(int n) { return n == 0 ? 0 : 1 + depth(n - 1); } public static void main(String[] args) { System.out.println(depth(200000)); } }"
+		executable, err := sb.CompileWithLimits(ctx, []byte(source), "java", nil, limits.Compile)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "200000" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
+		}
+	})
+
 	// Every catalog configuration compiles and runs a program in the image.
 	t.Run("catalog configurations", func(t *testing.T) {
 		sources := map[string]string{

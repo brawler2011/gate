@@ -91,7 +91,7 @@ type = "compiler"
 code_file = "${class}.java"
 compile = "/usr/bin/javac-jar ${name} ${class} ${class}.java"
 compile_file = "Main.jar"
-execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -jar ${dir}/Main.jar"
+execute = "/usr/bin/java -Xmx192m -Xms32m -Xss64m -XX:ActiveProcessorCount=1 -jar ${dir}/Main.jar"
 
 [java.graders]
 code_file = "${solution}.java"
