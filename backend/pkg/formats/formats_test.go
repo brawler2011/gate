@@ -254,10 +254,19 @@ func TestICPCScoring(t *testing.T) {
 	for g := range p.Testset.All() {
 		require.True(t, g.StopOnFailure, "problem.yaml grading overrides every group as on_reject: break")
 	}
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\nvalidation: custom\n")
+	write(t, dir, "data/secret/group2/testdata.yaml", "grader_flags: min accept_if_any_accepted\naccept_score: 70\n")
+	p, err = Read(dir)
+	require.NoError(t, err, "the flag only decides acceptance, which a continuing parent ignores")
+	require.Equal(t, "min", p.Testset.Groups[1].Groups[1].Aggregate)
+	write(t, dir, "data/secret/testdata.yaml", "on_reject: break\n")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "grader flag \"accept_if_any_accepted\" under on_reject: break is not supported")
+	require.NoError(t, os.Remove(filepath.Join(dir, "data/secret/testdata.yaml")))
 	for config, feature := range map[string]string{
-		"grading: custom\n":                     "grading \"custom\" is not supported",
-		"grader_flags: accept_if_any_accepted\n": "grader flag \"accept_if_any_accepted\" is not supported",
-		"reject_score: 1\n":                      "reject_score other than 0 is not supported",
+		"grading: custom\n": "grading \"custom\" is not supported",
+		"grader_flags: .\n": "grader flag \".\" is not supported",
+		"reject_score: 1\n": "reject_score other than 0 is not supported",
 	} {
 		write(t, dir, "data/secret/group2/testdata.yaml", config)
 		_, err := Read(dir)
