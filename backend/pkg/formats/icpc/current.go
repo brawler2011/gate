@@ -55,6 +55,19 @@ func (n *names) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// title names the problem in English, or else the first language, and gives statements their own differing names.
+func (n names) title(p *spec.Problem) {
+	p.Title = n["en"]
+	if p.Title == "" && len(n) > 0 {
+		p.Title = n[slices.Sorted(maps.Keys(n))[0]]
+	}
+	for i, s := range p.Statements {
+		if title := n[s.Language]; title != p.Title {
+			p.Statements[i].Title = title
+		}
+	}
+}
+
 func readCurrent(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	var prob CurrentProblem
 	if err := yaml.Unmarshal(data, &prob); err != nil {
@@ -130,15 +143,7 @@ func readCurrent(fsys fs.FS, data []byte) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Statements = statements(fsys, p)
-	p.Title = prob.Name["en"]
-	if p.Title == "" && len(prob.Name) > 0 {
-		p.Title = prob.Name[slices.Sorted(maps.Keys(prob.Name))[0]]
-	}
-	for i, s := range p.Statements {
-		if title := prob.Name[s.Language]; title != p.Title {
-			p.Statements[i].Title = title
-		}
-	}
+	prob.Name.title(p)
 	p.Attachments, err = attachments(fsys)
 	return p, err
 }

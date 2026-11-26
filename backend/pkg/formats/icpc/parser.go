@@ -46,7 +46,7 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
-	p := &spec.Problem{Title: prob.Name, Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	p := &spec.Problem{Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
 	validation := strings.Fields(prob.Validation)
 	interactive := slices.Contains(validation, "interactive")
 	types := strings.Fields(prob.Type)
@@ -118,6 +118,7 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Statements = statements(fsys, p)
+	prob.Name.title(p)
 	return p, nil
 }
 
