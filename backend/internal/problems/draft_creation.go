@@ -64,6 +64,9 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	if len(plan.converted) > 0 {
 		slog.InfoContext(ctx, "import converted text files to UTF-8", "problem_id", id, "files", plan.converted)
 	}
+	if len(plan.skipped) > 0 {
+		slog.WarnContext(ctx, "import skipped missing package files", "problem_id", id, "files", plan.skipped)
+	}
 	return uc.Repo.FinalizeImport(ctx, id, expected, plan.draft, objects)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {

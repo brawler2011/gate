@@ -297,7 +297,7 @@ func TestICPCCurrentScoring(t *testing.T) {
 	require.Equal(t, spec.Group{Aggregate: "sum", Groups: []spec.Group{
 		{Name: "sample", Aggregate: "sum", Tests: []spec.Test{sample}},
 		{Name: "secret", Aggregate: "sum", CheckerArgs: []string{"case_sensitive"}, Groups: []spec.Group{
-			{Name: "secret/1-easy", Aggregate: "min", StopOnFailure: true, Requires: []string{"sample"},
+			{Name: "secret/1-easy", Aggregate: "min", StopOnFailure: true, Requires: []string{"sample"}, CheckerArgs: []string{"case_sensitive"},
 				Tests: []spec.Test{test("secret/1-easy/a", 2, 30), test("secret/1-easy/nested/b", 3, 30)}},
 			{Name: "secret/2-sum", Aggregate: "avg", Requires: []string{"secret/1-easy"}, CheckerArgs: []string{"float_tolerance", "1e-6"},
 				Tests: []spec.Test{test("secret/2-sum/c", 4, 70), test("secret/2-sum/d", 5, 70)}},
@@ -324,15 +324,27 @@ func TestICPCCurrentScoring(t *testing.T) {
 	require.Equal(t, 100*points.Unit, secret.Groups[1].Tests[0].Points)
 	write(t, dir, "data/secret/test_group.yaml", "")
 
+	write(t, dir, "data/test_group.yaml", "input_validator_args: [--n, 5]\noutput_validator_args: [float_tolerance, \"1E-6\"]\n")
+	p, err = Read(dir)
+	require.NoError(t, err)
+	args := map[string][2][]string{}
+	for g := range p.Testset.All() {
+		args[g.Name] = [2][]string{g.ValidatorArgs, g.CheckerArgs}
+	}
+	root := []string{"float_tolerance", "1E-6"}
+	require.Equal(t, map[string][2][]string{"": {}, "sample": {{"--n", "5"}, root}, "secret": {{"--n", "5"}, root},
+		"secret/1-easy": {{"--n", "5"}, root}, "secret/2-sum": {{"--n", "5"}, {"float_tolerance", "1e-6"}}}, args, "data/test_group.yaml applies to every group that sets nothing else")
+	write(t, dir, "data/test_group.yaml", "")
+
 	for file, change := range map[string][2]string{
-		"problem.yaml":                       {"problem_format_version: 2025-09\nname: X\ntype: [pass-fail, multi-pass]\n", "multi-pass problems are not supported"},
-		"data/secret/2-sum/test_group.yaml":  {"max_score: 70\nscore_aggregation: sum\nscore_mode: absolute\n", "score_mode absolute is not supported"},
-		"data/secret/1-easy/test_group.yaml": {"score_aggregation: min\n", "unbounded max_score"},
-		"data/secret/2-sum/c.yaml":           {"args: [x]\n", "args of a single test case are not supported"},
-		"data/secret/2-sum/c.files/f.txt":    {"x", "input files are not supported"},
-		"include/cpp/grader.h":               {"", "included files are not supported"},
+		"problem.yaml":                              {"problem_format_version: 2025-09\nname: X\ntype: [pass-fail, multi-pass]\n", "multi-pass problems are not supported"},
+		"data/secret/2-sum/test_group.yaml":         {"max_score: 70\nscore_aggregation: sum\nscore_mode: absolute\n", "score_mode absolute is not supported"},
+		"data/secret/1-easy/test_group.yaml":        {"score_aggregation: min\n", "unbounded max_score"},
+		"data/secret/2-sum/c.yaml":                  {"args: [x]\n", "args of a single test case are not supported"},
+		"data/secret/2-sum/c.files/f.txt":           {"x", "input files are not supported"},
+		"include/cpp/grader.h":                      {"", "included files are not supported"},
 		"data/secret/1-easy/nested/test_group.yaml": {"", "test data groups cannot nest"},
-		"data/sample/test_group.yaml":        {"scoring: {score: 1}\n", "field scoring not found"},
+		"data/sample/test_group.yaml":               {"scoring: {score: 1}\n", "field scoring not found"},
 	} {
 		t.Run(change[1], func(t *testing.T) {
 			dir := unpack(t, "icpc-current-scoring")

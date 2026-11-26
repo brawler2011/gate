@@ -151,6 +151,31 @@ func TestImportKeepsPolygonCheckerAndValidatorTests(t *testing.T) {
 	require.Equal(t, []string{"101 0\n", "1\n1\n"}, validator)
 }
 
+// Public archives strip checker tests and resources; a package without them imports, without its main solution it does not.
+func TestImportSkipsMissingOptionalPolygonFiles(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS("../../pkg/testdata/polygon/a-plus-b")))
+	for _, name := range []string{"files/tests/checker-tests/02.o", "files/tests/validator-tests/01", "solutions/257073270_Spider47_ok.cpp"} {
+		require.NoError(t, os.Remove(filepath.Join(dir, name)))
+	}
+	manifest, err := os.ReadFile(filepath.Join(dir, "problem.xml"))
+	require.NoError(t, err)
+	jar := strings.Replace(string(manifest), "<resources>", `<resources><file path="files/testlib4j.jar" type="jar"/>`, 1)
+	plan, err := importDir(t, dir, map[string]string{"problem.xml": jar})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Len(t, plan.draft.Checker.Tests, 2)
+	require.Len(t, plan.draft.Validators[0].Tests, 1)
+	require.Len(t, plan.draft.Solutions, 5)
+	require.NotNil(t, libraryFile(plan.draft, "testlib.h"))
+	require.Nil(t, libraryFile(plan.draft, "testlib4j.jar"))
+	require.ElementsMatch(t, []string{"files/testlib4j.jar", "files/tests/checker-tests/02.o", "files/tests/validator-tests/01", "solutions/257073270_Spider47_ok.cpp"}, plan.skipped)
+
+	require.NoError(t, os.Remove(filepath.Join(dir, "solutions/solution_mm.cpp")))
+	_, err = importDir(t, dir, nil)
+	require.ErrorContains(t, err, "missing package file solutions/solution_mm.cpp")
+}
+
 // Known Polygon standard checkers use system references; unknown ones import their source.
 func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	const pkgDir = "../../pkg/testdata/polygon/a-plus-b"
