@@ -76,6 +76,7 @@ type result struct {
 	ExitStatus int               `json:"exitStatus"`
 	Error      string            `json:"error"`
 	Time       uint64            `json:"time"`
+	RunTime    uint64            `json:"runTime"`
 	Memory     uint64            `json:"memory"`
 	Files      map[string]string `json:"files"`
 	FileIDs    map[string]string `json:"fileIds"`

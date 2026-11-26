@@ -240,8 +240,10 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	outputID := b.FileIDs[interactorOutput]
 	status, score, message := interactor.verdict(b, "")
 	sol := solutionRun(results[:m])
-	limitExceeded := processes > 0 && limitStatus(sol.Status)
-	if sol.Status != StatusOK && (status == StatusOK || status == StatusPoints || limitExceeded && status != StatusFail) {
+	// As in DOMjudge, a rejection wins only when the interactor exited first; otherwise the solution's failure caused it.
+	interactorFirst := !slices.ContainsFunc(results[:m], func(r result) bool { return r.RunTime <= b.RunTime })
+	interactorRejected := interactorFirst && status != StatusOK && status != StatusPoints
+	if sol.Status != StatusOK && status != StatusFail && !interactorRejected {
 		status, score = sol.Status, nil
 	}
 	return &InteractiveResult{Status: status, Score: score, Message: message, OutputID: outputID, SolutionResult: sol,
