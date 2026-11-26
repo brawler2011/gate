@@ -128,6 +128,10 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 	}
 	outputName := cmp.Or(lang.CompileFile, "solution")
 	codeFile, compileCmd := lang.CodeFile, lang.Compile
+	if strings.Contains(codeFile+compileCmd, classArg) {
+		r := strings.NewReplacer(classArg, javaClass(sourceCode))
+		codeFile, compileCmd = r.Replace(codeFile), r.Replace(compileCmd)
+	}
 	var linked []string
 	if graders != nil {
 		g, ok := lang.graded(graders.Solution)

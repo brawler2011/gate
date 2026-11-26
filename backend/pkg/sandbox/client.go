@@ -46,6 +46,7 @@ type cmd struct {
 	CPULimit      uint64             `json:"cpuLimit"`
 	ClockLimit    uint64             `json:"clockLimit"`
 	MemoryLimit   uint64             `json:"memoryLimit"`
+	StackLimit    uint64             `json:"stackLimit"`
 	ProcLimit     uint64             `json:"procLimit"`
 	CopyIn        map[string]cmdFile `json:"copyIn,omitempty"`
 	CopyOut       []string           `json:"copyOut,omitempty"`
@@ -107,6 +108,10 @@ func collector(name string, max int64, pipe bool) *cmdFile {
 }
 
 func (c *Client) run(ctx context.Context, req request) ([]result, error) {
+	for i := range req.Cmd {
+		// Stack counts towards memory; without this go-judge keeps a small default stack that deep recursion overflows.
+		req.Cmd[i].StackLimit = req.Cmd[i].MemoryLimit
+	}
 	for _, cmd := range req.Cmd {
 		for _, f := range cmd.Files {
 			if f != nil && f.Content != nil && !utf8.ValidString(*f.Content) {
