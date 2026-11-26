@@ -3,6 +3,8 @@ package sandbox
 import (
 	"regexp"
 	"slices"
+	"strconv"
+	"unicode/utf8"
 )
 
 // classArg in a language's code_file and compile stands for the source's public top-level Java class.
@@ -11,32 +13,55 @@ const classArg = "${class}"
 // defaultClass keeps programs without a public top-level class building as before.
 const defaultClass = "Main"
 
-var javaIdentifier = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+// javac translates Unicode escapes before it reads tokens.
+var unicodeEscape = regexp.MustCompile(`\\u+([0-9a-fA-F]{4})`)
 
 // javaClass names the public top-level type, which javac requires to match the file name.
 func javaClass(source []byte) string {
-	depth, public := 0, false
-	typeKeyword := false
+	source = unicodeEscape.ReplaceAllFunc(source, func(m []byte) []byte {
+		s, err := strconv.Unquote(`"\u` + string(m[len(m)-4:]) + `"`)
+		if err != nil {
+			return m
+		}
+		return []byte(s)
+	})
+	triple := func(j int) bool {
+		return j+2 < len(source) && source[j] == '"' && source[j+1] == '"' && source[j+2] == '"'
+	}
+	depth, parens, public, typeKeyword := 0, 0, false, false
 	for i := 0; i < len(source); {
 		c := source[i]
 		switch {
 		case c == '/' && i+1 < len(source) && source[i+1] == '/':
-			for i < len(source) && source[i] != '\n' {
+			for i < len(source) && source[i] != '\n' && source[i] != '\r' {
 				i++
 			}
 		case c == '/' && i+1 < len(source) && source[i+1] == '*':
-			end := indexFrom(source, i+2, "*/")
-			i = end + 2
-		case c == '"' && i+2 < len(source) && source[i+1] == '"' && source[i+2] == '"':
-			i = indexFrom(source, i+3, `"""`) + 3
+			i = indexFrom(source, i+2, "*/") + 2
+		case triple(i):
+			for i += 3; i < len(source) && !triple(i); i++ {
+				if source[i] == '\\' {
+					i++
+				}
+			}
+			i += 3
 		case c == '"' || c == '\'':
 			i++
-			for i < len(source) && source[i] != c && source[i] != '\n' {
+			for i < len(source) && source[i] != c && source[i] != '\n' && source[i] != '\r' {
 				if source[i] == '\\' {
 					i++
 				}
 				i++
 			}
+			i++
+		case c == '(':
+			parens++
+			i++
+		case c == ')':
+			parens--
+			i++
+		case parens > 0:
+			// Annotation arguments hold expressions and array braces, not declarations.
 			i++
 		case c == '{':
 			depth++
@@ -62,7 +87,7 @@ func javaClass(source []byte) string {
 			switch {
 			case typeKeyword:
 				typeKeyword = false
-				if public && javaIdentifier.MatchString(word) {
+				if public && utf8.ValidString(word) {
 					return word
 				}
 			case word == "public":

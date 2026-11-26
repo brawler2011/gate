@@ -492,8 +492,9 @@ public class Main {
 		}
 	})
 
+	// A non-ASCII class name also checks that javac accepts its file name.
 	t.Run("java class named after the solution", func(t *testing.T) {
-		source := "public class Ideal_gk { public static void main(String[] args) { System.out.println(42); } }"
+		source := "public class Решение { public static void main(String[] args) { System.out.println(42); } }"
 		executable, err := sb.CompileWithLimits(ctx, []byte(source), "java", nil, limits.Compile)
 		if err != nil {
 			t.Fatalf("failed to compile: %v", err)

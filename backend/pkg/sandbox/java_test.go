@@ -13,6 +13,13 @@ func TestJavaClass(t *testing.T) {
 		"public record":            {"public record Point(int x) {}", "Point"},
 		"unterminated comment":     {"public class A /* {", "A"},
 		"empty":                    {"", defaultClass},
+		"annotation arguments":     {"public @A(String.class) class Solver {}", "Solver"},
+		"annotation before public": {"@A(String.class) public class Solver {}", "Solver"},
+		"annotation array":         {"public @A({1}) class Solver {}", "Solver"},
+		"unicode name":             {"public class Решение {}", "Решение"},
+		"unicode escape":           {"public class \\u004dain {}", "Main"},
+		"escaped quote in block":   {"class H { String s = \"\"\"\n\\\"\"\"\n}\npublic class Fake {\n\"\"\"; }\npublic class Real {}", "Real"},
+		"CR line comment":          {"// comment\rpublic class Solver {}", "Solver"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := javaClass([]byte(tc.source)); got != tc.want {

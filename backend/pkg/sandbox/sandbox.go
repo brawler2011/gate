@@ -230,7 +230,8 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		CPULimit:      uint64(limits.CPU),
 		MemoryLimit:   limits.Memory.Uint64(),
 		ProcLimit:     limits.Processes,
-		Env:           []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
+		// javac rejects non-ASCII file names, such as a Java class named in Cyrillic, under the C locale.
+		Env: []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp", "LANG=C.UTF-8"},
 	}}})
 	if err != nil {
 		return Executable{}, fmt.Errorf("compilation failed to dispatch: %w", err)
