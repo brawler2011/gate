@@ -40,6 +40,8 @@ type draftImport struct {
 	root    string
 	// Package paths of text files converted to UTF-8.
 	converted []string
+	// Package paths of missing files the import can do without.
+	skipped []string
 }
 
 func (i *draftImport) Close() { _ = os.RemoveAll(i.root) }
@@ -142,6 +144,7 @@ func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, 
 	}
 	result.draft = c.draft
 	result.converted = c.converted
+	result.skipped = c.skipped
 	return nil
 }
 
@@ -156,6 +159,7 @@ type importConverter struct {
 	programs  int
 	textBytes int64
 	converted []string
+	skipped   []string
 }
 
 func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
@@ -199,6 +203,9 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 	}
 	solutions := map[string]string{}
 	for _, s := range p.Solutions {
+		if s.Text == "" && s.Path != p.MainSolution && c.skip(s.Path) {
+			continue
+		}
 		programs := c.draft.SolutionPrograms()
 		name, err := c.named(&programs, s)
 		if err != nil {
@@ -259,6 +266,9 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 func (c *importConverter) checkerTests(tests []spec.CheckerTest) ([]model.DraftCheckerTest, error) {
 	result := []model.DraftCheckerTest{}
 	for _, t := range tests {
+		if c.skip(t.Input, t.Output, t.Answer) {
+			continue
+		}
 		test := model.DraftCheckerTest{ID: uuid.New(), Verdict: t.Verdict, Points: t.Points}
 		for _, f := range []struct {
 			path string
@@ -278,6 +288,9 @@ func (c *importConverter) checkerTests(tests []spec.CheckerTest) ([]model.DraftC
 func (c *importConverter) validatorTests(tests []spec.ValidatorTest) ([]model.DraftValidatorTest, error) {
 	result := []model.DraftValidatorTest{}
 	for _, t := range tests {
+		if c.skip(t.Input) {
+			continue
+		}
 		oid, err := c.object(t.Input, "validator-test")
 		if err != nil {
 			return nil, err
@@ -353,6 +366,9 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		}
 		if program.Dependencies == nil {
 			for _, f := range p.Library {
+				if !f.System && c.skip(f.Path) {
+					continue
+				}
 				if err := add(f.Name, f, generator); err != nil {
 					return err
 				}
@@ -388,6 +404,9 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	// Without judge programs nothing selects library files, so keep them all for a later checker.
 	if p.Checker == nil && p.Interactor == nil && len(p.Validators) == 0 && len(p.Generators) == 0 {
 		for _, f := range p.Library {
+			if !f.System && c.skip(f.Path) {
+				continue
+			}
 			if err := add(f.Name, f, false); err != nil {
 				return err
 			}
@@ -836,6 +855,22 @@ func copyLF(dst io.Writer, src io.Reader) (bool, error) {
 			return false, fmt.Errorf("read: %w", readErr)
 		}
 	}
+}
+
+// skip records missing package paths; it is for files a package may omit without changing judging.
+func (c *importConverter) skip(paths ...string) bool {
+	var missing []string
+	for _, path := range paths {
+		if _, err := c.file(path); err != nil {
+			missing = append(missing, path)
+		}
+	}
+	for _, path := range missing {
+		if !slices.Contains(c.skipped, path) {
+			c.skipped = append(c.skipped, path)
+		}
+	}
+	return len(missing) > 0
 }
 
 func (c *importConverter) file(path string) (string, error) {

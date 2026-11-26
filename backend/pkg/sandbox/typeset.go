@@ -38,13 +38,30 @@ func (e *TeXError) Error() string {
 	return fmt.Sprintf("LaTeX error at line %d: %s", e.Line, e.Message)
 }
 
+// PandocContents is the text of a log entry, or compact JSON when pandoc logs an AST node.
+type PandocContents string
+
+func (c *PandocContents) UnmarshalJSON(data []byte) error {
+	var s string
+	if json.Unmarshal(data, &s) == nil {
+		*c = PandocContents(s)
+		return nil
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, data); err != nil {
+		return fmt.Errorf("compact contents: %w", err)
+	}
+	*c = PandocContents(buf.String())
+	return nil
+}
+
 // PandocMessage is an entry of pandoc --log.
 type PandocMessage struct {
-	Type     string `json:"type"`
-	Contents string `json:"contents"`
-	Line     int    `json:"line"`
-	Column   int    `json:"column"`
-	Pretty   string `json:"pretty"`
+	Type     string         `json:"type"`
+	Contents PandocContents `json:"contents"`
+	Line     int            `json:"line"`
+	Column   int            `json:"column"`
+	Pretty   string         `json:"pretty"`
 }
 
 var texErrorLine = regexp.MustCompile(`(?m)^\./doc\.tex:(\d+): (.*)$`)

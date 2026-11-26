@@ -246,7 +246,7 @@ func strict(fsys fs.FS, name string, v any) error {
 	return nil
 }
 
-// arguments are the validator arguments of a group's own tests; groups do not inherit them.
+// arguments are the validator arguments of a group's tests, inherited from the parent group unless it sets its own.
 type arguments struct{ input, output []string }
 
 // currentData reads data/sample and data/secret; validation test data is not imported.
@@ -256,8 +256,7 @@ type currentData struct {
 	count   int
 }
 
-func (d *currentData) config(dir string) (*GroupConfig, arguments, error) {
-	var args arguments
+func (d *currentData) config(dir string, args arguments) (*GroupConfig, arguments, error) {
 	name := path.Join(dir, "test_group.yaml")
 	if !regular(d.fsys, name) {
 		name = path.Join(dir, "testdata.yaml")
@@ -303,7 +302,11 @@ func (d *currentData) read() (spec.Group, error) {
 	if d.scoring {
 		root.Aggregate = "sum"
 	}
-	_, args, err := d.config("data/sample")
+	_, inherited, err := d.config("data", arguments{})
+	if err != nil {
+		return root, err
+	}
+	_, args, err := d.config("data/sample", inherited)
 	if err != nil {
 		return root, err
 	}
@@ -317,7 +320,7 @@ func (d *currentData) read() (spec.Group, error) {
 	if len(sample.Tests) > 0 {
 		root.Groups = append(root.Groups, sample)
 	}
-	secret, err := d.secret()
+	secret, err := d.secret(inherited)
 	if err != nil {
 		return root, err
 	}
@@ -331,9 +334,9 @@ func (d *currentData) read() (spec.Group, error) {
 }
 
 // secret maps the ICPC scores, of whole numbers, onto Gate's group tree.
-func (d *currentData) secret() (spec.Group, error) {
+func (d *currentData) secret(inherited arguments) (spec.Group, error) {
 	const dir = "data/secret"
-	config, args, err := d.config(dir)
+	config, args, err := d.config(dir, inherited)
 	if err != nil {
 		return spec.Group{}, err
 	}
@@ -370,11 +373,11 @@ func (d *currentData) secret() (spec.Group, error) {
 	}
 	for _, name := range groups {
 		full := path.Join(dir, name)
-		config, args, err := d.config(full)
+		config, own, err := d.config(full, args)
 		if err != nil {
 			return secret, err
 		}
-		group := spec.Group{Name: "secret/" + name, ValidatorArgs: args.input, CheckerArgs: args.output}
+		group := spec.Group{Name: "secret/" + name, ValidatorArgs: own.input, CheckerArgs: own.output}
 		if group.Tests, err = d.tests(full, false); err != nil {
 			return secret, err
 		}

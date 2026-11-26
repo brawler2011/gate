@@ -51,7 +51,7 @@ func (p pandocStub) HTML(_ context.Context, tex string) (string, []sandbox.Pando
 	var log []sandbox.PandocMessage
 	for i, line := range strings.Split(tex, "\n") {
 		if p.skipped != "" && strings.Contains(line, p.skipped) {
-			log = append(log, sandbox.PandocMessage{Type: "SkippedContent", Contents: p.skipped, Line: i + 1})
+			log = append(log, sandbox.PandocMessage{Type: "SkippedContent", Contents: sandbox.PandocContents(p.skipped), Line: i + 1})
 		}
 	}
 	return p.html, log, nil
