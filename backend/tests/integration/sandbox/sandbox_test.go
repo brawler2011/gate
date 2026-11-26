@@ -492,6 +492,44 @@ public class Main {
 		}
 	})
 
+	// A non-ASCII class name also checks that javac accepts its file name.
+	t.Run("java class named after the solution", func(t *testing.T) {
+		source := "public class Решение { public static void main(String[] args) { System.out.println(42); } }"
+		executable, err := sb.CompileWithLimits(ctx, []byte(source), "java", nil, limits.Compile)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "42" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
+		}
+	})
+
+	// GNU extensions such as typeof need -std=gnu++; the recursion needs far more than a default 8 MiB stack.
+	t.Run("deep recursion", func(t *testing.T) {
+		source := "#include <cstdio>\nint depth(int n) { volatile char pad[64]; pad[n % 64] = 1; if (n == 0) return 0; int d = depth(n - 1); return d + pad[n % 64]; }\nint main() { typeof(depth(0)) d = depth(1000000); printf(\"%d\\n\", d); }"
+		executable, err := sb.CompileWithLimits(ctx, []byte(source), "cpp17", nil, limits.Compile)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, stdout := r.run(t, program{executable, "cpp17"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "1000000" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
+		}
+	})
+
+	t.Run("java deep recursion", func(t *testing.T) {
+		source := "public class Main { static int depth(int n) { return n == 0 ? 0 : 1 + depth(n - 1); } public static void main(String[] args) { System.out.println(depth(200000)); } }"
+		executable, err := sb.CompileWithLimits(ctx, []byte(source), "java", nil, limits.Compile)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(limits, 5000, 256))
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "200000" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
+		}
+	})
+
 	// Every catalog configuration compiles and runs a program in the image.
 	t.Run("catalog configurations", func(t *testing.T) {
 		sources := map[string]string{

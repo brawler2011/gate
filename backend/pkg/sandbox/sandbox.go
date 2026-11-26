@@ -128,6 +128,10 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 	}
 	outputName := cmp.Or(lang.CompileFile, "solution")
 	codeFile, compileCmd := lang.CodeFile, lang.Compile
+	if strings.Contains(codeFile+compileCmd, classArg) {
+		r := strings.NewReplacer(classArg, javaClass(sourceCode))
+		codeFile, compileCmd = r.Replace(codeFile), r.Replace(compileCmd)
+	}
 	var linked []string
 	if graders != nil {
 		g, ok := lang.graded(graders.Solution)
@@ -226,7 +230,8 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		CPULimit:      uint64(limits.CPU),
 		MemoryLimit:   limits.Memory.Uint64(),
 		ProcLimit:     limits.Processes,
-		Env:           []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
+		// javac rejects non-ASCII file names, such as a Java class named in Cyrillic, under the C locale.
+		Env: []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp", "LANG=C.UTF-8"},
 	}}})
 	if err != nil {
 		return Executable{}, fmt.Errorf("compilation failed to dispatch: %w", err)
