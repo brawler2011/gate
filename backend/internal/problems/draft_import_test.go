@@ -410,6 +410,15 @@ func importDir(t *testing.T, source string, extra map[string]string) (*draftImpo
 	return newImportUseCase(t).parseImport(context.Background(), &archive, uuid.New(), 1)
 }
 
+// An archive of one folder fails for what that folder lacks.
+func TestImportExplainsFolderWithoutPackage(t *testing.T) {
+	source := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(source, "alter"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(source, "alter", "problem.properties"), []byte("name = Alter\n"), 0o600))
+	_, err := importDir(t, source, nil)
+	require.ErrorContains(t, err, "has only problem.properties")
+}
+
 // Tests name generators by file stem, so echo.cpp and echo.py together are ambiguous.
 func TestImportRejectsGeneratorsWithOneStem(t *testing.T) {
 	_, err := importAPlusB(t, map[string]string{"generators/echo.py": "print(0, 0)\n"})

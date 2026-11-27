@@ -23,6 +23,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if err != nil {
 		return nil, err
 	}
+	if info, err := fs.Stat(fsys, "data"); err != nil || !info.IsDir() {
+		return nil, spec.Fail(pkg.ErrUnsupported, "data", "", "Found problem.yaml, but this is not an ICPC package: there is no data/ directory with tests")
+	}
 	var version struct {
 		Version string `yaml:"problem_format_version"`
 	}
@@ -82,6 +85,9 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if err != nil {
 		return nil, err
 	}
+	if (custom || interactive) && len(output) == 0 {
+		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "problem.yaml asks for a custom output validator, but output_validators/ is missing or empty")
+	}
 	if len(output) > 1 {
 		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "package has %d output validators; Gate supports one", len(output))
 	}
@@ -117,9 +123,27 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if p.Testset, err = tree.read(); err != nil {
 		return nil, err
 	}
+	if err := hasTests(fsys, &p.Testset); err != nil {
+		return nil, err
+	}
 	p.Statements = statements(fsys, p)
 	prob.Name.title(p)
 	return p, nil
+}
+
+// hasTests explains a data/ without test cases, which generator-based tools leave until they run.
+func hasTests(fsys fs.FS, root *spec.Group) error {
+	for g := range root.All() {
+		if len(g.Tests) > 0 {
+			return nil
+		}
+	}
+	for _, generator := range []string{"generators/generators.yaml", "data/generator.sh", "data/generator", "data/generate.sh"} {
+		if regular(fsys, generator) {
+			return spec.Fail(pkg.ErrUnsupported, generator, "", "data/ has no test cases because %s makes them, and Gate does not run it: generate the tests and import the package with them", generator)
+		}
+	}
+	return spec.Fail(pkg.ErrPackageLayout, "data", "", "data/ has no test cases: add .in files, with .ans answers, under data/sample and data/secret")
 }
 
 // The ICPC default output validator, called with the validator_flags of the problem.

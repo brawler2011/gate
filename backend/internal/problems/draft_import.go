@@ -88,7 +88,8 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	return result, nil
 }
 func detectImportRoot(root string) (string, error) {
-	if _, err := formats.DetectFormat(root); err == nil {
+	_, rootErr := formats.DetectFormat(root)
+	if rootErr == nil {
 		return root, nil
 	}
 	entries, err := os.ReadDir(root)
@@ -96,22 +97,29 @@ func detectImportRoot(root string) (string, error) {
 		return "", fmt.Errorf("readdir: %w", err)
 	}
 	found := ""
+	var folders []error
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == "__MACOSX" {
 			continue
 		}
 		path := filepath.Join(root, entry.Name())
-		if _, err := formats.DetectFormat(path); err == nil {
+		_, err := formats.DetectFormat(path)
+		if err == nil {
 			if found != "" {
 				return "", spec.Fail(pkg.ErrPackageLayout, "", "", "multiple packages in archive")
 			}
 			found = path
 		}
+		folders = append(folders, err)
 	}
-	if found == "" {
-		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "package root not found")
+	switch {
+	case found != "":
+		return found, nil
+	// An archive of one folder fails for what that folder lacks.
+	case len(folders) == 1:
+		return "", folders[0]
 	}
-	return found, nil
+	return "", rootErr
 }
 func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (importObject, error) {
 	f, err := os.Open(path)

@@ -37,7 +37,10 @@ func detect(fsys fs.FS) (string, error) {
 		return "polygon", nil
 	}
 	if _, err := fs.Stat(fsys, "problem.yaml"); err != nil {
-		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "unknown problem format: no problem.xml or problem.yaml found")
+		if _, err := fs.Stat(fsys, "problem.properties"); err == nil {
+			return "", spec.Fail(pkg.ErrUnsupported, "problem.properties", "", "The directory has only problem.properties, without problem.xml, tests or a statement: import the problem's Polygon or ICPC package instead")
+		}
+		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "No problem.xml or problem.yaml in the package root: Gate imports Polygon, PCMS2, ICPC and Gate packages")
 	}
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {

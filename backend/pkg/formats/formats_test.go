@@ -363,6 +363,27 @@ func TestICPCRejectsSeveralOutputValidators(t *testing.T) {
 	require.ErrorContains(t, err, "2 output validators")
 }
 
+// Packages Gate cannot build are rejected at import, saying why.
+func TestReadExplainsUnsupportedPackages(t *testing.T) {
+	for want, files := range map[string]map[string]string{
+		"not an ICPC package: there is no data/ directory": {"problem.yaml": "name: X\n", "tests/1.in": "1\n"},
+		"data/generator.sh makes them":                     {"problem.yaml": "name: X\n", "data/generator.sh": "", "data/sample/testdata.yaml": ""},
+		"generators/generators.yaml makes them":            {"problem.yaml": "problem_format_version: 2025-09\nname: X\n", "generators/generators.yaml": "", "data/sample/.gitkeep": ""},
+		"data/ has no test cases: add .in files":           {"problem.yaml": "name: X\n", "data/secret/1.ans": "1\n"},
+		"asks for a custom output validator":               {"problem.yaml": "name: X\nvalidation: custom\n", "data/secret/1.in": "1\n"},
+		"has only problem.properties":                      {"problem.properties": "name = X\n", "Check.java": ""},
+	} {
+		t.Run(want, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, content := range files {
+				write(t, dir, name, content)
+			}
+			_, err := Read(dir)
+			require.ErrorContains(t, err, want)
+		})
+	}
+}
+
 func TestPCMS2ProgramHeaders(t *testing.T) {
 	p, err := Read(unpack(t, "pcms2-program-headers"))
 	require.NoError(t, err)

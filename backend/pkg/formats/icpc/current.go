@@ -142,6 +142,9 @@ func readCurrent(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if p.Testset, err = tree.read(); err != nil {
 		return nil, err
 	}
+	if err := hasTests(fsys, &p.Testset); err != nil {
+		return nil, err
+	}
 	p.Statements = statements(fsys, p)
 	prob.Name.title(p)
 	p.Attachments, err = attachments(fsys)
