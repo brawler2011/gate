@@ -98,8 +98,8 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				require.NotEmpty(t, s.Legend, s.Language)
 				require.NotEmpty(t, s.Output+s.Interaction, s.Language)
 			}
-			// testlib programs keep the library file they include.
-			if (d.Checker != nil && d.Checker.Protocol == sandbox.ProtocolTestlib) || (d.Interactor != nil && d.Interactor.Protocol == sandbox.ProtocolTestlib) {
+			// Programs including testlib.h keep it in the library.
+			if (d.Checker != nil && strings.Contains(d.Checker.Source, "testlib.h")) || (d.Interactor != nil && strings.Contains(d.Interactor.Source, "testlib.h")) {
 				require.NotNil(t, libraryFile(d, "testlib.h"))
 			}
 		})

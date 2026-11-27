@@ -21,7 +21,7 @@ const draft: ProblemDraft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "standard", grading: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, input_file: "", output_file: "", processes: 0, max_score: null, checker: null, interactor: null, validators: [], generators: [],
   solutions: [], main_solution: null, statements: [], assets: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [],
-  library: [{name: "testlib.h", content: "", auto_update: true}],
+  library: [{name: "testlib.h", content: "", auto_update: true, object_id: null}],
   graders: [], solution_name: "",
   attachments: [],
 };
@@ -56,17 +56,17 @@ describe("workshop library", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     fireEvent.click(button);
     await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0].library).toEqual([{name: "testlib.h", content: SYSTEM, auto_update: false}]);
+    expect(puts[0].library).toEqual([{name: "testlib.h", content: SYSTEM, auto_update: false, object_id: null}]);
     // The copy is an ordinary file the author edits.
     await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"})).toBeTruthy());
   });
 
   it("turning auto-update on replaces a copy of a system file", async () => {
-    const puts = mockApi({...draft, library: [{name: "testlib.h", content: "// 0.9.20\n", auto_update: false}]});
+    const puts = mockApi({...draft, library: [{name: "testlib.h", content: "// 0.9.20\n", auto_update: false, object_id: null}]});
     const view = renderWithProviders(<WorkshopLibTab problemId="problem" />);
     fireEvent.click(await view.findByRole("button", {name: "Включить автообновление"}));
     fireEvent.click(await view.findByRole("button", {name: "Заменить"}));
     await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0].library).toEqual([{name: "testlib.h", content: "", auto_update: true}]);
+    expect(puts[0].library).toEqual([{name: "testlib.h", content: "", auto_update: true, object_id: null}]);
   });
 });

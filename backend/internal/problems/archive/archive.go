@@ -120,7 +120,11 @@ func Layout(d model.Draft, languages *sandbox.Config, built map[uuid.UUID]BuiltT
 		if _, ok := syslib.Lookup(f.Name); ok {
 			m.Sources[path] = gfmt.Source{AutoUpdate: &f.AutoUpdate}
 		}
-		p.files = append(p.files, file{name: path, text: f.Text()})
+		if f.ObjectID != nil {
+			p.files = append(p.files, file{name: path, object: *f.ObjectID})
+		} else {
+			p.files = append(p.files, file{name: path, text: f.Text()})
+		}
 	}
 	for folder, files := range map[string][]model.DraftFile{gfmt.GraderFolder: d.Graders, gfmt.AttachmentFolder: d.Attachments} {
 		for _, f := range files {
