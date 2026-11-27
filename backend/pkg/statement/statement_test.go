@@ -86,13 +86,13 @@ func TestHTMLSplitsSectionsAndSanitizes(t *testing.T) {
 <h1 class="unnumbered" id="gate-section-input">gate-section-input</h1>
 <p><a href="javascript:alert(1)">bad</a> <span class="evil" onclick="x()">y</span></p>`
 	sections := []Section{{Name: "legend", Text: "Text $x$."}, {Name: "input", Text: "Input."}, {Name: "notes", Text: " \n"}}
-	assets := func(name string) bool { return name == "pic.png" }
+	assets := func(name string) bool { return name == "pic.png" || name == "my pic.png" }
 	// graphicx would find pic.png for \includegraphics{pic}.
-	local := strings.Replace(out, `<img src="https://tracker.example/x.png" />`, `<img src="pic" />`, 1)
+	local := strings.Replace(out, `<img src="https://tracker.example/x.png" />`, `<img src="pic" /><img src="my%20pic.png" />`, 1)
 	html, err := HTML(context.Background(), pandocStub{html: local}, sections, assets)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{
-		"legend": "<p>Text <span class=\"math inline\">\\(x\\)</span></p>\n<p><img src=\"pic.png\" style=\"width: 2cm\" alt=\"image\"/><img src=\"pic.png\"/></p>",
+		"legend": "<p>Text <span class=\"math inline\">\\(x\\)</span></p>\n<p><img src=\"pic.png\" style=\"width: 2cm\" alt=\"image\"/><img src=\"pic.png\"/><img src=\"my%20pic.png\"/></p>",
 		"input":  "<p>bad <span>y</span></p>",
 	}, html)
 

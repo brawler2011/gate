@@ -137,7 +137,7 @@ func resolveImages(n *html.Node, section string, exists func(name string) bool) 
 			if !ok {
 				return &Error{Section: section, Message: fmt.Sprintf("image %q is not among the statement's assets", ref)}
 			}
-			n.Attr[i].Val = file
+			n.Attr[i].Val = (&url.URL{Path: file}).String()
 		}
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
