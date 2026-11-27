@@ -616,7 +616,8 @@ func (e *execution) rejudge(ctx context.Context, test model.DraftTest, names []s
 func (e *execution) settleTimeLimit() bool {
 	d := &e.build.Snapshot.Draft
 	rule := d.TimeRule
-	slowest, accepted := int64(0), false
+	var slowest time.Duration
+	accepted := false
 	for i := range d.Solutions {
 		sol := &d.Solutions[i]
 		if !sol.Runs() || !sol.MustPass() || e.uncompiled[sol.Name] {
@@ -630,7 +631,7 @@ func (e *execution) settleTimeLimit() bool {
 				}
 				return false
 			}
-			slowest = max(slowest, t.Time/int64(time.Millisecond))
+			slowest = max(slowest, time.Duration(t.Time))
 		}
 	}
 	if d.TimeLimitMs == nil {
@@ -649,8 +650,8 @@ func (e *execution) settleTimeLimit() bool {
 			continue
 		}
 		for _, t := range e.solutions[sol.Name] {
-			if ms := t.Time / int64(time.Millisecond); float64(ms) > bound {
-				e.timing[sol.Name] = fmt.Sprintf("test %d: runs %d ms, but the time rule needs accepted solutions within the limit / %g = %d ms", t.TestNumber, ms, rule.AcceptedFactor, int64(bound))
+			if ms := float64(t.Time) / float64(time.Millisecond); ms > bound {
+				e.timing[sol.Name] = fmt.Sprintf("test %d: runs %.0f ms, but the time rule needs accepted solutions within the limit / %g = %.0f ms", t.TestNumber, ms, rule.AcceptedFactor, bound)
 				break
 			}
 		}
@@ -658,7 +659,7 @@ func (e *execution) settleTimeLimit() bool {
 	return true
 }
 
-// applyTimeLimit turns finished runs over the limit into TLE, since the rest ran with a margin above it, and checks
+// applyTimeLimit turns runs over the limit into TLE, since the rest ran with a margin above it, and checks
 // that a solution which must time out exceeds the margin rather than the limit alone.
 func (e *execution) applyTimeLimit(sol *model.DraftSolution, tl int) {
 	d := &e.build.Snapshot.Draft
@@ -669,7 +670,8 @@ func (e *execution) applyTimeLimit(sol *model.DraftSolution, tl int) {
 		switch {
 		case r.Verdict == string(sandbox.StatusTLE):
 			timedOut = true
-		case r.Time > int64(tl)*int64(time.Millisecond) && (r.Verdict == string(sandbox.StatusOK) || r.Verdict == "POINTS"):
+		// An interactor that rejected the solution first decides the verdict, as the judge does, so only finished interactive runs change.
+		case r.Time > int64(tl)*int64(time.Millisecond) && (!spec.Interactive(d.Type) || r.Verdict == string(sandbox.StatusOK) || r.Verdict == "POINTS"):
 			over = r.TestNumber
 			r.Verdict, r.Score = string(sandbox.StatusTLE), nil
 			r.Award(0, d.Grading)
@@ -755,7 +757,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(
 		}
 		ids = append(ids, result.OutputID)
 		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
-			return tr, fail("interact", test.Ordinal, r.Verdict, answerFailure(answerer, r))
+			return tr, fail("interact", test.Ordinal, r.Verdict, answerFailure(answerer, r.Verdict, r.Message))
 		}
 		outputID = result.OutputID
 		// Without a provided answer, the main solution's interactor output becomes the answer for later judging.
@@ -787,7 +789,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(
 			}
 			ids = append(ids, result.OutputID)
 			if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-				return tr, fail("answer", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
+				return tr, fail("answer", test.Ordinal, string(result.Status), answerFailure(solution, string(result.Status), fmt.Sprintf("exit %d: %s", result.ExitStatus, result.Stderr)))
 			}
 			outputID = result.OutputID
 			if test.Answer.Mode == "generated" {
@@ -805,7 +807,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(
 			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
 		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
-			return tr, fail("check", test.Ordinal, r.Verdict, answerFailure(answerer, r))
+			return tr, fail("check", test.Ordinal, r.Verdict, answerFailure(answerer, r.Verdict, r.Message))
 		}
 	}
 	for i := range s.Draft.Solutions {
@@ -845,11 +847,11 @@ func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(
 }
 
 // answerFailure names the solution whose output had to earn the test's points to serve as its answer.
-func answerFailure(solution *string, r judging.TestResult) error {
+func answerFailure(solution *string, verdict, message string) error {
 	if solution == nil {
-		return errors.New(r.Message)
+		return errors.New(message)
 	}
-	return fmt.Errorf("solution %s gets %s, but answers come from a solution with the full score; choose another main solution: %s", *solution, r.Verdict, r.Message)
+	return fmt.Errorf("solution %s gets %s, but answers come from a solution with the full score; choose another main solution: %s", *solution, verdict, message)
 }
 
 // judge runs a solution on a test as the judge runs submissions. A TLE runs again before it counts,

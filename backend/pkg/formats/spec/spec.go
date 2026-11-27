@@ -11,6 +11,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -473,9 +474,9 @@ type TimeRule struct {
 	ResolutionMs int `yaml:"resolution_ms" json:"resolution_ms"`
 }
 
-// Derive gives the smallest limit the slowest accepted run fits within.
-func (r TimeRule) Derive(slowestMs int64) int {
+// Derive gives the smallest limit in milliseconds that the slowest accepted run fits within.
+func (r TimeRule) Derive(slowest time.Duration) int {
 	res := int64(r.ResolutionMs)
-	need := int64(math.Ceil(float64(slowestMs) * r.AcceptedFactor))
+	need := int64(math.Ceil(float64(slowest) / float64(time.Millisecond) * r.AcceptedFactor))
 	return int(max(res, (need+res-1)/res*res))
 }
