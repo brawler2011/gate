@@ -64,7 +64,7 @@ func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.List
 	}
 	items := make([]corev1.ProblemPackage, len(packages.Items))
 	for i, p := range packages.Items {
-		items[i] = corev1.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, BuildID: p.BuildID, Revision: p.Revision, PackageHash: p.PackageHash, CreatedAt: p.CreatedAt}
+		items[i] = corev1.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, BuildID: p.BuildID, Revision: p.Revision, PackageHash: p.PackageHash, CreatedAt: p.CreatedAt, TimeLimitMs: p.TimeLimitMs}
 	}
 	return &corev1.ListProblemPackagesOK{Packages: items, Pagination: PaginationDTO(packages.Pagination)}, nil
 }

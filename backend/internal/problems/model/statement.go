@@ -48,8 +48,9 @@ func PrintedProblem(title string, limits PrintedLimits, s DraftStatement, sample
 }
 
 type PrintedLimits struct {
-	TimeLimitMs, MemoryLimitMb int
-	InputFile, OutputFile      string
+	TimeLimitMs           *int
+	MemoryLimitMb         int
+	InputFile, OutputFile string
 }
 
 // StatementImages lists the assets the statement shows that exist.

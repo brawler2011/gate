@@ -95,7 +95,8 @@ type Problem struct {
 	Visibility        string
 	Title             string
 	ShortName         string
-	TimeLimitMs       int
+	// TimeLimitMs is the draft's, nil while builds derive it.
+	TimeLimitMs       *int
 	MemoryLimitMb     int
 	IsTemplate        bool
 	CreatedAt         time.Time

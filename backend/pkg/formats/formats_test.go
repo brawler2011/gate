@@ -358,6 +358,30 @@ func TestICPCCurrentScoring(t *testing.T) {
 	require.ErrorContains(t, err, "problem format version 2026-01 is not supported")
 }
 
+// Without a time limit the build derives one by the format's rule; an explicit limit keeps the rule for its checks.
+func TestICPCTimeLimits(t *testing.T) {
+	for _, c := range []struct {
+		name, fixture, yaml string
+		timeMs, memoryMb    int
+		rule                spec.TimeRule
+	}{
+		{"legacy defaults", "icpc-scoring", "type: scoring\nvalidation: custom\n", 0, 2048, spec.TimeRule{AcceptedFactor: 5, TLEFactor: 2, ResolutionMs: 1000}},
+		{"legacy limits", "icpc-scoring", "type: scoring\nvalidation: custom\nlimits:\n  time: 2.5\n  memory: 512\n  time_multiplier: 3\n  time_safety_margin: 1.5\n", 2500, 512, spec.TimeRule{AcceptedFactor: 3, TLEFactor: 1.5, ResolutionMs: 1000}},
+		{"current defaults", "icpc-current-scoring", "problem_format_version: 2025-09\ntype: scoring\nname: Scoring\n", 0, 2048, spec.TimeRule{AcceptedFactor: 2, TLEFactor: 1.5, ResolutionMs: 1000}},
+		{"current limits", "icpc-current-scoring", "problem_format_version: 2025-09\ntype: scoring\nname: Scoring\nlimits:\n  time_limit: 3\n  time_resolution: 0.1\n  time_multipliers:\n    ac_to_time_limit: 1.5\n    time_limit_to_tle: 4\n", 3000, 2048, spec.TimeRule{AcceptedFactor: 1.5, TLEFactor: 4, ResolutionMs: 100}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := unpack(t, c.fixture)
+			write(t, dir, "problem.yaml", c.yaml)
+			p, err := Read(dir)
+			require.NoError(t, err)
+			require.Equal(t, c.timeMs, p.TimeLimitMs)
+			require.Equal(t, c.memoryMb, p.MemoryLimitMb)
+			require.Equal(t, &c.rule, p.TimeRule)
+		})
+	}
+}
+
 func TestICPCRejectsSeveralOutputValidators(t *testing.T) {
 	_, err := Read(unpack(t, "icpc-two-output-validators"))
 	require.ErrorContains(t, err, "2 output validators")

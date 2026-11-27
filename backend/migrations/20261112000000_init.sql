@@ -303,7 +303,8 @@ CREATE TABLE problem_drafts (
     short_name text NOT NULL,
     type text NOT NULL,
     grading text NOT NULL,
-    time_limit_ms integer NOT NULL,
+    -- NULL while builds derive it by the draft's time rule.
+    time_limit_ms integer,
     memory_limit_mb integer NOT NULL,
     max_score numeric(12,2),
     -- The draft is validated and written as one document.

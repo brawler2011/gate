@@ -225,6 +225,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
                 <Table.Tr>
                   <Table.Th>Ревизия</Table.Th>
                   <Table.Th>Хеш</Table.Th>
+                  <Table.Th>Время</Table.Th>
                   <Table.Th>Собран</Table.Th>
                   <Table.Th />
                 </Table.Tr>
@@ -238,6 +239,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
                         {item.package_hash.slice(0, 8)}
                       </Text>
                     </Table.Td>
+                    <Table.Td>{item.time_limit_ms} мс</Table.Td>
                     <Table.Td>{formatDateTime(item.created_at)}</Table.Td>
                     <Table.Td>
                       <Anchor size="sm" href={`/api/problems/${problemId}/packages/${item.id}/download`}>

@@ -183,7 +183,7 @@ func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
 	services := startPipelineServices(t)
 	cfg := &sandbox.Config{Langs: services.langs}
 	generator, main, group := "gen", "main", uuid.New()
-	d.TimeLimitMs = 1000
+	d.TimeLimitMs = new(1000)
 	d.Checker = checker("python3", "import sys\nout, ans = (open(f).read().split() for f in sys.argv[2:4])\nsys.exit(0 if out == ans else 1)\n")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftSolution{

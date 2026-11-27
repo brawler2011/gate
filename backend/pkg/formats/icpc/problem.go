@@ -14,6 +14,7 @@ type Problem struct {
 
 type Limits struct {
 	TimeMultiplier   float64 `yaml:"time_multiplier"`
+	TimeSafetyMargin float64 `yaml:"time_safety_margin"`
 	Time             float64 `yaml:"time"`   // in seconds
 	Memory           int     `yaml:"memory"` // in MB
 	Output           int     `yaml:"output"` // in MB

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"iter"
+	"math"
 	"regexp"
 	"slices"
 	"strings"
@@ -29,7 +30,8 @@ type Draft struct {
 	ShortName     string        `json:"short_name"`
 	Type          string        `json:"type"`
 	Grading       string        `json:"grading"`
-	TimeLimitMs   int           `json:"time_limit_ms"`
+	// TimeLimitMs is nil when the build derives it by TimeRule.
+	TimeLimitMs   *int          `json:"time_limit_ms"`
 	MemoryLimitMb int           `json:"memory_limit_mb"`
 	MaxScore      *points.Value `json:"max_score"`
 	DraftContent
@@ -37,6 +39,8 @@ type Draft struct {
 
 // DraftContent is stored as one document; catalog-query fields remain separate columns.
 type DraftContent struct {
+	// TimeRule makes the build check the time limit against the solutions' run times, or derive a missing one.
+	TimeRule     *spec.TimeRule      `json:"time_rule"`
 	Checker      *DraftChecker       `json:"checker"`
 	Interactor   *DraftInteractor    `json:"interactor"`
 	Validators   []DraftValidator    `json:"validators"`
@@ -261,7 +265,9 @@ type BuildLimits struct {
 	ObjectBytes     bytesize.Size `json:"object_bytes" yaml:"object_bytes"`
 	TestOutputBytes bytesize.Size `json:"test_output_bytes" yaml:"test_output_bytes"`
 	// Every run's wall-clock limit is its CPU limit times this factor.
-	WallFactor int                   `json:"wall_factor" yaml:"wall_factor"`
+	WallFactor int `json:"wall_factor" yaml:"wall_factor"`
+	// TimeCeiling bounds accepted solutions while a build derives the time limit from their run times.
+	TimeCeiling time.Duration         `json:"time_ceiling" yaml:"time_ceiling"`
 	Compile    sandbox.FileRunLimits `json:"compile" yaml:"compile"`
 	Auxiliary  sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
 	// Typesetting runs in its own sandbox, outside build snapshots.
@@ -692,8 +698,19 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if !slices.Contains(spec.Gradings, d.Grading) {
 		v.fail("/grading", pkg.ErrUnknown, value(d.Grading), "invalid grading %q", d.Grading)
 	}
-	if d.TimeLimitMs <= 0 {
+	switch {
+	case d.TimeLimitMs == nil && d.TimeRule == nil:
+		v.fail("/time_limit_ms", pkg.ErrRequired, nil, "time limit is required without a time rule to derive it")
+	case d.TimeLimitMs != nil && *d.TimeLimitMs <= 0:
 		v.fail("/time_limit_ms", pkg.ErrRange, positive(), "time limit must be positive")
+	}
+	if r := d.TimeRule; r != nil {
+		if r.AcceptedFactor < 1 || r.TLEFactor < 1 || math.IsNaN(r.AcceptedFactor) || math.IsNaN(r.TLEFactor) || r.AcceptedFactor > 100 || r.TLEFactor > 100 {
+			v.fail("/time_rule", pkg.ErrRange, map[string]any{"min": 1, "max": 100}, "time rule factors must be from 1 to 100")
+		}
+		if r.ResolutionMs <= 0 {
+			v.fail("/time_rule/resolution_ms", pkg.ErrRange, positive(), "time resolution must be positive")
+		}
 	}
 	if d.MemoryLimitMb <= 0 {
 		v.fail("/memory_limit_mb", pkg.ErrRange, positive(), "memory limit must be positive")

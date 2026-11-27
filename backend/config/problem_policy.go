@@ -43,6 +43,7 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.Limits.FileCount > 0, "problems.limits.file_count", "must be positive")
 	v.check(p.Limits.ObjectBytes > 0 && p.Limits.ObjectBytes <= 5*bytesize.GiB, "problems.limits.object_bytes", "must be in (0, 5GiB]")
 	v.check(p.Limits.WallFactor >= 1, "problems.limits.wall_factor", "must be at least 1")
+	v.check(p.Limits.TimeCeiling > 0, "problems.limits.time_ceiling", "must be positive")
 	validateRunLimits(v, "problems.limits.compile", p.Limits.Compile)
 	validateRunLimits(v, "problems.limits.auxiliary", p.Limits.Auxiliary)
 	validateRunLimits(v, "problems.limits.typeset", p.Limits.Typeset)

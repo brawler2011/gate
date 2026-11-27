@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"iter"
+	"math"
 	"path"
 	"slices"
 	"strings"
@@ -42,9 +43,12 @@ type Problem struct {
 	Title         string
 	Type          string // one of ProblemTypes
 	Grading       string // one of Gradings
+	// TimeLimitMs is zero when the build derives it by TimeRule.
 	TimeLimitMs   int
 	MemoryLimitMb int
-	Checker       *Program
+	// TimeRule is nil for formats that leave the time limit to the author alone.
+	TimeRule *TimeRule
+	Checker  *Program
 	Validators    []Program
 	Interactor    *Program
 	// Processes is the number of solution copies a communication problem runs at once.
@@ -458,4 +462,20 @@ func extension(path string) string {
 		return base[i:]
 	}
 	return ""
+}
+
+// TimeRule ties the time limit to run times as ICPC does: the slowest accepted solution times AcceptedFactor fits
+// within the limit, and the limit times TLEFactor within the fastest solution that must exceed it.
+type TimeRule struct {
+	AcceptedFactor float64 `yaml:"accepted_factor" json:"accepted_factor"`
+	TLEFactor      float64 `yaml:"tle_factor" json:"tle_factor"`
+	// A derived limit is a multiple of ResolutionMs.
+	ResolutionMs int `yaml:"resolution_ms" json:"resolution_ms"`
+}
+
+// Derive gives the smallest limit the slowest accepted run fits within.
+func (r TimeRule) Derive(slowestMs int64) int {
+	res := int64(r.ResolutionMs)
+	need := int64(math.Ceil(float64(slowestMs) * r.AcceptedFactor))
+	return int(max(res, (need+res-1)/res*res))
 }

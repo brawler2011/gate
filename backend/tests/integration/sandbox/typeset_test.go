@@ -42,7 +42,7 @@ func TestTypesetStatements(t *testing.T) {
 	})
 
 	problem := func(legend string) statement.Contest {
-		return statement.Contest{Title: "Contest", Language: "ru", Problems: []statement.Problem{{Title: "Сумма", TimeLimitMs: 1000, MemoryLimitMb: 256, Assets: "assets",
+		return statement.Contest{Title: "Contest", Language: "ru", Problems: []statement.Problem{{Title: "Сумма", TimeLimitMs: new(1000), MemoryLimitMb: 256, Assets: "assets",
 			Sections: []statement.Section{{Name: "legend", Text: legend}, {Name: "input", Text: "Два числа."}}, Samples: []statement.Sample{{Input: "1 2", Output: "3"}}}}}
 	}
 
