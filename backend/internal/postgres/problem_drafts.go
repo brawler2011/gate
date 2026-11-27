@@ -108,11 +108,7 @@ func (r *ProblemDraftsRepo) saveDraft(ctx context.Context, draft model.Draft) (m
 	if revision != draft.Revision {
 		return model.Draft{}, pkg.ErrStaleRevision
 	}
-	old, err := readProblemDraft(ctx, q, draft.ProblemID)
-	if err != nil {
-		return model.Draft{}, err
-	}
-	if err := draft.Validate(r.quotas, &old); err != nil {
+	if err := draft.Validate(r.quotas); err != nil {
 		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
 	}
 	known, err := q.DraftObjectIDs(ctx, draft.ProblemID)

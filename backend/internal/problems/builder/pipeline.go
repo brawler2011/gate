@@ -279,13 +279,13 @@ func (e *execution) typeset(ctx context.Context) ([]model.BuiltStatement, []mode
 	built := make([]model.BuiltStatement, 0, len(d.Statements))
 	var pdfs []model.StatementPDF
 	for _, s := range d.Statements {
-		html, err := statement.HTML(ctx, e.pipeline.Typeset, s.SiteSections())
+		html, err := statement.HTML(ctx, e.pipeline.Typeset, s.SiteSections(), d.HasAsset)
 		if err != nil {
 			return nil, nil, fail("statements", 0, typesetKind(err), fmt.Errorf("%s statement: %w", s.Language, err))
 		}
 		built = append(built, model.BuiltStatement{DraftStatement: s, HTML: html})
 		files := map[string][]byte{"olymp.sty": statement.OlympSty}
-		for _, a := range model.StatementImages(s, d.Assets) {
+		for _, a := range d.Assets {
 			data, err := os.ReadFile(filepath.Join(e.dir.root, "objects", a.ObjectID.String()))
 			if err != nil {
 				return nil, nil, fail("statements", 0, "infrastructure", err)

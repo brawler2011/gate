@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -42,7 +43,8 @@ const marker = "gate-section-"
 const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n"
 
 // HTML converts sections, given in Order, in one pandoc run. Content pandoc skips fails, so the site never misses what the PDF shows.
-func HTML(ctx context.Context, c Converter, sections []Section) (map[string]string, error) {
+// Each image's src becomes the asset name graphicx would pick; an image with no asset fails.
+func HTML(ctx context.Context, c Converter, sections []Section, exists func(name string) bool) (map[string]string, error) {
 	var src strings.Builder
 	src.WriteString(prelude)
 	line := 1 + strings.Count(prelude, "\n")
@@ -78,7 +80,7 @@ func HTML(ctx context.Context, c Converter, sections []Section) (map[string]stri
 		}
 		return nil, e
 	}
-	result, err := split(out)
+	result, err := split(out, exists)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +92,7 @@ func HTML(ctx context.Context, c Converter, sections []Section) (map[string]stri
 	return result, nil
 }
 
-func split(out string) (map[string]string, error) {
+func split(out string, exists func(name string) bool) (map[string]string, error) {
 	nodes, err := html.ParseFragment(strings.NewReader(out), &html.Node{Type: html.ElementNode, DataAtom: atom.Body, Data: "body"})
 	if err != nil {
 		return nil, fmt.Errorf("parse pandoc HTML: %w", err)
@@ -110,12 +112,40 @@ func split(out string) (map[string]string, error) {
 			current = name
 			continue
 		}
+		if err := resolveImages(n, current, exists); err != nil {
+			return nil, err
+		}
 		if err := html.Render(&buf, n); err != nil {
 			return nil, fmt.Errorf("render HTML: %w", err)
 		}
 	}
 	flush()
 	return result, nil
+}
+
+func resolveImages(n *html.Node, section string, exists func(name string) bool) error {
+	if n.DataAtom == atom.Img {
+		for i, a := range n.Attr {
+			if a.Key != "src" {
+				continue
+			}
+			ref := a.Val
+			if unescaped, err := url.PathUnescape(ref); err == nil {
+				ref = unescaped
+			}
+			file, ok := ImageFile(ref, exists)
+			if !ok {
+				return &Error{Section: section, Message: fmt.Sprintf("image %q is not among the statement's assets", ref)}
+			}
+			n.Attr[i].Val = (&url.URL{Path: file}).String()
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if err := resolveImages(c, section, exists); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func sectionName(n *html.Node) (string, bool) {

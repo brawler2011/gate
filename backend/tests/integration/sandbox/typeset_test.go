@@ -21,20 +21,21 @@ func TestTypesetStatements(t *testing.T) {
 
 	t.Run("HTML keeps macros across sections and drops scripts", func(t *testing.T) {
 		html, err := statement.HTML(ctx, ts, []statement.Section{
-			{Name: "legend", Text: "\\newcommand{\\NN}{\\mathbb{N}}\nGiven $a \\in \\NN$ <script>alert(1)</script>.\n\n\\includegraphics[width=2cm]{graph.svg}\n\n\\begin{tabular}{|c|c|}\\hline a & b \\\\ \\hline\\end{tabular}"},
+			{Name: "legend", Text: "\\newcommand{\\NN}{\\mathbb{N}}\nGiven $a \\in \\NN$ <script>alert(1)</script>.\n\n\\includegraphics[width=2cm]{graph}\n% \\includegraphics{gone.png}\n\n\\begin{tabular}{|c|c|}\\hline a & b \\\\ \\hline\\end{tabular}"},
 			{Name: "input", Text: "One number $n \\in \\NN$ and \\t{x}; \\href{javascript:alert(1)}{link}."},
-		})
+		}, func(name string) bool { return name == "graph.png" })
 		require.NoError(t, err)
 		require.Contains(t, html["input"], `\(n \in \mathbb{N}\)`)
 		require.Contains(t, html["legend"], "<table>")
-		require.Contains(t, html["legend"], `src="graph.svg"`)
+		require.Contains(t, html["legend"], `src="graph.png"`)
+		require.NotContains(t, html["legend"], "gone")
 		require.Contains(t, html["input"], "<code>x</code>")
 		require.NotContains(t, html["legend"], "<script")
 		require.NotContains(t, html["input"], "javascript:")
 	})
 
 	t.Run("HTML names what the site cannot show", func(t *testing.T) {
-		_, err := statement.HTML(ctx, ts, []statement.Section{{Name: "legend", Text: "Fine."}, {Name: "notes", Text: "One.\nTwo \\exmp{1}{2}."}})
+		_, err := statement.HTML(ctx, ts, []statement.Section{{Name: "legend", Text: "Fine."}, {Name: "notes", Text: "One.\nTwo \\exmp{1}{2}."}}, nil)
 		var e *statement.Error
 		require.ErrorAs(t, err, &e)
 		require.Equal(t, statement.Error{Section: "notes", Line: 2, Message: e.Message}, *e)
@@ -65,6 +66,15 @@ func TestTypesetStatements(t *testing.T) {
 		require.Contains(t, e.Message, "Undefined control sequence")
 	})
 
+	t.Run("PDF names a missing image", func(t *testing.T) {
+		doc := statement.NewDocument(problem("Text.\n\\includegraphics{nope}"))
+		_, err := ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty})
+		var e *statement.Error
+		require.ErrorAs(t, doc.Explain(err), &e)
+		require.Equal(t, "legend", e.Section)
+		require.Contains(t, e.Message, "nope")
+	})
+
 	t.Run("PCMS2 HTML keeps its math", func(t *testing.T) {
 		sections, err := statement.SplitHTML("<div class=\"legend\"><p>Print $$$a+b$$$.</p></div>")
 		require.NoError(t, err)
@@ -85,7 +95,7 @@ func TestTypesetStatements(t *testing.T) {
 		for _, name := range statement.Order {
 			sections = append(sections, statement.Section{Name: name, Text: split[name]})
 		}
-		html, err := statement.HTML(ctx, ts, sections)
+		html, err := statement.HTML(ctx, ts, sections, nil)
 		require.NoError(t, err)
 		require.Contains(t, html["legend"], "<td style=\"text-align: right\">2</td>")
 		doc := statement.NewDocument(statement.Contest{Language: "en", Problems: []statement.Problem{{Title: "Sum", Sections: sections}}})

@@ -159,15 +159,13 @@ func (r *ProblemDraftsRepo) finalizeUploadDraftOnce(ctx context.Context, id uuid
 		return model.Draft{}, dbError("finalize upload draft", err)
 	}
 	known = append(known, objectIDs(objects)...)
-	before := draft
-	before.Statements = slices.Clone(draft.Statements)
 	if err := apply(&draft); err != nil {
 		return model.Draft{}, err
 	}
 	if err := draft.ComputeScores(); err != nil {
 		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
-	if err := draft.Validate(r.quotas, &before); err != nil {
+	if err := draft.Validate(r.quotas); err != nil {
 		return model.Draft{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid upload change")
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {

@@ -132,7 +132,7 @@ func (w *BookletWorker) compile(ctx context.Context, job contestsmodel.BookletJo
 		printedProblem := problemsmodel.PrintedProblem(p.Title, limits, printed.Statement, printed.Samples)
 		// Problems may show different images under one name.
 		printedProblem.Letter, printedProblem.Assets = contestsmodel.ProblemLetter(p.Ordinal), fmt.Sprintf("assets/%d", n)
-		for name, data := range printed.Images {
+		for name, data := range printed.Assets {
 			files[printedProblem.Assets+"/"+name] = data
 		}
 		doc.Problems = append(doc.Problems, printedProblem)

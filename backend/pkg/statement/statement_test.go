@@ -86,16 +86,22 @@ func TestHTMLSplitsSectionsAndSanitizes(t *testing.T) {
 <h1 class="unnumbered" id="gate-section-input">gate-section-input</h1>
 <p><a href="javascript:alert(1)">bad</a> <span class="evil" onclick="x()">y</span></p>`
 	sections := []Section{{Name: "legend", Text: "Text $x$."}, {Name: "input", Text: "Input."}, {Name: "notes", Text: " \n"}}
-	html, err := HTML(context.Background(), pandocStub{html: out}, sections)
+	assets := func(name string) bool { return name == "pic.png" || name == "my pic.png" }
+	// graphicx would find pic.png for \includegraphics{pic}.
+	local := strings.Replace(out, `<img src="https://tracker.example/x.png" />`, `<img src="pic" /><img src="my%20pic.png" />`, 1)
+	html, err := HTML(context.Background(), pandocStub{html: local}, sections, assets)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{
-		"legend": "<p>Text <span class=\"math inline\">\\(x\\)</span></p>\n<p><img src=\"pic.png\" style=\"width: 2cm\" alt=\"image\"/></p>",
+		"legend": "<p>Text <span class=\"math inline\">\\(x\\)</span></p>\n<p><img src=\"pic.png\" style=\"width: 2cm\" alt=\"image\"/><img src=\"pic.png\"/><img src=\"my%20pic.png\"/></p>",
 		"input":  "<p>bad <span>y</span></p>",
 	}, html)
 
-	_, err = HTML(context.Background(), pandocStub{html: out, skipped: "\\bad{x}"}, []Section{{Name: "legend", Text: "Text."}, {Name: "input", Text: "One.\nTwo.\n\\bad{x}"}, {Name: "notes", Text: "N."}})
+	_, err = HTML(context.Background(), pandocStub{html: local, skipped: "\\bad{x}"}, []Section{{Name: "legend", Text: "Text."}, {Name: "input", Text: "One.\nTwo.\n\\bad{x}"}, {Name: "notes", Text: "N."}}, assets)
 	require.Equal(t, &Error{Section: "input", Line: 3, Message: "\\bad{x} is not supported on the site"}, err)
 
-	_, err = HTML(context.Background(), pandocStub{html: out}, []Section{{Name: "legend", Text: "Text."}, {Name: "notes", Text: "Missing."}})
+	_, err = HTML(context.Background(), pandocStub{html: local}, []Section{{Name: "legend", Text: "Text."}, {Name: "notes", Text: "Missing."}}, assets)
 	require.Equal(t, &Error{Section: "notes", Message: "the section is swallowed by the one before it; check its braces"}, err)
+
+	_, err = HTML(context.Background(), pandocStub{html: out}, sections, assets)
+	require.Equal(t, &Error{Section: "legend", Message: `image "https://tracker.example/x.png" is not among the statement's assets`}, err)
 }

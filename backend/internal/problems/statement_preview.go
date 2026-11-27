@@ -14,10 +14,11 @@ import (
 
 // PreviewStatement typesets an edited statement of the draft as the site shows it.
 func (uc *DraftUseCase) PreviewStatement(ctx context.Context, id uuid.UUID, s model.DraftStatement) (map[string]string, error) {
-	if _, err := uc.preview(ctx, id, s); err != nil {
+	d, err := uc.preview(ctx, id, s)
+	if err != nil {
 		return nil, err
 	}
-	html, err := statement.HTML(ctx, uc.Typeset, s.SiteSections())
+	html, err := statement.HTML(ctx, uc.Typeset, s.SiteSections(), d.HasAsset)
 	return html, previewError(err)
 }
 
@@ -28,7 +29,7 @@ func (uc *DraftUseCase) PreviewStatementPDF(ctx context.Context, id uuid.UUID, s
 		return nil, err
 	}
 	files := map[string][]byte{"olymp.sty": statement.OlympSty}
-	for _, a := range model.StatementImages(s, d.Assets) {
+	for _, a := range d.Assets {
 		if files["assets/"+a.Name], err = uc.readObject(ctx, a.ObjectID); err != nil {
 			return nil, err
 		}
