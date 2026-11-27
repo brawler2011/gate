@@ -256,7 +256,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text, 'statement'::text, 'booklet'::text, 'files'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'library'::text, 'package'::text, 'statement'::text, 'booklet'::text, 'files'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_key_key UNIQUE (key),

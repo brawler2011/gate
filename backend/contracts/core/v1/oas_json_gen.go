@@ -19244,12 +19244,17 @@ func (s *ProblemDraftLibraryFile) encodeFields(e *jx.Encoder) {
 		e.FieldStart("auto_update")
 		e.Bool(s.AutoUpdate)
 	}
+	{
+		e.FieldStart("object_id")
+		s.ObjectID.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfProblemDraftLibraryFile = [3]string{
+var jsonFieldsNameOfProblemDraftLibraryFile = [4]string{
 	0: "name",
 	1: "content",
 	2: "auto_update",
+	3: "object_id",
 }
 
 // Decode decodes ProblemDraftLibraryFile from json.
@@ -19297,6 +19302,16 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"auto_update\"")
 			}
+		case "object_id":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.ObjectID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"object_id\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -19307,7 +19322,7 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

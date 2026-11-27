@@ -10826,15 +10826,19 @@ func (s *ProblemDraftInteractor) SetArgs(val []string) {
 	s.Args = val
 }
 
-// A source file judge programs include by its name; names are unique in a draft and identify the file.
+// A file judge programs include or load by its name; names are unique in a draft and identify the
+// file.
 // Ref: #/components/schemas/ProblemDraftLibraryFile
 type ProblemDraftLibraryFile struct {
 	Name string `json:"name"`
-	// Empty for an auto-updated file.
+	// Empty for an auto-updated or binary file.
 	Content string `json:"content"`
 	// The file is the system library file of its name from GET /lib, whose current text every build takes.
 	// Only an empty file named after a system library file can be auto-updated.
 	AutoUpdate bool `json:"auto_update"`
+	// The stored bytes of a binary file, such as a jar Java programs get on their classpath; null for
+	// text.
+	ObjectID NilUUID `json:"object_id"`
 }
 
 // GetName returns the value of Name.
@@ -10852,6 +10856,11 @@ func (s *ProblemDraftLibraryFile) GetAutoUpdate() bool {
 	return s.AutoUpdate
 }
 
+// GetObjectID returns the value of ObjectID.
+func (s *ProblemDraftLibraryFile) GetObjectID() NilUUID {
+	return s.ObjectID
+}
+
 // SetName sets the value of Name.
 func (s *ProblemDraftLibraryFile) SetName(val string) {
 	s.Name = val
@@ -10865,6 +10874,11 @@ func (s *ProblemDraftLibraryFile) SetContent(val string) {
 // SetAutoUpdate sets the value of AutoUpdate.
 func (s *ProblemDraftLibraryFile) SetAutoUpdate(val bool) {
 	s.AutoUpdate = val
+}
+
+// SetObjectID sets the value of ObjectID.
+func (s *ProblemDraftLibraryFile) SetObjectID(val NilUUID) {
+	s.ObjectID = val
 }
 
 // A generator; tests refer to it by name.

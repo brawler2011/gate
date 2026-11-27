@@ -460,6 +460,18 @@ func (e *execution) compile(ctx context.Context) error {
 			needed = append(needed, p)
 		}
 	}
+	library := map[string][]byte{}
+	for i := range d.Library {
+		f := &d.Library[i]
+		library[f.Name] = []byte(f.Text())
+		if f.ObjectID != nil {
+			data, err := os.ReadFile(filepath.Join(e.dir.root, "objects", f.ObjectID.String()))
+			if err != nil {
+				return fail("compile", 0, "infrastructure", err)
+			}
+			library[f.Name] = data
+		}
+	}
 	var mu sync.Mutex
 	return ordered(ctx, len(needed), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
 		p := needed[i]
@@ -468,9 +480,7 @@ func (e *execution) compile(ctx context.Context) error {
 		if p.role == "solution" {
 			program.Graders = d.GraderFiles()
 		} else {
-			for i := range d.Library {
-				program.Deps[d.Library[i].Name] = []byte(d.Library[i].Text())
-			}
+			program.Deps = library
 		}
 		compiled, err := e.pipeline.Programs.Get(ctx, program, s.Limits.Compile)
 		if err != nil && judged[p.key] && processKind(err) == "author" {

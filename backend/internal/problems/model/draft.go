@@ -125,11 +125,12 @@ func (d *Draft) Validates(v *DraftValidator, group uuid.UUID) bool {
 	return false
 }
 
-// DraftLibraryFile stores no content when AutoUpdate selects the current system library.
+// DraftLibraryFile stores no content when AutoUpdate selects the current system library or ObjectID holds a binary file, such as a jar.
 type DraftLibraryFile struct {
-	Name       string `json:"name"`
-	Content    string `json:"content"`
-	AutoUpdate bool   `json:"auto_update"`
+	Name       string     `json:"name"`
+	Content    string     `json:"content"`
+	AutoUpdate bool       `json:"auto_update"`
+	ObjectID   *uuid.UUID `json:"object_id"`
 }
 
 func (f *DraftLibraryFile) Text() string {
@@ -512,6 +513,11 @@ func (d *Draft) EachObject(f func(ref string, id *uuid.UUID)) {
 	for i := range d.Assets {
 		f(fmt.Sprintf("asset %q", d.Assets[i].Name), &d.Assets[i].ObjectID)
 	}
+	for i := range d.Library {
+		if d.Library[i].ObjectID != nil {
+			f(fmt.Sprintf("library file %q", d.Library[i].Name), d.Library[i].ObjectID)
+		}
+	}
 	if d.Checker != nil {
 		for i := range d.Checker.Tests {
 			t := &d.Checker.Tests[i]
@@ -717,8 +723,8 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 
 	var total int64
 	text := func(pointer, content string) {
-		if !utf8.ValidString(content) {
-			v.fail(pointer, pkg.ErrNotUTF8, nil, "text must be UTF-8")
+		if !utf8.ValidString(content) || strings.ContainsRune(content, 0) {
+			v.fail(pointer, pkg.ErrNotUTF8, nil, "text must be UTF-8 without NUL characters")
 		}
 		if int64(len(content)) > int64(q.FileBytes) {
 			v.fail(pointer, pkg.ErrTooLarge, maximum(int64(q.FileBytes)), "text exceeds %d bytes", int64(q.FileBytes))
@@ -732,6 +738,9 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		text(at+"/content", f.Content)
 		if _, ok := syslib.Lookup(f.Name); f.AutoUpdate && (!ok || f.Content != "") {
 			v.fail(at+"/auto_update", pkg.ErrInconsistent, with(at+"/content"), "only an empty system library file can be auto-updated")
+		}
+		if f.ObjectID != nil && (f.AutoUpdate || f.Content != "") {
+			v.fail(at+"/object_id", pkg.ErrInconsistent, with(at+"/content"), "a binary library file has neither text nor auto-update")
 		}
 	}
 	for list, files := range map[string][]DraftFile{"graders": d.Graders, "attachments": d.Attachments} {

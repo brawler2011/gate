@@ -1882,13 +1882,18 @@ export interface components {
             name: string;
             content: string;
         };
-        /** @description A source file judge programs include by its name; names are unique in a draft and identify the file. */
+        /** @description A file judge programs include or load by its name; names are unique in a draft and identify the file. */
         ProblemDraftLibraryFile: {
             name: string;
-            /** @description Empty for an auto-updated file. */
+            /** @description Empty for an auto-updated or binary file. */
             content: string;
             /** @description The file is the system library file of its name from GET /lib, whose current text every build takes. Only an empty file named after a system library file can be auto-updated. */
             auto_update: boolean;
+            /**
+             * Format: uuid
+             * @description The stored bytes of a binary file, such as a jar Java programs get on their classpath; null for text.
+             */
+            object_id: string | null;
         };
         /** @description Sanitized HTML by section name; math is left as \(...\) and \[...\] for KaTeX, and images name their assets. */
         StatementPreview: {

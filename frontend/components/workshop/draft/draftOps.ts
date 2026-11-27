@@ -179,12 +179,12 @@ export const removeProgram = (draft: ProblemDraft, role: ListRole, name: string)
 
 export const addLibraryFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
-  library: [...draft.library, {name, content: "", auto_update: false}],
+  library: [...draft.library, {name, content: "", auto_update: false, object_id: null}],
 });
 
 export const addSystemFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
-  library: [...draft.library, {name, content: "", auto_update: true}],
+  library: [...draft.library, {name, content: "", auto_update: true, object_id: null}],
 });
 
 export const startAutoUpdate = (draft: ProblemDraft, name: string): ProblemDraft =>
