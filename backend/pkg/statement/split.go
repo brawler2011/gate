@@ -97,10 +97,35 @@ var includeGraphics = regexp.MustCompile(`\\includegraphics\s*(?:\[[^\]]*\])?\s*
 // Images lists the files \includegraphics shows.
 func Images(tex string) []string {
 	var names []string
-	for _, m := range includeGraphics.FindAllStringSubmatch(tex, -1) {
+	for _, m := range includeGraphics.FindAllStringSubmatch(uncommented(tex), -1) {
 		names = append(names, strings.TrimSpace(m[1]))
 	}
 	return names
+}
+
+// uncommented drops TeX comments: an unescaped % hides the rest of its line.
+func uncommented(tex string) string {
+	var b strings.Builder
+	for i := 0; i < len(tex); i++ {
+		switch tex[i] {
+		case '\\':
+			b.WriteByte(tex[i])
+			if i+1 < len(tex) {
+				i++
+				b.WriteByte(tex[i])
+			}
+			continue
+		case '%':
+			for i < len(tex) && tex[i] != '\n' {
+				i++
+			}
+			if i == len(tex) {
+				return b.String()
+			}
+		}
+		b.WriteByte(tex[i])
+	}
+	return b.String()
 }
 
 // graphicx tries these extensions after the name as given.

@@ -58,6 +58,11 @@ func (p pandocStub) HTML(_ context.Context, tex string) (string, []sandbox.Pando
 }
 
 // Polygon HTML keeps the sections in divs and MathJax in $$$; limits and samples are left to the problem.
+func TestImagesSkipsCommentedReferences(t *testing.T) {
+	tex := "% \\includegraphics{old.gif}\n50\\% \\includegraphics{a.png} % \\includegraphics{b.png}\n\\\\%\\includegraphics{c.png}"
+	require.Equal(t, []string{"a.png"}, Images(tex))
+}
+
 func TestSplitHTMLReadsPolygonSections(t *testing.T) {
 	page, err := os.ReadFile("../testdata/pcms2/a-plus-b/statements/.html/english/problem.html")
 	require.NoError(t, err)
