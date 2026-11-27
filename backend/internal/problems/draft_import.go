@@ -317,7 +317,7 @@ func (c *importConverter) scopeValidators(validators []spec.Program) error {
 	return nil
 }
 
-// Generators retain bundled testlib to preserve random seeds; other upstream copies may auto-update.
+// Upstream copies of system files auto-update, so old packages build with the current compiler.
 // Conflicting library texts are rejected unless all can use the system copy.
 func (c *importConverter) addLibrary(p *spec.Problem) error {
 	paths := map[string]spec.File{}
@@ -325,11 +325,11 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		paths[f.Path] = f
 	}
 	var order []string
-	texts, system, generated := map[string][]string{}, map[string]bool{}, map[string]bool{}
+	texts, system := map[string][]string{}, map[string]bool{}
 	pinned := map[string]bool{}
 	// sources holds a package path of each distinct text, for errors.
 	sources := map[string][]string{}
-	add := func(name string, f spec.File, generator bool) error {
+	add := func(name string, f spec.File) error {
 		if !model.ValidFileName(name) {
 			return spec.Fail(pkg.ErrFormat, "", name, "invalid library file name %s", name)
 		}
@@ -337,7 +337,6 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			order = append(order, name)
 			texts[name] = nil
 		}
-		generated[name] = generated[name] || generator
 		pinned[name] = pinned[name] || f.Pinned
 		// Charge text before retaining it so imports cannot exceed draft memory quotas.
 		if f.System {
@@ -360,7 +359,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		}
 		return nil
 	}
-	judge := func(program *spec.Program, generator bool) error {
+	judge := func(program *spec.Program) error {
 		if program == nil {
 			return nil
 		}
@@ -369,7 +368,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 				if !f.System && c.skip(f.Path) {
 					continue
 				}
-				if err := add(f.Name, f, generator); err != nil {
+				if err := add(f.Name, f); err != nil {
 					return err
 				}
 			}
@@ -380,24 +379,24 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			if !ok {
 				return spec.Fail(pkg.ErrUnknown, program.Path, program.Dependencies[name], "dependency %s of %s is not a library file", program.Dependencies[name], program.Path)
 			}
-			if err := add(name, f, generator); err != nil {
+			if err := add(name, f); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 	for _, program := range []*spec.Program{p.Checker, p.Interactor} {
-		if err := judge(program, false); err != nil {
+		if err := judge(program); err != nil {
 			return err
 		}
 	}
 	for i := range p.Validators {
-		if err := judge(&p.Validators[i], false); err != nil {
+		if err := judge(&p.Validators[i]); err != nil {
 			return err
 		}
 	}
 	for i := range p.Generators {
-		if err := judge(&p.Generators[i], true); err != nil {
+		if err := judge(&p.Generators[i]); err != nil {
 			return err
 		}
 	}
@@ -407,7 +406,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			if !f.System && c.skip(f.Path) {
 				continue
 			}
-			if err := add(f.Name, f, false); err != nil {
+			if err := add(f.Name, f); err != nil {
 				return err
 			}
 		}
@@ -427,7 +426,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			return spec.Fail(pkg.ErrUnknown, "", name, "unknown system library file %s", name)
 		case system[name] && len(list) > 0:
 			return spec.Fail(pkg.ErrDuplicate, "", name, "the package has its own %s and names the system one", name)
-		case system[name], upstream && !generated[name], upstream && len(list) == 1 && list[0] == current.Content:
+		case system[name], upstream:
 			file.AutoUpdate = true
 		case len(list) == 1:
 			file.Content = list[0]

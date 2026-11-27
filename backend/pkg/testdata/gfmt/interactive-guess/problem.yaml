@@ -28,3 +28,5 @@ solutions:
   wa.cpp: "WA"
   wa.py: "WA"
   wa.go: "WA"
+  tl.cpp: "TLE"
+  wa-then-tl.cpp: "WA"

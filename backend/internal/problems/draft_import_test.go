@@ -344,21 +344,12 @@ func TestImportMergesUpstreamTestlibVersions(t *testing.T) {
 	require.ErrorContains(t, err, "different files named testlib.h")
 }
 
-// Generator imports retain bundled testlib to preserve random seeds unless it matches the system copy.
-func TestImportKeepsGeneratorTestlib(t *testing.T) {
-	const pkgDir = "../../pkg/testdata/polygon/max-subarray"
-	plan, err := importDir(t, pkgDir, nil)
+// An old upstream testlib shared with a generator still auto-updates: pre-2023 copies do not compile with GCC 13+.
+func TestImportUpdatesGeneratorTestlib(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/max-subarray", nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
-	require.NoError(t, err)
-	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: string(original)}}, plan.draft.Library)
-
-	system, _ := syslib.Lookup("testlib.h")
-	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": system.Content})
-	require.NoError(t, err)
-	defer plan.Close()
-	require.True(t, plan.draft.Library[0].AutoUpdate)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
 }
 
 // Templates and GFMT packages must reference system testlib without copying it.
