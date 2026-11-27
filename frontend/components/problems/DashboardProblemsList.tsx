@@ -24,7 +24,10 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
     );
   }
 
-  const formatTimeLimit = (timeMs: number) => {
+  const formatTimeLimit = (timeMs: number | null) => {
+    if (timeMs === null) {
+      return "по решениям";
+    }
     if (timeMs % 1000 === 0) {
       return `${timeMs / 1000}с`;
     }

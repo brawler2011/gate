@@ -95,7 +95,7 @@ type GetProblemByIDRow struct {
 	ShortName      string    `json:"short_name"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
-	TimeLimitMs    int32     `json:"time_limit_ms"`
+	TimeLimitMs    *int32    `json:"time_limit_ms"`
 	MemoryLimitMb  int32     `json:"memory_limit_mb"`
 	IsTemplate     bool      `json:"is_template"`
 }

@@ -18,7 +18,7 @@ afterEach(() => {
 const generator = (name: string, source: string) => ({name, language: "cpp20", source});
 
 const draft: ProblemDraft = {
-  problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "standard", grading: "pass-fail", time_limit_ms: 1000,
+  problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "standard", grading: "pass-fail", time_limit_ms: 1000, time_rule: null,
   memory_limit_mb: 256, input_file: "", output_file: "", processes: 0, max_score: null, checker: null, interactor: null, validators: [],
   generators: [generator("first", "FIRST SOURCE"), generator("second", "SECOND SOURCE")], solutions: [],
   main_solution: null, statements: [], assets: [], testset: {id: "root", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []}, tests: [], library: [], graders: [], solution_name: "", attachments: [],

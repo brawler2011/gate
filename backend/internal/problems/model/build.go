@@ -109,6 +109,6 @@ type PackageIndex struct {
 }
 
 func NewPackageIndex(d Draft, statements []BuiltStatement, pdfs []StatementPDF, samples []Sample, files *StoredObject) PackageIndex {
-	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, Grading: d.Grading, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb, MaxScore: d.MaxScore,
+	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, Grading: d.Grading, TimeLimitMs: *d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb, MaxScore: d.MaxScore,
 		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: statements, PDFs: pdfs, Samples: samples, Assets: d.Assets, Files: files}
 }

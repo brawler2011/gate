@@ -1,6 +1,6 @@
 "use client";
 
-import {Badge, Box, Button, Code, Grid, Group, Menu, Modal, NavLink, ScrollArea, Stack, Text, TextInput} from "@mantine/core";
+import {Anchor, Badge, Box, Button, Code, Grid, Group, Menu, Modal, NavLink, ScrollArea, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
@@ -20,7 +20,7 @@ import {
   updateLibraryFile,
 } from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
-import {useSaveDraft} from "./draft/useDraft";
+import {objectUrl, useSaveDraft} from "./draft/useDraft";
 
 import type {FileList} from "./draft/draftOps";
 import type {ProblemDraft, ProblemDraftLibraryFile} from "@/contracts/core/v1/schema";
@@ -42,6 +42,13 @@ const RenameFile = ({name, description = "Под этим именем прог�
       </Grid.Col>
     </Grid>
   );
+};
+
+const libraryNote = (file: ProblemDraftLibraryFile): string | undefined => {
+  if (file.auto_update) {
+    return "автообновление";
+  }
+  return file.object_id ? "двоичный" : undefined;
 };
 
 const SolutionName = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
@@ -190,7 +197,7 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
                 key={file.name}
                 active={file.name === selected?.name}
                 label={file.name}
-                description={file.auto_update ? "автообновление" : undefined}
+                description={libraryNote(file)}
                 onClick={() => open(file.name)}
               />
             ))}
@@ -229,7 +236,25 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
             />
           </SectionPaper>
         )}
-        {selected && !selected.auto_update && (
+        {selected?.object_id && (
+          <SectionPaper>
+            <Stack gap="md">
+              <RenameFile key={`rename:${selected.name}`} name={selected.name} saving={isSaving} onRename={(name) => void handleRename(selected.name, name)} />
+              <Text size="sm" c="dimmed">
+                Двоичный файл из пакета. Программы жюри на Java получают jar-файлы библиотеки в classpath.
+              </Text>
+              <Group justify="space-between">
+                <Button variant="subtle" color="red" loading={isSaving} onClick={() => void save((current) => removeLibraryFile(current, selected.name))}>
+                  Удалить
+                </Button>
+                <Anchor href={objectUrl(problemId, selected.object_id)} target="_blank" rel="noreferrer" size="sm">
+                  Скачать
+                </Anchor>
+              </Group>
+            </Stack>
+          </SectionPaper>
+        )}
+        {selected && !selected.auto_update && !selected.object_id && (
           <SectionPaper>
             <Stack gap="md">
               {systemCopy && (

@@ -18,10 +18,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// defaultMemoryMb is the typical system default the spec names for packages without a memory limit.
+const defaultMemoryMb = 2048
+
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, err
+	}
+	if info, err := fs.Stat(fsys, "data"); err != nil || !info.IsDir() {
+		return nil, spec.Fail(pkg.ErrUnsupported, "data", "", "Found problem.yaml, but this is not an ICPC package: there is no data/ directory with tests")
 	}
 	var version struct {
 		Version string `yaml:"problem_format_version"`
@@ -46,7 +52,7 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
-	p := &spec.Problem{Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	p := &spec.Problem{Type: "standard", Grading: "pass-fail", MemoryLimitMb: defaultMemoryMb, TimeRule: &spec.TimeRule{AcceptedFactor: 5, TLEFactor: 2, ResolutionMs: 1000}}
 	validation := strings.Fields(prob.Validation)
 	interactive := slices.Contains(validation, "interactive")
 	types := strings.Fields(prob.Type)
@@ -66,6 +72,12 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	}
 	custom := len(validation) > 0 && validation[0] == "custom"
 	if prob.Limits != nil {
+		if prob.Limits.TimeMultiplier > 0 {
+			p.TimeRule.AcceptedFactor = prob.Limits.TimeMultiplier
+		}
+		if prob.Limits.TimeSafetyMargin > 0 {
+			p.TimeRule.TLEFactor = prob.Limits.TimeSafetyMargin
+		}
 		if prob.Limits.Time > 0 {
 			p.TimeLimitMs = int(prob.Limits.Time * 1000)
 		}
@@ -81,6 +93,9 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	output, err := collect("output_validators")
 	if err != nil {
 		return nil, err
+	}
+	if (custom || interactive) && len(output) == 0 {
+		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "problem.yaml asks for a custom output validator, but output_validators/ is missing or empty")
 	}
 	if len(output) > 1 {
 		return nil, spec.Fail(pkg.ErrPackageLayout, "output_validators", "", "package has %d output validators; Gate supports one", len(output))
@@ -117,9 +132,27 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if p.Testset, err = tree.read(); err != nil {
 		return nil, err
 	}
+	if err := hasTests(fsys, &p.Testset); err != nil {
+		return nil, err
+	}
 	p.Statements = statements(fsys, p)
 	prob.Name.title(p)
 	return p, nil
+}
+
+// hasTests explains a data/ without test cases, which generator-based tools leave until they run.
+func hasTests(fsys fs.FS, root *spec.Group) error {
+	for g := range root.All() {
+		if len(g.Tests) > 0 {
+			return nil
+		}
+	}
+	for _, generator := range []string{"generators/generators.yaml", "data/generator.sh", "data/generator", "data/generate.sh"} {
+		if regular(fsys, generator) {
+			return spec.Fail(pkg.ErrUnsupported, generator, "", "data/ has no test cases because %s makes them, and Gate does not run it: generate the tests and import the package with them", generator)
+		}
+	}
+	return spec.Fail(pkg.ErrPackageLayout, "data", "", "data/ has no test cases: add .in files, with .ans answers, under data/sample and data/secret")
 }
 
 // The ICPC default output validator, called with the validator_flags of the problem.

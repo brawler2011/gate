@@ -31,7 +31,7 @@ const emptyDraft = (): ProblemDraft => ({
   title: "A",
   short_name: "a",
   type: "standard", grading: "pass-fail",
-  time_limit_ms: 1000,
+  time_limit_ms: 1000, time_rule: null,
   memory_limit_mb: 256, input_file: "", output_file: "", processes: 0,
   max_score: null,
   checker: null,

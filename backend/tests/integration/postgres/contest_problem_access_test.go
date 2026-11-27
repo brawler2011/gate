@@ -265,7 +265,7 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 	details, err := reader.GetContestProblemDetails(visitor, contest.ID, f.problem)
 	require.NoError(t, err)
 	require.Equal(t, before.Title, details.Problem.Title)
-	require.Equal(t, before.TimeLimitMs, details.Problem.TimeLimitMs)
+	require.Equal(t, before.TimeLimitMs, *details.Problem.TimeLimitMs)
 	require.Equal(t, f.original, statements.pack)
 }
 

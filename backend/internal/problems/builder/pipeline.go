@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"math"
+	"slices"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -119,6 +121,9 @@ type execution struct {
 	solutions map[string][]judging.TestResult
 	// Solutions that run only to be judged report compilation errors as their verdict.
 	uncompiled map[string]bool
+	// What the time rule found wrong with a solution's run times, by name; timeFailure stops the build.
+	timing      map[string]string
+	timeFailure error
 }
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
@@ -151,7 +156,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(work, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: work, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), tests: testFiles(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: work, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), tests: testFiles(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}, timing: map[string]string{}}
 	defer e.releaseComponents()
 	local := map[uuid.UUID]archive.BuiltTest{}
 	for id, t := range e.tests {
@@ -198,7 +203,8 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 			return uuid.Nil, err
 		}
 	}
-	index := model.NewPackageIndex(s.Draft, statements, pdfs, e.samples, files)
+	// The run may have derived the time limit into the execution's draft.
+	index := model.NewPackageIndex(e.build.Snapshot.Draft, statements, pdfs, e.samples, files)
 	if len(s.Draft.Graders) > 0 {
 		index.Languages = p.Languages.Graded(s.Draft.GraderNames(), s.Draft.SolutionName)
 	}
@@ -460,6 +466,18 @@ func (e *execution) compile(ctx context.Context) error {
 			needed = append(needed, p)
 		}
 	}
+	library := map[string][]byte{}
+	for i := range d.Library {
+		f := &d.Library[i]
+		library[f.Name] = []byte(f.Text())
+		if f.ObjectID != nil {
+			data, err := os.ReadFile(filepath.Join(e.dir.root, "objects", f.ObjectID.String()))
+			if err != nil {
+				return fail("compile", 0, "infrastructure", err)
+			}
+			library[f.Name] = data
+		}
+	}
 	var mu sync.Mutex
 	return ordered(ctx, len(needed), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
 		p := needed[i]
@@ -468,9 +486,7 @@ func (e *execution) compile(ctx context.Context) error {
 		if p.role == "solution" {
 			program.Graders = d.GraderFiles()
 		} else {
-			for i := range d.Library {
-				program.Deps[d.Library[i].Name] = []byte(d.Library[i].Text())
-			}
+			program.Deps = library
 		}
 		compiled, err := e.pipeline.Programs.Get(ctx, program, s.Limits.Compile)
 		if err != nil && judged[p.key] && processKind(err) == "author" {
@@ -493,9 +509,10 @@ func (e *execution) compile(ctx context.Context) error {
 		return nil
 	})
 }
-func (e *execution) solutionLimits() sandbox.FileRunLimits {
+// solutionLimits runs solutions under timeLimit, a reference time that the calibration scales to this machine.
+func (e *execution) solutionLimits(timeLimit time.Duration) sandbox.FileRunLimits {
 	d := e.build.Snapshot.Draft
-	return e.build.Snapshot.Limits.Solution(e.pipeline.Calibration().Limit(time.Duration(d.TimeLimitMs)*time.Millisecond), bytesize.Size(d.MemoryLimitMb)*bytesize.MiB)
+	return e.build.Snapshot.Limits.Solution(e.pipeline.Calibration().Limit(timeLimit), bytesize.Size(d.MemoryLimitMb)*bytesize.MiB)
 }
 
 type testResult struct {
@@ -503,12 +520,20 @@ type testResult struct {
 	sample    *model.Sample
 }
 
+// runTests judges every solution as the judge would. Under a time rule, accepted solutions run first: their times
+// derive or check the limit, and the others then run with the margin the rule asks of solutions that must time out.
 func (e *execution) runTests(ctx context.Context) error {
-	tests := e.build.Snapshot.Draft.Tests
+	d := &e.build.Snapshot.Draft
+	tests := d.Tests
+	limit := e.build.Snapshot.Limits.TimeCeiling
+	if d.TimeLimitMs != nil {
+		limit = time.Duration(*d.TimeLimitMs) * time.Millisecond
+	}
+	first := func(sol *model.DraftSolution) bool { return d.TimeRule == nil || sol.MustPass() }
 	results := make([]testResult, len(tests))
 	err := ordered(ctx, len(tests), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
 		var err error
-		results[i], err = e.test(ctx, tests[i])
+		results[i], err = e.test(ctx, tests[i], first, limit)
 		return err
 	})
 	if err != nil {
@@ -522,10 +547,143 @@ func (e *execution) runTests(ctx context.Context) error {
 			e.samples = append(e.samples, *r.sample)
 		}
 	}
+	if d.TimeRule == nil || !e.settleTimeLimit() {
+		return nil
+	}
+	rest := []string{}
+	for i := range d.Solutions {
+		if sol := &d.Solutions[i]; sol.Runs() && !e.uncompiled[sol.Name] && !first(sol) {
+			rest = append(rest, sol.Name)
+		}
+	}
+	if len(rest) == 0 {
+		return nil
+	}
+	tl := *d.TimeLimitMs
+	margin := time.Duration(math.Ceil(float64(tl)*d.TimeRule.TLEFactor)) * time.Millisecond
+	rejudged := make([]map[string]judging.TestResult, len(tests))
+	err = ordered(ctx, len(tests), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
+		var err error
+		rejudged[i], err = e.rejudge(ctx, tests[i], rest, margin)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range rejudged {
+		for _, name := range rest {
+			e.solutions[name] = append(e.solutions[name], r[name])
+		}
+	}
+	for i := range d.Solutions {
+		if sol := &d.Solutions[i]; slices.Contains(rest, sol.Name) {
+			e.applyTimeLimit(sol, tl)
+		}
+	}
 	return nil
 }
 
-func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult, error) {
+// rejudge judges solutions on a test that test already made, from its files.
+func (e *execution) rejudge(ctx context.Context, test model.DraftTest, names []string, limit time.Duration) (map[string]judging.TestResult, error) {
+	d := e.build.Snapshot.Draft
+	files := e.tests[test.ID]
+	inputID, err := e.upload(ctx, files.Input)
+	if err != nil {
+		return nil, fail("solutions", test.Ordinal, "infrastructure", err)
+	}
+	defer e.release(inputID)
+	var answerID string
+	if _, err := os.Stat(filepath.Join(e.dir.root, files.Answer)); err == nil {
+		if answerID, err = e.upload(ctx, files.Answer); err != nil {
+			return nil, fail("solutions", test.Ordinal, "infrastructure", err)
+		}
+		defer e.release(answerID)
+	}
+	args := d.Group(test.GroupID).CheckerArgs
+	results := map[string]judging.TestResult{}
+	for _, name := range names {
+		result, err := e.judge(ctx, name, test, args, inputID, answerID, limit)
+		if err != nil {
+			return nil, fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", name, err))
+		}
+		results[name] = result
+	}
+	return results, nil
+}
+
+// settleTimeLimit derives a missing limit from the accepted solutions, or checks that they fit the given one.
+// It reports false when they failed, which checkSolutions reports, so the rest need not run.
+func (e *execution) settleTimeLimit() bool {
+	d := &e.build.Snapshot.Draft
+	rule := d.TimeRule
+	var slowest time.Duration
+	accepted := false
+	for i := range d.Solutions {
+		sol := &d.Solutions[i]
+		if !sol.Runs() || !sol.MustPass() || e.uncompiled[sol.Name] {
+			continue
+		}
+		accepted = true
+		for _, t := range e.solutions[sol.Name] {
+			if t.Verdict != string(sandbox.StatusOK) {
+				if t.Verdict == string(sandbox.StatusTLE) && d.TimeLimitMs == nil {
+					e.timing[sol.Name] = fmt.Sprintf("the build runs accepted solutions for at most %s while it derives the time limit", e.build.Snapshot.Limits.TimeCeiling)
+				}
+				return false
+			}
+			slowest = max(slowest, time.Duration(t.Time))
+		}
+	}
+	if d.TimeLimitMs == nil {
+		if !accepted {
+			e.timeFailure = errors.New("the time limit is derived from accepted solutions, but none runs")
+			return false
+		}
+		tl := rule.Derive(slowest)
+		d.TimeLimitMs, e.pkg.Manifest.Limits.TimeMs = &tl, tl
+		return true
+	}
+	bound := float64(*d.TimeLimitMs) / rule.AcceptedFactor
+	for i := range d.Solutions {
+		sol := &d.Solutions[i]
+		if !sol.Runs() || !sol.MustPass() || e.uncompiled[sol.Name] {
+			continue
+		}
+		for _, t := range e.solutions[sol.Name] {
+			if ms := float64(t.Time) / float64(time.Millisecond); ms > bound {
+				e.timing[sol.Name] = fmt.Sprintf("test %d: runs %.0f ms, but the time rule needs accepted solutions within the limit / %g = %.0f ms", t.TestNumber, ms, rule.AcceptedFactor, bound)
+				break
+			}
+		}
+	}
+	return true
+}
+
+// applyTimeLimit turns runs over the limit into TLE, since the rest ran with a margin above it, and checks
+// that a solution which must time out exceeds the margin rather than the limit alone.
+func (e *execution) applyTimeLimit(sol *model.DraftSolution, tl int) {
+	d := &e.build.Snapshot.Draft
+	timedOut, over := false, 0
+	results := e.solutions[sol.Name]
+	for i := range results {
+		r := &results[i]
+		switch {
+		case r.Verdict == string(sandbox.StatusTLE):
+			timedOut = true
+		// An interactor that rejected the solution first decides the verdict, as the judge does, so only finished interactive runs change.
+		case r.Time > int64(tl)*int64(time.Millisecond) && (!spec.Interactive(d.Type) || r.Verdict == string(sandbox.StatusOK) || r.Verdict == "POINTS"):
+			over = r.TestNumber
+			r.Verdict, r.Score = string(sandbox.StatusTLE), nil
+			r.Award(0, d.Grading)
+		}
+	}
+	if sol.MustTimeOut() && !timedOut && over != 0 {
+		e.timing[sol.Name] = fmt.Sprintf("test %d: over the limit, but the time rule needs solutions that must time out to run at least %g times the limit", over, d.TimeRule.TLEFactor)
+	}
+}
+
+// test makes the test's files and judges the solutions that judged selects, under limit.
+func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(*model.DraftSolution) bool, limit time.Duration) (testResult, error) {
 	s := e.build.Snapshot
 	tr := testResult{solutions: map[string]judging.TestResult{}}
 	aux := s.Limits.Auxiliary
@@ -578,7 +736,10 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 	}
 	var outputID, answerID string
+	// answerer is the solution whose output the checker grades as the answer, if any.
+	var answerer *string
 	if spec.Interactive(s.Draft.Type) {
+		answerer = s.Draft.MainSolution
 		var answer sandbox.File
 		if test.Answer.Mode == "provided" {
 			id, err := e.upload(ctx, files.Answer)
@@ -590,13 +751,13 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		}
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(group.CheckerArgs), s.Draft.Processes, sandbox.FileID(inputID), answer, e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(group.CheckerArgs), s.Draft.Processes, sandbox.FileID(inputID), answer, e.solutionLimits(limit), aux)
 		if err != nil {
 			return tr, fail("interact", test.Ordinal, "infrastructure", err)
 		}
 		ids = append(ids, result.OutputID)
 		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
-			return tr, fail("interact", test.Ordinal, r.Verdict, errors.New(r.Message))
+			return tr, fail("interact", test.Ordinal, r.Verdict, answerFailure(answerer, r.Verdict, r.Message))
 		}
 		outputID = result.OutputID
 		// Without a provided answer, the main solution's interactor output becomes the answer for later judging.
@@ -619,16 +780,16 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 		if test.Answer.Mode == "provided" {
 			solution = s.Draft.MainSolution
 		}
-		outputID = answerID
+		outputID, answerer = answerID, solution
 		if solution != nil {
 			sol := e.compiled[programKey("solution", *solution)]
-			result, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
+			result, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits(limit))
 			if err != nil {
 				return tr, fail("answer", test.Ordinal, "infrastructure", err)
 			}
 			ids = append(ids, result.OutputID)
 			if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-				return tr, fail("answer", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
+				return tr, fail("answer", test.Ordinal, string(result.Status), answerFailure(solution, string(result.Status), fmt.Sprintf("exit %d: %s", result.ExitStatus, result.Stderr)))
 			}
 			outputID = result.OutputID
 			if test.Answer.Mode == "generated" {
@@ -646,14 +807,15 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 			return tr, fail("check", test.Ordinal, "infrastructure", err)
 		}
 		if r := e.award(test, string(result.Status), result.Score, result.Message); r.Verdict != string(sandbox.StatusOK) {
-			return tr, fail("check", test.Ordinal, r.Verdict, errors.New(r.Message))
+			return tr, fail("check", test.Ordinal, r.Verdict, answerFailure(answerer, r.Verdict, r.Message))
 		}
 	}
-	for _, sol := range s.Draft.Solutions {
-		if !sol.Runs() || e.uncompiled[sol.Name] {
+	for i := range s.Draft.Solutions {
+		sol := &s.Draft.Solutions[i]
+		if !sol.Runs() || e.uncompiled[sol.Name] || !judged(sol) {
 			continue
 		}
-		result, err := e.judge(ctx, sol.Name, test, group.CheckerArgs, inputID, answerID)
+		result, err := e.judge(ctx, sol.Name, test, group.CheckerArgs, inputID, answerID, limit)
 		if err != nil {
 			return tr, fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
 		}
@@ -684,11 +846,19 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) (testResult,
 	return tr, nil
 }
 
+// answerFailure names the solution whose output had to earn the test's points to serve as its answer.
+func answerFailure(solution *string, verdict, message string) error {
+	if solution == nil {
+		return errors.New(message)
+	}
+	return fmt.Errorf("solution %s gets %s, but answers come from a solution with the full score; choose another main solution: %s", *solution, verdict, message)
+}
+
 // judge runs a solution on a test as the judge runs submissions. A TLE runs again before it counts,
 // since concurrent steps contend for the CPU.
-func (e *execution) judge(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string) (judging.TestResult, error) {
+func (e *execution) judge(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string, limit time.Duration) (judging.TestResult, error) {
 	for rerun := true; ; rerun = false {
-		result, err := e.judgeOnce(ctx, name, test, args, inputID, answerID)
+		result, err := e.judgeOnce(ctx, name, test, args, inputID, answerID, limit)
 		if err != nil || !rerun || result.Verdict != string(sandbox.StatusTLE) {
 			return result, err
 		}
@@ -703,7 +873,7 @@ func (e *execution) award(test model.DraftTest, status string, score *float64, m
 }
 
 // judgeOnce passes args, those of the test's group, to the checker or interactor.
-func (e *execution) judgeOnce(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string) (judging.TestResult, error) {
+func (e *execution) judgeOnce(ctx context.Context, name string, test model.DraftTest, args []string, inputID, answerID string, limit time.Duration) (judging.TestResult, error) {
 	s := e.build.Snapshot
 	aux := s.Limits.Auxiliary
 	sol := e.compiled[programKey("solution", name)]
@@ -711,7 +881,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, test model.Draft
 	var outputID string
 	if spec.Interactive(s.Draft.Type) {
 		intr := e.compiled["interactor"]
-		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(args), s.Draft.Processes, sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
+		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, s.Draft.Interactor.Jury(intr.executable, intr.language).With(args), s.Draft.Processes, sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(limit), aux)
 		if err != nil {
 			return result, err
 		}
@@ -719,7 +889,7 @@ func (e *execution) judgeOnce(ctx context.Context, name string, test model.Draft
 		outputID, result.Verdict, result.Score, result.Time = r.OutputID, string(r.Status), r.Score, e.pipeline.Calibration().Normalize(r.SolutionResult.Time).Nanoseconds()
 		result.Award(test.Points, s.Draft.Grading)
 	} else {
-		r, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
+		r, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits(limit))
 		if err != nil {
 			return result, err
 		}
@@ -764,6 +934,14 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 			result.Points = &score
 		}
 		result.Mismatch = sol.Mismatch(!e.uncompiled[sol.Name], verdicts, result.Points)
+		if result.Mismatch != "" && sol.MustPass() && d.Grading == spec.GradingPoints {
+			result.Mismatch += "; a partial solution should expect its score instead"
+		}
+		if result.Mismatch == "" {
+			result.Mismatch = e.timing[sol.Name]
+		} else if note := e.timing[sol.Name]; note != "" {
+			result.Mismatch += "; " + note
+		}
 		if result.Mismatch != "" {
 			mismatches = append(mismatches, fmt.Sprintf("solution %s: %s", sol.Name, result.Mismatch))
 		}
@@ -771,6 +949,9 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 	}
 	if err := e.pipeline.Repo.RecordBuildSolutions(ctx, e.build.ID, *e.build.LeaseToken, results); err != nil {
 		return fail("solutions", 0, "infrastructure", err)
+	}
+	if e.timeFailure != nil {
+		mismatches = append(mismatches, e.timeFailure.Error())
 	}
 	if len(mismatches) > 0 {
 		return fail("solutions", 0, "author", errors.New(strings.Join(mismatches, "\n")))

@@ -98,8 +98,8 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				require.NotEmpty(t, s.Legend, s.Language)
 				require.NotEmpty(t, s.Output+s.Interaction, s.Language)
 			}
-			// testlib programs keep the library file they include.
-			if (d.Checker != nil && d.Checker.Protocol == sandbox.ProtocolTestlib) || (d.Interactor != nil && d.Interactor.Protocol == sandbox.ProtocolTestlib) {
+			// Programs including testlib.h keep it in the library.
+			if (d.Checker != nil && strings.Contains(d.Checker.Source, "testlib.h")) || (d.Interactor != nil && strings.Contains(d.Interactor.Source, "testlib.h")) {
 				require.NotNil(t, libraryFile(d, "testlib.h"))
 			}
 		})
@@ -408,6 +408,30 @@ func importDir(t *testing.T, source string, extra map[string]string) (*draftImpo
 	require.NoError(t, w.AddFS(os.DirFS(dir)))
 	require.NoError(t, w.Close())
 	return newImportUseCase(t).parseImport(context.Background(), &archive, uuid.New(), 1)
+}
+
+// An archive of one folder fails for what that folder lacks; files at the root are the package itself.
+func TestImportExplainsArchiveWithoutPackage(t *testing.T) {
+	for name, files := range map[string][]string{
+		"folder": {"alter/problem.properties"},
+		"root":   {"problem.properties", "checker/Check.java"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			source := t.TempDir()
+			for _, f := range files {
+				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(source, f)), 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(source, f), []byte("name = Alter\n"), 0o600))
+			}
+			_, err := importDir(t, source, nil)
+			require.ErrorContains(t, err, "has only problem.properties")
+		})
+	}
+	source := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(source, "p", "problem.xml"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(source, "p", "problem.xml", "junk.txt"), nil, 0o600))
+	_, err := importDir(t, source, nil)
+	var coded *pkg.Error
+	require.ErrorAs(t, err, &coded, "an unreadable package is a client error")
 }
 
 // Tests name generators by file stem, so echo.cpp and echo.py together are ambiguous.

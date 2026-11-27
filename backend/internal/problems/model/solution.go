@@ -21,6 +21,10 @@ type DraftSolution struct {
 
 func (s *DraftSolution) Runs() bool { return len(s.Verdicts) > 0 }
 
+// MustPass and MustTimeOut name the solutions whose run times a time rule relates to the limit.
+func (s *DraftSolution) MustPass() bool    { return slices.Equal(s.Verdicts, []string{"OK"}) }
+func (s *DraftSolution) MustTimeOut() bool { return slices.Equal(s.Verdicts, []string{"TLE"}) }
+
 type TestVerdict struct {
 	Ordinal int
 	Verdict string

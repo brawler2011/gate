@@ -39,7 +39,9 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [shortName, setShortName] = useState(draft.short_name);
   const [type, setType] = useState<ProblemDraft["type"]>(draft.type);
   const [grading, setGrading] = useState<ProblemDraft["grading"]>(draft.grading);
-  const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
+  const [timeLimit, setTimeLimit] = useState<number | null>(draft.time_limit_ms);
+  const [lastTimeLimit, setLastTimeLimit] = useState(draft.time_limit_ms ?? 1000);
+  const rule = draft.time_rule;
   const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
   const [mainSolution, setMainSolution] = useState(draft.main_solution);
   const [inputFile, setInputFile] = useState(draft.input_file);
@@ -117,14 +119,34 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
             </Grid.Col>
           )}
           <Grid.Col span={{base: 12, sm: 6}}>
-            <NumberInput
-              label="Ограничение по времени (мс)"
-              value={timeLimit}
-              onChange={(value) => setTimeLimit(typeof value === "number" ? value : timeLimit)}
-              min={100}
-              max={60000}
-              step={100}
-            />
+            <Stack gap="xs">
+              <NumberInput
+                label="Ограничение по времени (мс)"
+                description={
+                  timeLimit === null && rule
+                    ? `Сборка берёт самое медленное принятое решение × ${rule.accepted_factor} с шагом ${rule.resolution_ms} мс; итог виден в списке пакетов`
+                    : undefined
+                }
+                value={timeLimit ?? ""}
+                disabled={timeLimit === null}
+                onChange={(value) => {
+                  if (typeof value === "number") {
+                    setTimeLimit(value);
+                    setLastTimeLimit(value);
+                  }
+                }}
+                min={100}
+                max={60000}
+                step={100}
+              />
+              {rule && (
+                <Switch
+                  label="Вычислять по времени решений"
+                  checked={timeLimit === null}
+                  onChange={(e) => setTimeLimit(e.currentTarget.checked ? null : lastTimeLimit)}
+                />
+              )}
+            </Stack>
           </Grid.Col>
           <Grid.Col span={{base: 12, sm: 6}}>
             <NumberInput

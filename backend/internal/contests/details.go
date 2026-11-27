@@ -90,7 +90,7 @@ func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, contestID,
 		return nil, err
 	}
 	statementVisible := a.Can(accessmodel.ContestViewStatements)
-	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
+	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: &link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
 	result := &ContestProblemDetails{Link: link, ProblemDetails: problemsmodel.ProblemDetails{Problem: problem}, Assets: map[string]string{}}
 	if statementVisible {
 		content := r.statements.ReadStatement(ctx, id, link.PackageID, "")

@@ -87,6 +87,9 @@ func TestBuiltPackageImportsBackAsDraft(t *testing.T) {
 				materialize(local.Answer, test.Answer.ObjectID, "generated answer\n")
 				built[test.ID] = local
 			}
+			if plan.draft.TimeLimitMs == nil {
+				plan.draft.TimeLimitMs = new(1000) // as the build derives it
+			}
 			data := writeArchive(t, plan, built)
 			z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 			require.NoError(t, err)

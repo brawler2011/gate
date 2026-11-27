@@ -72,7 +72,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	packageRoot, err := detectImportRoot(tree)
 	if err != nil {
-		return nil, err
+		return nil, uncoded(err, pkg.ErrPackageLayout, "the package cannot be read")
 	}
 	problem, err := formats.Read(packageRoot)
 	if err != nil {
@@ -88,30 +88,42 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	return result, nil
 }
 func detectImportRoot(root string) (string, error) {
-	if _, err := formats.DetectFormat(root); err == nil {
+	_, rootErr := formats.DetectFormat(root)
+	if rootErr == nil {
 		return root, nil
 	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return "", fmt.Errorf("readdir: %w", err)
 	}
-	found := ""
+	found, files := "", false
+	var folders []error
 	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".") || entry.Name() == "__MACOSX" {
+			continue
+		}
 		if !entry.IsDir() {
+			files = true
 			continue
 		}
 		path := filepath.Join(root, entry.Name())
-		if _, err := formats.DetectFormat(path); err == nil {
+		_, err := formats.DetectFormat(path)
+		if err == nil {
 			if found != "" {
 				return "", spec.Fail(pkg.ErrPackageLayout, "", "", "multiple packages in archive")
 			}
 			found = path
 		}
+		folders = append(folders, err)
 	}
-	if found == "" {
-		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "package root not found")
+	switch {
+	case found != "":
+		return found, nil
+	// An archive of one folder fails for what that folder lacks.
+	case len(folders) == 1 && !files:
+		return "", folders[0]
 	}
-	return found, nil
+	return "", rootErr
 }
 func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (importObject, error) {
 	f, err := os.Open(path)
@@ -136,9 +148,12 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 
 func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
-	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, Grading: p.Grading, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
-		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Processes: p.Processes, SolutionName: p.SolutionName, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
+	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, Grading: p.Grading, MemoryLimitMb: p.MemoryLimitMb,
+		DraftContent: model.DraftContent{TimeRule: p.TimeRule, InputFile: p.InputFile, OutputFile: p.OutputFile, Processes: p.Processes, SolutionName: p.SolutionName, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
 			Library: []model.DraftLibraryFile{}, Graders: []model.DraftFile{}, Attachments: []model.DraftFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
+	if p.TimeLimitMs > 0 {
+		c.draft.TimeLimitMs = &p.TimeLimitMs
+	}
 	if err := c.convert(ctx, p); err != nil {
 		return err
 	}
@@ -329,6 +344,8 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	pinned := map[string]bool{}
 	// sources holds a package path of each distinct text, for errors.
 	sources := map[string][]string{}
+	// blobs holds an object of each distinct binary file, such as a jar, by name.
+	blobs := map[string][]uuid.UUID{}
 	add := func(name string, f spec.File) error {
 		if !model.ValidFileName(name) {
 			return spec.Fail(pkg.ErrFormat, "", name, "invalid library file name %s", name)
@@ -343,6 +360,23 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			if !system[name] {
 				system[name] = true
 				return c.charge(0)
+			}
+			return nil
+		}
+		if binary, err := c.binary(f.Path); err != nil || binary {
+			if err != nil {
+				return err
+			}
+			oid, err := c.object(f.Path, "library")
+			if err != nil {
+				return err
+			}
+			if !slices.ContainsFunc(blobs[name], func(id uuid.UUID) bool { return c.digest(id) == c.digest(oid) }) {
+				if err := c.charge(0); err != nil {
+					return err
+				}
+				blobs[name] = append(blobs[name], oid)
+				sources[name] = append(sources[name], f.Path)
 			}
 			return nil
 		}
@@ -420,6 +454,11 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			upstream = upstream && current.IsUpstream(text)
 		}
 		switch {
+		case len(blobs[name]) > 0 && (len(list) > 0 || system[name] || len(blobs[name]) > 1):
+			return spec.Fail(pkg.ErrDuplicate, strings.Join(sources[name], ", "), name,
+				"programs include different files named %s: %s; a problem has one library file of each name, so rename one of them", name, strings.Join(sources[name], ", "))
+		case len(blobs[name]) == 1:
+			file.ObjectID = &blobs[name][0]
 		case pinned[name] && len(list) == 1:
 			file.Content = list[0]
 		case system[name] && !known:
@@ -749,10 +788,41 @@ func (c *importConverter) readText(path, charset string) (string, error) {
 	if err != nil {
 		return "", spec.Fail(pkg.ErrNotUTF8, path, "", "cannot read text of %s: %v", path, err)
 	}
+	if strings.ContainsRune(text, 0) {
+		return "", spec.Fail(pkg.ErrNotUTF8, path, "", "%s is a binary file, but Gate needs it as text", path)
+	}
 	if converted && !slices.Contains(c.converted, path) {
 		c.converted = append(c.converted, path)
 	}
 	return text, nil
+}
+
+// binary reports a file with a NUL byte near its start, as Git tells binary files from text.
+func (c *importConverter) binary(path string) (bool, error) {
+	full, err := c.file(path)
+	if err != nil {
+		return false, err
+	}
+	f, err := os.Open(full)
+	if err != nil {
+		return false, fmt.Errorf("open: %w", err)
+	}
+	defer f.Close()
+	head := make([]byte, 8000)
+	n, err := io.ReadFull(f, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return false, fmt.Errorf("read: %w", err)
+	}
+	return bytes.IndexByte(head[:n], 0) >= 0, nil
+}
+
+func (c *importConverter) digest(oid uuid.UUID) string {
+	for _, o := range c.result.objects {
+		if o.temporaryID == oid {
+			return o.spec.SHA256
+		}
+	}
+	return ""
 }
 
 // Charge every draft entry, even when several entries reference the same source file.
@@ -773,7 +843,7 @@ func (c *importConverter) object(path, purpose string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if c.textTests && purpose != "asset" {
+	if c.textTests && purpose != "asset" && purpose != "library" {
 		if full, err = c.toLF(full); err != nil {
 			return uuid.Nil, err
 		}

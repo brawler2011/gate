@@ -32,8 +32,10 @@ type Sample struct {
 type Problem struct {
 	Letter                     string
 	Title                      string
-	TimeLimitMs, MemoryLimitMb int
-	InputFile, OutputFile      string
+	// TimeLimitMs is nil in a draft preview while the build derives the limit; the field stays empty.
+	TimeLimitMs           *int
+	MemoryLimitMb         int
+	InputFile, OutputFile string
 	// Sections in Order; empty ones are left out.
 	Sections []Section
 	Samples  []Sample
@@ -127,7 +129,11 @@ func NewDocument(c Contest) Document {
 		if p.Assets != "" {
 			w.text(fmt.Sprintf("\\graphicspath{{%s/}}\n", p.Assets))
 		}
-		w.text(fmt.Sprintf("\\begin{problem}{%s}{%s}{%s}{%s}{%s}\n", escape(name), stream(p.InputFile, "стандартный ввод", "standard input", russian), stream(p.OutputFile, "стандартный вывод", "standard output", russian), timeLimit(p.TimeLimitMs, russian), memoryLimit(p.MemoryLimitMb, russian)))
+		var limit string
+		if p.TimeLimitMs != nil {
+			limit = timeLimit(*p.TimeLimitMs, russian)
+		}
+		w.text(fmt.Sprintf("\\begin{problem}{%s}{%s}{%s}{%s}{%s}\n", escape(name), stream(p.InputFile, "стандартный ввод", "standard input", russian), stream(p.OutputFile, "стандартный вывод", "standard output", russian), limit, memoryLimit(p.MemoryLimitMb, russian)))
 		section := func(s Section) {
 			if h, ok := headings[s.Name]; ok {
 				w.text(h + "\n")

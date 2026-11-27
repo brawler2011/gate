@@ -128,7 +128,7 @@ func (w *BookletWorker) compile(ctx context.Context, job contestsmodel.BookletJo
 		if err != nil {
 			return err
 		}
-		limits := problemsmodel.PrintedLimits{TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, InputFile: p.InputFile, OutputFile: p.OutputFile}
+		limits := problemsmodel.PrintedLimits{TimeLimitMs: &p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, InputFile: p.InputFile, OutputFile: p.OutputFile}
 		printedProblem := problemsmodel.PrintedProblem(p.Title, limits, printed.Statement, printed.Samples)
 		// Problems may show different images under one name.
 		printedProblem.Letter, printedProblem.Assets = contestsmodel.ProblemLetter(p.Ordinal), fmt.Sprintf("assets/%d", n)

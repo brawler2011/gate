@@ -192,7 +192,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
                         <TruncatedWithCopy value={problem.id} />
                       </Table.Td>
                       <Table.Td>
-                        <Text className={classes.metaCell}>{problem.time_limit} мс</Text>
+                        <Text className={classes.metaCell}>{problem.time_limit === null ? "по решениям" : `${problem.time_limit} мс`}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Text className={classes.metaCell}>{problem.memory_limit} МБ</Text>
