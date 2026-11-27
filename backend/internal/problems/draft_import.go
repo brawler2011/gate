@@ -148,9 +148,12 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 
 func (uc *DraftUseCase) convertImport(ctx context.Context, result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
-	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, Grading: p.Grading, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
-		DraftContent: model.DraftContent{InputFile: p.InputFile, OutputFile: p.OutputFile, Processes: p.Processes, SolutionName: p.SolutionName, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
+	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, Grading: p.Grading, MemoryLimitMb: p.MemoryLimitMb,
+		DraftContent: model.DraftContent{TimeRule: p.TimeRule, InputFile: p.InputFile, OutputFile: p.OutputFile, Processes: p.Processes, SolutionName: p.SolutionName, Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
 			Library: []model.DraftLibraryFile{}, Graders: []model.DraftFile{}, Attachments: []model.DraftFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}}}
+	if p.TimeLimitMs > 0 {
+		c.draft.TimeLimitMs = &p.TimeLimitMs
+	}
 	if err := c.convert(ctx, p); err != nil {
 		return err
 	}

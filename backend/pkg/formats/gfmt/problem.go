@@ -35,9 +35,11 @@ type Problem struct {
 	SystemLibrary []string `yaml:"system_library,omitempty" json:"system_library,omitempty"`
 }
 
+// Limits omit TimeMs when TimeRule derives it; a built package always has it.
 type Limits struct {
-	TimeMs   int `yaml:"time_ms" json:"time_ms"`
-	MemoryMb int `yaml:"memory_mb" json:"memory_mb"`
+	TimeMs   int            `yaml:"time_ms,omitempty" json:"time_ms,omitempty"`
+	MemoryMb int            `yaml:"memory_mb" json:"memory_mb"`
+	TimeRule *spec.TimeRule `yaml:"time_rule,omitempty" json:"time_rule,omitempty"`
 }
 
 // Group scores its tests and subgroups, taken in the order of their first tests, by an spec.Aggregations entry; empty means sum.

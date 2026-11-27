@@ -1966,6 +1966,15 @@ export interface components {
             /** Format: uuid */
             object_id: string;
         };
+        /** @description Ties the time limit to run times as ICPC does: the slowest accepted solution times accepted_factor fits within the limit, and the limit times tle_factor within the fastest solution that must exceed it. Builds derive a missing limit as the smallest multiple of resolution_ms that satisfies the first rule. */
+        ProblemTimeRule: {
+            /** Format: double */
+            accepted_factor: number;
+            /** Format: double */
+            tle_factor: number;
+            /** Format: int64 */
+            resolution_ms: number;
+        } | null;
         /** @description The editable problem as typed entries without package paths. Programs are referred to by their names, unique within a role, and library files are included by their names; groups and tests are referred to by ID. */
         ProblemDraft: {
             /** Format: uuid */
@@ -1976,8 +1985,12 @@ export interface components {
             short_name: string;
             type: components["schemas"]["ProblemType"];
             grading: components["schemas"]["ProblemGrading"];
-            /** Format: int64 */
-            time_limit_ms: number;
+            /**
+             * Format: int64
+             * @description Null while builds derive the limit by time_rule.
+             */
+            time_limit_ms: number | null;
+            time_rule: components["schemas"]["ProblemTimeRule"];
             /** Format: int64 */
             memory_limit_mb: number;
             /**
@@ -2014,6 +2027,11 @@ export interface components {
             tests: components["schemas"]["ProblemDraftTest"][];
         };
         ProblemPackage: {
+            /**
+             * Format: int32
+             * @description The limit the package judges with, derived by the build when the draft has none.
+             */
+            time_limit_ms: number;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2278,9 +2296,10 @@ export interface components {
             title: string;
             /**
              * Format: int32
+             * @description Null while builds derive the limit by the draft's time rule.
              * @example 1000
              */
-            time_limit: number;
+            time_limit: number | null;
             /**
              * Format: int32
              * @example 256
@@ -2327,8 +2346,11 @@ export interface components {
             visibility?: string;
             /** Format: int32 */
             memory_limit: number;
-            /** Format: int32 */
-            time_limit: number;
+            /**
+             * Format: int32
+             * @description Null while builds derive the limit by the draft's time rule.
+             */
+            time_limit: number | null;
             is_template: boolean;
             /** Format: date-time */
             created_at: string;
@@ -5575,6 +5597,7 @@ export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement
 export type ProblemDraftGroup = components['schemas']['ProblemDraftGroup'];
 export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
 export type ProblemDraftAsset = components['schemas']['ProblemDraftAsset'];
+export type ProblemTimeRule = components['schemas']['ProblemTimeRule'];
 export type ProblemDraft = components['schemas']['ProblemDraft'];
 export type ProblemPackage = components['schemas']['ProblemPackage'];
 export type ProblemBuild = components['schemas']['ProblemBuild'];

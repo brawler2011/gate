@@ -13,7 +13,7 @@ var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, 
 
 func validDraft() Draft {
 	gen, sol, sub := "gen", "main", uuid.New()
-	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
+	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "standard", Grading: "pass-fail", TimeLimitMs: new(1000), MemoryLimitMb: 256,
 		DraftContent: DraftContent{
 			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}},
 			Generators:   []DraftNamedProgram{{Name: gen, DraftProgram: DraftProgram{Language: "python"}}},

@@ -18,6 +18,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// defaultMemoryMb is the typical system default the spec names for packages without a memory limit.
+const defaultMemoryMb = 2048
+
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
@@ -49,7 +52,7 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, spec.Fail(pkg.ErrPackageSyntax, "problem.yaml", "", "problem.yaml must contain a mapping")
 	}
-	p := &spec.Problem{Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	p := &spec.Problem{Type: "standard", Grading: "pass-fail", MemoryLimitMb: defaultMemoryMb, TimeRule: &spec.TimeRule{AcceptedFactor: 5, TLEFactor: 2, ResolutionMs: 1000}}
 	validation := strings.Fields(prob.Validation)
 	interactive := slices.Contains(validation, "interactive")
 	types := strings.Fields(prob.Type)
@@ -69,6 +72,12 @@ func readLegacy(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	}
 	custom := len(validation) > 0 && validation[0] == "custom"
 	if prob.Limits != nil {
+		if prob.Limits.TimeMultiplier > 0 {
+			p.TimeRule.AcceptedFactor = prob.Limits.TimeMultiplier
+		}
+		if prob.Limits.TimeSafetyMargin > 0 {
+			p.TimeRule.TLEFactor = prob.Limits.TimeSafetyMargin
+		}
 		if prob.Limits.Time > 0 {
 			p.TimeLimitMs = int(prob.Limits.Time * 1000)
 		}

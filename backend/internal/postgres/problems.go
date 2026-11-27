@@ -161,7 +161,7 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) problemsmodel.Problem {
 		Visibility:        string(p.Visibility),
 		Title:             p.Title,
 		ShortName:         p.ShortName,
-		TimeLimitMs:       int(p.TimeLimitMs),
+		TimeLimitMs:       widen(p.TimeLimitMs),
 		MemoryLimitMb:     int(p.MemoryLimitMb),
 		IsTemplate:        p.IsTemplate,
 		CreatedAt:         p.CreatedAt,

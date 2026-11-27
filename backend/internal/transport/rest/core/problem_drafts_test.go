@@ -37,6 +37,8 @@ func fill(v reflect.Value, n *int) {
 		v.SetInt(int64(*n * 100))
 	case reflect.Bool:
 		v.SetBool(true)
+	case reflect.Float64:
+		v.SetFloat(float64(*n) + 0.5)
 	default:
 		panic("fill: unsupported kind " + v.Kind().String())
 	}

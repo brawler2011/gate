@@ -56,6 +56,11 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 			}
 			_, _, ok := built.Program(role)
 			s.True(ok, "package has no %s", role)
+			// A derived limit is a multiple of the rule's resolution; the TLE margin check passed with the build.
+			if rule, ok := draft.TimeRule.Get(); ok && draft.TimeLimitMs.Null {
+				s.Positive(built.Limits.TimeMs)
+				s.Zero(int64(built.Limits.TimeMs)%rule.ResolutionMs, "derived limit %d ms", built.Limits.TimeMs)
+			}
 		})
 	}
 }

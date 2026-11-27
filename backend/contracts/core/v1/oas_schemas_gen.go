@@ -5955,6 +5955,51 @@ func (o NilFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewNilInt32 returns new NilInt32 with value set to v.
+func NewNilInt32(v int32) NilInt32 {
+	return NilInt32{
+		Value: v,
+	}
+}
+
+// NilInt32 is nullable int32.
+type NilInt32 struct {
+	Value int32
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt32) SetTo(v int32) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt32) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt32) SetToNull() {
+	o.Null = true
+	var v int32
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt32) Get() (v int32, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt32) Or(d int32) int32 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilInt64 returns new NilInt64 with value set to v.
 func NewNilInt64(v int64) NilInt64 {
 	return NilInt64{
@@ -6129,6 +6174,51 @@ func (o NilProblemDraftInteractor) Get() (v ProblemDraftInteractor, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilProblemDraftInteractor) Or(d ProblemDraftInteractor) ProblemDraftInteractor {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilProblemTimeRule returns new NilProblemTimeRule with value set to v.
+func NewNilProblemTimeRule(v ProblemTimeRule) NilProblemTimeRule {
+	return NilProblemTimeRule{
+		Value: v,
+	}
+}
+
+// NilProblemTimeRule is nullable ProblemTimeRule.
+type NilProblemTimeRule struct {
+	Value ProblemTimeRule
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilProblemTimeRule) SetTo(v ProblemTimeRule) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilProblemTimeRule) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilProblemTimeRule) SetToNull() {
+	o.Null = true
+	var v ProblemTimeRule
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilProblemTimeRule) Get() (v ProblemTimeRule, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilProblemTimeRule) Or(d ProblemTimeRule) ProblemTimeRule {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -9808,14 +9898,16 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 // referred to by ID.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
-	ProblemID     uuid.UUID      `json:"problem_id"`
-	Revision      int64          `json:"revision"`
-	Title         string         `json:"title"`
-	ShortName     string         `json:"short_name"`
-	Type          ProblemType    `json:"type"`
-	Grading       ProblemGrading `json:"grading"`
-	TimeLimitMs   int64          `json:"time_limit_ms"`
-	MemoryLimitMB int64          `json:"memory_limit_mb"`
+	ProblemID uuid.UUID      `json:"problem_id"`
+	Revision  int64          `json:"revision"`
+	Title     string         `json:"title"`
+	ShortName string         `json:"short_name"`
+	Type      ProblemType    `json:"type"`
+	Grading   ProblemGrading `json:"grading"`
+	// Null while builds derive the limit by time_rule.
+	TimeLimitMs   NilInt64           `json:"time_limit_ms"`
+	TimeRule      NilProblemTimeRule `json:"time_rule"`
+	MemoryLimitMB int64              `json:"memory_limit_mb"`
 	// Computed from the testset on a points problem; null on a pass-fail one, and ignored on save.
 	MaxScore   NilFloat64                 `json:"max_score"`
 	Checker    NilProblemDraftChecker     `json:"checker"`
@@ -9878,8 +9970,13 @@ func (s *ProblemDraft) GetGrading() ProblemGrading {
 }
 
 // GetTimeLimitMs returns the value of TimeLimitMs.
-func (s *ProblemDraft) GetTimeLimitMs() int64 {
+func (s *ProblemDraft) GetTimeLimitMs() NilInt64 {
 	return s.TimeLimitMs
+}
+
+// GetTimeRule returns the value of TimeRule.
+func (s *ProblemDraft) GetTimeRule() NilProblemTimeRule {
+	return s.TimeRule
 }
 
 // GetMemoryLimitMB returns the value of MemoryLimitMB.
@@ -10008,8 +10105,13 @@ func (s *ProblemDraft) SetGrading(val ProblemGrading) {
 }
 
 // SetTimeLimitMs sets the value of TimeLimitMs.
-func (s *ProblemDraft) SetTimeLimitMs(val int64) {
+func (s *ProblemDraft) SetTimeLimitMs(val NilInt64) {
 	s.TimeLimitMs = val
+}
+
+// SetTimeRule sets the value of TimeRule.
+func (s *ProblemDraft) SetTimeRule(val NilProblemTimeRule) {
+	s.TimeRule = val
 }
 
 // SetMemoryLimitMB sets the value of MemoryLimitMB.
@@ -11579,12 +11681,13 @@ type ProblemModel struct {
 	OrganizationLogin string                  `json:"organization_login"`
 	Visibility        string                  `json:"visibility"`
 	Title             string                  `json:"title"`
-	TimeLimit         int32                   `json:"time_limit"`
-	MemoryLimit       int32                   `json:"memory_limit"`
-	IsTemplate        bool                    `json:"is_template"`
-	IsPrivate         OptBool                 `json:"is_private"`
-	CreatedAt         time.Time               `json:"created_at"`
-	UpdatedAt         time.Time               `json:"updated_at"`
+	// Null while builds derive the limit by the draft's time rule.
+	TimeLimit   NilInt32  `json:"time_limit"`
+	MemoryLimit int32     `json:"memory_limit"`
+	IsTemplate  bool      `json:"is_template"`
+	IsPrivate   OptBool   `json:"is_private"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // GetPermissions returns the value of Permissions.
@@ -11618,7 +11721,7 @@ func (s *ProblemModel) GetTitle() string {
 }
 
 // GetTimeLimit returns the value of TimeLimit.
-func (s *ProblemModel) GetTimeLimit() int32 {
+func (s *ProblemModel) GetTimeLimit() NilInt32 {
 	return s.TimeLimit
 }
 
@@ -11678,7 +11781,7 @@ func (s *ProblemModel) SetTitle(val string) {
 }
 
 // SetTimeLimit sets the value of TimeLimit.
-func (s *ProblemModel) SetTimeLimit(val int32) {
+func (s *ProblemModel) SetTimeLimit(val NilInt32) {
 	s.TimeLimit = val
 }
 
@@ -11709,13 +11812,20 @@ func (s *ProblemModel) SetUpdatedAt(val time.Time) {
 
 // Ref: #/components/schemas/ProblemPackage
 type ProblemPackage struct {
-	ID        uuid.UUID `json:"id"`
-	ProblemID uuid.UUID `json:"problem_id"`
-	BuildID   uuid.UUID `json:"build_id"`
-	Revision  int64     `json:"revision"`
+	// The limit the package judges with, derived by the build when the draft has none.
+	TimeLimitMs int32     `json:"time_limit_ms"`
+	ID          uuid.UUID `json:"id"`
+	ProblemID   uuid.UUID `json:"problem_id"`
+	BuildID     uuid.UUID `json:"build_id"`
+	Revision    int64     `json:"revision"`
 	// Full SHA-256 of the archive.
 	PackageHash string    `json:"package_hash"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+// GetTimeLimitMs returns the value of TimeLimitMs.
+func (s *ProblemPackage) GetTimeLimitMs() int32 {
+	return s.TimeLimitMs
 }
 
 // GetID returns the value of ID.
@@ -11746,6 +11856,11 @@ func (s *ProblemPackage) GetPackageHash() string {
 // GetCreatedAt returns the value of CreatedAt.
 func (s *ProblemPackage) GetCreatedAt() time.Time {
 	return s.CreatedAt
+}
+
+// SetTimeLimitMs sets the value of TimeLimitMs.
+func (s *ProblemPackage) SetTimeLimitMs(val int32) {
+	s.TimeLimitMs = val
 }
 
 // SetID sets the value of ID.
@@ -12347,6 +12462,47 @@ func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 	s.IsBuiltin = val
 }
 
+// Ties the time limit to run times as ICPC does: the slowest accepted solution times accepted_factor
+// fits within the limit, and the limit times tle_factor within the fastest solution that must exceed
+// it. Builds derive a missing limit as the smallest multiple of resolution_ms that satisfies the first
+// rule.
+// Ref: #/components/schemas/ProblemTimeRule
+type ProblemTimeRule struct {
+	AcceptedFactor float64 `json:"accepted_factor"`
+	TleFactor      float64 `json:"tle_factor"`
+	ResolutionMs   int64   `json:"resolution_ms"`
+}
+
+// GetAcceptedFactor returns the value of AcceptedFactor.
+func (s *ProblemTimeRule) GetAcceptedFactor() float64 {
+	return s.AcceptedFactor
+}
+
+// GetTleFactor returns the value of TleFactor.
+func (s *ProblemTimeRule) GetTleFactor() float64 {
+	return s.TleFactor
+}
+
+// GetResolutionMs returns the value of ResolutionMs.
+func (s *ProblemTimeRule) GetResolutionMs() int64 {
+	return s.ResolutionMs
+}
+
+// SetAcceptedFactor sets the value of AcceptedFactor.
+func (s *ProblemTimeRule) SetAcceptedFactor(val float64) {
+	s.AcceptedFactor = val
+}
+
+// SetTleFactor sets the value of TleFactor.
+func (s *ProblemTimeRule) SetTleFactor(val float64) {
+	s.TleFactor = val
+}
+
+// SetResolutionMs sets the value of ResolutionMs.
+func (s *ProblemTimeRule) SetResolutionMs(val int64) {
+	s.ResolutionMs = val
+}
+
 // How a solution runs. An output-only problem judges the outputs participants submit, one file per
 // test, instead of running a program. A communication problem runs several copies of the solution at
 // once, each talking to the interactor, its manager.
@@ -12416,10 +12572,11 @@ type ProblemsListItemModel struct {
 	Title             string                  `json:"title"`
 	Visibility        OptString               `json:"visibility"`
 	MemoryLimit       int32                   `json:"memory_limit"`
-	TimeLimit         int32                   `json:"time_limit"`
-	IsTemplate        bool                    `json:"is_template"`
-	CreatedAt         time.Time               `json:"created_at"`
-	UpdatedAt         time.Time               `json:"updated_at"`
+	// Null while builds derive the limit by the draft's time rule.
+	TimeLimit  NilInt32  `json:"time_limit"`
+	IsTemplate bool      `json:"is_template"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // GetPermissions returns the value of Permissions.
@@ -12458,7 +12615,7 @@ func (s *ProblemsListItemModel) GetMemoryLimit() int32 {
 }
 
 // GetTimeLimit returns the value of TimeLimit.
-func (s *ProblemsListItemModel) GetTimeLimit() int32 {
+func (s *ProblemsListItemModel) GetTimeLimit() NilInt32 {
 	return s.TimeLimit
 }
 
@@ -12513,7 +12670,7 @@ func (s *ProblemsListItemModel) SetMemoryLimit(val int32) {
 }
 
 // SetTimeLimit sets the value of TimeLimit.
-func (s *ProblemsListItemModel) SetTimeLimit(val int32) {
+func (s *ProblemsListItemModel) SetTimeLimit(val NilInt32) {
 	s.TimeLimit = val
 }
 

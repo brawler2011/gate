@@ -256,7 +256,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	require.Equal(t, title, prob.Title)
 	require.Equal(t, shortName, prob.ShortName)
 	require.Equal(t, orgID, prob.OrganizationID)
-	require.Equal(t, 1000, prob.TimeLimitMs)
+	require.Equal(t, new(1000), prob.TimeLimitMs)
 	require.Equal(t, 256, prob.MemoryLimitMb)
 
 	// Duplicate short names within an organization map to ErrConflict.

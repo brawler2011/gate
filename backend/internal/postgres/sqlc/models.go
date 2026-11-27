@@ -898,7 +898,7 @@ type ProblemCatalog struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 	Title          string    `json:"title"`
 	ShortName      string    `json:"short_name"`
-	TimeLimitMs    int32     `json:"time_limit_ms"`
+	TimeLimitMs    *int32    `json:"time_limit_ms"`
 	MemoryLimitMb  int32     `json:"memory_limit_mb"`
 }
 
@@ -911,7 +911,7 @@ type ProblemDraft struct {
 	ShortName      string        `json:"short_name"`
 	Type           string        `json:"type"`
 	Grading        string        `json:"grading"`
-	TimeLimitMs    int32         `json:"time_limit_ms"`
+	TimeLimitMs    *int32        `json:"time_limit_ms"`
 	MemoryLimitMb  int32         `json:"memory_limit_mb"`
 	MaxScore       *points.Value `json:"max_score"`
 	Content        []byte        `json:"content"`

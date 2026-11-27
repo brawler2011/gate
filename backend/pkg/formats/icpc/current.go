@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"math"
 	"path"
 	"slices"
 	"strings"
@@ -22,8 +23,13 @@ type CurrentProblem struct {
 	Type   list  `yaml:"type"`
 	Name   names `yaml:"name"`
 	Limits struct {
-		TimeLimit float64 `yaml:"time_limit"` // in seconds
-		Memory    int     `yaml:"memory"`     // in MiB
+		TimeLimit       float64 `yaml:"time_limit"`      // in seconds
+		TimeResolution  float64 `yaml:"time_resolution"` // in seconds
+		TimeMultipliers struct {
+			ACToTimeLimit  float64 `yaml:"ac_to_time_limit"`
+			TimeLimitToTLE float64 `yaml:"time_limit_to_tle"`
+		} `yaml:"time_multipliers"`
+		Memory int `yaml:"memory"` // in MiB
 	} `yaml:"limits"`
 }
 
@@ -73,7 +79,16 @@ func readCurrent(fsys fs.FS, data []byte) (*spec.Problem, error) {
 	if err := yaml.Unmarshal(data, &prob); err != nil {
 		return nil, spec.Syntax("problem.yaml", err)
 	}
-	p := &spec.Problem{Type: "standard", Grading: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	p := &spec.Problem{Type: "standard", Grading: "pass-fail", MemoryLimitMb: defaultMemoryMb, TimeRule: &spec.TimeRule{AcceptedFactor: 2, TLEFactor: 1.5, ResolutionMs: 1000}}
+	if m := prob.Limits.TimeMultipliers.ACToTimeLimit; m > 0 {
+		p.TimeRule.AcceptedFactor = m
+	}
+	if m := prob.Limits.TimeMultipliers.TimeLimitToTLE; m > 0 {
+		p.TimeRule.TLEFactor = m
+	}
+	if r := prob.Limits.TimeResolution; r > 0 {
+		p.TimeRule.ResolutionMs = max(1, int(math.Round(r*1000)))
+	}
 	unsupported := func(file, value, format string, args ...any) error {
 		return spec.Fail(pkg.ErrUnsupported, file, value, format, args...)
 	}

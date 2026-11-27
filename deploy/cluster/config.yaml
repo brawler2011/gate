@@ -34,6 +34,7 @@ problems:
     object_bytes: 512MiB
     test_output_bytes: 512MiB
     wall_factor: 3
+    time_ceiling: 10s
     compile:
       cpu: 40s
       memory: 512MiB

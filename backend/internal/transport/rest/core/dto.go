@@ -71,6 +71,13 @@ func uuidPtrToOptUUID(u *uuid.UUID) corev1.OptUUID {
 	return corev1.NewOptUUID(*u)
 }
 
+func timeLimitDTO(ms *int) corev1.NilInt32 {
+	if ms == nil {
+		return corev1.NilInt32{Null: true}
+	}
+	return corev1.NewNilInt32(safeInt32(*ms))
+}
+
 func int32PtrToOptNilInt32(i *int32) corev1.OptNilInt32 {
 	if i == nil {
 		return corev1.OptNilInt32{}
@@ -144,7 +151,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 			Grading:      corev1.ProblemGrading(contestProblem.Grading),
 			ProblemID:    contestProblem.ProblemID,
 			Title:        title,
-			TimeLimit:    safeInt32(problem.TimeLimitMs),
+			TimeLimit:    safeInt32(*problem.TimeLimitMs),
 			MemoryLimit:  safeInt32(problem.MemoryLimitMb),
 			InputFile:    contestProblem.InputFile,
 			OutputFile:   contestProblem.OutputFile,
@@ -264,7 +271,7 @@ func ProblemsListItemDTO(p problemsmodel.Problem) corev1.ProblemsListItemModel {
 		Title:             title,
 		Visibility:        stringToOptString(p.Visibility),
 		MemoryLimit:       safeInt32(p.MemoryLimitMb),
-		TimeLimit:         safeInt32(p.TimeLimitMs),
+		TimeLimit:         timeLimitDTO(p.TimeLimitMs),
 		IsTemplate:        p.IsTemplate,
 		CreatedAt:         p.CreatedAt,
 		UpdatedAt:         p.UpdatedAt,
@@ -291,7 +298,7 @@ func ProblemDTO(p problemsmodel.Problem) *corev1.ProblemModel {
 		OrganizationLogin: p.OrganizationLogin,
 		Title:             strings.TrimSpace(p.Title),
 		Visibility:        p.Visibility,
-		TimeLimit:         safeInt32(p.TimeLimitMs),
+		TimeLimit:         timeLimitDTO(p.TimeLimitMs),
 		MemoryLimit:       safeInt32(p.MemoryLimitMb),
 		IsTemplate:        p.IsTemplate,
 		CreatedAt:         p.CreatedAt,

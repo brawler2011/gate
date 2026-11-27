@@ -37,7 +37,7 @@ func (s *detailStore) GetContestProblems(context.Context, uuid.UUID) ([]contests
 }
 func (s *detailStore) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
 	s.catalogCalls++
-	return problemsmodel.Problem{Title: "Problem", TimeLimitMs: 1000}, nil
+	return problemsmodel.Problem{Title: "Problem", TimeLimitMs: new(1000)}, nil
 }
 
 type detailStatements struct {
