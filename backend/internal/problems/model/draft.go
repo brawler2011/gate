@@ -16,7 +16,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
-	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 )
@@ -600,20 +599,17 @@ func (v *validation) err() error {
 	return v.errs
 }
 
-// Validate allows incomplete drafts and checks images only in changed sections, allowing staged asset renames.
-// A nil previous checks all sections; violations return pkg.FieldErrors.
-func (d *Draft) Validate(q DraftQuotas, previous *Draft) error {
+// Validate allows incomplete drafts; violations return pkg.FieldErrors.
+func (d *Draft) Validate(q DraftQuotas) error {
 	v := &validation{}
 	d.validate(v, q)
-	d.validateImages(v, previous)
 	return v.err()
 }
 
-// ValidateBuild requires complete selections and checks all image references, including unchanged sections.
+// ValidateBuild requires complete selections.
 func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Language) error {
 	v := &validation{}
 	d.validate(v, q)
-	d.validateImages(v, nil)
 	d.eachProgram(func(at string, p DraftProgram) {
 		if _, ok := languages[p.Language]; !ok {
 			v.fail(at+"/language", pkg.ErrUnknown, value(p.Language), "language %q is unavailable in the toolchain", p.Language)
@@ -1103,31 +1099,6 @@ func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.SolutionPrograms()}} {
 		for i, p := range list.programs {
 			f(fmt.Sprintf("/%s/%d", list.role, i), p.DraftProgram)
-		}
-	}
-}
-
-func (d *Draft) validateImages(v *validation, previous *Draft) {
-	assets := make(map[string]bool, len(d.Assets))
-	for _, a := range d.Assets {
-		assets[a.Name] = true
-	}
-	for i := range d.Statements {
-		s := &d.Statements[i]
-		var old *DraftStatement
-		if previous != nil {
-			old = previous.Statement(s.Language)
-		}
-		for _, name := range StatementSections {
-			body := *s.Section(name)
-			if old != nil && *old.Section(name) == body {
-				continue
-			}
-			for _, ref := range ImageReferences(body) {
-				if _, ok := statement.ImageFile(ref, func(name string) bool { return assets[name] }); !ok {
-					v.fail(fmt.Sprintf("/statements/%d/%s", i, name), pkg.ErrUnknown, value(ref), "%s section of the %s statement shows missing asset %q", name, s.Language, ref)
-				}
-			}
 		}
 	}
 }

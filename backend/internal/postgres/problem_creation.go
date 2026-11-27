@@ -15,7 +15,7 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, org, user uuid.U
 	if err := draft.ComputeScores(); err != nil {
 		return pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
-	if err := draft.Validate(r.quotas, nil); err != nil {
+	if err := draft.Validate(r.quotas); err != nil {
 		return pkg.Wrap(pkg.ErrInvalid, err, "invalid template")
 	}
 	_, err := serializableRetry(func() (struct{}, error) { return struct{}{}, r.finalizeCreate(ctx, org, user, draft, objects) })

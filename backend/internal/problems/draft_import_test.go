@@ -85,7 +85,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 			require.NoError(t, err)
 			defer plan.Close()
 			d := plan.draft
-			require.NoError(t, d.Validate(importQuotas, nil))
+			require.NoError(t, d.Validate(importQuotas))
 			if want, ok := buildErrors[name]; ok {
 				var fields pkg.FieldErrors
 				require.ErrorAs(t, d.ValidateBuild(importQuotas, languages), &fields)
@@ -184,7 +184,7 @@ func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	defer plan.Close()
 	require.Equal(t, model.DraftProgram{Language: "cpp17"}, plan.draft.Checker.DraftProgram)
 	require.Equal(t, "hcmp", plan.draft.Checker.Standard)
-	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.NoError(t, plan.draft.Validate(importQuotas))
 
 	manifest, err := os.ReadFile(pkgDir + "/problem.xml")
 	require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestImportKeepsExpectedVerdicts(t *testing.T) {
 	require.Equal(t, []string{"CE"}, byName["ce.cpp17"])
 	require.Equal(t, []string{"WA"}, byName["wa-2.python3"])
 	require.Equal(t, []string{}, byName["extra.python3"])
-	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.NoError(t, plan.draft.Validate(importQuotas))
 }
 
 func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
@@ -312,7 +312,7 @@ func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	require.NoError(t, err)
 	defer plan.Close()
 	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
-	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.NoError(t, plan.draft.Validate(importQuotas))
 
 	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
 	require.NoError(t, err)
@@ -441,7 +441,7 @@ func TestImportKeepsSeveralValidators(t *testing.T) {
 	validators := func(plan *draftImport, err error) map[string][]string {
 		require.NoError(t, err)
 		defer plan.Close()
-		require.NoError(t, plan.draft.Validate(importQuotas, nil))
+		require.NoError(t, plan.draft.Validate(importQuotas))
 		result := map[string][]string{}
 		for _, v := range plan.draft.Validators {
 			result[v.Name] = []string{}
@@ -515,7 +515,7 @@ func TestImportLinksPCMS2StatementPDF(t *testing.T) {
 	defer plan.Close()
 	require.Equal(t, `\includegraphics{statement-en.pdf}`, plan.draft.Statement("en").Legend)
 	require.Equal(t, "statement-en.pdf", plan.draft.Assets[0].Name)
-	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.NoError(t, plan.draft.Validate(importQuotas))
 }
 
 func TestImportKeepsStatementTitles(t *testing.T) {

@@ -40,7 +40,7 @@ func fieldErrors(t *testing.T, err error) pkg.FieldErrors {
 
 // Each violation names the entry the workshop has to show it at.
 func TestValidateLocatesViolations(t *testing.T) {
-	require.NoError(t, func() error { d := validDraft(); return d.Validate(testQuotas, nil) }())
+	require.NoError(t, func() error { d := validDraft(); return d.Validate(testQuotas) }())
 	for name, tc := range map[string]struct {
 		change  func(*Draft)
 		pointer string
@@ -85,12 +85,11 @@ func TestValidateLocatesViolations(t *testing.T) {
 		}, "/validators/0/groups/0", pkg.ErrInconsistent.Code},
 		"group arguments of a testlib checker": {func(d *Draft) { d.Testset.Groups[0].CheckerArgs = []string{"case_sensitive"} }, "/testset/groups/0/checker_args", pkg.ErrInconsistent.Code},
 		"arguments of a testlib checker": {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
-		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See \\includegraphics{tree.png}." }, "/statements/0/notes", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {
 			d := validDraft()
 			tc.change(&d)
-			fields := fieldErrors(t, d.Validate(testQuotas, nil))
+			fields := fieldErrors(t, d.Validate(testQuotas))
 			require.Len(t, fields, 1, "%v", fields)
 			require.Equal(t, tc.pointer, fields[0].Pointer)
 			require.Equal(t, tc.code, fields[0].Code)
@@ -135,25 +134,3 @@ func TestGradersNeedLanguagesThatLinkThem(t *testing.T) {
 	require.Equal(t, []string{"/graders", "/solutions/0/language"}, pointers)
 }
 
-// Asset renames may save with stale image references, but builds must reject them.
-func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
-	saved := validDraft()
-	renamed := saved
-	renamed.Assets = []DraftAsset{{Name: "plot.png", ObjectID: saved.Assets[0].ObjectID}}
-	require.NoError(t, renamed.Validate(testQuotas, &saved))
-	fields := fieldErrors(t, renamed.ValidateBuild(testQuotas, map[string]sandbox.Language{"cpp": {}, "python": {}}))
-	require.Equal(t, pkg.FieldErrors{{Pointer: "/statements/0/legend", Code: pkg.ErrUnknown.Code, Params: map[string]any{"value": "graph.png"}, Message: `legend section of the en statement shows missing asset "graph.png"`}}, fields)
-
-	typo := renamed
-	typo.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics{plott.png}"}}
-	require.Equal(t, "/statements/0/legend", fieldErrors(t, typo.Validate(testQuotas, &renamed))[0].Pointer)
-
-	fixed := renamed
-	fixed.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics{plot.png}"}}
-	require.NoError(t, fixed.Validate(testQuotas, &renamed))
-
-	// graphicx finds plot.png for a name without an extension.
-	bare := renamed
-	bare.Statements = []DraftStatement{{Language: "en", Legend: "\\includegraphics[width=2cm]{plot}"}}
-	require.NoError(t, bare.Validate(testQuotas, &renamed))
-}

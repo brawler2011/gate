@@ -18,24 +18,15 @@ const assetName = (src: string): string => {
 
 const attribute = (value: string): string => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll("\"", "&#34;");
 
-// graphicx tries these extensions after the name as given (statement.ImageFile).
-const extensions = ["", ".pdf", ".png", ".jpg", ".jpeg"];
-
-// The backend sanitized the HTML and writes src first; images outside the problem's assets show their alt text,
-// and browsers show PDF images only as links.
+// The backend sanitized the HTML, writes src first and names the asset exactly; browsers show PDF images only as links.
 const withAssets = (html: string, assetUrl?: AssetUrl): string =>
   html.replace(/<img src="([^"]*)"([^>]*)>/g, (_, src: string, rest: string) => {
     const name = assetName(src);
-    for (const ext of extensions) {
-      const url = assetUrl?.(name + ext);
-      if (url && (name + ext).toLowerCase().endsWith(".pdf")) {
-        return `<a href="${attribute(url)}" target="_blank" rel="noreferrer">${attribute(name + ext)}</a>`;
-      }
-      if (url) {
-        return `<img src="${attribute(url)}"${rest}>`;
-      }
+    const url = assetUrl?.(name);
+    if (url && name.toLowerCase().endsWith(".pdf")) {
+      return `<a href="${attribute(url)}" target="_blank" rel="noreferrer">${attribute(name)}</a>`;
     }
-    return `<img${rest}>`;
+    return url ? `<img src="${attribute(url)}"${rest}>` : `<img${rest}>`;
   });
 
 const delimiters = /^\\[([]|\\[)\]]$/g;

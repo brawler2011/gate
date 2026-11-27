@@ -199,7 +199,7 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Tests[0].Ordinal, d.Tests[1].Ordinal = 2, 1
 	d.Tests[0], d.Tests[1] = d.Tests[1], d.Tests[0]
 	require.NoError(t, d.ComputeScores())
-	require.NoError(t, d.Validate(importQuotas, nil))
+	require.NoError(t, d.Validate(importQuotas))
 
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
@@ -222,7 +222,7 @@ func TestExportRoundTripKeepsLibraryWithoutJudgePrograms(t *testing.T) {
 	defer plan.Close()
 	plan.draft.Checker, plan.draft.Validators = nil, nil
 	plan.draft.Library = append(plan.draft.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
-	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.NoError(t, plan.draft.Validate(importQuotas))
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 

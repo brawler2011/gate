@@ -92,17 +92,6 @@ func closingBrace(s string, from int) int {
 	return -1
 }
 
-var includeGraphics = regexp.MustCompile(`\\includegraphics\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}`)
-
-// Images lists the files \includegraphics shows.
-func Images(tex string) []string {
-	var names []string
-	for _, m := range includeGraphics.FindAllStringSubmatch(tex, -1) {
-		names = append(names, strings.TrimSpace(m[1]))
-	}
-	return names
-}
-
 // graphicx tries these extensions after the name as given.
 var imageExtensions = []string{"", ".pdf", ".png", ".jpg", ".jpeg"}
 

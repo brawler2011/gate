@@ -13,7 +13,6 @@ import (
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/google/uuid"
 )
 
@@ -128,8 +127,8 @@ func (c *PackageContent) OpenFiles(ctx context.Context, packageID uuid.UUID) (io
 type Printed struct {
 	Statement model.DraftStatement
 	Samples   []model.Sample
-	// Images the statement shows, by asset name.
-	Images map[string][]byte
+	// Assets by name; LaTeX picks the ones the statement shows.
+	Assets map[string][]byte
 }
 
 // ReadPrinted reads the package's statement in the language the site shows, with its images.
@@ -142,19 +141,13 @@ func (c *PackageContent) ReadPrinted(ctx context.Context, problemID, packageID u
 	if p.ProblemID != problemID || s == nil {
 		return Printed{}, pkg.ErrNotFound
 	}
-	printed := Printed{Statement: s.DraftStatement, Samples: p.Samples, Images: map[string][]byte{}}
+	printed := Printed{Statement: s.DraftStatement, Samples: p.Samples, Assets: map[string][]byte{}}
 	if printed.Statement.Title == "" {
 		printed.Statement.Title = p.Title
 	}
-	for _, name := range statement.Order {
-		for _, ref := range model.ImageReferences(*s.Section(name)) {
-			file, ok := statement.ImageFile(ref, func(name string) bool { return p.Assets[name] != "" })
-			if _, done := printed.Images[file]; done || !ok {
-				continue
-			}
-			if printed.Images[file], err = c.readAsset(ctx, packageID, file, p.Assets[file]); err != nil {
-				return Printed{}, err
-			}
+	for name, sha256 := range p.Assets {
+		if printed.Assets[name], err = c.readAsset(ctx, packageID, name, sha256); err != nil {
+			return Printed{}, err
 		}
 	}
 	return printed, nil

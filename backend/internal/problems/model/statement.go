@@ -6,9 +6,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/statement"
 )
 
-// ImageReferences lists the asset names \includegraphics shows.
-func ImageReferences(tex string) []string { return statement.Images(tex) }
-
 // BuiltStatement is a draft statement with the HTML its build made of each nonempty section.
 type BuiltStatement struct {
 	DraftStatement
@@ -52,22 +49,6 @@ type PrintedLimits struct {
 	InputFile, OutputFile      string
 }
 
-// StatementImages lists the assets the statement shows that exist.
-func StatementImages(s DraftStatement, assets []DraftAsset) []DraftAsset {
-	exists := func(name string) bool { return slices.ContainsFunc(assets, func(a DraftAsset) bool { return a.Name == name }) }
-	shown := map[string]bool{}
-	for _, name := range statement.Order {
-		for _, ref := range ImageReferences(*s.Section(name)) {
-			if file, ok := statement.ImageFile(ref, exists); ok {
-				shown[file] = true
-			}
-		}
-	}
-	var result []DraftAsset
-	for _, a := range assets {
-		if shown[a.Name] {
-			result = append(result, a)
-		}
-	}
-	return result
+func (d *Draft) HasAsset(name string) bool {
+	return slices.ContainsFunc(d.Assets, func(a DraftAsset) bool { return a.Name == name })
 }
