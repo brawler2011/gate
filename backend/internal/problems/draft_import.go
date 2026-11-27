@@ -72,7 +72,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	packageRoot, err := detectImportRoot(tree)
 	if err != nil {
-		return nil, err
+		return nil, uncoded(err, pkg.ErrPackageLayout, "the package cannot be read")
 	}
 	problem, err := formats.Read(packageRoot)
 	if err != nil {
@@ -96,10 +96,14 @@ func detectImportRoot(root string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("readdir: %w", err)
 	}
-	found := ""
+	found, files := "", false
 	var folders []error
 	for _, entry := range entries {
-		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || entry.Name() == "__MACOSX" {
+		if strings.HasPrefix(entry.Name(), ".") || entry.Name() == "__MACOSX" {
+			continue
+		}
+		if !entry.IsDir() {
+			files = true
 			continue
 		}
 		path := filepath.Join(root, entry.Name())
@@ -116,7 +120,7 @@ func detectImportRoot(root string) (string, error) {
 	case found != "":
 		return found, nil
 	// An archive of one folder fails for what that folder lacks.
-	case len(folders) == 1:
+	case len(folders) == 1 && !files:
 		return "", folders[0]
 	}
 	return "", rootErr
