@@ -240,14 +240,26 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	outputID := b.FileIDs[interactorOutput]
 	status, score, message := interactor.verdict(b, "")
 	sol := solutionRun(results[:m])
-	// As in DOMjudge, a rejection wins only when the interactor exited first; otherwise the solution's failure caused it.
-	interactorFirst := !slices.ContainsFunc(results[:m], func(r result) bool { return r.RunTime <= b.RunTime })
-	interactorRejected := interactorFirst && status != StatusOK && status != StatusPoints
+	// As in DOMjudge, a rejection wins over the solution's failure only when the interactor exited first.
+	interactorRejected := status != StatusOK && status != StatusPoints && exitedBefore(b, results[:m])
 	if sol.Status != StatusOK && status != StatusFail && !interactorRejected {
 		status, score = sol.Status, nil
 	}
 	return &InteractiveResult{Status: status, Score: score, Message: message, OutputID: outputID, SolutionResult: sol,
 		InteractorResult: RunResult{Status: statusToString(b.Status), ExitStatus: b.ExitStatus, Time: safeDuration(b.Time), Memory: safeInt64(b.Memory), Stderr: []byte(b.Files["stderr"])}}, nil
+}
+
+// exitSkew covers go-judge recording a killed process's end a few milliseconds after its pipe peer sees EOF.
+const exitSkew = 100 * time.Millisecond
+
+// exitedBefore reports whether r ended before the first failed solution copy.
+func exitedBefore(r result, solutions []result) bool {
+	for _, s := range solutions {
+		if s.Status != resultAccepted && safeDuration(r.RunTime)+exitSkew >= safeDuration(s.RunTime) {
+			return false
+		}
+	}
+	return true
 }
 
 func limitStatus(s Status) bool { return s == StatusTLE || s == StatusMLE || s == StatusOLE }
