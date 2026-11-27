@@ -10,6 +10,7 @@ for lib in *.jar; do
   cp=$cp:$lib
   (cd classes && jar --extract --file "../$lib")
 done
-rm -rf classes/META-INF
+# Their manifests, signatures and module descriptors would conflict with the program's jar; services stay.
+rm -f classes/META-INF/MANIFEST.MF classes/META-INF/*.SF classes/META-INF/*.RSA classes/META-INF/*.DSA classes/META-INF/*.EC classes/module-info.class
 javac -cp "$cp" -d classes "$@"
 jar --create --file "$out" --main-class "$main" -C classes .
