@@ -5,3 +5,7 @@ rejected rather than imported with one of them dropped.
 name: Two
 -- output_validators/a.cpp --
 -- output_validators/b.cpp --
+-- data/secret/1.in --
+1
+-- data/secret/1.ans --
+1

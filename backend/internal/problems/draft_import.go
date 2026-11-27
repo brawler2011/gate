@@ -72,7 +72,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	packageRoot, err := detectImportRoot(tree)
 	if err != nil {
-		return nil, err
+		return nil, uncoded(err, pkg.ErrPackageLayout, "the package cannot be read")
 	}
 	problem, err := formats.Read(packageRoot)
 	if err != nil {
@@ -88,30 +88,42 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	return result, nil
 }
 func detectImportRoot(root string) (string, error) {
-	if _, err := formats.DetectFormat(root); err == nil {
+	_, rootErr := formats.DetectFormat(root)
+	if rootErr == nil {
 		return root, nil
 	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return "", fmt.Errorf("readdir: %w", err)
 	}
-	found := ""
+	found, files := "", false
+	var folders []error
 	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".") || entry.Name() == "__MACOSX" {
+			continue
+		}
 		if !entry.IsDir() {
+			files = true
 			continue
 		}
 		path := filepath.Join(root, entry.Name())
-		if _, err := formats.DetectFormat(path); err == nil {
+		_, err := formats.DetectFormat(path)
+		if err == nil {
 			if found != "" {
 				return "", spec.Fail(pkg.ErrPackageLayout, "", "", "multiple packages in archive")
 			}
 			found = path
 		}
+		folders = append(folders, err)
 	}
-	if found == "" {
-		return "", spec.Fail(pkg.ErrPackageLayout, "", "", "package root not found")
+	switch {
+	case found != "":
+		return found, nil
+	// An archive of one folder fails for what that folder lacks.
+	case len(folders) == 1 && !files:
+		return "", folders[0]
 	}
-	return found, nil
+	return "", rootErr
 }
 func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (importObject, error) {
 	f, err := os.Open(path)
