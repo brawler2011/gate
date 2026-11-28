@@ -1,4 +1,5 @@
-// Command judgeimage prints the image name for the current judge/ sources, or typeset/ ones with the argument typeset.
+// Command judgeimage prints the judge image name (minimal by default, or full) for the current judge/ sources, or
+// with the argument typeset the image built from typeset/.
 package main
 
 import (
@@ -10,8 +11,17 @@ import (
 
 func main() {
 	ref := judgeimage.Ref
-	if len(os.Args) > 1 && os.Args[1] == "typeset" {
-		ref = judgeimage.TypesetRef
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "minimal":
+		case "full":
+			ref = judgeimage.FullRef
+		case "typeset":
+			ref = judgeimage.TypesetRef
+		default:
+			fmt.Fprintln(os.Stderr, "unknown image", os.Args[1])
+			os.Exit(2)
+		}
 	}
 	name, err := ref()
 	if err != nil {

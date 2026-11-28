@@ -23,6 +23,7 @@ worker:
     limits: {memory: 2Gi}
 
 goJudge:
+  # gate-go-judge-full has every catalog language; the API takes its catalog from this image too.
   image: ghcr.io/brawler2011/gate-go-judge
   resources:
     requests: {cpu: 500m, memory: 512Mi}

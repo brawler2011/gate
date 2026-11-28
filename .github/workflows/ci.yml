@@ -73,7 +73,11 @@ jobs:
     name: Image (${{ matrix.image }})
     strategy:
       matrix:
-        image: [judge, typeset]
+        include:
+          - {image: minimal, source: judge, output: minimal, cache: true}
+          # The full store would crowd the other entries out of the repository's Actions cache.
+          - {image: full, source: judge, output: full, cache: false}
+          - {image: typeset, source: typeset, output: default, cache: true}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -116,6 +120,10 @@ jobs:
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
 
+      - name: Free disk space
+        if: matrix.image == 'full' && env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
       # Forks cannot push, so integration tests build their image locally.
       - name: Install Nix
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
@@ -124,10 +132,10 @@ jobs:
       # Restore earlier Nix stores to reuse unchanged toolchains.
       - name: Cache Nix store
         id: nix-cache
-        if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
+        if: matrix.cache && env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: ${{ matrix.image }}-nix-store-${{ hashFiles(format('{0}/**', matrix.image)) }}
+          primary-key: ${{ matrix.image }}-nix-store-${{ hashFiles(format('{0}/**', matrix.source)) }}
           restore-prefixes-first-match: ${{ matrix.image }}-nix-store-
           gc-max-store-size-linux: 8G
           purge: true
@@ -137,24 +145,27 @@ jobs:
 
       # Warm main's cache without replacing a tested tag during a concurrent deploy.
       - name: Warm main Nix cache
-        if: env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
+        if: matrix.cache && env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
         run: |
           started=$SECONDS
-          nix build --no-link ./$SOURCE#default ./$SOURCE#default.copyTo
-          echo "$SOURCE cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
+          nix build --no-link ./$SOURCE#$OUTPUT ./$SOURCE#$OUTPUT.copyTo
+          echo "$IMAGE cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
         env:
-          SOURCE: ${{ matrix.image }}
+          IMAGE: ${{ matrix.image }}
+          SOURCE: ${{ matrix.source }}
+          OUTPUT: ${{ matrix.output }}
 
       # Fixed compression keeps digests reproducible; changed images still recompress every layer.
       - name: Build and push image
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         run: |
           started=$SECONDS
-          nix run ./$SOURCE#default.copyTo -- --dest-compress-format zstd --dest-compress-level 3 "docker://$IMAGE"
-          echo "$SOURCE image build and push: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
+          nix run ./$SOURCE#$OUTPUT.copyTo -- --dest-compress-format zstd --dest-compress-level 3 "docker://$IMAGE"
+          echo "$IMAGE image build and push: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
-          SOURCE: ${{ matrix.image }}
+          SOURCE: ${{ matrix.source }}
+          OUTPUT: ${{ matrix.output }}
 
   backend-image:
     name: Backend Image
@@ -239,6 +250,38 @@ jobs:
       - name: Check query work
         run: task be:querywork
 
+  full-judge-tests:
+    name: Full Judge Image Tests
+    needs: judge-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up project tools
+        uses: ./.github/actions/setup-go
+        with:
+          tools: go task
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+
+      - name: Log in to GitHub Container Registry
+        if: env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run every language in the full image
+        run: |
+          task judge:image VARIANT=full
+          go test -v -timeout 15m -tags=integration ./backend/tests/integration/sandbox -run 'TestIntegrationSandbox/catalog_configurations' -args -variant=full
+
   deploy-lint:
     name: Deploy Lint
     runs-on: ubuntu-latest
@@ -293,6 +336,7 @@ jobs:
       - backend-lint
       - backend-unit-tests
       - backend-integration-tests
+      - full-judge-tests
       - deploy-lint
       - frontend-checks
       - judge-image
@@ -306,6 +350,7 @@ jobs:
           echo "Backend Lint: ${{ needs.backend-lint.result }}"
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
+          echo "Full Judge Image Tests: ${{ needs.full-judge-tests.result }}"
           echo "Deploy Lint: ${{ needs.deploy-lint.result }}"
           echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
           echo "Judge Image: ${{ needs.judge-image.result }}"
@@ -315,6 +360,7 @@ jobs:
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
+                "${{ needs.full-judge-tests.result }}" != "success" || \
                 "${{ needs.deploy-lint.result }}" != "success" || \
                 "${{ needs.frontend-checks.result }}" != "success" || \
                 "${{ needs.judge-image.result }}" != "success" || \

@@ -48,7 +48,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	require.NoError(t, err)
 	client, err := sandbox.NewClient(base, &http.Client{})
 	require.NoError(t, err)
-	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	sb := sandbox.NewSandbox(client, cfg)
 	buildLimits := dbfixtures.BuildLimits(t)

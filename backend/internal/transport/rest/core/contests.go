@@ -224,8 +224,8 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	if req.Languages != nil {
 		settings.Languages = []string{}
 		for _, id := range req.Languages {
-			if _, ok := h.languages.Langs[id]; !ok {
-				return pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration "+id, map[string]any{"id": id})
+			if _, err := h.languages.Lookup(id); err != nil {
+				return pkg.Invalid(pkg.ErrUnknownLanguage, err.Error(), map[string]any{"id": id})
 			}
 			if !slices.Contains(settings.Languages, id) {
 				settings.Languages = append(settings.Languages, id)

@@ -43,7 +43,7 @@ func TestIntegrationCalibration(t *testing.T) {
 	require.NoError(t, err)
 	files, err := sandbox.NewFileTransport(base, &http.Client{Timeout: time.Minute})
 	require.NoError(t, err)
-	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 
 	probes, err := client.Probes(ctx, 2)

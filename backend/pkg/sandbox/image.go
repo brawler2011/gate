@@ -76,11 +76,15 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	if !digestPattern.MatchString(identity.Digest) || identity.Architecture == "" || identity.ABI == "" {
 		return Image{}, fmt.Errorf("invalid identity.json: %s", data)
 	}
+	variant, err := read("variant")
+	if err != nil {
+		return Image{}, err
+	}
 	data, err = read("langs.toml")
 	if err != nil {
 		return Image{}, err
 	}
-	cfg, err := ParseConfig(data)
+	cfg, err := ParseConfig(data, strings.TrimSpace(string(variant)))
 	if err != nil {
 		return Image{}, err
 	}

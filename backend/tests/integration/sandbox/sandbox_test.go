@@ -5,6 +5,7 @@ package sandbox_test
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,6 +22,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+var variant = flag.String("variant", sandbox.VariantMinimal, "judge image variant to run")
+
 func TestIntegrationSandbox(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -29,7 +32,11 @@ func TestIntegrationSandbox(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Starting go-judge container...")
-	image, err := judgeimage.Ref()
+	ref := judgeimage.Ref
+	if *variant == sandbox.VariantFull {
+		ref = judgeimage.FullRef
+	}
+	image, err := ref()
 	if err != nil {
 		t.Fatalf("Failed to name go-judge image: %v", err)
 	}
@@ -74,9 +81,13 @@ func TestIntegrationSandbox(t *testing.T) {
 		t.Fatalf("Failed to create sandbox file transport: %v", err)
 	}
 
-	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
+	judge, err := sandbox.ReadImage(ctx, client)
 	if err != nil {
-		t.Fatalf("Failed to load languages config: %v", err)
+		t.Fatalf("Failed to read judge image manifest: %v", err)
+	}
+	cfg := judge.Config
+	if len(cfg.Missing) > 0 && *variant == sandbox.VariantFull {
+		t.Fatalf("full image lacks %v", cfg.Missing)
 	}
 
 	sb := sandbox.NewSandbox(client, cfg)
@@ -224,6 +235,16 @@ public class Main {
 			"go":      "package main\nimport \"fmt\"\nfunc main() { var a, b int64; fmt.Scan(&a, &b); fmt.Println(a + b) }",
 			"rust":    "use std::io::Read;\nfn main() { let mut s = String::new(); std::io::stdin().read_to_string(&mut s).unwrap(); let n: i64 = s.split_whitespace().map(|x| x.parse::<i64>().unwrap()).sum(); println!(\"{n}\"); }",
 			"node":    "const [a, b] = require(\"fs\").readFileSync(0, \"utf8\").trim().split(/\\s+/).map(BigInt);\nconsole.log((a + b).toString());",
+			"kotlin":  "fun main() { val (a, b) = readln().split(\" \").map { it.toLong() }; println(a + b) }",
+			"scala":   "object Main { def main(args: Array[String]): Unit = { val Array(a, b) = scala.io.StdIn.readLine().split(\" \").map(_.toLong); println(a + b) } }",
+			"csharp":  "using System; using System.Linq; var v = Console.ReadLine()!.Split(' ').Select(long.Parse).ToArray(); Console.WriteLine(v[0] + v[1]);",
+			"d":       "import std.stdio; void main() { long a, b; readf(\" %d %d\", a, b); writeln(a + b); }",
+			"pascal":  "program sum; var a, b: int64; begin read(a, b); writeln(a + b); end.",
+			"haskell": "main :: IO ()\nmain = interact $ \\s -> show (sum (map read (words s) :: [Integer])) ++ \"\\n\"",
+			"ocaml":   "let () = Scanf.scanf \" %Ld %Ld\" (fun a b -> print_endline (Int64.to_string (Int64.add a b)))",
+			"ruby":    "puts gets.split.map(&:to_i).sum",
+			"php":     "<?php [$a, $b] = array_map('intval', explode(' ', trim(fgets(STDIN)))); echo $a + $b, \"\\n\";",
+			"perl":    "my ($a, $b) = split ' ', <STDIN>; print $a + $b, \"\\n\";",
 		}
 		for _, id := range cfg.Order {
 			t.Run(id, func(t *testing.T) {

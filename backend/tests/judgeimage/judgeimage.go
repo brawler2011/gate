@@ -12,8 +12,11 @@ import (
 	"strings"
 )
 
-// Ref names the judge image built from judge/.
+// Ref names the minimal judge image built from judge/.
 func Ref() (string, error) { return ref("judge", "ghcr.io/brawler2011/gate-go-judge") }
+
+// FullRef names the full judge image built from judge/.
+func FullRef() (string, error) { return ref("judge", "ghcr.io/brawler2011/gate-go-judge-full") }
 
 // TypesetRef names the typeset image built from typeset/.
 func TypesetRef() (string, error) { return ref("typeset", "ghcr.io/brawler2011/gate-typeset") }

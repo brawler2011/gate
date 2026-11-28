@@ -57,6 +57,7 @@ jobs:
           tag="release-$commit"
           backend="ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')"
           judge="$(go run ./tools/judgeimage)"
+          full="$(go run ./tools/judgeimage full)"
           typeset="$(go run ./tools/judgeimage typeset)"
           digest() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
           promote() {
@@ -79,6 +80,7 @@ jobs:
           }
           promote "$backend"
           promote "$judge"
+          promote "$full"
           promote "$typeset"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 

@@ -217,7 +217,7 @@ func (s *IntegrationTestSuite) initApp() {
 		BlogReads:         blogsRepo,
 		Permissions:       access.NewPermissions(loader),
 	}, false)
-	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	langs, err := sandbox.LoadConfig("../../../judge/langs.toml", sandbox.VariantMinimal)
 	s.Require().NoError(err)
 	coreServer.WithLanguages(langs)
 

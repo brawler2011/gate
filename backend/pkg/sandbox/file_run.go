@@ -35,9 +35,9 @@ func (s *Sandbox) fileCommand(executable Executable, language string, input File
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return nil, fmt.Errorf("invalid sandbox file execution limits")
 	}
-	lang, ok := s.config.Langs[language]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, language)
+	lang, err := s.config.Lookup(language)
+	if err != nil {
+		return nil, err
 	}
 	name := lang.CodeFile
 	if lang.Type == "compiler" {
