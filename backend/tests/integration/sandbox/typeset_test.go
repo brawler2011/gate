@@ -39,13 +39,15 @@ func TestTypesetStatements(t *testing.T) {
 
 	t.Run("HTML drops layout commands and keeps Kattis and NERC macros", func(t *testing.T) {
 		html, err := statement.HTML(ctx, ts, []statement.Section{{Name: "legend", Text: "\\noindent\\parindent=1cm Text\\texttrademark{}.\\vspace*{2mm}\\medskip\n\n{\\small small}\n\n" +
-			"\\begin{center}\\includegraphics{pic.png}\\end{center}\n\n\\illustration{0.3}{pic.png}{By X}\n\n\\begin{shortitems}\\item one\\end{shortitems}"}}, func(string) bool { return true })
+			"\\begin{center}\\includegraphics{pic.png}\\end{center}\n\n\\illustration{0.3}{pic.png}{By X}\n\n\\begin{shortitems}\\item one\\end{shortitems}\n\n" +
+			"\\setlength{\\parskip}{1ex}\\pagebreak[2]\\begin{large}Big $a\\quad b$.\\end{large}"}}, func(string) bool { return true })
 		require.NoError(t, err)
 		require.Contains(t, html["legend"], "<p>Text™.</p>\n<p><span>small</span></p>")
 		require.Contains(t, html["legend"], `<p class="image"><img src="pic.png"`)
 		require.Contains(t, html["legend"], `<img src="pic.png" style="width: 30.0%"`)
 		require.Contains(t, html["legend"], "<figcaption>By X</figcaption>")
 		require.Contains(t, html["legend"], "<li><p>one</p></li>")
+		require.Contains(t, html["legend"], `Big <span class="math inline">\(a\quad b\)</span>.`)
 	})
 
 	t.Run("HTML names what the site cannot show", func(t *testing.T) {

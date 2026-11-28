@@ -40,20 +40,34 @@ func (e *Error) Error() string {
 const marker = "gate-section-"
 
 // prelude gives pandoc the olymp.sty macros that the PDF has.
-const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n" +
+var prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n" +
 	"\\newcommand{\\illustration}[3]{\\begin{figure}\\includegraphics[width=#1\\textwidth]{#2}\\caption{#3}\\end{figure}}\n" +
 	"\\newenvironment{shortitems}{\\begin{itemize}}{\\end{itemize}}\n" +
 	"\\newenvironment{shortnums}{\\begin{enumerate}}{\\end{enumerate}}\n" +
-	"\\newcommand{\\texttrademark}{™}\n"
+	"\\newcommand{\\texttrademark}{™}\n" +
+	layoutMacros
 
-// layout matches what pandoc skips of commands that only change layout; it skips braces after a command too, so arguments are matched exactly.
-// \bgroup and \egroup come from expanding \newenvironment.
+// layoutMacros drop commands that only change layout. \quad stays out: pandoc expands macros in math too.
+// pandoc keeps an environment and a command under one name, so each size command is defined after its environment.
+var layoutMacros = func() string {
+	var b strings.Builder
+	for _, c := range strings.Fields("noindent indent centering smallskip medskip bigskip hfil hfill vfil vfill newpage clearpage") {
+		fmt.Fprintf(&b, "\\renewcommand{\\%s}{}\n", c)
+	}
+	for _, c := range strings.Fields("tiny scriptsize footnotesize small normalsize large Large LARGE huge Huge") {
+		fmt.Fprintf(&b, "\\renewenvironment{%s}{}{}\\renewcommand{\\%s}{}\n", c, c)
+	}
+	b.WriteString("\\renewcommand{\\setlength}[2]{}\\renewcommand{\\addtolength}[2]{}\n")
+	b.WriteString("\\renewcommand{\\pagebreak}[1][0]{}\\renewcommand{\\nopagebreak}[1][0]{}\n")
+	return b.String()
+}()
+
+// layout matches what pandoc skips of layout commands macros cannot take: starred forms, TeX assignments and \quad.
+// pandoc skips braces after a command too, so arguments are matched exactly; \bgroup and \egroup come from expanding environments.
 var layout = func() *regexp.Regexp {
-	sizes := "tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge"
-	plain := "noindent|indent|centering|smallskip|medskip|bigskip|hfil|hfill|vfil|vfill|quad|qquad|newpage|clearpage|bgroup|egroup|" + sizes
 	dimen := `[-+]?(?:[0-9.]+\s*[a-z]{2,4}|[0-9.]*\s*\\[a-zA-Z]+)`
 	glue := dimen + `(?:\s*(?:plus|minus)\s*` + dimen + `)*`
-	return regexp.MustCompile(`^\\(?:(?:` + plain + `)|(?:begin|end)\{(?:` + sizes + `)\}|(?:no)?pagebreak(?:\[[0-4]\])?|[vh]space\*?\{[^{}]*\}|(?:setlength|addtolength)\{\\[a-zA-Z]+\}\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
+	return regexp.MustCompile(`^\\(?:quad|qquad|bgroup|egroup|[vh]space\*?\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
 }()
 
 // HTML converts sections, given in Order, in one pandoc run. Content pandoc skips fails, so the site never misses what the PDF shows.
