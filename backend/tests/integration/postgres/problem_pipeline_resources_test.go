@@ -69,17 +69,17 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	}
 	uploads := &problems.DraftUseCase{
 		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Groups: 10},
-		Repo:        repo, Problems: fixedProblem{org}, Access: postgres.NewAccess(pool), Store: services.store, Bucket: "objects",
+		Repo:        repo, Problems: fixedProblem{org}, Access: postgres.NewAccess(pool), Store: services.store, Bucket: services.bucket,
 		TempDir: work, UploadTTL: 5 * time.Minute, BuildOptions: options,
 		Languages: &sandbox.Config{Langs: services.langs},
 	}
 	return &pipelineHarness{ctx: ctx,
 		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads,
-		programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
+		programs: sandbox.NewProgramCache(dbfixtures.Programs(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
 }
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
-	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client, Typeset: h.services.typeset,
+	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: h.services.bucket, TempDir: h.work, Client: h.services.client, Typeset: h.services.typeset,
 		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
@@ -181,7 +181,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	require.NoError(t, h.pool.QueryRow(h.ctx, `SELECT o.size,o.sha256,o.key FROM problem_packages p JOIN stored_objects o ON o.id=p.object_id WHERE p.id=$1`, packageID).Scan(&size, &digest, &key))
 	total := int64(2 * perFile * tests)
 	require.Greater(t, size, total, "the archive holds every incompressible test body")
-	requireStoredObject(t, h.ctx, h.services.store, "objects", key, size, digest)
+	requireStoredObject(t, h.ctx, h.services.store, h.services.bucket, key, size, digest)
 	growth := int64(peak.Load()) - int64(baseline.HeapAlloc)
 	t.Logf("tests=%d MiB archive=%d MiB heap growth=%d MiB", total>>20, size>>20, growth>>20)
 	require.Less(t, growth, int64(48<<20), "heap must not grow with the total size of the tests (%d MiB of data)", total>>20)
@@ -207,7 +207,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	delete(without, "cpp17")
 	pipeline := h.pipeline()
 	pipeline.Languages = &sandbox.Config{Langs: without}
-	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskCache(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.Programs(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	var failure *builder.Failure
 	require.ErrorAs(t, err, &failure)
@@ -220,7 +220,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
 	changed["cpp17"] = cpp
 	pipeline.Languages = &sandbox.Config{Langs: changed}
-	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskCache(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.Programs(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)
 }
@@ -386,7 +386,7 @@ func TestPipelineBuildsTestsSharingAnInput(t *testing.T) {
 	})
 	packageID, err := h.pipeline().Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)
-	loader := &judging.PackageLoader{Store: h.services.store, Bucket: "objects", Cache: dbfixtures.DiskCache(t), Packages: h.repo, Limits: h.limits}
+	loader := &judging.PackageLoader{Store: h.services.store, Bucket: h.services.bucket, Cache: dbfixtures.DiskCache(t), Packages: h.repo, Limits: h.limits}
 	pkg, err := loader.LoadPackage(h.ctx, packageID)
 	require.NoError(t, err, "judges unpack the package")
 	pkg.Release()

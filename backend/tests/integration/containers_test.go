@@ -25,6 +25,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/docker/docker/api/types/container"
 	"github.com/google/uuid"
@@ -65,6 +66,7 @@ type goJudge struct {
 
 func TestMain(m *testing.M) {
 	code := m.Run()
+	dbfixtures.RemovePrograms()
 	if shared.judgeDir != "" {
 		_ = os.RemoveAll(shared.judgeDir)
 	}
