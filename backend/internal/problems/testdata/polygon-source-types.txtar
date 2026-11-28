@@ -18,6 +18,7 @@ source without a type gets the configuration its extension suggests.
     <solution tag="accepted"><source path="solutions/old14.cpp" type="cpp.g++14"/></solution>
     <solution tag="accepted"><source path="solutions/bare.cpp" type="cpp.g++"/></solution>
     <solution tag="accepted"><source path="solutions/fast.rs" type="rust"/></solution>
+    <solution tag="accepted"><source path="solutions/web.js" type="javascript.node"/></solution>
   </solutions></assets>
 </problem>
 -- solutions/main.cpp --
@@ -34,5 +35,7 @@ int main() {}
 int main() {}
 -- solutions/fast.rs --
 fn main() {}
+-- solutions/web.js --
+console.log()
 -- tests/01 --
 1

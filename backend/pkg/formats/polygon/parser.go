@@ -165,12 +165,10 @@ var (
 	// GCC type names encode versions and builds.
 	gccType = regexp.MustCompile(`^cpp\.(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?g\+\+(\d\d)$`)
 	// Versions in these type names are compiler versions, which share one configuration named like the language.
-	versionedType = regexp.MustCompile(`^(java|kotlin|csharp|ruby|php|scala)(?:\.?[a-z]*\d*)$`)
+	versionedType = regexp.MustCompile(`^(java|kotlin|scala|csharp|ruby|php)(?:\d+|\.(?:\d+|mono|dotnet\d*))?$`)
 )
 
-// C++ standards and Rust editions must match, except that C++11, C++14 and dialects without a standard build as
-// C++17, which accepts nearly all of their code. An unsupported source type is an error; an absent type defers to
-// the file extension.
+// C++11, C++14 and C++ without a standard build as C++17, which accepts nearly all of their code.
 func Language(sourceType string) (string, error) {
 	if m := gccType.FindStringSubmatch(sourceType); m != nil {
 		if m[1] == "11" || m[1] == "14" {

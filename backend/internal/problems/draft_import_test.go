@@ -39,7 +39,7 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 
 // testCatalog has two configurations for .cpp; the extension suggests the first.
 var testCatalog = &sandbox.Config{
-	Order:   []string{"c", "cpp17", "cpp20", "python3", "go", "java", "rust2021"},
+	Order:   []string{"c", "cpp17", "cpp20", "python3", "go", "java", "rust2021", "node"},
 	Missing: map[string]sandbox.Language{"kotlin": {Name: "Kotlin", Extensions: []string{"kt"}}},
 	Langs: map[string]sandbox.Language{
 		"c":        {Extensions: []string{"c"}},
@@ -49,6 +49,7 @@ var testCatalog = &sandbox.Config{
 		"go":       {Extensions: []string{"go"}},
 		"java":     {Extensions: []string{"java"}},
 		"rust2021": {Extensions: []string{"rs"}},
+		"node":     {Extensions: []string{"js"}},
 	},
 }
 
@@ -691,7 +692,7 @@ func TestImportKeepsPolygonSourceTypes(t *testing.T) {
 	for _, s := range plan.draft.Solutions {
 		languages[s.Name] = s.Language
 	}
-	require.Equal(t, map[string]string{"main": "cpp20", "old": "cpp17", "plain": "cpp17", "script": "python3", "old14": "cpp17", "bare": "cpp17", "fast": "rust2021"}, languages)
+	require.Equal(t, map[string]string{"main": "cpp20", "old": "cpp17", "plain": "cpp17", "script": "python3", "old14": "cpp17", "bare": "cpp17", "fast": "rust2021", "web": "node"}, languages)
 }
 
 func TestImportRejectsUnsupportedPolygonSourceTypes(t *testing.T) {
