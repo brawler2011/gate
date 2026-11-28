@@ -99,13 +99,24 @@ compile = "/usr/bin/javac-jar ${name} grader ${solution}.java ${graders}"
 entry = "grader.java"
 
 [rust]
-name = "Rust 1.95"
+name = "Rust 1.95 (2024 edition)"
 extensions = ["rs"]
 syntax = "rust"
 package = "rustc"
 type = "compiler"
 code_file = "foo.rs"
 compile = "/usr/bin/rustc -O --edition 2024 -o ${name} foo.rs"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[rust2021]
+name = "Rust 1.95 (2021 edition)"
+extensions = ["rs"]
+syntax = "rust"
+package = "rustc"
+type = "compiler"
+code_file = "foo.rs"
+compile = "/usr/bin/rustc -O --edition 2021 -o ${name} foo.rs"
 compile_file = "solution"
 execute = "${dir}/${name}"
 

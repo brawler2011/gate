@@ -1,15 +1,15 @@
-A Polygon C++14 solution: Gate has no C++14 configuration and does not
-substitute another standard.
+A Polygon C++26 solution: Gate has no C++26 configuration and does not
+substitute an older standard.
 
 -- problem.xml --
-<problem short-name="cpp14">
+<problem short-name="cpp26">
   <judging><testset name="tests">
     <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
     <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
     <tests><test method="manual"/></tests>
   </testset></judging>
   <assets><solutions>
-    <solution tag="main"><source path="solutions/main.cpp" type="cpp.g++14"/></solution>
+    <solution tag="main"><source path="solutions/main.cpp" type="cpp.gcc15-64-msys2-g++26"/></solution>
   </solutions></assets>
 </problem>
 -- solutions/main.cpp --

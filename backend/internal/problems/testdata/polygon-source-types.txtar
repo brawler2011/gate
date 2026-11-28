@@ -1,6 +1,7 @@
 Polygon names each program's configuration in source.type: a GCC build with
-a standard selects that standard, whatever the extension suggests; a source
-without a type gets the configuration its extension suggests.
+a standard selects that standard, whatever the extension suggests, with C++11,
+C++14 and no standard building as C++17; plain rust is the 2021 edition; a
+source without a type gets the configuration its extension suggests.
 
 -- problem.xml --
 <problem short-name="types">
@@ -14,6 +15,9 @@ without a type gets the configuration its extension suggests.
     <solution tag="accepted"><source path="solutions/old.cpp" type="cpp.g++17"/></solution>
     <solution tag="accepted"><source path="solutions/plain.cpp"/></solution>
     <solution tag="accepted"><source path="solutions/script.py" type="python.3"/></solution>
+    <solution tag="accepted"><source path="solutions/old14.cpp" type="cpp.g++14"/></solution>
+    <solution tag="accepted"><source path="solutions/bare.cpp" type="cpp.g++"/></solution>
+    <solution tag="accepted"><source path="solutions/fast.rs" type="rust"/></solution>
   </solutions></assets>
 </problem>
 -- solutions/main.cpp --
@@ -24,5 +28,11 @@ int main() {}
 int main() {}
 -- solutions/script.py --
 print()
+-- solutions/old14.cpp --
+int main() {}
+-- solutions/bare.cpp --
+int main() {}
+-- solutions/fast.rs --
+fn main() {}
 -- tests/01 --
 1
