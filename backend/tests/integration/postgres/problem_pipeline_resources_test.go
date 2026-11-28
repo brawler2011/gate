@@ -122,7 +122,8 @@ func (h *pipelineHarness) enqueueAndClaim(t *testing.T) model.ProblemBuild {
 	require.NoError(t, err)
 	_, err = h.repo.EnqueueBuild(h.ctx, current.ProblemID, current.Revision, h.options)
 	require.NoError(t, err)
-	build, err := h.repo.ClaimBuild(h.ctx, h.options.Lease)
+	// Without a heartbeat, the lease must cover the whole build.
+	build, err := h.repo.ClaimBuild(h.ctx, max(h.options.Lease, 5*time.Minute))
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, build.ID)
 	return build
