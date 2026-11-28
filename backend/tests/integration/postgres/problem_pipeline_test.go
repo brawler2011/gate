@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
+	"github.com/brawler2011/gate/backend/pkg/cpus"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -35,6 +37,7 @@ import (
 
 type pipelineServices struct {
 	store  *storage.S3Storage
+	bucket string
 	client *sandbox.Client
 	files  *sandbox.FileTransport
 	langs  map[string]sandbox.Language
@@ -42,42 +45,67 @@ type pipelineServices struct {
 	typeset *sandbox.Typesetter
 }
 
+// Tests share one SeaweedFS and one go-judge and get their own bucket.
+var shared struct {
+	sync.Mutex
+	containers []testcontainers.Container
+	endpoint   string
+	client     *sandbox.Client
+	files      *sandbox.FileTransport
+}
+
 func startPipelineServices(t *testing.T) pipelineServices {
 	t.Helper()
 	ctx := context.Background()
-	s3container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: testcontainers.ContainerRequest{
-		Image: "chrislusf/seaweedfs:4.53_full", ExposedPorts: []string{"8333/tcp"},
-		Cmd:        []string{"server", "-s3", "-filer", "-ip.bind=0.0.0.0", "-volume.max=100", "-master.volumeSizeLimitMB=1024", "-dir=/data"},
-		WaitingFor: wait.ForHTTP("/").WithPort("8333/tcp").WithStartupTimeout(time.Minute)}, Started: true})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, s3container.Terminate(context.Background(), testcontainers.StopTimeout(0))) })
-	s3host, err := s3container.Host(ctx)
-	require.NoError(t, err)
-	s3port, err := s3container.MappedPort(ctx, "8333/tcp")
-	require.NoError(t, err)
-	store := storage.NewS3Storage(storage.S3Config{Endpoint: fmt.Sprintf("http://%s:%s", s3host, s3port.Port()), AccessKey: "test", SecretKey: "test", Region: "us-east-1"})
-	require.NoError(t, store.EnsureBucket(ctx, "objects"))
-	image, err := judgeimage.Ref()
-	require.NoError(t, err)
-	request := testcontainers.ContainerRequest{
-		Image:        image,
-		ExposedPorts: []string{"5050/tcp"}, Privileged: true,
-		Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=1", "-no-fallback"},
-		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp")}
-	judge, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, judge.Terminate(context.Background(), testcontainers.StopTimeout(0))) })
-	host, err := judge.Host(ctx)
-	require.NoError(t, err)
-	hp, err := judge.MappedPort(ctx, "5050/tcp")
-	require.NoError(t, err)
-	client, err := sandbox.NewClient("http://"+host+":"+hp.Port(), &http.Client{})
-	require.NoError(t, err)
-	files, err := sandbox.NewFileTransport("http://"+host+":"+hp.Port(), &http.Client{Timeout: time.Minute})
-	require.NoError(t, err)
+	shared.Lock()
+	defer shared.Unlock()
+	if shared.client == nil {
+		s3container, err := startShared(ctx, testcontainers.ContainerRequest{
+			Image: "chrislusf/seaweedfs:4.53_full", ExposedPorts: []string{"8333/tcp"},
+			Cmd:        []string{"server", "-s3", "-filer", "-ip.bind=0.0.0.0", "-volume.max=1000", "-master.volumeSizeLimitMB=1024", "-dir=/data"},
+			WaitingFor: wait.ForHTTP("/").WithPort("8333/tcp").WithStartupTimeout(time.Minute)})
+		require.NoError(t, err)
+		s3host, err := s3container.Host(ctx)
+		require.NoError(t, err)
+		s3port, err := s3container.MappedPort(ctx, "8333/tcp")
+		require.NoError(t, err)
+		image, err := judgeimage.Ref()
+		require.NoError(t, err)
+		parallelism, err := cpus.Physical()
+		require.NoError(t, err)
+		judge, err := startShared(ctx, testcontainers.ContainerRequest{
+			Image:        image,
+			ExposedPorts: []string{"5050/tcp"}, Privileged: true,
+			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", fmt.Sprintf("-parallelism=%d", parallelism), "-no-fallback"},
+			WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp")})
+		require.NoError(t, err)
+		host, err := judge.Host(ctx)
+		require.NoError(t, err)
+		hp, err := judge.MappedPort(ctx, "5050/tcp")
+		require.NoError(t, err)
+		client, err := sandbox.NewClient("http://"+host+":"+hp.Port(), &http.Client{})
+		require.NoError(t, err)
+		files, err := sandbox.NewFileTransport("http://"+host+":"+hp.Port(), &http.Client{Timeout: time.Minute})
+		require.NoError(t, err)
+		shared.endpoint, shared.client, shared.files = fmt.Sprintf("http://%s:%s", s3host, s3port.Port()), client, files
+	}
+	store := storage.NewS3Storage(storage.S3Config{Endpoint: shared.endpoint, AccessKey: "test", SecretKey: "test", Region: "us-east-1"})
+	bucket := "t-" + uuid.NewString()
+	require.NoError(t, store.EnsureBucket(ctx, bucket))
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
-	return pipelineServices{store: store, client: client, files: files, langs: cfg.Langs, typeset: dbfixtures.Typesetter(t)}
+	return pipelineServices{store: store, bucket: bucket, client: shared.client, files: shared.files, langs: cfg.Langs, typeset: dbfixtures.Typesetter(t)}
+}
+
+func startShared(ctx context.Context, request testcontainers.ContainerRequest) (testcontainers.Container, error) {
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
+	if c != nil {
+		shared.containers = append(shared.containers, c)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("start %s: %w", request.Image, err)
+	}
+	return c, nil
 }
 
 func TestProblemPipelineRealServices(t *testing.T) {
@@ -110,7 +138,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Typeset: dbfixtures.Typesetter(t), Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: services.bucket, TempDir: temp, Client: client, Typeset: dbfixtures.Typesetter(t), Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(dbfixtures.Programs(t), client, files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)
@@ -120,7 +148,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	var size int64
 	require.NoError(t, pool.QueryRow(ctx, `SELECT p.title,o.key,o.sha256,o.size FROM problem_packages p JOIN stored_objects o ON o.id=p.object_id WHERE p.id=$1`, pid).Scan(&title, &key, &digest, &size))
 	require.Equal(t, "Initial", title)
-	requireStoredObject(t, ctx, store, "objects", key, size, digest)
+	requireStoredObject(t, ctx, store, services.bucket, key, size, digest)
 	// The second finalization resolves the original success, never a second Package.
 	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, model.NewStoredObject(b.OrganizationID, model.UploadSpec{Purpose: "package", SHA256: digest, Size: size}), model.PackageIndex{})
 	require.NoError(t, err)
@@ -175,8 +203,8 @@ func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsR
 func buildPackage(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, uuid.UUID, error) {
 	t.Helper()
 	limits := dbfixtures.BuildLimits(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Typeset: services.typeset, Files: services.files, Languages: cfg,
-		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: services.bucket, TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Typeset: services.typeset, Files: services.files, Languages: cfg,
+		Programs: sandbox.NewProgramCache(dbfixtures.Programs(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	_, err := repo.SaveDraft(ctx, *d)
 	require.NoError(t, err)
 	*d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -233,7 +261,7 @@ func TestProblemPipelineGeneratesPipelinesAndFiles(t *testing.T) {
 	pid, err := build(of("", step("gen", "5"), step("double")), of("1", step("multi", "1", "2")), of("2", step("multi", "1", "2")), of("", step("ones"), step("first")))
 	require.NoError(t, err)
 	inputs := map[string]string{}
-	r, err := (&problems.PackageContent{Repo: repo, Store: services.store, Bucket: "objects"}).OpenFiles(ctx, pid)
+	r, err := (&problems.PackageContent{Repo: repo, Store: services.store, Bucket: services.bucket}).OpenFiles(ctx, pid)
 	require.NoError(t, err)
 	data, err := io.ReadAll(r)
 	require.NoError(t, errors.Join(err, r.Close()))

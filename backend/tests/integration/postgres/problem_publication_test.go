@@ -92,7 +92,7 @@ func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string]
 	t.Helper()
 	desc, err := h.repo.GetPackageDescriptor(h.ctx, id)
 	require.NoError(t, err)
-	r, _, err := h.services.store.DownloadFile(h.ctx, "objects", desc.Object.Key, nil)
+	r, _, err := h.services.store.DownloadFile(h.ctx, h.services.bucket, desc.Object.Key, nil)
 	require.NoError(t, err)
 	data, err := io.ReadAll(r)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string]
 	}
 	var manifest gfmt.Problem
 	require.NoError(t, yaml.Unmarshal(files["problem.yaml"], &manifest))
-	requireStoredObject(t, h.ctx, h.services.store, "objects", desc.Object.Key, desc.Object.Size, desc.Object.SHA256)
+	requireStoredObject(t, h.ctx, h.services.store, h.services.bucket, desc.Object.Key, desc.Object.Size, desc.Object.SHA256)
 	return files, &manifest
 }
 
@@ -195,12 +195,12 @@ func TestPublicationMissingAndCorruptedObjects(t *testing.T) {
 				if tc.part == "answer" {
 					original = "original answer\n"
 				}
-				require.NoError(t, h.services.store.UploadFile(h.ctx, "objects", o.Key, strings.NewReader(original), "application/octet-stream"))
+				require.NoError(t, h.services.store.UploadFile(h.ctx, h.services.bucket, o.Key, strings.NewReader(original), "application/octet-stream"))
 			})
 			if tc.body == "" {
-				require.NoError(t, h.services.store.DeleteFile(h.ctx, "objects", o.Key))
+				require.NoError(t, h.services.store.DeleteFile(h.ctx, h.services.bucket, o.Key))
 			} else {
-				require.NoError(t, h.services.store.UploadFile(h.ctx, "objects", o.Key, strings.NewReader(tc.body), "application/octet-stream"))
+				require.NoError(t, h.services.store.UploadFile(h.ctx, h.services.bucket, o.Key, strings.NewReader(tc.body), "application/octet-stream"))
 			}
 			_, err = h.pipeline().Execute(h.ctx, b)
 			var failure *builder.Failure

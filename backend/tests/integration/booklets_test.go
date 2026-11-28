@@ -28,6 +28,7 @@ func (s *IntegrationTestSuite) TestContestBookletIsBuiltAheadAndNeverServedStale
 	ctx := withTestUser(s.ctx, owner.Id)
 	created, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{Title: "Booklet", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
+	s.onlyMainSolution(owner.Id, created.ID)
 	packageID := s.buildPackage(owner.Id, created.ID)
 	contestID := uuid.New()
 	s.Require().NoError(s.createContest(contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, Visibility: contestsmodel.ContestVisibilityPrivate, Title: "Booklet contest", Login: "booklet-contest"}, owner.Id))
