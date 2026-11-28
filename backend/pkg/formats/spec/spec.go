@@ -66,6 +66,8 @@ type Problem struct {
 	Attachments  []File
 	Statements   []Statement
 	Assets       []File
+	// Pictures are PostScript images and MetaPost sources that the import converts to SVG assets.
+	Pictures []File
 	// Testset is the root group of every test.
 	Testset Group
 	// Empty names keep standard input and output.
@@ -162,8 +164,24 @@ func IsImage(name string) bool {
 
 // AddAsset keeps the first file of each name, since statements in several languages often share images.
 func (p *Problem) AddAsset(name, rel string) {
-	if !slices.ContainsFunc(p.Assets, func(f File) bool { return f.Name == name }) {
-		p.Assets = append(p.Assets, File{Name: name, Path: rel})
+	addFirst(&p.Assets, name, rel)
+}
+
+// AddStatementFile keeps an image as an asset and a PostScript or MetaPost picture for conversion; it ignores other files.
+func (p *Problem) AddStatementFile(name, rel string) {
+	switch strings.ToLower(path.Ext(name)) {
+	case ".eps", ".ps", ".mp":
+		addFirst(&p.Pictures, name, rel)
+	default:
+		if IsImage(name) {
+			addFirst(&p.Assets, name, rel)
+		}
+	}
+}
+
+func addFirst(files *[]File, name, rel string) {
+	if !slices.ContainsFunc(*files, func(f File) bool { return f.Name == name }) {
+		*files = append(*files, File{Name: name, Path: rel})
 	}
 }
 

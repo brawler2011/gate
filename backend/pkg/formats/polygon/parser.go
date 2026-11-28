@@ -454,8 +454,8 @@ func exists(fsys fs.FS, name string) bool {
 func images(fsys fs.FS, p *spec.Problem, dir string) {
 	entries, _ := fs.ReadDir(fsys, dir)
 	for _, e := range entries {
-		if e.Type().IsRegular() && spec.IsImage(e.Name()) {
-			p.AddAsset(e.Name(), path.Join(dir, e.Name()))
+		if e.Type().IsRegular() {
+			p.AddStatementFile(e.Name(), path.Join(dir, e.Name()))
 		}
 	}
 }

@@ -397,6 +397,10 @@ func unpack(t *testing.T, name string) string {
 }
 
 func importDir(t *testing.T, source string, extra map[string]string) (*draftImport, error) {
+	return newImportUseCase(t).parseImport(context.Background(), packageArchive(t, source, extra), uuid.New(), 1)
+}
+
+func packageArchive(t *testing.T, source string, extra map[string]string) *bytes.Buffer {
 	dir := t.TempDir()
 	require.NoError(t, os.CopyFS(dir, os.DirFS(source)))
 	for path, text := range extra {
@@ -407,7 +411,7 @@ func importDir(t *testing.T, source string, extra map[string]string) (*draftImpo
 	w := zip.NewWriter(&archive)
 	require.NoError(t, w.AddFS(os.DirFS(dir)))
 	require.NoError(t, w.Close())
-	return newImportUseCase(t).parseImport(context.Background(), &archive, uuid.New(), 1)
+	return &archive
 }
 
 // An archive of one folder fails for what that folder lacks; files at the root are the package itself.
@@ -540,6 +544,44 @@ func TestImportLinksPCMS2StatementPDF(t *testing.T) {
 	require.Equal(t, `\includegraphics{statement-en.pdf}`, plan.draft.Statement("en").Legend)
 	require.Equal(t, "statement-en.pdf", plan.draft.Assets[0].Name)
 	require.NoError(t, plan.draft.Validate(importQuotas))
+}
+
+// svgTypesetter converts as the sandbox does: pic.mp writes pic-1.eps and pic-2.eps, and every PostScript file becomes SVG.
+type svgTypesetter struct{ Typesetter }
+
+func (svgTypesetter) Pictures(_ context.Context, files map[string][]byte) (map[string][]byte, error) {
+	svgs := map[string][]byte{}
+	for name := range files {
+		if name == "pic.mp" {
+			svgs["pic-1.eps"], svgs["pic-2.eps"] = []byte("<svg/>"), []byte("<svg/>")
+		} else {
+			svgs[name] = []byte("<svg/>")
+		}
+	}
+	return svgs, nil
+}
+
+func TestImportConvertsPostScriptPictures(t *testing.T) {
+	uc := newImportUseCase(t)
+	uc.Typeset = svgTypesetter{}
+	archive := packageArchive(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{
+		"statement-sections/english/legend.tex": "\\includegraphics{pic-1.eps} \\includegraphics[width=2cm]{pic-2} \\illustration{.3}{photo}{photo} \\texttt{pic-1.eps} \\includegraphics{map.eps}",
+		"statement-sections/english/pic.mp":     "beginfig(1); endfig; beginfig(2); endfig; end",
+		"statement-sections/english/photo.eps":  "%!PS",
+		"statement-sections/english/photo.png":  "png",
+		"statement-sections/english/map.eps":    "%!PS",
+		"statement-sections/english/map.svg":    "<svg/>",
+	})
+	plan, err := uc.parseImport(context.Background(), archive, uuid.New(), 1)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, "\\includegraphics{pic-1.svg} \\includegraphics[width=2cm]{pic-2.svg} \\illustration{.3}{photo}{photo} \\texttt{pic-1.eps} \\includegraphics{map.eps.svg}", plan.draft.Statement("en").Legend,
+		"graphicx finds photo.png before photo.eps")
+	var names []string
+	for _, a := range plan.draft.Assets {
+		names = append(names, a.Name)
+	}
+	require.ElementsMatch(t, []string{"photo.png", "photo.svg", "pic-1.svg", "pic-2.svg", "map.svg", "map.eps.svg"}, names)
 }
 
 func TestImportKeepsStatementTitles(t *testing.T) {

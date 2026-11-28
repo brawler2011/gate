@@ -59,6 +59,7 @@ type Typesetter interface {
 	statement.Converter
 	LaTeX(ctx context.Context, from, text string) (string, []sandbox.PandocMessage, error)
 	PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error)
+	Pictures(ctx context.Context, files map[string][]byte) (map[string][]byte, error)
 }
 
 // authorize fails fast before uploads; mutations authorize again inside their transaction.

@@ -105,3 +105,16 @@ func TestHTMLSplitsSectionsAndSanitizes(t *testing.T) {
 	_, err = HTML(context.Background(), pandocStub{html: out}, sections, assets)
 	require.Equal(t, &Error{Section: "legend", Message: `image "https://tracker.example/x.png" is not among the statement's assets`}, err)
 }
+
+// pandoc skips the braces after a command it does not know, so a layout command passes only with its own arguments.
+func TestHTMLSkipsOnlyLayoutCommands(t *testing.T) {
+	out := `<h1 class="unnumbered" id="gate-section-legend">gate-section-legend</h1><p>Text.</p>`
+	for skipped, layout := range map[string]bool{
+		"\\quad ": true, "\\parindent=1cm": true, "\\itemsep=-1mm plus 0.5mm": true, "\\vskip 0pt plus 1fill": true, "\\hskip\\parindent": true,
+		"\\vspace*{2mm}": true, "\\bgroup ": true,
+		"\\quad{hidden}": false, "\\vspace{1mm}{hidden}": false, "\\parindent=0pt{hidden}": false, "\\foo": false, "\\begin{foo}": false,
+	} {
+		_, err := HTML(context.Background(), pandocStub{html: out, skipped: skipped}, []Section{{Name: "legend", Text: skipped + "Text."}}, nil)
+		require.Equal(t, !layout, err != nil, skipped)
+	}
+}

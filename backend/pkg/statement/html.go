@@ -40,7 +40,35 @@ func (e *Error) Error() string {
 const marker = "gate-section-"
 
 // prelude gives pandoc the olymp.sty macros that the PDF has.
-const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n"
+var prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n" +
+	"\\newcommand{\\illustration}[3]{\\begin{figure}\\includegraphics[width=#1\\textwidth]{#2}\\caption{#3}\\end{figure}}\n" +
+	"\\newenvironment{shortitems}{\\begin{itemize}}{\\end{itemize}}\n" +
+	"\\newenvironment{shortnums}{\\begin{enumerate}}{\\end{enumerate}}\n" +
+	"\\newcommand{\\texttrademark}{™}\n" +
+	layoutMacros
+
+// layoutMacros drop commands that only change layout. \quad stays out: pandoc expands macros in math too.
+// pandoc keeps an environment and a command under one name, so each size command is defined after its environment.
+var layoutMacros = func() string {
+	var b strings.Builder
+	for _, c := range strings.Fields("noindent indent centering smallskip medskip bigskip hfil hfill vfil vfill newpage clearpage") {
+		fmt.Fprintf(&b, "\\renewcommand{\\%s}{}\n", c)
+	}
+	for _, c := range strings.Fields("tiny scriptsize footnotesize small normalsize large Large LARGE huge Huge") {
+		fmt.Fprintf(&b, "\\renewenvironment{%s}{}{}\\renewcommand{\\%s}{}\n", c, c)
+	}
+	b.WriteString("\\renewcommand{\\setlength}[2]{}\\renewcommand{\\addtolength}[2]{}\n")
+	b.WriteString("\\renewcommand{\\pagebreak}[1][0]{}\\renewcommand{\\nopagebreak}[1][0]{}\n")
+	return b.String()
+}()
+
+// layout matches what pandoc skips of layout commands macros cannot take: starred forms, TeX assignments and \quad.
+// pandoc skips braces after a command too, so arguments are matched exactly; \bgroup and \egroup come from expanding environments.
+var layout = func() *regexp.Regexp {
+	dimen := `[-+]?(?:[0-9.]+\s*[a-z]{2,4}|[0-9.]*\s*\\[a-zA-Z]+)`
+	glue := dimen + `(?:\s*(?:plus|minus)\s*` + dimen + `)*`
+	return regexp.MustCompile(`^\\(?:quad|qquad|bgroup|egroup|[vh]space\*?\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
+}()
 
 // HTML converts sections, given in Order, in one pandoc run. Content pandoc skips fails, so the site never misses what the PDF shows.
 // Each image's src becomes the asset name graphicx would pick; an image with no asset fails.
@@ -69,7 +97,7 @@ func HTML(ctx context.Context, c Converter, sections []Section, exists func(name
 		return nil, err
 	}
 	for _, m := range log {
-		if m.Type != "SkippedContent" {
+		if m.Type != "SkippedContent" || layout.MatchString(string(m.Contents)) {
 			continue
 		}
 		e := &Error{Section: spans[0].name, Message: fmt.Sprintf("%s is not supported on the site", m.Contents)}
@@ -124,6 +152,9 @@ func split(out string, exists func(name string) bool) (map[string]string, error)
 }
 
 func resolveImages(n *html.Node, section string, exists func(name string) bool) error {
+	if n.DataAtom == atom.P && onlyImage(n) {
+		n.Attr = append(n.Attr, html.Attribute{Key: "class", Val: "image"})
+	}
 	if n.DataAtom == atom.Img {
 		for i, a := range n.Attr {
 			if a.Key != "src" {
@@ -148,6 +179,20 @@ func resolveImages(n *html.Node, section string, exists func(name string) bool) 
 	return nil
 }
 
+func onlyImage(p *html.Node) bool {
+	images := 0
+	for c := p.FirstChild; c != nil; c = c.NextSibling {
+		switch {
+		case c.Type == html.ElementNode && c.DataAtom == atom.Img:
+			images++
+		case c.Type == html.TextNode && strings.TrimSpace(c.Data) == "":
+		default:
+			return false
+		}
+	}
+	return images == 1
+}
+
 func sectionName(n *html.Node) (string, bool) {
 	if n.DataAtom != atom.H1 {
 		return "", false
@@ -168,6 +213,7 @@ var policy = func() *bluemonday.Policy {
 		"figure", "figcaption", "span", "div")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(math inline|math display|smallcaps|underline)$`)).OnElements("span")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(center|flushleft|flushright)$`)).OnElements("div")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^image$`)).OnElements("p")
 	p.AllowAttrs("start", "type").OnElements("ol")
 	p.AllowAttrs("colspan", "rowspan").Matching(bluemonday.Integer).OnElements("td", "th")
 	p.AllowStyles("text-align").MatchingEnum("left", "right", "center").OnElements("td", "th")

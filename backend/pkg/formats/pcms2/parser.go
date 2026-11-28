@@ -285,8 +285,8 @@ func statements(fsys fs.FS, p *spec.Problem, list []Statement) []spec.Statement 
 		dir := path.Dir(sources[language])
 		entries, _ := fs.ReadDir(fsys, dir)
 		for _, e := range entries {
-			if e.Type().IsRegular() && spec.IsImage(e.Name()) {
-				p.AddAsset(e.Name(), path.Join(dir, e.Name()))
+			if e.Type().IsRegular() {
+				p.AddStatementFile(e.Name(), path.Join(dir, e.Name()))
 			}
 		}
 	}

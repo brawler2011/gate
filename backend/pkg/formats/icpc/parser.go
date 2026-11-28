@@ -429,8 +429,8 @@ func statements(fsys fs.FS, p *spec.Problem) []spec.Statement {
 			case named && ext == ".pdf" && dir == "statement" && pdfs[language] == "":
 				pdfs[language] = name
 				p.AddAsset(name, path.Join(dir, name))
-			case spec.IsImage(name):
-				p.AddAsset(name, path.Join(dir, name))
+			default:
+				p.AddStatementFile(name, path.Join(dir, name))
 			}
 		}
 	}
