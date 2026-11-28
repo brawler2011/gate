@@ -235,7 +235,7 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 		d.MainSolution = &solution
 		d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 1,
-			Input:  model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{}},
+			Input:  model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: generator, Args: []string{}}}},
 			Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	})
 }

@@ -584,6 +584,21 @@ func TestImportConvertsPostScriptPictures(t *testing.T) {
 	require.ElementsMatch(t, []string{"photo.png", "photo.svg", "pic-1.svg", "pic-2.svg", "map.svg", "map.eps.svg"}, names)
 }
 
+// Polygon tests may pipe generators and take a file that one run writes.
+func TestImportKeepsPolygonPipelinesAndFiles(t *testing.T) {
+	xml, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/problem.xml")
+	require.NoError(t, err)
+	changed := strings.NewReplacer(`<test cmd="echo 0 0" method="generated"/>`, `<test cmd="echo 0 0 | echo 'a b'" method="generated"/>`,
+		`<test cmd="echo 0 1" method="generated"/>`, `<test cmd="echo" from-file="7" method="generated"/>`).Replace(string(xml))
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{"problem.xml": changed})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: "echo", Args: []string{"0", "0"}}, {Generator: "echo", Args: []string{"a b"}}}}, plan.draft.Tests[3].Input)
+	require.Equal(t, model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: "echo", Args: []string{}}}, File: "7"}, plan.draft.Tests[4].Input)
+	require.NoError(t, plan.draft.Validate(importQuotas))
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+}
+
 func TestImportKeepsStatementTitles(t *testing.T) {
 	xml, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/problem.xml")
 	require.NoError(t, err)

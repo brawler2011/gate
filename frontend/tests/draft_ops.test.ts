@@ -76,7 +76,7 @@ describe("programs", () => {
     draft = applied(renameProgram(draft, "generator", "gen", "random"));
     draft = applied(renameProgram(draft, "solution", "ok", "main"));
     expect(draft.main_solution).toBe("main");
-    expect(draft.tests.map((t) => [t.input.generator, t.answer.solution])).toEqual([["random", "main"], ["random", "wa"]]);
+    expect(draft.tests.map((t) => [t.input.steps[0].generator, t.answer.solution])).toEqual([["random", "main"], ["random", "wa"]]);
     // A generator and a solution may share a name; a rename never touches the other role.
     draft = applied(renameProgram(applied(addProgram(draft, "generator", "wa", "cpp", "")), "generator", "wa", "big"));
     expect(draft.tests[1].answer.solution).toBe("wa");

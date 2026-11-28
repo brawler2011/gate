@@ -199,15 +199,11 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 	if t.Generate == "" {
 		test.Input = TestFolder + "/" + t.Input
 	} else {
-		argv, err := spec.ParseCommand(t.Generate)
+		steps, err := spec.Steps(t.Generate, generators)
 		if err != nil {
 			return test, err
 		}
-		name, ok := generators[argv[0]]
-		if !ok {
-			return test, spec.Fail(pkg.ErrUnknown, "", argv[0], "generator %s not found", argv[0])
-		}
-		test.Generator, test.Args = name, argv[1:]
+		test.Steps, test.File = steps, t.File
 	}
 	if t.StatementInput != "" {
 		test.StatementInput = TestFolder + "/" + t.StatementInput

@@ -238,12 +238,22 @@ type DraftTest struct {
 }
 
 type DraftInput struct {
-	Mode      string     `json:"mode"`
-	ObjectID  *uuid.UUID `json:"object_id"`
-	Generator *string    `json:"generator"`
-	// Args include the full generator argv after its name; testlib derives its random seed from them.
+	Mode     string     `json:"mode"`
+	ObjectID *uuid.UUID `json:"object_id"`
+	// Steps run connected by pipes, each step reading the previous one's output.
+	Steps []DraftStep `json:"steps"`
+	// File names the file the run writes as the input, instead of the last step's output.
+	File string `json:"file"`
+}
+
+type DraftStep struct {
+	Generator string `json:"generator"`
+	// Args are the full argv after the generator's name; testlib derives its random seed from them.
 	Args []string `json:"args"`
 }
+
+// MaxSteps bounds a generator pipeline.
+const MaxSteps = 8
 
 type DraftAnswer struct {
 	Mode     string     `json:"mode"`
@@ -487,8 +497,14 @@ func (d *Draft) Normalize() {
 		d.Tests = []DraftTest{}
 	}
 	for i := range d.Tests {
-		if d.Tests[i].Input.Args == nil {
-			d.Tests[i].Input.Args = []string{}
+		in := &d.Tests[i].Input
+		if in.Steps == nil {
+			in.Steps = []DraftStep{}
+		}
+		for j := range in.Steps {
+			if in.Steps[j].Args == nil {
+				in.Steps[j].Args = []string{}
+			}
 		}
 	}
 }
@@ -1047,7 +1063,7 @@ func (d *Draft) validateTests(v *validation) {
 		i := test.Input
 		switch i.Mode {
 		case "manual":
-			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.Generator != nil || len(i.Args) != 0 {
+			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || len(i.Steps) != 0 || i.File != "" {
 				v.fail(at+"/input", pkg.ErrInconsistent, with(at+"/input/mode"), "manual input needs content and no generator")
 			}
 		case "generator":
@@ -1055,20 +1071,29 @@ func (d *Draft) validateTests(v *validation) {
 				v.fail(at+"/input/object_id", pkg.ErrInconsistent, with(at+"/input/mode"), "generated input cannot have content")
 			}
 			switch {
-			case i.Generator == nil:
-				v.fail(at+"/input/generator", pkg.ErrRequired, nil, "generator is missing")
-			case d.Generator(*i.Generator) == nil:
-				v.fail(at+"/input/generator", pkg.ErrUnknown, value(*i.Generator), "unknown generator %q", *i.Generator)
+			case len(i.Steps) == 0:
+				v.fail(at+"/input/steps", pkg.ErrRequired, nil, "generator is missing")
+			case len(i.Steps) > MaxSteps:
+				v.fail(at+"/input/steps", pkg.ErrTooMany, maximum(MaxSteps), "too many generator steps")
+			}
+			if i.File != "" && (!ValidFileName(i.File) || !sandbox.ValidSolutionFile(i.File)) {
+				v.fail(at+"/input/file", pkg.ErrFormat, nil, "invalid generated file name %q", i.File)
 			}
 		default:
 			v.fail(at+"/input/mode", pkg.ErrUnknown, value(i.Mode), "invalid input mode %q", i.Mode)
 		}
-		if len(i.Args) > 256 {
-			v.fail(at+"/input/args", pkg.ErrTooMany, maximum(256), "too many generator arguments")
-		}
-		for j, arg := range i.Args {
-			if len(arg) > 4096 || strings.ContainsRune(arg, 0) || !utf8.ValidString(arg) {
-				v.fail(fmt.Sprintf("%s/input/args/%d", at, j), pkg.ErrFormat, nil, "invalid generator argument")
+		for j, step := range i.Steps {
+			stepAt := fmt.Sprintf("%s/input/steps/%d", at, j)
+			if d.Generator(step.Generator) == nil {
+				v.fail(stepAt+"/generator", pkg.ErrUnknown, value(step.Generator), "unknown generator %q", step.Generator)
+			}
+			if len(step.Args) > 256 {
+				v.fail(stepAt+"/args", pkg.ErrTooMany, maximum(256), "too many generator arguments")
+			}
+			for k, arg := range step.Args {
+				if len(arg) > 4096 || strings.ContainsRune(arg, 0) || !utf8.ValidString(arg) {
+					v.fail(fmt.Sprintf("%s/args/%d", stepAt, k), pkg.ErrFormat, nil, "invalid generator argument")
+				}
 			}
 		}
 		a := test.Answer

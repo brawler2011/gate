@@ -109,7 +109,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {
 		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Points: weight,
-			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}},
+			Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: []string{a, b}}}},
 			Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	d.Tests = []problemsmodel.DraftTest{test(1, 40*points.Unit, "1", "2"), test(2, 60*points.Unit, "3", "2")}
@@ -367,7 +367,7 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 			d.MainSolution = &solution
 			d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"5"}},
+				Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: []string{"5"}}}},
 				Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 		}
 	}
@@ -452,7 +452,7 @@ func TestCommunicationJudgingE2E(t *testing.T) {
 		d.MainSolution = &solution
 		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 		d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Points: 100 * points.Unit,
-			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"21"}},
+			Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: []string{"21"}}}},
 			Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 	})
 	assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", correct).State)
@@ -478,7 +478,7 @@ func TestStandardCheckerE2E(t *testing.T) {
 			d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 			for i, args := range [][]string{{"1", "3"}, {"2", "7"}} {
 				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 50 * points.Unit,
-					Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args},
+					Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: args}}},
 					Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 			}
 		}
@@ -517,7 +517,7 @@ func TestOutputOnlyJudgingE2E(t *testing.T) {
 		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 		for i, arg := range []string{"1", "2", "3"} {
 			d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 10 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{arg}},
+				Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: []string{arg}}}},
 				Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 		}
 		max := 30 * points.Unit
@@ -584,7 +584,7 @@ func TestGraderJudgingE2E(t *testing.T) {
 		d.Testset = problemsmodel.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []problemsmodel.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
 		for i, args := range [][]string{{"1", "2"}, {"3", "-4"}} {
 			d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, GroupID: group, Points: 50 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args},
+				Input:  problemsmodel.DraftInput{Mode: "generator", Steps: []problemsmodel.DraftStep{{Generator: generator, Args: args}}},
 				Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 		}
 	})

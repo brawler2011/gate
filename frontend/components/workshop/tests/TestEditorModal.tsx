@@ -1,4 +1,5 @@
-import {Alert, Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput, Textarea} from "@mantine/core";
+import {ActionIcon, Alert, Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput, Textarea} from "@mantine/core";
+import {IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
 
 import {groupLabel, groupRows, isInteractive, toHundredths} from "../draft/draftOps";
@@ -47,8 +48,14 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const [statementOutput, setStatementOutput] = useState(test.statement_output);
   const [points, setPoints] = useState<number>(test.points);
   const [inputMode, setInputMode] = useState<"manual" | "generator">(test.input.mode);
-  const [generator, setGenerator] = useState(test.input.generator);
-  const [args, setArgs] = useState(test.input.args.join(" "));
+  const [steps, setSteps] = useState(
+    test.input.steps.length > 0
+      ? test.input.steps.map((step) => ({generator: step.generator, args: step.args.join(" ")}))
+      : [{generator: draft.generators[0]?.name ?? "", args: ""}],
+  );
+  const [generatedFile, setGeneratedFile] = useState(test.input.file);
+  const setStep = (index: number, patch: Partial<{generator: string; args: string}>) =>
+    setSteps((current) => current.map((step, i) => (i === index ? {...step, ...patch} : step)));
   const [answerMode, setAnswerMode] = useState(test.answer.mode);
   const [solution, setSolution] = useState(test.answer.solution ?? draft.main_solution);
   const [inputFile, setInputFile] = useState<File | null>(null);
@@ -60,7 +67,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const needsInputFile = inputMode === "manual" && !test.input.object_id && !inputFile;
   const needsAnswerFile = !interactive && answerMode === "provided" && !test.answer.object_id && !answerFile;
   const invalid =
-    (inputMode === "generator" && !generator) ||
+    (inputMode === "generator" && steps.some((step) => !step.generator)) ||
     (!interactive && answerMode === "generated" && !solution) ||
     toHundredths(points) < 0;
 
@@ -85,8 +92,8 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       points: toHundredths(points) / 100,
       input:
         inputMode === "manual"
-          ? {mode: "manual", object_id: test.input.object_id, generator: null, args: []}
-          : {mode: "generator", object_id: null, generator, args: parseArgs(args)},
+          ? {mode: "manual", object_id: test.input.object_id, steps: [], file: ""}
+          : {mode: "generator", object_id: null, steps: steps.map((step) => ({generator: step.generator, args: parseArgs(step.args)})), file: generatedFile.trim()},
       answer: buildAnswer(),
     };
     onSubmit(next, {
@@ -158,8 +165,42 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
             />
           ) : (
             <>
-              <Select label="Генератор" data={programOptions(draft.generators)} value={generator} onChange={setGenerator} placeholder="Не выбран" />
-              <TextInput label="Аргументы" description="Передаются генератору как argv, разделитель — пробел" value={args} onChange={(e) => setArgs(e.currentTarget.value)} />            </>
+              {steps.map((step, index) => (
+                <Group key={index} align="flex-end" wrap="nowrap">
+                  <Select
+                    label={index === 0 ? "Генератор" : `Шаг ${index + 1}: читает вывод предыдущего`}
+                    data={programOptions(draft.generators)}
+                    value={step.generator || null}
+                    onChange={(value) => setStep(index, {generator: value ?? ""})}
+                    placeholder="Не выбран"
+                    w={200}
+                  />
+                  <TextInput
+                    label="Аргументы"
+                    description={index === 0 ? "Передаются как argv, разделитель — пробел" : undefined}
+                    value={step.args}
+                    onChange={(e) => setStep(index, {args: e.currentTarget.value})}
+                    style={{flex: 1}}
+                  />
+                  {steps.length > 1 && (
+                    <ActionIcon variant="subtle" color="red" aria-label="Убрать шаг" onClick={() => setSteps((current) => current.filter((_, i) => i !== index))}>
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  )}
+                </Group>
+              ))}
+              <Group>
+                <Button size="xs" variant="light" onClick={() => setSteps((current) => [...current, {generator: "", args: ""}])}>
+                  Добавить шаг (|)
+                </Button>
+              </Group>
+              <TextInput
+                label="Файл"
+                description="Пусто — вход это вывод последнего шага. Иначе — файл, который запуск пишет в рабочий каталог; тесты с одинаковыми шагами строятся одним запуском."
+                value={generatedFile}
+                onChange={(e) => setGeneratedFile(e.currentTarget.value)}
+              />
+            </>
           )}
         </Stack>
 

@@ -118,8 +118,8 @@ func TestPolygonGroups(t *testing.T) {
 	require.Equal(t, spec.Group{Groups: []spec.Group{
 		{Name: "samples", Aggregate: "sum", Feedback: "complete", Tests: []spec.Test{{Input: "tests/01", Sample: true, Ordinal: 1}}},
 		{Name: "main", Aggregate: "min", Feedback: "points", Requires: []string{"samples"}, Tests: []spec.Test{
-			{Generator: "gen.cpp", Args: []string{"a b", "2"}, Points: 100 * points.Unit, Ordinal: 2},
-			{Generator: "gen.cpp", Args: []string{"3"}, Points: 100 * points.Unit, Ordinal: 3},
+			{Steps: []spec.Step{{Generator: "gen.cpp", Args: []string{"a b", "2"}}}, Points: 100 * points.Unit, Ordinal: 2},
+			{Steps: []spec.Step{{Generator: "gen.cpp", Args: []string{"3"}}}, Points: 100 * points.Unit, Ordinal: 3},
 		}},
 	}}, p.Testset)
 }
@@ -461,10 +461,16 @@ func TestYAMLFormatsRejectNullAndNonMappingConfiguration(t *testing.T) {
 }
 
 func TestParseCommand(t *testing.T) {
-	argv, err := spec.ParseCommand(`gen "a b" c\ d 'e"f' > $`)
+	steps, err := spec.ParseCommand(`gen "a b" c\ d 'e"f' > $`)
 	require.NoError(t, err)
-	require.Equal(t, []string{"gen", "a b", "c d", `e"f`}, argv)
-	for _, bad := range []string{"", "gen | cat", "gen > out", "gen 'open"} {
+	require.Equal(t, [][]string{{"gen", "a b", "c d", `e"f`}}, steps)
+	steps, err = spec.ParseCommand(`gen 1000 '|' | make_impossible "x|y"`)
+	require.NoError(t, err)
+	require.Equal(t, [][]string{{"gen", "1000", "|"}, {"make_impossible", "x|y"}}, steps)
+	formatted, err := spec.ParseCommand(spec.FormatCommand(steps))
+	require.NoError(t, err)
+	require.Equal(t, steps, formatted)
+	for _, bad := range []string{"", "gen |", "| gen", "gen || cat", "gen > out", "gen 'open", "gen; rm"} {
 		_, err := spec.ParseCommand(bad)
 		require.Error(t, err, bad)
 	}

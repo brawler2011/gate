@@ -196,7 +196,7 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	second.ValidatorArgs = []string{"--n", "5"}
 	second.Groups = []model.DraftGroup{{ID: uuid.New(), Name: "nested", Aggregate: "avg", StopOnFailure: true, Feedback: "points"}}
 	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, GroupID: second.Groups[0].ID, Points: 5, Sample: true,
-		Input:  model.DraftInput{Mode: "generator", Generator: &gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}},
+		Input:  model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}}}},
 		Answer: model.DraftAnswer{Mode: "generated", Solution: &other}})
 	// Interleave the groups' tests.
 	d.Tests[0].Ordinal, d.Tests[1].Ordinal = 2, 1

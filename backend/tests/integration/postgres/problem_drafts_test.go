@@ -156,7 +156,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	d.Generators = []model.DraftNamedProgram{named(generator, "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "min", Feedback: "complete"}}}
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Input: model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: generator}}}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	saved, err := repo.GetDraft(ctx, d.ProblemID)
@@ -164,7 +164,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 
 	saved.Library[0].Name = "testlib-0.9.h"
 	saved.Generators[0].Name = "random"
-	saved.Tests[0].Input.Generator = &saved.Generators[0].Name
+	saved.Tests[0].Input.Steps = []model.DraftStep{{Generator: saved.Generators[0].Name, Args: []string{}}}
 	saved.Assets[0].Name = "graph.png"
 	_, err = repo.SaveDraft(ctx, saved)
 	require.NoError(t, err)

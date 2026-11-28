@@ -52,7 +52,7 @@ const buildableDraft = {
   testset: {id: "s", name: "", aggregate: "sum", stop_on_failure: false, requires: [], feedback: "complete", checker_args: [], validator_args: [], groups: []},
   tests: [{
     id: "t", ordinal: 1, group_id: "s", sample: false, points: 1,
-    input: {mode: "manual", object_id: "in", component_id: null, args: []},
+    input: {mode: "manual", object_id: "in", steps: [], file: ""},
     answer: {mode: "provided", object_id: "ans", component_id: null},
   }],
 };

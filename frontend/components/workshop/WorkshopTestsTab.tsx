@@ -241,10 +241,12 @@ const describeInput = (test: ProblemDraftTest, draft: ProblemDraft, problemId: s
       </Badge>
     );
   }
-  const generator = draft.generators.find((g) => g.name === test.input.generator);
+  const command = test.input.steps.map((step) => [step.generator || "?", ...step.args].join(" ")).join(" | ");
   return (
     <Text size="sm" ff="monospace">
-      {generator?.name ?? "?"} {test.input.args.join(" ")}    </Text>
+      {command}
+      {test.input.file && ` → ${test.input.file}`}
+    </Text>
   );
 };
 

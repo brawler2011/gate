@@ -208,8 +208,12 @@ func (p *Package) tests(d model.Draft, solutions map[string]string, built map[uu
 		if built != nil && !isBuilt {
 			return fmt.Errorf("test %d was not built", t.Ordinal)
 		}
-		if t.Input.Mode == "generator" && t.Input.Generator != nil {
-			test.Generate = spec.FormatCommand(append([]string{*t.Input.Generator}, t.Input.Args...))
+		if t.Input.Mode == "generator" {
+			steps := make([][]string, len(t.Input.Steps))
+			for i, step := range t.Input.Steps {
+				steps[i] = append([]string{step.Generator}, step.Args...)
+			}
+			test.Generate, test.File = spec.FormatCommand(steps), t.Input.File
 		}
 		switch {
 		case isBuilt:

@@ -147,9 +147,9 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 			d.Testset.Groups = []model.DraftGroup{{ID: a, Name: "a", Aggregate: "sum", Feedback: "complete", Requires: []uuid.UUID{b, b}}, {ID: b, Name: "b", Aggregate: "sum", Feedback: "complete"}}
 		}},
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
-		{"missing generator", "/tests/0/input/generator: unknown generator", func(d *model.Draft) {
+		{"missing generator", "/tests/0/input/steps/0/generator: unknown generator", func(d *model.Draft) {
 			name := "gen"
-			d.Tests[0].Input = model.DraftInput{Mode: "generator", Generator: &name}
+			d.Tests[0].Input = model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: name}}}
 		}},
 		{"duplicate test", "/tests/1/id: ID is not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
 	}
