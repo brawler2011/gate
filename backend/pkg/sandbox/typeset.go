@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -66,11 +67,11 @@ type PandocMessage struct {
 
 var texErrorLine = regexp.MustCompile(`(?m)^\./doc\.tex:(\d+): (.*)$`)
 
-// PDF compiles doc.tex twice, for references, next to files; SVG images become PDF under their own name.
-func (t *Typesetter) PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error) {
-	copyIn := map[string]cmdFile{"doc.tex": *memoryFile(doc)}
+// copyIn passes text inline and uploads binary files; release frees the uploads.
+func (t *Typesetter) copyIn(ctx context.Context, files map[string][]byte) (copyIn map[string]cmdFile, release func(), err error) {
+	copyIn = map[string]cmdFile{}
 	var uploaded []string
-	defer func() { t.client.release(uploaded...) }()
+	release = func() { t.client.release(uploaded...) }
 	for _, name := range slices.Sorted(maps.Keys(files)) {
 		data := files[name]
 		if utf8.Valid(data) {
@@ -79,11 +80,23 @@ func (t *Typesetter) PDF(ctx context.Context, doc string, files map[string][]byt
 		}
 		id, err := t.client.upload(ctx, data)
 		if err != nil {
-			return nil, fmt.Errorf("%w: upload %s: %w", ErrUnavailable, name, err)
+			release()
+			return nil, nil, fmt.Errorf("%w: upload %s: %w", ErrUnavailable, name, err)
 		}
 		uploaded = append(uploaded, id)
 		copyIn[name] = *cachedFile(id)
 	}
+	return copyIn, release, nil
+}
+
+// PDF compiles doc.tex twice, for references, next to files; SVG images become PDF under their own name.
+func (t *Typesetter) PDF(ctx context.Context, doc string, files map[string][]byte) ([]byte, error) {
+	copyIn, release, err := t.copyIn(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	copyIn["doc.tex"] = *memoryFile(doc)
 	latex := "pdflatex -no-shell-escape -file-line-error -interaction=nonstopmode -halt-on-error doc.tex >/dev/null"
 	script := `shopt -s globstar nullglob
 for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" || exit 2; done
@@ -107,6 +120,44 @@ for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" |
 		return nil, fmt.Errorf("download PDF: %w", err)
 	}
 	return pdf.Bytes(), nil
+}
+
+// pictureScript builds MetaPost sources into PostScript, then prints "name<TAB>base64 SVG" for every PostScript file; pictures that fail are left out.
+const pictureScript = `shopt -s nullglob
+for f in *.mp; do mpost -interaction=batchmode -s prologues=3 "$f" </dev/null >/dev/null 2>&1; done
+for f in *; do
+  [ -f "$f" ] && [ "$(head -c 2 -- "$f")" = '%!' ] || continue
+  dvisvgm --eps --no-fonts --output=/tmp/out.svg -- "$f" >/dev/null 2>&1 && [ -s /tmp/out.svg ] || continue
+  printf '%s\t' "$f" >> svg; base64 -w0 /tmp/out.svg >> svg; echo >> svg; rm /tmp/out.svg
+done`
+
+// Pictures converts MetaPost sources and EPS or PS files to SVG, keyed by the name of the PostScript file it comes from.
+func (t *Typesetter) Pictures(ctx context.Context, files map[string][]byte) (map[string][]byte, error) {
+	copyIn, release, err := t.copyIn(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	res, err := t.run(ctx, pictureScript, copyIn, nil, []string{"svg?"}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if res.Status != resultAccepted {
+		return nil, fmt.Errorf("convert pictures: %s (exit %d): %s", res.Status, res.ExitStatus, res.Files["stderr"])
+	}
+	svgs := map[string][]byte{}
+	for line := range strings.Lines(res.Files["svg"]) {
+		name, data, ok := strings.Cut(strings.TrimSuffix(line, "\n"), "\t")
+		if !ok {
+			continue
+		}
+		svg, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return nil, fmt.Errorf("decode SVG of %s: %w", name, err)
+		}
+		svgs[name] = svg
+	}
+	return svgs, nil
 }
 
 func texError(log string) *TeXError {

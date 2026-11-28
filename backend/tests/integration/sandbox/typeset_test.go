@@ -4,6 +4,9 @@ package sandbox_test
 
 import (
 	"context"
+	"encoding/base64"
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -34,6 +37,17 @@ func TestTypesetStatements(t *testing.T) {
 		require.NotContains(t, html["input"], "javascript:")
 	})
 
+	t.Run("HTML drops layout commands and keeps Kattis and NERC macros", func(t *testing.T) {
+		html, err := statement.HTML(ctx, ts, []statement.Section{{Name: "legend", Text: "\\noindent\\parindent=1cm Text\\texttrademark{}.\\vspace*{2mm}\\medskip\n\n{\\small small}\n\n" +
+			"\\begin{center}\\includegraphics{pic.png}\\end{center}\n\n\\illustration{0.3}{pic.png}{By X}\n\n\\begin{shortitems}\\item one\\end{shortitems}"}}, func(string) bool { return true })
+		require.NoError(t, err)
+		require.Contains(t, html["legend"], "<p>Text™.</p>\n<p><span>small</span></p>")
+		require.Contains(t, html["legend"], `<p class="image"><img src="pic.png"`)
+		require.Contains(t, html["legend"], `<img src="pic.png" style="width: 30.0%"`)
+		require.Contains(t, html["legend"], "<figcaption>By X</figcaption>")
+		require.Contains(t, html["legend"], "<li><p>one</p></li>")
+	})
+
 	t.Run("HTML names what the site cannot show", func(t *testing.T) {
 		_, err := statement.HTML(ctx, ts, []statement.Section{{Name: "legend", Text: "Fine."}, {Name: "notes", Text: "One.\nTwo \\exmp{1}{2}."}}, nil)
 		var e *statement.Error
@@ -54,6 +68,25 @@ func TestTypesetStatements(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, strings.HasPrefix(string(pdf), "%PDF"))
 		require.NotContains(t, string(pdf), "/Type3", "Cyrillic text falls back to bitmap fonts")
+	})
+
+	t.Run("PDF wraps text around an illustration", func(t *testing.T) {
+		doc := statement.NewDocument(problem("\\noindent\\illustration{0.3}{pic.png}{By X}Text.\\begin{shortitems}\\item one\\end{shortitems}"))
+		png, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==")
+		require.NoError(t, err)
+		_, err = ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty, "assets/pic.png": png})
+		require.NoError(t, err)
+	})
+
+	t.Run("Pictures turn MetaPost and EPS into SVG", func(t *testing.T) {
+		mp := "prologues := 3;\noutputtemplate := \"%j-%c.eps\";\nbeginfig(1) draw (0,0)--(1cm,1cm); label(btex $x_1$ etex, (0,0)); endfig;\nbeginfig(2) draw fullcircle scaled 1cm; endfig;\nend\n"
+		eps := "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 20 20\nnewpath 0 0 moveto 20 20 lineto stroke\nshowpage\n"
+		svgs, err := ts.Pictures(ctx, map[string][]byte{"pic.mp": []byte(mp), "line.eps": []byte(eps)})
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"pic-1.eps", "pic-2.eps", "line.eps"}, slices.Collect(maps.Keys(svgs)))
+		for name, svg := range svgs {
+			require.Contains(t, string(svg), "<svg", name)
+		}
 	})
 
 	t.Run("PDF errors name the section and its line", func(t *testing.T) {

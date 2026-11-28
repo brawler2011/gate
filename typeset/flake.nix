@@ -24,10 +24,13 @@
           babel-russian
           cm-super
           cyrillic
+          dvisvgm
           graphics
           hyphen-russian
           lh
           metafont
+          metapost
+          wrapfig
         ]
       );
 
@@ -40,6 +43,7 @@
         paths = [
           pkgs.bash
           pkgs.coreutils
+          pkgs.ghostscript
           pkgs.librsvg
           pkgs.pandoc
           tex
@@ -78,6 +82,7 @@
             pkgs.librsvg
             pkgs.dejavu_fonts
           ])
+          (layer [ pkgs.ghostscript ])
           (layer [ pkgs.go-judge ])
         ];
         perms = [

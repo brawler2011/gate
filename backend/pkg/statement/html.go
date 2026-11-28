@@ -40,7 +40,21 @@ func (e *Error) Error() string {
 const marker = "gate-section-"
 
 // prelude gives pandoc the olymp.sty macros that the PDF has.
-const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n"
+const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n" +
+	"\\newcommand{\\illustration}[3]{\\begin{figure}\\includegraphics[width=#1\\textwidth]{#2}\\caption{#3}\\end{figure}}\n" +
+	"\\newenvironment{shortitems}{\\begin{itemize}}{\\end{itemize}}\n" +
+	"\\newenvironment{shortnums}{\\begin{enumerate}}{\\end{enumerate}}\n" +
+	"\\newcommand{\\texttrademark}{™}\n"
+
+// layout matches what pandoc skips of commands that only change layout; it skips braces after a command too, so arguments are matched exactly.
+// \bgroup and \egroup come from expanding \newenvironment.
+var layout = func() *regexp.Regexp {
+	sizes := "tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge"
+	plain := "noindent|indent|centering|smallskip|medskip|bigskip|hfil|hfill|vfil|vfill|quad|qquad|newpage|clearpage|pagebreak|nopagebreak|bgroup|egroup|" + sizes
+	dimen := `[-+]?(?:[0-9.]+\s*[a-z]{2,4}|[0-9.]*\s*\\[a-zA-Z]+)`
+	glue := dimen + `(?:\s*(?:plus|minus)\s*` + dimen + `)*`
+	return regexp.MustCompile(`^\\(?:(?:` + plain + `)|(?:begin|end)\{(?:` + sizes + `)\}|[vh]space\*?\{[^{}]*\}|(?:setlength|addtolength)\{\\[a-zA-Z]+\}\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
+}()
 
 // HTML converts sections, given in Order, in one pandoc run. Content pandoc skips fails, so the site never misses what the PDF shows.
 // Each image's src becomes the asset name graphicx would pick; an image with no asset fails.
@@ -69,7 +83,7 @@ func HTML(ctx context.Context, c Converter, sections []Section, exists func(name
 		return nil, err
 	}
 	for _, m := range log {
-		if m.Type != "SkippedContent" {
+		if m.Type != "SkippedContent" || layout.MatchString(string(m.Contents)) {
 			continue
 		}
 		e := &Error{Section: spans[0].name, Message: fmt.Sprintf("%s is not supported on the site", m.Contents)}
@@ -124,6 +138,9 @@ func split(out string, exists func(name string) bool) (map[string]string, error)
 }
 
 func resolveImages(n *html.Node, section string, exists func(name string) bool) error {
+	if n.DataAtom == atom.P && onlyImage(n) {
+		n.Attr = append(n.Attr, html.Attribute{Key: "class", Val: "image"})
+	}
 	if n.DataAtom == atom.Img {
 		for i, a := range n.Attr {
 			if a.Key != "src" {
@@ -148,6 +165,20 @@ func resolveImages(n *html.Node, section string, exists func(name string) bool) 
 	return nil
 }
 
+func onlyImage(p *html.Node) bool {
+	images := 0
+	for c := p.FirstChild; c != nil; c = c.NextSibling {
+		switch {
+		case c.Type == html.ElementNode && c.DataAtom == atom.Img:
+			images++
+		case c.Type == html.TextNode && strings.TrimSpace(c.Data) == "":
+		default:
+			return false
+		}
+	}
+	return images == 1
+}
+
 func sectionName(n *html.Node) (string, bool) {
 	if n.DataAtom != atom.H1 {
 		return "", false
@@ -168,6 +199,7 @@ var policy = func() *bluemonday.Policy {
 		"figure", "figcaption", "span", "div")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(math inline|math display|smallcaps|underline)$`)).OnElements("span")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(center|flushleft|flushright)$`)).OnElements("div")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^image$`)).OnElements("p")
 	p.AllowAttrs("start", "type").OnElements("ol")
 	p.AllowAttrs("colspan", "rowspan").Matching(bluemonday.Integer).OnElements("td", "th")
 	p.AllowStyles("text-align").MatchingEnum("left", "right", "center").OnElements("td", "th")

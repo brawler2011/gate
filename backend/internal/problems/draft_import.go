@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -175,6 +176,8 @@ type importConverter struct {
 	textBytes int64
 	converted []string
 	skipped   []string
+	// pictures maps each name a statement may give a converted picture to its SVG asset.
+	pictures map[string]string
 }
 
 func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
@@ -239,6 +242,22 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 	if p.MainSolution != "" && c.draft.MainSolution == nil {
 		return spec.Fail(pkg.ErrUnknown, "", p.MainSolution, "main solution %s not found", p.MainSolution)
 	}
+	for _, a := range p.Assets {
+		if !model.ValidFileName(a.Name) {
+			return spec.Fail(pkg.ErrFormat, a.Path, a.Name, "invalid asset name %s", a.Name)
+		}
+		if err := c.charge(0); err != nil {
+			return err
+		}
+		oid, err := c.object(a.Path, "asset")
+		if err != nil {
+			return err
+		}
+		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
+	}
+	if err := c.addPictures(ctx, p.Pictures); err != nil {
+		return err
+	}
 	for _, s := range p.Statements {
 		if err := c.addStatement(ctx, s); err != nil {
 			return err
@@ -258,19 +277,6 @@ func (c *importConverter) convert(ctx context.Context, p *spec.Problem) error {
 			}
 			*list.draft = append(*list.draft, model.DraftFile{Name: f.Name, Content: text})
 		}
-	}
-	for _, a := range p.Assets {
-		if !model.ValidFileName(a.Name) {
-			return spec.Fail(pkg.ErrFormat, a.Path, a.Name, "invalid asset name %s", a.Name)
-		}
-		if err := c.charge(0); err != nil {
-			return err
-		}
-		oid, err := c.object(a.Path, "asset")
-		if err != nil {
-			return err
-		}
-		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
 	}
 	if err := c.addGroups(p.Testset, generators, solutions); err != nil {
 		return err
@@ -618,10 +624,76 @@ func (c *importConverter) addStatement(ctx context.Context, s spec.Statement) er
 		if err := c.charge(len(text)); err != nil {
 			return err
 		}
-		*section = text
+		*section = c.renamePictures(text)
 	}
 	c.draft.Statements = append(c.draft.Statements, st)
 	return nil
+}
+
+// addPictures stores the SVG of each PostScript or MetaPost picture that converts; the rest stay missing images for the build to report.
+func (c *importConverter) addPictures(ctx context.Context, pictures []spec.File) error {
+	if len(pictures) == 0 {
+		return nil
+	}
+	files := map[string][]byte{}
+	for _, f := range pictures {
+		full, err := c.file(f.Path)
+		if err != nil {
+			return err
+		}
+		if files[f.Name], err = os.ReadFile(full); err != nil {
+			return fmt.Errorf("read %s: %w", f.Path, err)
+		}
+	}
+	svgs, err := c.uc.Typeset.Pictures(ctx, files)
+	if err != nil {
+		return fmt.Errorf("convert pictures: %w", err)
+	}
+	dir, err := os.MkdirTemp(c.result.root, "pictures")
+	if err != nil {
+		return fmt.Errorf("create pictures dir: %w", err)
+	}
+	asset := func(name string) bool {
+		return slices.ContainsFunc(c.draft.Assets, func(a model.DraftAsset) bool { return a.Name == name })
+	}
+	c.pictures = map[string]string{}
+	for _, ps := range slices.Sorted(maps.Keys(svgs)) {
+		base := strings.TrimSuffix(ps, path.Ext(ps))
+		name := ps + ".svg"
+		if ext := strings.ToLower(path.Ext(ps)); ext == ".eps" || ext == ".ps" || ext == ".mps" {
+			name = base + ".svg"
+		}
+		if asset(name) || !model.ValidFileName(name) {
+			continue
+		}
+		if err := c.charge(0); err != nil {
+			return err
+		}
+		full := filepath.Join(dir, name)
+		if err := os.WriteFile(full, svgs[ps], 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", name, err)
+		}
+		oid := uuid.New()
+		object, err := c.uc.importObject(full, "asset", oid)
+		if err != nil {
+			return err
+		}
+		c.result.objects = append(c.result.objects, object)
+		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: name, ObjectID: oid})
+		c.pictures[ps] = name
+		// graphicx tries other extensions before PostScript, so an extensionless reference means the picture only without them.
+		if _, other := statement.ImageFile(base, asset); base != ps && !other {
+			c.pictures[base] = name
+		}
+	}
+	return nil
+}
+
+func (c *importConverter) renamePictures(text string) string {
+	for _, ref := range slices.Sorted(maps.Keys(c.pictures)) {
+		text = strings.ReplaceAll(text, "{"+ref+"}", "{"+c.pictures[ref]+"}")
+	}
+	return text
 }
 
 // latex reads a LaTeX file, or converts a Markdown one.
