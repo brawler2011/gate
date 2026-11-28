@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"math"
-	"slices"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -13,9 +11,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -124,6 +124,18 @@ type execution struct {
 	// What the time rule found wrong with a solution's run times, by name; timeFailure stops the build.
 	timing      map[string]string
 	timeFailure error
+	// Runs of generators that write tests as files, by command; tests with the same command share one run.
+	runsMu sync.Mutex
+	runs   map[string]*generatorRun
+	// runsCtx outlives each test, since cancelling a later test must not fail an earlier one that shares its run.
+	runsCtx context.Context
+}
+
+type generatorRun struct {
+	once sync.Once
+	err  error
+	// missing holds the tests whose file the run did not write.
+	missing map[uuid.UUID]bool
 }
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
@@ -156,7 +168,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(work, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: work, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), tests: testFiles(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}, timing: map[string]string{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: work, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), tests: testFiles(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}, timing: map[string]string{}, runs: map[string]*generatorRun{}}
 	defer e.releaseComponents()
 	local := map[uuid.UUID]archive.BuiltTest{}
 	for id, t := range e.tests {
@@ -447,8 +459,8 @@ func (e *execution) compile(ctx context.Context) error {
 		required[programKey("solution", *d.MainSolution)] = true
 	}
 	for _, test := range d.Tests {
-		if test.Input.Generator != nil {
-			required[programKey("generator", *test.Input.Generator)] = true
+		for _, step := range test.Input.Steps {
+			required[programKey("generator", step.Generator)] = true
 		}
 		if test.Answer.Solution != nil {
 			required[programKey("solution", *test.Answer.Solution)] = true
@@ -509,6 +521,115 @@ func (e *execution) compile(ctx context.Context) error {
 		return nil
 	})
 }
+func command(in model.DraftInput) string {
+	steps := make([][]string, len(in.Steps))
+	for i, step := range in.Steps {
+		steps[i] = append([]string{step.Generator}, step.Args...)
+	}
+	return spec.FormatCommand(steps)
+}
+
+// generate makes the test's input file and returns its sandbox ID, which the caller owns.
+func (e *execution) generate(ctx context.Context, test model.DraftTest) (string, error) {
+	path := e.tests[test.ID].Input
+	if test.Input.File == "" {
+		result, err := e.runGenerator(ctx, test.Input.Steps, nil)
+		if err != nil {
+			return "", fail("generate", test.Ordinal, "infrastructure", err)
+		}
+		if err := generatorFailure(test.Input.Steps, &result.FileRunResult, result.Step); err != nil {
+			return result.OutputID, fail("generate", test.Ordinal, string(result.Status), err)
+		}
+		if err := e.download(ctx, path, result.OutputID, int64(e.build.Snapshot.Limits.ObjectBytes)); err != nil {
+			return result.OutputID, fail("generate", test.Ordinal, "infrastructure", err)
+		}
+		return result.OutputID, nil
+	}
+	key := command(test.Input)
+	e.runsMu.Lock()
+	run, ok := e.runs[key]
+	if !ok {
+		run = &generatorRun{}
+		e.runs[key] = run
+	}
+	e.runsMu.Unlock()
+	run.once.Do(func() { run.err = e.runShared(e.runsCtx, key, test.Input.Steps, run) })
+	var f *Failure
+	switch {
+	case errors.As(run.err, &f):
+		return "", fail("generate", test.Ordinal, f.Kind, errors.New(f.Message))
+	case run.err != nil:
+		return "", run.err
+	case run.missing[test.ID]:
+		return "", fail("generate", test.Ordinal, "author", fmt.Errorf("%s wrote no file %q", key, test.Input.File))
+	}
+	id, err := e.upload(ctx, path)
+	if err != nil {
+		return "", fail("generate", test.Ordinal, "infrastructure", err)
+	}
+	return id, nil
+}
+
+// runShared runs a generator once for every test that takes a file from the same command, saving each test's file as its input.
+func (e *execution) runShared(ctx context.Context, key string, steps []model.DraftStep, run *generatorRun) error {
+	var tests []model.DraftTest
+	var names []string
+	for _, t := range e.build.Snapshot.Draft.Tests {
+		if t.Input.Mode == "generator" && t.Input.File != "" && command(t.Input) == key {
+			tests = append(tests, t)
+			if !slices.Contains(names, t.Input.File) {
+				names = append(names, t.Input.File)
+			}
+		}
+	}
+	result, err := e.runGenerator(ctx, steps, names)
+	if err != nil {
+		return fail("generate", tests[0].Ordinal, "infrastructure", err)
+	}
+	defer func() {
+		e.release(result.OutputID)
+		for _, id := range result.FileIDs {
+			e.release(id)
+		}
+	}()
+	if err := generatorFailure(steps, &result.FileRunResult, result.Step); err != nil {
+		return fail("generate", tests[0].Ordinal, string(result.Status), err)
+	}
+	run.missing = map[uuid.UUID]bool{}
+	for _, t := range tests {
+		id, ok := result.FileIDs[t.Input.File]
+		if !ok {
+			run.missing[t.ID] = true
+			continue
+		}
+		if err := e.download(ctx, e.tests[t.ID].Input, id, int64(e.build.Snapshot.Limits.ObjectBytes)); err != nil {
+			return fail("generate", t.Ordinal, "infrastructure", err)
+		}
+	}
+	return nil
+}
+
+func (e *execution) runGenerator(ctx context.Context, steps []model.DraftStep, files []string) (*sandbox.GenerateResult, error) {
+	run := make([]sandbox.GenerateStep, len(steps))
+	for i, step := range steps {
+		gen := e.compiled[programKey("generator", step.Generator)]
+		run[i] = sandbox.GenerateStep{Executable: gen.executable, Language: gen.language, Args: step.Args}
+	}
+	return e.sandbox.Generate(ctx, run, files, e.build.Snapshot.Limits.Auxiliary)
+}
+
+// generatorFailure names the step that failed, when the pipeline has several.
+func generatorFailure(steps []model.DraftStep, result *sandbox.FileRunResult, step int) error {
+	if result.Status == sandbox.StatusOK {
+		return nil
+	}
+	err := fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr)
+	if len(steps) > 1 {
+		err = fmt.Errorf("step %d (%s): %w", step+1, steps[step].Generator, err)
+	}
+	return err
+}
+
 // solutionLimits runs solutions under timeLimit, a reference time that the calibration scales to this machine.
 func (e *execution) solutionLimits(timeLimit time.Duration) sandbox.FileRunLimits {
 	d := e.build.Snapshot.Draft
@@ -530,6 +651,7 @@ func (e *execution) runTests(ctx context.Context) error {
 		limit = time.Duration(*d.TimeLimitMs) * time.Millisecond
 	}
 	first := func(sol *model.DraftSolution) bool { return d.TimeRule == nil || sol.MustPass() }
+	e.runsCtx = ctx
 	results := make([]testResult, len(tests))
 	err := ordered(ctx, len(tests), e.pipeline.Parallelism, func(ctx context.Context, i int) error {
 		var err error
@@ -703,19 +825,12 @@ func (e *execution) test(ctx context.Context, test model.DraftTest, judged func(
 		inputID = id
 		ids = append(ids, id)
 	} else {
-		gen := e.compiled[programKey("generator", *test.Input.Generator)]
-		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, sandbox.File{}, test.Input.Args, nil, aux)
+		id, err := e.generate(ctx, test)
+		ids = append(ids, id)
 		if err != nil {
-			return tr, fail("generate", test.Ordinal, "infrastructure", err)
+			return tr, err
 		}
-		ids = append(ids, result.OutputID)
-		if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-			return tr, fail("generate", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
-		}
-		inputID = result.OutputID
-		if err := e.download(ctx, files.Input, inputID, int64(s.Limits.ObjectBytes)); err != nil {
-			return tr, fail("generate", test.Ordinal, "infrastructure", err)
-		}
+		inputID = id
 	}
 	group := s.Draft.Group(test.GroupID)
 	if group == nil {

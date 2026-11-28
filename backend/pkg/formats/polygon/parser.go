@@ -328,15 +328,11 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 	}
 	test := spec.Test{Points: weight, Sample: t.Sample, Ordinal: number}
 	if t.Method == "generated" {
-		argv, err := spec.ParseCommand(t.Cmd)
+		steps, err := spec.Steps(t.Cmd, generators)
 		if err != nil {
 			return test, fmt.Errorf("test %d: %w", number, err)
 		}
-		name, ok := generators[argv[0]]
-		if !ok {
-			return test, spec.Fail(pkg.ErrUnknown, "problem.xml", argv[0], "test %d: generator %s not found", number, argv[0])
-		}
-		test.Generator, test.Args = name, argv[1:]
+		test.Steps, test.File = steps, t.FromFile
 		return test, nil
 	}
 	test.Input = fmt.Sprintf(testset.InputPathPattern, number)
@@ -423,7 +419,7 @@ func markPretests(fsys fs.FS, main Testset, testsets []Testset, root *spec.Group
 			}
 			match = slices.IndexFunc(main.Tests, func(t Test) bool {
 				other, err := spec.ParseCommand(t.Cmd)
-				return t.Method == "generated" && err == nil && slices.Equal(argv, other)
+				return t.Method == "generated" && err == nil && t.FromFile == pre.FromFile && slices.EqualFunc(argv, other, slices.Equal)
 			})
 		}
 		if name := fmt.Sprintf(pretests.InputPathPattern, number); match < 0 && (pre.Method != "generated" || exists(fsys, name)) {

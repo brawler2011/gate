@@ -1741,8 +1741,14 @@ export interface components {
             mode: "manual" | "generator";
             /** Format: uuid */
             object_id: string | null;
+            /** @description Generators run connected by pipes, each reading the previous one's output; empty for manual input. */
+            steps: components["schemas"]["ProblemDraftStep"][];
+            /** @description File the generator run writes as the input; empty takes the last step's output. Tests with the same steps share one run. */
+            file: string;
+        };
+        ProblemDraftStep: {
             /** @description Name of a generator of the draft. */
-            generator: string | null;
+            generator: string;
             args: string[];
         };
         /** @description An interactive test's answer is the interactor's output on the main solution, or provided for ICPC interactors, which read it. */
@@ -5607,6 +5613,7 @@ export interface components {
     pathItems: never;
 }
 export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
+export type ProblemDraftStep = components['schemas']['ProblemDraftStep'];
 export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
 export type ProblemDraftProtocol = components['schemas']['ProblemDraftProtocol'];

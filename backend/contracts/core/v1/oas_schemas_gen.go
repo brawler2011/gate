@@ -10792,9 +10792,11 @@ func (s *ProblemDraftGroupFeedback) UnmarshalText(data []byte) error {
 type ProblemDraftInput struct {
 	Mode     ProblemDraftInputMode `json:"mode"`
 	ObjectID NilUUID               `json:"object_id"`
-	// Name of a generator of the draft.
-	Generator NilString `json:"generator"`
-	Args      []string  `json:"args"`
+	// Generators run connected by pipes, each reading the previous one's output; empty for manual input.
+	Steps []ProblemDraftStep `json:"steps"`
+	// File the generator run writes as the input; empty takes the last step's output. Tests with the same
+	// steps share one run.
+	File string `json:"file"`
 }
 
 // GetMode returns the value of Mode.
@@ -10807,14 +10809,14 @@ func (s *ProblemDraftInput) GetObjectID() NilUUID {
 	return s.ObjectID
 }
 
-// GetGenerator returns the value of Generator.
-func (s *ProblemDraftInput) GetGenerator() NilString {
-	return s.Generator
+// GetSteps returns the value of Steps.
+func (s *ProblemDraftInput) GetSteps() []ProblemDraftStep {
+	return s.Steps
 }
 
-// GetArgs returns the value of Args.
-func (s *ProblemDraftInput) GetArgs() []string {
-	return s.Args
+// GetFile returns the value of File.
+func (s *ProblemDraftInput) GetFile() string {
+	return s.File
 }
 
 // SetMode sets the value of Mode.
@@ -10827,14 +10829,14 @@ func (s *ProblemDraftInput) SetObjectID(val NilUUID) {
 	s.ObjectID = val
 }
 
-// SetGenerator sets the value of Generator.
-func (s *ProblemDraftInput) SetGenerator(val NilString) {
-	s.Generator = val
+// SetSteps sets the value of Steps.
+func (s *ProblemDraftInput) SetSteps(val []ProblemDraftStep) {
+	s.Steps = val
 }
 
-// SetArgs sets the value of Args.
-func (s *ProblemDraftInput) SetArgs(val []string) {
-	s.Args = val
+// SetFile sets the value of File.
+func (s *ProblemDraftInput) SetFile(val string) {
+	s.File = val
 }
 
 type ProblemDraftInputMode string
@@ -11239,6 +11241,33 @@ func (s *ProblemDraftStatement) SetScoring(val string) {
 // SetTutorial sets the value of Tutorial.
 func (s *ProblemDraftStatement) SetTutorial(val string) {
 	s.Tutorial = val
+}
+
+// Ref: #/components/schemas/ProblemDraftStep
+type ProblemDraftStep struct {
+	// Name of a generator of the draft.
+	Generator string   `json:"generator"`
+	Args      []string `json:"args"`
+}
+
+// GetGenerator returns the value of Generator.
+func (s *ProblemDraftStep) GetGenerator() string {
+	return s.Generator
+}
+
+// GetArgs returns the value of Args.
+func (s *ProblemDraftStep) GetArgs() []string {
+	return s.Args
+}
+
+// SetGenerator sets the value of Generator.
+func (s *ProblemDraftStep) SetGenerator(val string) {
+	s.Generator = val
+}
+
+// SetArgs sets the value of Args.
+func (s *ProblemDraftStep) SetArgs(val []string) {
+	s.Args = val
 }
 
 // Ref: #/components/schemas/ProblemDraftTest

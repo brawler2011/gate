@@ -10,15 +10,15 @@ import (
 
 type Problem struct {
 	// Gate writes the max score of points problems for the judge; imports recompute it.
-	MaxScore      *points.Value      `yaml:"max_score,omitempty" json:"max_score,omitempty"`
-	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
-	FormatVersion string             `yaml:"format_version" json:"format_version"`
-	Title         string             `yaml:"title" json:"title"`
+	MaxScore      *points.Value     `yaml:"max_score,omitempty" json:"max_score,omitempty"`
+	Sources       map[string]Source `yaml:"sources,omitempty" json:"sources,omitempty"`
+	FormatVersion string            `yaml:"format_version" json:"format_version"`
+	Title         string            `yaml:"title" json:"title"`
 	// Titles by statement language override Title for that statement.
-	Titles   map[string]string  `yaml:"titles,omitempty" json:"titles,omitempty"`
-	Type     string             `yaml:"type" json:"type"` // one of spec.ProblemTypes
-	Grading  string             `yaml:"grading" json:"grading"` // one of spec.Gradings
-	Limits   Limits             `yaml:"limits" json:"limits"`
+	Titles  map[string]string `yaml:"titles,omitempty" json:"titles,omitempty"`
+	Type    string            `yaml:"type" json:"type"`       // one of spec.ProblemTypes
+	Grading string            `yaml:"grading" json:"grading"` // one of spec.Gradings
+	Limits  Limits            `yaml:"limits" json:"limits"`
 	// Testset is the root group; only it is unnamed.
 	Testset Group `yaml:"testset" json:"testset"`
 	// Empty names keep standard input and output.
@@ -64,9 +64,12 @@ type Test struct {
 	Points  points.Value `yaml:"points" json:"points"`
 	Ordinal int          `yaml:"ordinal,omitempty" json:"ordinal,omitempty"`
 	// Input names a file under tests/.
-	Input    string `yaml:"input,omitempty" json:"input,omitempty"`
+	Input string `yaml:"input,omitempty" json:"input,omitempty"`
+	// Generate is a generator command; | connects generators.
 	Generate string `yaml:"generate,omitempty" json:"generate,omitempty"`
-	Answer   string `yaml:"answer,omitempty" json:"answer,omitempty"`
+	// File names the file the generator run writes as the input, instead of its standard output.
+	File   string `yaml:"file,omitempty" json:"file,omitempty"`
+	Answer string `yaml:"answer,omitempty" json:"answer,omitempty"`
 	// Solution names the solutions/ file whose output is the answer.
 	Solution string `yaml:"solution,omitempty" json:"solution,omitempty"`
 	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`

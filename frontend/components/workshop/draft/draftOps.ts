@@ -119,7 +119,7 @@ export const renameProgram = (draft: ProblemDraft, role: ListRole, from: string,
       main_solution: role === "solution" ? follow(draft.main_solution) : draft.main_solution,
       tests: draft.tests.map((test) => ({
         ...test,
-        input: role === "generator" ? {...test.input, generator: follow(test.input.generator)} : test.input,
+        input: role === "generator" ? {...test.input, steps: test.input.steps.map((step) => ({...step, generator: follow(step.generator) ?? ""}))} : test.input,
         answer: role === "solution" ? {...test.answer, solution: follow(test.answer.solution)} : test.answer,
       })),
     },
@@ -418,7 +418,7 @@ export const newGeneratedTest = (draft: ProblemDraft, groupId: string): ProblemD
   statement_input: null,
   statement_output: null,
   points: 0,
-  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: []},
+  input: {mode: "generator", object_id: null, steps: [{generator: draft.generators[0]?.name ?? "", args: []}], file: ""},
   answer: newAnswer(draft, "generated"),
 });
 
@@ -431,7 +431,7 @@ export const newManualTest = (draft: ProblemDraft, groupId: string): ProblemDraf
   statement_input: null,
   statement_output: null,
   points: 0,
-  input: {mode: "manual", object_id: null, generator: null, args: []},
+  input: {mode: "manual", object_id: null, steps: [], file: ""},
   answer: newAnswer(draft, "provided"),
 });
 

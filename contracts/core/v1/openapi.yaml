@@ -3393,8 +3393,8 @@ components:
       required:
       - mode
       - object_id
-      - generator
-      - args
+      - steps
+      - file
       properties:
         mode:
           type: string
@@ -3405,10 +3405,23 @@ components:
           type: string
           format: uuid
           nullable: true
+        steps:
+          type: array
+          description: Generators run connected by pipes, each reading the previous one's output; empty for manual input.
+          items:
+            $ref: '#/components/schemas/ProblemDraftStep'
+        file:
+          type: string
+          description: File the generator run writes as the input; empty takes the last step's output. Tests with the same steps share one run.
+    ProblemDraftStep:
+      type: object
+      required:
+      - generator
+      - args
+      properties:
         generator:
           type: string
           description: Name of a generator of the draft.
-          nullable: true
         args:
           type: array
           items:

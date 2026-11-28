@@ -53,8 +53,10 @@ type Testset struct {
 }
 
 type Test struct {
-	Method      string  `xml:"method,attr"`
-	Cmd         string  `xml:"cmd,attr"`
+	Method string `xml:"method,attr"`
+	Cmd    string `xml:"cmd,attr"`
+	// FromFile names the file the generator writes the test to, instead of its standard output.
+	FromFile    string  `xml:"from-file,attr"`
 	Sample      bool    `xml:"sample,attr"`
 	Description string  `xml:"description,attr"`
 	Group       string  `xml:"group,attr"`

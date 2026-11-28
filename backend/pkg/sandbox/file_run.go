@@ -89,6 +89,85 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language 
 	return s.runFile(ctx, c, "stdout")
 }
 
+// GenerateStep is one program of a generator pipeline.
+type GenerateStep struct {
+	Executable Executable
+	Language   string
+	Args       []string
+}
+
+// GenerateResult reports the last step that failed, if any; the caller owns OutputID and FileIDs even on failure.
+type GenerateResult struct {
+	FileRunResult
+	Step    int
+	FileIDs map[string]string
+}
+
+const sigpipe = 13
+
+// Generate runs steps connected by pipes, each under limits. The output is the last step's standard output or, with files,
+// those of the files it wrote. A step killed by SIGPIPE does not fail, as in a shell pipeline, and the last failed step is
+// reported, since a reader that fails breaks the pipe of the writers before it.
+func (s *Sandbox) Generate(ctx context.Context, steps []GenerateStep, files []string, limits FileRunLimits) (*GenerateResult, error) {
+	if len(steps) == 0 {
+		return nil, fmt.Errorf("no generator steps")
+	}
+	cmds := make([]cmd, len(steps))
+	var pipes []pipeMap
+	for i, step := range steps {
+		c, err := s.fileCommand(step.Executable, step.Language, File{}, step.Args, nil, limits)
+		if err != nil {
+			return nil, err
+		}
+		if i > 0 {
+			c.Files[0] = nil
+			// A proxy would drain the writer after the reader exits; a direct pipe sends it SIGPIPE, as a shell does.
+			pipes = append(pipes, pipeMap{In: pipeIndex{Index: i - 1, Fd: 1}, Out: pipeIndex{Index: i, Fd: 0}})
+		}
+		if i < len(steps)-1 {
+			c.Files[1], c.CopyOutCached = nil, nil
+		}
+		cmds[i] = *c
+	}
+	last := &cmds[len(cmds)-1]
+	if len(files) > 0 {
+		last.CopyOutCached = nil
+		for _, name := range files {
+			if _, taken := last.CopyIn[name]; !ValidSolutionFile(name) || taken {
+				return nil, fmt.Errorf("generated file %q is invalid or clashes with the executable", name)
+			}
+			last.CopyOutCached = append(last.CopyOutCached, name+"?")
+		}
+	}
+	results, err := s.client.run(ctx, request{Cmd: cmds, PipeMapping: pipes})
+	if err != nil {
+		return nil, fmt.Errorf("execute generator: %w", err)
+	}
+	out := &GenerateResult{FileRunResult: FileRunResult{Status: StatusOK}, FileIDs: map[string]string{}}
+	r := results[len(results)-1]
+	out.OutputID = r.FileIDs["stdout"]
+	for _, name := range files {
+		if id, ok := r.FileIDs[name]; ok {
+			out.FileIDs[name] = id
+		}
+	}
+	for i, r := range results {
+		out.Time, out.Memory = max(out.Time, safeDuration(r.Time)), max(out.Memory, safeInt64(r.Memory))
+		status := statusToString(r.Status)
+		if status == StatusOK && r.ExitStatus != 0 {
+			status = StatusRE
+		}
+		if i == len(results)-1 && slices.ContainsFunc(r.FileError, func(e fileError) bool { return e.Type == "CopyOutSizeExceeded" }) {
+			status = StatusOLE
+		}
+		if status == StatusOK || i < len(results)-1 && r.Status == resultSignalled && r.ExitStatus == sigpipe {
+			continue
+		}
+		out.Status, out.Step, out.ExitStatus, out.Stderr = status, i, r.ExitStatus, []byte(r.Files["stderr"])
+	}
+	return out, nil
+}
+
 // Streams name the files a solution reads and writes instead of standard input and output; empty keeps the stream.
 type Streams struct{ Input, Output string }
 

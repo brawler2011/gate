@@ -3,20 +3,26 @@
 package postgres_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/postgres"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/calibration"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -88,7 +94,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
 	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "min", Feedback: "complete"}}}
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: group, Sample: true, Input: model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: generator, Args: []string{"10", "7"}}}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	_, err := repo.SaveDraft(ctx, d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -139,7 +145,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	d.MainSolution = &solution
 	d.Testset = model.DraftGroup{ID: large, Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: small, Name: "small", Aggregate: "min", Feedback: "complete"}}}
 	test := func(ordinal int, group uuid.UUID, a, b string) model.DraftTest {
-		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
+		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: generator, Args: []string{a, b}}}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	build := func(tests ...model.DraftTest) error {
 		d.Tests = tests
@@ -161,6 +167,13 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 // buildDraft saves the draft and runs one build of it, returning the build's ID.
 func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, error) {
 	t.Helper()
+	id, _, err := buildPackage(t, ctx, repo, d, services, cfg)
+	return id, err
+}
+
+// buildPackage is buildDraft that also returns the package the build made.
+func buildPackage(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, uuid.UUID, error) {
+	t.Helper()
 	limits := dbfixtures.BuildLimits(t)
 	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Typeset: services.typeset, Files: services.files, Languages: cfg,
 		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Parallelism: 2, Calibration: calibration.Uncalibrated, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -172,8 +185,82 @@ func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsR
 	require.NoError(t, err)
 	b, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
-	_, err = pipeline.Execute(ctx, b)
-	return b.ID, err
+	pid, err := pipeline.Execute(ctx, b)
+	return b.ID, pid, err
+}
+
+// Generators chain through pipes, and tests naming files of one command share a single run of it.
+func TestProblemPipelineGeneratesPipelinesAndFiles(t *testing.T) {
+	t.Parallel()
+	ctx, _, repo, _, d := draftFixture(t)
+	services := startPipelineServices(t)
+	cfg := &sandbox.Config{Langs: services.langs}
+	main, group := "main", uuid.New()
+	d.Type, d.Grading = "output-only", "points"
+	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, DraftJury: testlib, Standard: "wcmp"}
+	d.Generators = []model.DraftNamedProgram{
+		named("gen", "python3", "import sys\nprint(sys.argv[1])\n"),
+		named("double", "python3", "print(2 * int(input()))\n"),
+		named("fail", "python3", "import sys\nsys.exit(3)\n"),
+		named("ones", "cpp17", "#include <cstdio>\nint main(){for(;;)std::puts(\"1\");}"),
+		named("first", "python3", "print(input())\n"),
+		// Writes one random token to every named file, so two runs would differ.
+		named("multi", "python3", "import random, sys\nr = random.random()\nfor name in sys.argv[1:]:\n    open(name, 'w').write(f'{r} {name}\\n')\n"),
+	}
+	d.Solutions = []model.DraftSolution{solutionProgram(main, "python3", "print(input())\n")}
+	d.MainSolution = &main
+	d.Testset = model.DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete", Groups: []model.DraftGroup{{ID: group, Name: "All", Aggregate: "sum", Feedback: "complete"}}}
+	step := func(argv ...string) model.DraftStep { return model.DraftStep{Generator: argv[0], Args: argv[1:]} }
+	test := func(file string, steps ...model.DraftStep) model.DraftTest {
+		return model.DraftTest{ID: uuid.New(), Ordinal: len(d.Tests) + 1, GroupID: group, Points: points.Unit,
+			Input: model.DraftInput{Mode: "generator", Steps: steps, File: file}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
+	}
+	build := func(tests ...func() model.DraftTest) (uuid.UUID, error) {
+		d.Tests = nil
+		for _, add := range tests {
+			d.Tests = append(d.Tests, add())
+		}
+		max := points.Value(len(d.Tests)) * points.Unit
+		d.MaxScore = &max
+		_, pid, err := buildPackage(t, ctx, repo, &d, services, cfg)
+		return pid, err
+	}
+	of := func(file string, steps ...model.DraftStep) func() model.DraftTest {
+		return func() model.DraftTest { return test(file, steps...) }
+	}
+
+	// ones writes until first stops reading, as a shell pipeline lets it.
+	pid, err := build(of("", step("gen", "5"), step("double")), of("1", step("multi", "1", "2")), of("2", step("multi", "1", "2")), of("", step("ones"), step("first")))
+	require.NoError(t, err)
+	inputs := map[string]string{}
+	r, err := (&problems.PackageContent{Repo: repo, Store: services.store, Bucket: "objects"}).OpenFiles(ctx, pid)
+	require.NoError(t, err)
+	data, err := io.ReadAll(r)
+	require.NoError(t, errors.Join(err, r.Close()))
+	z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	require.NoError(t, err)
+	for _, f := range z.File {
+		rc, err := f.Open()
+		require.NoError(t, err)
+		text, err := io.ReadAll(rc)
+		require.NoError(t, errors.Join(err, rc.Close()))
+		inputs[f.Name] = string(text)
+	}
+	require.Equal(t, "10\n", inputs["1.in"])
+	first, second := strings.Fields(inputs["2.in"]), strings.Fields(inputs["3.in"])
+	require.Equal(t, []string{first[0], "1"}, first)
+	require.Equal(t, []string{first[0], "2"}, second, "both tests come from one run")
+	require.Equal(t, "1\n", inputs["4.in"])
+
+	var failure *builder.Failure
+	_, err = build(of("1", step("multi", "1")), of("3", step("multi", "1")))
+	require.ErrorAs(t, err, &failure)
+	require.Equal(t, 2, failure.Test)
+	require.Contains(t, failure.Message, `multi 1 wrote no file "3"`)
+	_, err = build(of("", step("gen", "5"), step("fail")))
+	require.ErrorAs(t, err, &failure)
+	require.Equal(t, 1, failure.Test)
+	require.Contains(t, failure.Message, "step 2 (fail): exit 3")
 }
 
 // The build judges every solution that runs and fails when one misses its expected verdicts.
@@ -196,7 +283,7 @@ func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
 	d.MainSolution = &main
 	d.Testset = model.DraftGroup{ID: group, Aggregate: "min", Feedback: "complete"}
 	test := func(ordinal int, a, b string) model.DraftTest {
-		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
+		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, GroupID: group, Input: model.DraftInput{Mode: "generator", Steps: []model.DraftStep{{Generator: generator, Args: []string{a, b}}}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
 	}
 
 	for _, slow := range []string{"OK", "TLE"} {

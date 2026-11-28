@@ -791,21 +791,21 @@ func (c *importConverter) test(test spec.Test, group uuid.UUID, generators, solu
 		return model.DraftTest{}, pkg.ErrPayloadTooLarge
 	}
 	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, GroupID: group, Points: test.Points, Sample: test.Sample, Pretest: test.Pretest}
-	if test.Generator != "" {
-		gen, ok := generators[test.Generator]
-		if !ok {
-			return t, spec.Fail(pkg.ErrUnknown, "", test.Generator, "generator %s not found", test.Generator)
-		}
-		t.Input = model.DraftInput{Mode: "generator", Generator: &gen, Args: test.Args}
-		if t.Input.Args == nil {
-			t.Input.Args = []string{}
+	if len(test.Steps) > 0 {
+		t.Input = model.DraftInput{Mode: "generator", Steps: []model.DraftStep{}, File: test.File}
+		for _, step := range test.Steps {
+			gen, ok := generators[step.Generator]
+			if !ok {
+				return t, spec.Fail(pkg.ErrUnknown, "", step.Generator, "generator %s not found", step.Generator)
+			}
+			t.Input.Steps = append(t.Input.Steps, model.DraftStep{Generator: gen, Args: append([]string{}, step.Args...)})
 		}
 	} else {
 		oid, err := c.object(test.Input, "test-input")
 		if err != nil {
 			return t, err
 		}
-		t.Input = model.DraftInput{Mode: "manual", ObjectID: &oid, Args: []string{}}
+		t.Input = model.DraftInput{Mode: "manual", ObjectID: &oid, Steps: []model.DraftStep{}}
 	}
 	switch {
 	// Only ICPC interactors read the answer; testlib ones produce it.

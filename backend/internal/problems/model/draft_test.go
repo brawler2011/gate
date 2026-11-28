@@ -1,6 +1,7 @@
 package problemsmodel
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -25,7 +26,7 @@ func validDraft() Draft {
 			Testset: DraftGroup{ID: uuid.New(), Aggregate: "sum", Feedback: "complete",
 				Groups: []DraftGroup{{ID: sub, Name: "main", Aggregate: "min", Feedback: "complete"}}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, GroupID: sub,
-				Input:  DraftInput{Mode: "generator", Generator: &gen},
+				Input:  DraftInput{Mode: "generator", Steps: []DraftStep{{Generator: gen}}},
 				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
 		}}
 }
@@ -46,7 +47,11 @@ func TestValidateLocatesViolations(t *testing.T) {
 		pointer string
 		code    pkg.Code
 	}{
-		"test input from a solution": {func(d *Draft) { d.Tests[0].Input.Generator = d.MainSolution }, "/tests/0/input/generator", pkg.ErrUnknown.Code},
+		"test input from a solution":                  {func(d *Draft) { d.Tests[0].Input.Steps[0].Generator = *d.MainSolution }, "/tests/0/input/steps/0/generator", pkg.ErrUnknown.Code},
+		"generated file named like the output stream": {func(d *Draft) { d.Tests[0].Input.File = "stdout" }, "/tests/0/input/file", pkg.ErrFormat.Code},
+		"too many generator steps": {func(d *Draft) {
+			d.Tests[0].Input.Steps = slices.Repeat(d.Tests[0].Input.Steps, MaxSteps+1)
+		}, "/tests/0/input/steps", pkg.ErrTooMany.Code},
 		"two generators of one name": {func(d *Draft) {
 			d.Generators = append(d.Generators, DraftNamedProgram{Name: "gen", DraftProgram: DraftProgram{Language: "cpp"}})
 		}, "/generators/1/name", pkg.ErrDuplicate.Code},
@@ -83,8 +88,8 @@ func TestValidateLocatesViolations(t *testing.T) {
 		"validator of the testset": {func(d *Draft) {
 			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, DraftJury: DraftJury{Protocol: sandbox.ProtocolTestlib}, Groups: []uuid.UUID{d.Testset.ID}}}
 		}, "/validators/0/groups/0", pkg.ErrInconsistent.Code},
-		"group arguments of a testlib checker": {func(d *Draft) { d.Testset.Groups[0].CheckerArgs = []string{"case_sensitive"} }, "/testset/groups/0/checker_args", pkg.ErrInconsistent.Code},
-		"arguments of a testlib checker": {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
+		"group arguments of a testlib checker":   {func(d *Draft) { d.Testset.Groups[0].CheckerArgs = []string{"case_sensitive"} }, "/testset/groups/0/checker_args", pkg.ErrInconsistent.Code},
+		"arguments of a testlib checker":         {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
 		"statement in a language without a file": {func(d *Draft) { d.Statements[0].Language = "fr" }, "/statements/0/language", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -134,4 +139,3 @@ func TestGradersNeedLanguagesThatLinkThem(t *testing.T) {
 	}
 	require.Equal(t, []string{"/graders", "/solutions/0/language"}, pointers)
 }
-
