@@ -317,6 +317,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SupportedLanguagesResponse"
+  /statement-languages:
+    get:
+      tags: [system]
+      operationId: GetStatementLanguages
+      summary: Get the languages statements can be written in
+      responses:
+        default:
+          $ref: "#/components/responses/Problem"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatementLanguagesResponse"
   /lib:
     get:
       tags: [system]
@@ -7505,6 +7519,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SupportedLanguage"
+    StatementLanguagesResponse:
+      description: "Codes of the languages statements can be written in, sorted."
+      example:
+        languages: [en, ru, uk]
+      type: object
+      required:
+        - languages
+      properties:
+        languages:
+          type: array
+          items:
+            type: string
     CreateContestDraftRequestModel:
       description: "Fields for the create contest draft request."
       example:

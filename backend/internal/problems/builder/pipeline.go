@@ -284,7 +284,7 @@ func (e *execution) typeset(ctx context.Context) ([]model.BuiltStatement, []mode
 			return nil, nil, fail("statements", 0, typesetKind(err), fmt.Errorf("%s statement: %w", s.Language, err))
 		}
 		built = append(built, model.BuiltStatement{DraftStatement: s, HTML: html})
-		files := map[string][]byte{"olymp.sty": statement.OlympSty}
+		files := statement.Files(s.Language)
 		for _, a := range d.Assets {
 			data, err := os.ReadFile(filepath.Join(e.dir.root, "objects", a.ObjectID.String()))
 			if err != nil {

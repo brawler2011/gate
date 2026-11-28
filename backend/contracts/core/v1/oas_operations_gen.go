@@ -81,6 +81,7 @@ const (
 	GetProblemBuildOperation                    OperationName = "GetProblemBuild"
 	GetProblemDraftOperation                    OperationName = "GetProblemDraft"
 	GetProblemDraftObjectOperation              OperationName = "GetProblemDraftObject"
+	GetStatementLanguagesOperation              OperationName = "GetStatementLanguages"
 	GetSubmissionOperation                      OperationName = "GetSubmission"
 	GetSystemLibraryOperation                   OperationName = "GetSystemLibrary"
 	GetTeamOperation                            OperationName = "GetTeam"

@@ -477,6 +477,12 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/draft/objects/{objectId}
 	GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (GetProblemDraftObjectOK, error)
+	// GetStatementLanguages invokes GetStatementLanguages operation.
+	//
+	// Get the languages statements can be written in.
+	//
+	// GET /statement-languages
+	GetStatementLanguages(ctx context.Context) (*StatementLanguagesResponse, error)
 	// GetSubmission invokes GetSubmission operation.
 	//
 	// Get submission.
@@ -6357,6 +6363,49 @@ func (c *Client) sendGetProblemDraftObject(ctx context.Context, params GetProble
 	}()
 
 	result, err := decodeGetProblemDraftObjectResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetStatementLanguages invokes GetStatementLanguages operation.
+//
+// Get the languages statements can be written in.
+//
+// GET /statement-languages
+func (c *Client) GetStatementLanguages(ctx context.Context) (*StatementLanguagesResponse, error) {
+	res, err := c.sendGetStatementLanguages(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetStatementLanguages(ctx context.Context) (res *StatementLanguagesResponse, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/statement-languages"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetStatementLanguagesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -97,8 +97,9 @@ func (t *Typesetter) PDF(ctx context.Context, doc string, files map[string][]byt
 	}
 	defer release()
 	copyIn["doc.tex"] = *memoryFile(doc)
-	latex := "pdflatex -no-shell-escape -file-line-error -interaction=nonstopmode -halt-on-error doc.tex >/dev/null"
+	latex := "lualatex -no-shell-escape -file-line-error -interaction=nonstopmode -halt-on-error doc.tex >/dev/null"
 	script := `shopt -s globstar nullglob
+. /usr/bin/typeset-env
 for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" || exit 2; done
 { ` + latex + " && " + latex + fmt.Sprintf("; } || { tail -c %d doc.log; exit 1; }", int64(t.limits.Diagnostic))
 	res, err := t.run(ctx, script, copyIn, nil, nil, []string{"doc.pdf"})
@@ -113,7 +114,7 @@ for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" |
 	case res.Status != resultAccepted:
 		return nil, fmt.Errorf("typeset PDF: %s (exit %d): %s", res.Status, res.ExitStatus, res.Files["stderr"])
 	case id == "":
-		return nil, errors.New("typeset PDF: pdflatex wrote no doc.pdf")
+		return nil, errors.New("typeset PDF: lualatex wrote no doc.pdf")
 	}
 	var pdf bytes.Buffer
 	if _, err := t.client.get(ctx, id, &pdf, int64(t.limits.Output)); err != nil {

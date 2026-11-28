@@ -13561,6 +13561,22 @@ func (s *SortByQuery) UnmarshalText(data []byte) error {
 	}
 }
 
+// Codes of the languages statements can be written in, sorted.
+// Ref: #/components/schemas/StatementLanguagesResponse
+type StatementLanguagesResponse struct {
+	Languages []string `json:"languages"`
+}
+
+// GetLanguages returns the value of Languages.
+func (s *StatementLanguagesResponse) GetLanguages() []string {
+	return s.Languages
+}
+
+// SetLanguages sets the value of Languages.
+func (s *StatementLanguagesResponse) SetLanguages(val []string) {
+	s.Languages = val
+}
+
 // Sanitized HTML by section name; math is left as \(...\) and \[...\] for KaTeX, and images name their
 // assets.
 // Ref: #/components/schemas/StatementPreview

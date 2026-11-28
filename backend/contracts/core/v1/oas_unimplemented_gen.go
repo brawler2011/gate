@@ -693,6 +693,15 @@ func (UnimplementedHandler) GetProblemDraftObject(ctx context.Context, params Ge
 	return r, ht.ErrNotImplemented
 }
 
+// GetStatementLanguages implements GetStatementLanguages operation.
+//
+// Get the languages statements can be written in.
+//
+// GET /statement-languages
+func (UnimplementedHandler) GetStatementLanguages(ctx context.Context) (r *StatementLanguagesResponse, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSubmission implements GetSubmission operation.
 //
 // Get submission.
