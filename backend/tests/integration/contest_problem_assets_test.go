@@ -88,6 +88,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 
 	image := []byte("\x89PNG\r\n\x1a\nstatement image")
 	s.importWithImage(owner.Id, problemID, image)
+	s.onlyMainSolution(owner.Id, problemID)
 	packageID := s.buildPackage(owner.Id, problemID)
 	s.removePackageArchive(packageID)
 
@@ -138,6 +139,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	// Switching packages changes the image URL and rejects the previous hash.
 	changed := []byte("\x89PNG\r\n\x1a\nchanged image")
 	s.importWithImage(owner.Id, problemID, changed)
+	s.onlyMainSolution(owner.Id, problemID)
 	next := s.buildPackage(owner.Id, problemID)
 	s.removePackageArchive(next)
 	s.Require().NoError(s.contestsRepo.UpdateContestProblemPackage(s.ctx, contestID, problemID, next))

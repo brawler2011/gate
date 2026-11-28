@@ -29,6 +29,9 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 		if name == "pcms2/interactive-guess" {
 			continue // no main solution to interact with; see the draft import test
 		}
+		if name == "gfmt/a-plus-b" {
+			continue // the builtin template, which TestBuiltinTemplatesBuildAndJudge builds
+		}
 		// Builds claim the next queued build, so each package gets its own database.
 		runIsolated(s.T(), name, func(s *IntegrationTestSuite) {
 			admin := s.createUser("admin_import", accessmodel.UserRoleAdmin)

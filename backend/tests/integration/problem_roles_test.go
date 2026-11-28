@@ -99,6 +99,7 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	ctx := withTestUser(s.ctx, admin.Id)
 	problem, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{Title: "Rename", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
+	s.onlyMainSolution(admin.Id, problem.ID)
 	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 	s.Require().NoError(err)
 

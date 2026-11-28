@@ -146,6 +146,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 	})
 
 	s.Run("BuildPackage", func() {
+		s.onlyMainSolution(admin.Id, problemID)
 		s.Require().NotEqual(uuid.Nil, s.buildPackage(admin.Id, problemID))
 	})
 

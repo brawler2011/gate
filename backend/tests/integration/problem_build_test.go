@@ -6,6 +6,7 @@ package integration
 import (
 	"io"
 	"log/slog"
+	"slices"
 	"time"
 
 	"testing"
@@ -39,6 +40,19 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	packageID, err := pipeline.Execute(s.ctx, build)
 	s.Require().NoError(err)
 	return packageID
+}
+
+// onlyMainSolution drops the other solutions for tests that do not judge them; the template's TLE and MLE ones dominate a build.
+func (s *IntegrationTestSuite) onlyMainSolution(userID, problemID uuid.UUID) {
+	s.T().Helper()
+	ctx := withTestUser(s.ctx, userID)
+	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problemID})
+	s.Require().NoError(err)
+	main := draft.MainSolution.Or("")
+	draft.Solutions = slices.DeleteFunc(draft.Solutions, func(sol corev1.ProblemDraftSolution) bool { return sol.Name != main })
+	s.Require().Len(draft.Solutions, 1)
+	_, err = s.client.SaveProblemDraft(ctx, draft, corev1.SaveProblemDraftParams{ID: problemID, ExpectedRevision: draft.Revision})
+	s.Require().NoError(err)
 }
 
 func testLanguages(t *testing.T) *sandbox.Config {
