@@ -76,7 +76,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	image, err := sandbox.ReadImage(imageCtx, client)
 	cancel()
 	require.NoError(t, err)
-	source, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	source, err := sandbox.LoadConfig("../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	require.Equal(t, source.Langs, image.Config.Langs)
 	cfg := image.Config
@@ -271,7 +271,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	image, err := sandbox.ReadImage(imageCtx, client)
 	cancel()
 	require.NoError(t, err)
-	source, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	source, err := sandbox.LoadConfig("../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	require.Equal(t, source.Langs, image.Config.Langs)
 	cfg := image.Config

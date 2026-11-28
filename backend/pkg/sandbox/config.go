@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -60,24 +61,68 @@ type Language struct {
 	Execute     string `toml:"execute" json:"execute"`
 	// Graders is unset for languages that link graders through ${graders} in Compile alone.
 	Graders *LanguageGraders `toml:"graders" json:"graders,omitempty"`
+	// Variant names the only judge image that has the language; empty means every image.
+	Variant string `toml:"variant" json:"-"`
 }
+
+// Judge image variants; the full image has every language.
+const (
+	VariantMinimal = "minimal"
+	VariantFull    = "full"
+)
 
 type Config struct {
 	Langs map[string]Language
 	// Order preserves the catalog display order.
 	Order []string
+	// Missing holds the catalog's languages that this image lacks.
+	Missing      map[string]Language
+	missingOrder []string
 }
 
-func LoadConfig(path string) (*Config, error) {
+// NotInstalledError is a catalog language that the running judge image lacks.
+type NotInstalledError struct{ ID, Name string }
+
+func (e *NotInstalledError) Error() string {
+	return fmt.Sprintf("language %s (%s) is not installed on this server", e.ID, e.Name)
+}
+
+func (e *NotInstalledError) Is(target error) bool { return target == ErrUnknownLanguage }
+
+// Lookup finds an installed language; the error tells an uninstalled catalog language from an unknown one.
+func (c *Config) Lookup(id string) (Language, error) {
+	if lang, ok := c.Langs[id]; ok {
+		return lang, nil
+	}
+	if lang, ok := c.Missing[id]; ok {
+		return Language{}, &NotInstalledError{ID: id, Name: lang.Name}
+	}
+	return Language{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, id)
+}
+
+// LoadConfig reads a catalog for the given image variant.
+func LoadConfig(path, variant string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sandbox languages config: %w", err)
 	}
-	return ParseConfig(data)
+	return ParseConfig(data, variant)
 }
 
-// ParseConfig ignores "package", which only the judge image build consumes.
-func ParseConfig(data []byte) (*Config, error) {
+// LoadManifest reads the catalog of the judge image whose manifest is in dir.
+func LoadManifest(dir string) (*Config, error) {
+	variant, err := os.ReadFile(filepath.Join(dir, "variant"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read judge image variant: %w", err)
+	}
+	return LoadConfig(filepath.Join(dir, "langs.toml"), strings.TrimSpace(string(variant)))
+}
+
+// ParseConfig keeps the languages of the variant's image and ignores "package", which only the image build consumes.
+func ParseConfig(data []byte, variant string) (*Config, error) {
+	if variant != VariantMinimal && variant != VariantFull {
+		return nil, fmt.Errorf("unknown judge image variant %q", variant)
+	}
 	var langs map[string]Language
 	meta, err := toml.Decode(string(data), &langs)
 	if err != nil {
@@ -92,16 +137,18 @@ func ParseConfig(data []byte) (*Config, error) {
 	if len(langs) == 0 {
 		return nil, fmt.Errorf("sandbox languages config defines no languages")
 	}
-	cfg := &Config{Langs: langs}
+	cfg := &Config{Langs: map[string]Language{}, Missing: map[string]Language{}}
 	for _, key := range meta.Keys() {
-		if len(key) == 1 {
-			cfg.Order = append(cfg.Order, key[0])
+		if len(key) != 1 {
+			continue
 		}
-	}
-	for _, id := range cfg.Order {
+		id := key[0]
 		lang := langs[id]
 		if lang.Name == "" || len(lang.Extensions) == 0 || lang.CodeFile == "" || lang.Execute == "" {
 			return nil, fmt.Errorf("language %q needs name, extensions, code_file and execute", id)
+		}
+		if lang.Variant != "" && lang.Variant != VariantFull {
+			return nil, fmt.Errorf("language %q has unknown variant %q", id, lang.Variant)
 		}
 		for _, ext := range lang.Extensions {
 			if ext == "" || ext != strings.ToLower(ext) || strings.ContainsAny(ext, "./") {
@@ -111,6 +158,13 @@ func ParseConfig(data []byte) (*Config, error) {
 		if g := lang.Graders; g != nil && (g.CodeFile == "" || g.Entry == "" && !slices.Contains(strings.Fields(g.Compile), gradersArg)) {
 			return nil, fmt.Errorf("language %q graders need code_file and an entry or ${graders} in compile", id)
 		}
+		if lang.Variant == VariantFull && variant != VariantFull {
+			cfg.Missing[id] = lang
+			cfg.missingOrder = append(cfg.missingOrder, id)
+			continue
+		}
+		cfg.Langs[id] = lang
+		cfg.Order = append(cfg.Order, id)
 	}
 	return cfg, nil
 }
@@ -165,10 +219,16 @@ func (c *Config) Graded(graders []string, solution string) []string {
 	return langs
 }
 
+// ForPath prefers installed languages but falls back to missing ones, which Lookup then reports as not installed.
 func (c *Config) ForPath(file string) string {
 	ext := strings.ToLower(strings.TrimPrefix(path.Ext(file), "."))
 	for _, id := range c.Order {
 		if slices.Contains(c.Langs[id].Extensions, ext) {
+			return id
+		}
+	}
+	for _, id := range c.missingOrder {
+		if slices.Contains(c.Missing[id].Extensions, ext) {
 			return id
 		}
 	}

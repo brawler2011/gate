@@ -117,3 +117,118 @@ package = "nodejs-slim_24"
 type = "interpreter"
 code_file = "foo.js"
 execute = "/usr/bin/node ${dir}/foo.js"
+
+
+[kotlin]
+name = "Kotlin 2.3"
+extensions = ["kt"]
+syntax = "kotlin"
+package = "kotlin"
+variant = "full"
+type = "compiler"
+code_file = "foo.kt"
+compile = "/usr/bin/kotlinc -J-XX:ActiveProcessorCount=1 -nowarn -include-runtime -d ${name} foo.kt"
+compile_file = "Main.jar"
+execute = "/usr/bin/java -Xmx192m -Xms32m -Xss64m -XX:ActiveProcessorCount=1 -jar ${dir}/Main.jar"
+
+[scala]
+name = "Scala 3.3"
+extensions = ["scala"]
+syntax = "scala"
+package = "scala_3"
+variant = "full"
+type = "compiler"
+code_file = "foo.scala"
+compile = "/usr/bin/scala-jar ${name} foo.scala"
+compile_file = "Main.jar"
+execute = "/usr/bin/java -Xmx192m -Xms32m -Xss64m -XX:ActiveProcessorCount=1 -jar ${dir}/Main.jar"
+
+[csharp]
+name = "C# 14 (.NET 10)"
+extensions = ["cs"]
+syntax = "csharp"
+package = "dotnet-sdk_10"
+variant = "full"
+type = "compiler"
+code_file = "foo.cs"
+compile = "/usr/bin/csc-dll ${name} foo.cs"
+compile_file = "solution.dll"
+execute = "/usr/bin/dotnet-dll ${dir}/solution.dll"
+
+[d]
+name = "D (LDC 1.41)"
+extensions = ["d"]
+syntax = "d"
+package = "ldc"
+variant = "full"
+type = "compiler"
+code_file = "foo.d"
+compile = "/usr/bin/ldc2 -O -release -of=${name} foo.d"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[pascal]
+name = "Free Pascal 3.2 (Delphi mode)"
+extensions = ["pas", "dpr"]
+syntax = "pascal"
+package = "fpc"
+variant = "full"
+type = "compiler"
+code_file = "foo.pas"
+compile = "/usr/bin/fpc -Mdelphi -O2 -XS -o${name} foo.pas"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[haskell]
+name = "Haskell (GHC 9.10)"
+extensions = ["hs"]
+syntax = "haskell"
+package = "ghc"
+variant = "full"
+type = "compiler"
+code_file = "foo.hs"
+compile = "/usr/bin/ghc -O2 -o ${name} foo.hs"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[ocaml]
+name = "OCaml 5.4"
+extensions = ["ml"]
+syntax = "ocaml"
+package = "ocaml"
+variant = "full"
+type = "compiler"
+code_file = "foo.ml"
+compile = "/usr/bin/ocamlopt -I +str -I +unix str.cmxa unix.cmxa -o ${name} foo.ml"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[ruby]
+name = "Ruby 3.4"
+extensions = ["rb"]
+syntax = "ruby"
+package = "ruby_3_4"
+variant = "full"
+type = "interpreter"
+code_file = "foo.rb"
+execute = "/usr/bin/ruby ${dir}/foo.rb"
+
+[php]
+name = "PHP 8.4"
+extensions = ["php"]
+syntax = "php"
+package = "php84"
+variant = "full"
+type = "interpreter"
+code_file = "foo.php"
+execute = "/usr/bin/php ${dir}/foo.php"
+
+[perl]
+name = "Perl 5.42"
+extensions = ["pl"]
+syntax = "perl"
+package = "perl"
+variant = "full"
+type = "interpreter"
+code_file = "foo.pl"
+execute = "/usr/bin/perl ${dir}/foo.pl"

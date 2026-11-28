@@ -57,14 +57,14 @@ func (s *IntegrationTestSuite) onlyMainSolution(userID, problemID uuid.UUID) {
 
 func testLanguages(t *testing.T) *sandbox.Config {
 	t.Helper()
-	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	return cfg
 }
 
 func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	t.Helper()
-	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	return problemsmodel.BuildOptions{
 		Languages:   cfg.Langs,

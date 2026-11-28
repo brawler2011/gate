@@ -92,7 +92,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	store := storage.NewS3Storage(storage.S3Config{Endpoint: shared.endpoint, AccessKey: "test", SecretKey: "test", Region: "us-east-1"})
 	bucket := "t-" + uuid.NewString()
 	require.NoError(t, store.EnsureBucket(ctx, bucket))
-	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml", sandbox.VariantMinimal)
 	require.NoError(t, err)
 	return pipelineServices{store: store, bucket: bucket, client: shared.client, files: shared.files, langs: cfg.Langs, typeset: dbfixtures.Typesetter(t)}
 }

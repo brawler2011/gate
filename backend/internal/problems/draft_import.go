@@ -538,9 +538,12 @@ func (c *importConverter) language(program spec.Program) (string, error) {
 	if language == "" {
 		language = c.uc.Languages.ForPath(program.Name)
 	}
-	if _, ok := c.uc.Languages.Langs[language]; !ok {
-		if language == "" {
-			return "", spec.Fail(pkg.ErrUnsupported, program.Path, "", "no language configuration accepts %s", program.Path)
+	if language == "" {
+		return "", spec.Fail(pkg.ErrUnsupported, program.Path, "", "no language configuration accepts %s", program.Path)
+	}
+	if _, err := c.uc.Languages.Lookup(language); err != nil {
+		if _, ok := errors.AsType[*sandbox.NotInstalledError](err); ok {
+			return "", spec.Fail(pkg.ErrUnsupported, program.Path, language, "%s of %s", err, program.Path)
 		}
 		return "", spec.Fail(pkg.ErrUnsupported, program.Path, language, "unsupported language configuration %s of %s", language, program.Path)
 	}

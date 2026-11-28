@@ -177,7 +177,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	}
 	if mode.API() {
 		if !mode.Worker() {
-			languages, err = sandbox.LoadConfig(filepath.Join(cfg.Judge.ManifestDir, "langs.toml"))
+			languages, err = sandbox.LoadManifest(cfg.Judge.ManifestDir)
 			if err != nil {
 				return err
 			}

@@ -122,9 +122,9 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 		return Executable{}, fmt.Errorf("invalid compilation limits")
 	}
 
-	lang, ok := s.config.Langs[langKey]
-	if !ok {
-		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
+	lang, err := s.config.Lookup(langKey)
+	if err != nil {
+		return Executable{}, err
 	}
 	outputName := cmp.Or(lang.CompileFile, "solution")
 	codeFile, compileCmd := lang.CodeFile, lang.Compile
@@ -156,7 +156,6 @@ func (s *Sandbox) compile(ctx context.Context, sourceCode []byte, langKey string
 	var uploaded []string
 	defer func() { s.client.release(uploaded...) }()
 	copyIn := make(map[string]cmdFile)
-	var err error
 	if copyIn[codeFile], err = s.inline(ctx, sourceCode, &uploaded); err != nil {
 		return Executable{}, err
 	}

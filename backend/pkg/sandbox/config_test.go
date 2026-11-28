@@ -25,7 +25,7 @@ package = "python314"
 type = "interpreter"
 code_file = "foo.py"
 execute = "/usr/bin/python3 ${dir}/foo.py"
-`))
+`), VariantMinimal)
 	require.NoError(t, err)
 	require.Equal(t, map[string]Language{"python3": {Name: "Python 3", Extensions: []string{"py"}, Type: "interpreter", CodeFile: "foo.py", Execute: "/usr/bin/python3 ${dir}/foo.py"}}, cfg.Langs)
 }
@@ -35,12 +35,12 @@ func TestLoadConfigRejectsUnknownKey(t *testing.T) {
 [python]
 type = "interpreter"
 exec = "/usr/bin/python3"
-`))
+`), VariantMinimal)
 	require.ErrorContains(t, err, "python.exec")
 }
 
 func TestLoadConfigRejectsEmpty(t *testing.T) {
-	_, err := LoadConfig(writeLangs(t, ""))
+	_, err := LoadConfig(writeLangs(t, ""), VariantMinimal)
 	require.Error(t, err)
 }
 
@@ -50,7 +50,7 @@ func TestLoadConfigRequiresNameAndExtensions(t *testing.T) {
 extensions = ["py"]
 code_file = "foo.py"
 execute = "/usr/bin/python3 foo.py"
-`))
+`), VariantMinimal)
 	require.ErrorContains(t, err, `language "python3" needs name`)
 	_, err = LoadConfig(writeLangs(t, `
 [python3]
@@ -58,19 +58,57 @@ name = "Python 3"
 extensions = [".py"]
 code_file = "foo.py"
 execute = "/usr/bin/python3 foo.py"
-`))
+`), VariantMinimal)
 	require.ErrorContains(t, err, `invalid extension ".py"`)
 }
 
 func TestLoadConfigRepositoryLangs(t *testing.T) {
-	cfg, err := LoadConfig("../../../judge/langs.toml")
+	for _, variant := range []string{VariantMinimal, VariantFull} {
+		cfg, err := LoadConfig("../../../judge/langs.toml", variant)
+		require.NoError(t, err)
+		require.Len(t, cfg.Order, len(cfg.Langs))
+	}
+}
+
+// The minimal image tells its missing languages from unknown ones.
+func TestVariantsSplitCatalog(t *testing.T) {
+	path := writeLangs(t, `
+[c]
+name = "C"
+extensions = ["c"]
+code_file = "foo.c"
+execute = "run"
+
+[kotlin]
+name = "Kotlin"
+extensions = ["kt"]
+code_file = "foo.kt"
+execute = "run"
+variant = "full"
+`)
+	full, err := LoadConfig(path, VariantFull)
 	require.NoError(t, err)
-	require.Len(t, cfg.Order, len(cfg.Langs))
+	require.Equal(t, []string{"c", "kotlin"}, full.Order)
+	_, err = full.Lookup("kotlin")
+	require.NoError(t, err)
+
+	minimal, err := LoadConfig(path, VariantMinimal)
+	require.NoError(t, err)
+	require.Equal(t, []string{"c"}, minimal.Order)
+	require.Equal(t, "kotlin", minimal.ForPath("a.kt"))
+	_, err = minimal.Lookup("kotlin")
+	require.ErrorIs(t, err, ErrUnknownLanguage)
+	require.EqualError(t, err, "language kotlin (Kotlin) is not installed on this server")
+	_, err = minimal.Lookup("cobol")
+	require.EqualError(t, err, "unknown language configuration: cobol")
+
+	_, err = LoadConfig(path, "huge")
+	require.Error(t, err)
 }
 
 // Each grader-capable language needs its own entry grader or linked source, and Python and Java also the solution name.
 func TestGradedLanguagesOfRepositoryCatalog(t *testing.T) {
-	cfg, err := LoadConfig("../../../judge/langs.toml")
+	cfg, err := LoadConfig("../../../judge/langs.toml", VariantMinimal)
 	require.NoError(t, err)
 	cpp := []string{"cpp23", "cpp20", "cpp17"}
 	all := []string{"grader.cpp", "grader.h", "grader.py", "grader.java"}
@@ -110,7 +148,7 @@ name = "C++17"
 extensions = ["cpp", "cc", "cxx"]
 code_file = "foo.cc"
 execute = "run"
-`))
+`), VariantMinimal)
 	require.NoError(t, err)
 	require.Equal(t, []string{"cpp20", "cpp17"}, cfg.Order)
 	require.Equal(t, "cpp20", cfg.ForPath("solutions/a.CPP"))

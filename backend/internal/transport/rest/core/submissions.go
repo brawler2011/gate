@@ -28,8 +28,8 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.AtField("/submission", pkg.Invalid(pkg.ErrTooLarge, "solution is too large", map[string]any{"max": maxSolutionSize}))
 	}
 
-	if _, ok := h.languages.Langs[params.Language]; !ok {
-		return nil, pkg.Invalid(pkg.ErrUnknownLanguage, "unknown language configuration", map[string]any{"id": params.Language})
+	if _, err := h.languages.Lookup(params.Language); err != nil {
+		return nil, pkg.Invalid(pkg.ErrUnknownLanguage, err.Error(), map[string]any{"id": params.Language})
 	}
 
 	contest, err := h.Contests.GetContest(ctx, params.ContestID)
