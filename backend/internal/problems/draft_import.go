@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
@@ -660,7 +661,7 @@ func (c *importConverter) addPictures(ctx context.Context, pictures []spec.File)
 	for _, ps := range slices.Sorted(maps.Keys(svgs)) {
 		base := strings.TrimSuffix(ps, path.Ext(ps))
 		name := ps + ".svg"
-		if ext := strings.ToLower(path.Ext(ps)); ext == ".eps" || ext == ".ps" || ext == ".mps" {
+		if ext := strings.ToLower(path.Ext(ps)); (ext == ".eps" || ext == ".ps" || ext == ".mps") && !asset(base+".svg") {
 			name = base + ".svg"
 		}
 		if asset(name) || !model.ValidFileName(name) {
@@ -689,11 +690,17 @@ func (c *importConverter) addPictures(ctx context.Context, pictures []spec.File)
 	return nil
 }
 
+// pictureRef is the file argument of \includegraphics and \illustration.
+var pictureRef = regexp.MustCompile(`(\\includegraphics\s*(?:\[[^\]]*\]\s*)?|\\illustration\s*\{[^{}]*\}\s*)\{([^{}]*)\}`)
+
 func (c *importConverter) renamePictures(text string) string {
-	for _, ref := range slices.Sorted(maps.Keys(c.pictures)) {
-		text = strings.ReplaceAll(text, "{"+ref+"}", "{"+c.pictures[ref]+"}")
-	}
-	return text
+	return pictureRef.ReplaceAllStringFunc(text, func(m string) string {
+		parts := pictureRef.FindStringSubmatch(m)
+		if svg, ok := c.pictures[strings.TrimSpace(parts[2])]; ok {
+			return parts[1] + "{" + svg + "}"
+		}
+		return m
+	})
 }
 
 // latex reads a LaTeX file, or converts a Markdown one.

@@ -111,7 +111,7 @@ func TestHTMLSkipsOnlyLayoutCommands(t *testing.T) {
 	out := `<h1 class="unnumbered" id="gate-section-legend">gate-section-legend</h1><p>Text.</p>`
 	for skipped, layout := range map[string]bool{
 		"\\noindent ": true, "\\parindent=1cm": true, "\\itemsep=-1mm plus 0.5mm": true, "\\vskip 0pt plus 1fill": true, "\\hskip\\parindent": true,
-		"\\vspace*{2mm}": true, "\\setlength{\\parskip}{1ex}": true, "\\begin{small}": true, "\\Large ": true,
+		"\\vspace*{2mm}": true, "\\setlength{\\parskip}{1ex}": true, "\\begin{small}": true, "\\Large ": true, "\\pagebreak[2]": true,
 		"\\medskip{\\small hidden}": false, "\\vspace{1mm}{hidden}": false, "\\noindent{hidden}": false, "\\foo": false, "\\begin{foo}": false,
 	} {
 		_, err := HTML(context.Background(), pandocStub{html: out, skipped: skipped}, []Section{{Name: "legend", Text: skipped + "Text."}}, nil)

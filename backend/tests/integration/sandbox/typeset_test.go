@@ -81,9 +81,10 @@ func TestTypesetStatements(t *testing.T) {
 	t.Run("Pictures turn MetaPost and EPS into SVG", func(t *testing.T) {
 		mp := "prologues := 3;\noutputtemplate := \"%j-%c.eps\";\nbeginfig(1) draw (0,0)--(1cm,1cm); label(btex $x_1$ etex, (0,0)); endfig;\nbeginfig(2) draw fullcircle scaled 1cm; endfig;\nend\n"
 		eps := "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 20 20\nnewpath 0 0 moveto 20 20 lineto stroke\nshowpage\n"
-		svgs, err := ts.Pictures(ctx, map[string][]byte{"pic.mp": []byte(mp), "line.eps": []byte(eps)})
+		pipe := "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 20 20\n(%pipe%echo pwned > pwned.eps) (w) file closefile\nshowpage\n"
+		svgs, err := ts.Pictures(ctx, map[string][]byte{"pic.mp": []byte(mp), "line.eps": []byte(eps), "pipe.eps": []byte(pipe)})
 		require.NoError(t, err)
-		require.ElementsMatch(t, []string{"pic-1.eps", "pic-2.eps", "line.eps"}, slices.Collect(maps.Keys(svgs)))
+		require.ElementsMatch(t, []string{"pic-1.eps", "pic-2.eps", "line.eps"}, slices.Collect(maps.Keys(svgs)), "SAFER Ghostscript refuses pipe.eps")
 		for name, svg := range svgs {
 			require.Contains(t, string(svg), "<svg", name)
 		}

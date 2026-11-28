@@ -123,11 +123,13 @@ for f in **/*.svg; do rsvg-convert -f pdf -o "$f.pdf" "$f" && mv "$f.pdf" "$f" |
 }
 
 // pictureScript builds MetaPost sources into PostScript, then prints "name<TAB>base64 SVG" for every PostScript file; pictures that fail are left out.
+// dvisvgm runs Ghostscript without SAFER, so it reads only the EPS that SAFER Ghostscript rewrote.
 const pictureScript = `shopt -s nullglob
-for f in *.mp; do mpost -interaction=batchmode -s prologues=3 "$f" </dev/null >/dev/null 2>&1; done
+for f in *.mp; do mpost -interaction=batchmode -s prologues=3 "./$f" </dev/null >/dev/null 2>&1; done
 for f in *; do
   [ -f "$f" ] && [ "$(head -c 2 -- "$f")" = '%!' ] || continue
-  dvisvgm --eps --no-fonts --output=/tmp/out.svg -- "$f" >/dev/null 2>&1 && [ -s /tmp/out.svg ] || continue
+  gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=eps2write -dEPSCrop -o /tmp/safe.eps "./$f" </dev/null >/dev/null 2>&1 || continue
+  dvisvgm --eps --no-fonts --output=/tmp/out.svg /tmp/safe.eps >/dev/null 2>&1 && [ -s /tmp/out.svg ] || continue
   printf '%s\t' "$f" >> svg; base64 -w0 /tmp/out.svg >> svg; echo >> svg; rm /tmp/out.svg
 done`
 

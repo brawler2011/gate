@@ -565,21 +565,23 @@ func TestImportConvertsPostScriptPictures(t *testing.T) {
 	uc := newImportUseCase(t)
 	uc.Typeset = svgTypesetter{}
 	archive := packageArchive(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{
-		"statement-sections/english/legend.tex": "\\includegraphics{pic-1.eps} \\includegraphics[width=2cm]{pic-2} \\illustration{.3}{photo}{By me}",
+		"statement-sections/english/legend.tex": "\\includegraphics{pic-1.eps} \\includegraphics[width=2cm]{pic-2} \\illustration{.3}{photo}{photo} \\texttt{pic-1.eps} \\includegraphics{map.eps}",
 		"statement-sections/english/pic.mp":     "beginfig(1); endfig; beginfig(2); endfig; end",
 		"statement-sections/english/photo.eps":  "%!PS",
 		"statement-sections/english/photo.png":  "png",
+		"statement-sections/english/map.eps":    "%!PS",
+		"statement-sections/english/map.svg":    "<svg/>",
 	})
 	plan, err := uc.parseImport(context.Background(), archive, uuid.New(), 1)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, "\\includegraphics{pic-1.svg} \\includegraphics[width=2cm]{pic-2.svg} \\illustration{.3}{photo}{By me}", plan.draft.Statement("en").Legend,
+	require.Equal(t, "\\includegraphics{pic-1.svg} \\includegraphics[width=2cm]{pic-2.svg} \\illustration{.3}{photo}{photo} \\texttt{pic-1.eps} \\includegraphics{map.eps.svg}", plan.draft.Statement("en").Legend,
 		"graphicx finds photo.png before photo.eps")
 	var names []string
 	for _, a := range plan.draft.Assets {
 		names = append(names, a.Name)
 	}
-	require.ElementsMatch(t, []string{"photo.png", "photo.svg", "pic-1.svg", "pic-2.svg"}, names)
+	require.ElementsMatch(t, []string{"photo.png", "photo.svg", "pic-1.svg", "pic-2.svg", "map.svg", "map.eps.svg"}, names)
 }
 
 func TestImportKeepsStatementTitles(t *testing.T) {

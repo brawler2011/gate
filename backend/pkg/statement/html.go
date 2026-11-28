@@ -50,10 +50,10 @@ const prelude = "\\renewcommand{\\t}[1]{\\texttt{#1}}\n" +
 // \bgroup and \egroup come from expanding \newenvironment.
 var layout = func() *regexp.Regexp {
 	sizes := "tiny|scriptsize|footnotesize|small|normalsize|large|Large|LARGE|huge|Huge"
-	plain := "noindent|indent|centering|smallskip|medskip|bigskip|hfil|hfill|vfil|vfill|quad|qquad|newpage|clearpage|pagebreak|nopagebreak|bgroup|egroup|" + sizes
+	plain := "noindent|indent|centering|smallskip|medskip|bigskip|hfil|hfill|vfil|vfill|quad|qquad|newpage|clearpage|bgroup|egroup|" + sizes
 	dimen := `[-+]?(?:[0-9.]+\s*[a-z]{2,4}|[0-9.]*\s*\\[a-zA-Z]+)`
 	glue := dimen + `(?:\s*(?:plus|minus)\s*` + dimen + `)*`
-	return regexp.MustCompile(`^\\(?:(?:` + plain + `)|(?:begin|end)\{(?:` + sizes + `)\}|[vh]space\*?\{[^{}]*\}|(?:setlength|addtolength)\{\\[a-zA-Z]+\}\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
+	return regexp.MustCompile(`^\\(?:(?:` + plain + `)|(?:begin|end)\{(?:` + sizes + `)\}|(?:no)?pagebreak(?:\[[0-4]\])?|[vh]space\*?\{[^{}]*\}|(?:setlength|addtolength)\{\\[a-zA-Z]+\}\{[^{}]*\}|(?:parindent|parskip|itemsep|vskip|hskip)\s*=?\s*` + glue + `)\s*$`)
 }()
 
 // HTML converts sections, given in Order, in one pandoc run. Content pandoc skips fails, so the site never misses what the PDF shows.
