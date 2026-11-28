@@ -33,7 +33,7 @@ typeset:
   parallelism: 1
   resources:
     requests: {cpu: 100m, memory: 256Mi}
-    limits: {memory: 1Gi}
+    limits: {memory: 1280Mi}
 
 ingress:
   host: ""

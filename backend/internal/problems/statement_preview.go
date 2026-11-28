@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -28,7 +29,7 @@ func (uc *DraftUseCase) PreviewStatementPDF(ctx context.Context, id uuid.UUID, s
 	if err != nil {
 		return nil, err
 	}
-	files := map[string][]byte{"olymp.sty": statement.OlympSty}
+	files := statement.Files(s.Language)
 	for _, a := range d.Assets {
 		if files["assets/"+a.Name], err = uc.readObject(ctx, a.ObjectID); err != nil {
 			return nil, err
@@ -41,6 +42,9 @@ func (uc *DraftUseCase) PreviewStatementPDF(ctx context.Context, id uuid.UUID, s
 }
 
 func (uc *DraftUseCase) preview(ctx context.Context, id uuid.UUID, s model.DraftStatement) (model.Draft, error) {
+	if !slices.Contains(statement.Languages, s.Language) {
+		return model.Draft{}, pkg.AtField("/language", pkg.Invalid(pkg.ErrUnknown, fmt.Sprintf("statements cannot be written in %q", s.Language), map[string]any{"value": s.Language}))
+	}
 	if _, err := uc.authorize(ctx, id, false); err != nil {
 		return model.Draft{}, err
 	}

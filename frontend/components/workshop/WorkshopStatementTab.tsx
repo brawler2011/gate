@@ -2,9 +2,8 @@
 
 import {ActionIcon, Alert, Anchor, Box, Button, FileInput, Group, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
-import {notifications} from "@mantine/notifications";
 import {IconCopy, IconPencil, IconTrash, IconUpload} from "@tabler/icons-react";
-import {useMutation} from "@tanstack/react-query";
+import {useMutation, useQuery} from "@tanstack/react-query";
 import {useState} from "react";
 
 import {StatementHtml} from "@/components/problems/StatementHtml";
@@ -140,19 +139,22 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
   const {save} = useSaveDraft(problemId);
   const languages = draft.statements.map((s) => s.language);
   const [language, setLanguage] = useState<string>(languages[0] ?? "ru");
-  const [newLanguage, setNewLanguage] = useState("");
+  const [newLanguage, setNewLanguage] = useState<string | null>(null);
+  const {data: available = []} = useQuery({
+    queryKey: ["statement-languages"],
+    queryFn: async () => (await unwrap(api.GET("/statement-languages"))).languages,
+    staleTime: Infinity,
+  });
   const stored = draft.statements.find((s) => s.language === language) ?? emptyStatement(language);
+  const addable = available
+    .filter((code) => !languages.includes(code))
+    .map((code) => ({value: code, label: code.toUpperCase()}));
 
-  const addLanguage = async () => {
-    const code = newLanguage.trim().toLowerCase();
-    if (!/^[a-z]{2,8}(-[a-z0-9]{2,8})*$/.test(code)) {
-      notifications.show({title: "Недопустимый код языка", message: "Например: ru или en", color: "red"});
-      return;
-    }
+  const addLanguage = async (code: string) => {
     if (!languages.includes(code) && !(await save((current) => setStatement(current, emptyStatement(code))))) {
       return;
     }
-    setNewLanguage("");
+    setNewLanguage(null);
     setLanguage(code);
   };
 
@@ -163,8 +165,15 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
       <Stack gap="md">
         <Group align="flex-end" wrap="wrap">
           <Select label="Язык" data={options} value={language} allowDeselect={false} onChange={(value) => value && setLanguage(value)} w={120} />
-          <TextInput label="Новый язык" placeholder="en" value={newLanguage} onChange={(e) => setNewLanguage(e.currentTarget.value)} w={120} />
-          <Button variant="light" disabled={newLanguage.trim() === ""} onClick={() => void addLanguage()}>
+          <Select
+            label="Новый язык"
+            data={addable}
+            value={newLanguage}
+            onChange={setNewLanguage}
+            searchable
+            w={120}
+          />
+          <Button variant="light" disabled={newLanguage === null} onClick={() => newLanguage && void addLanguage(newLanguage)}>
             Добавить
           </Button>
         </Group>

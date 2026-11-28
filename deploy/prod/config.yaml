@@ -54,7 +54,7 @@ problems:
       diagnostic: 64KiB
     typeset:
       cpu: 30s
-      memory: 512MiB
+      memory: 1GiB
       processes: 100
       output: 64MiB
       diagnostic: 64KiB

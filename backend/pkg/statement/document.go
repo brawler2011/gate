@@ -2,19 +2,53 @@
 package statement
 
 import (
-	_ "embed"
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
+	"path"
+	"strconv"
 	"strings"
+
+	"golang.org/x/text/feature/plural"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
-//go:embed olymp.sty
-var OlympSty []byte
+//go:embed olymp.sty languages
+var files embed.FS
 
-// Version keys stored booklets: bump it whenever NewDocument or olymp.sty print differently.
-const Version = 1
+// Languages are the statement languages: those with a file in languages/.
+var Languages = func() []string {
+	entries, err := fs.ReadDir(files, "languages")
+	if err != nil {
+		panic(err)
+	}
+	var codes []string
+	for _, e := range entries {
+		codes = append(codes, strings.TrimSuffix(e.Name(), path.Ext(e.Name())))
+	}
+	return codes
+}()
+
+// Files are what a document in the language needs next to it.
+func Files(lang string) map[string][]byte {
+	result := map[string][]byte{}
+	for _, name := range []string{"olymp.sty", "languages/" + lang + ".tex"} {
+		data, err := files.ReadFile(name)
+		if err != nil {
+			panic(err)
+		}
+		result[name] = data
+	}
+	return result
+}
+
+// Version keys stored booklets: bump it whenever NewDocument, olymp.sty or a language file print differently.
+const Version = 2
 
 // Order is the order of sections in a statement; macros a section defines apply in the sections after it.
 var Order = []string{"legend", "input", "output", "interaction", "scoring", "notes"}
@@ -45,7 +79,7 @@ type Problem struct {
 
 type Contest struct {
 	Title, Place, Date string
-	// Language selects babel hyphenation and the words olymp.sty prints.
+	// Language is one of Languages.
 	Language string
 	Problems []Problem
 }
@@ -97,17 +131,13 @@ func (w *writer) text(s string) {
 }
 
 func NewDocument(c Contest) Document {
-	russian := c.Language == "ru"
+	tag := language.Make(c.Language)
 	w := &writer{line: 1}
 	var spans []span
-	w.text("\\documentclass[11pt,a4paper,oneside]{article}\n\\usepackage[T2A]{fontenc}\n\\usepackage[utf8]{inputenc}\n")
-	if russian {
-		w.text("\\usepackage[english,russian]{babel}\n")
-	} else {
-		w.text("\\usepackage[russian,english]{babel}\n")
-	}
+	w.text("\\documentclass[11pt,a4paper,oneside]{article}\n")
 	// SVG images arrive converted to PDF under their own names.
-	w.text("\\usepackage{amsmath,amssymb}\n\\usepackage{graphicx}\n\\DeclareGraphicsRule{.svg}{pdf}{*}{}\n\\usepackage{olymp}\n")
+	w.text("\\usepackage{amsmath,amssymb}\n\\usepackage{graphicx}\n\\DeclareGraphicsRule{.svg}{pdf}{*}{}\n")
+	w.text(fmt.Sprintf("\\usepackage[%s]{olymp}\n", c.Language))
 	w.text(fmt.Sprintf("\\contest{%s}{%s}{%s}\n", escape(c.Title), escape(c.Place), escape(c.Date)))
 	if c.Date == "" {
 		// olymp.sty ends the header line with \\, which fails after an empty paragraph.
@@ -130,10 +160,11 @@ func NewDocument(c Contest) Document {
 			w.text(fmt.Sprintf("\\graphicspath{{%s/}}\n", p.Assets))
 		}
 		var limit string
+		// FIXME(#481): builds print the draft's limit, so a limit the build derives leaves the time line out.
 		if p.TimeLimitMs != nil {
-			limit = timeLimit(*p.TimeLimitMs, russian)
+			limit = quantity(tag, *p.TimeLimitMs, 1000, "second")
 		}
-		w.text(fmt.Sprintf("\\begin{problem}{%s}{%s}{%s}{%s}{%s}\n", escape(name), stream(p.InputFile, "стандартный ввод", "standard input", russian), stream(p.OutputFile, "стандартный вывод", "standard output", russian), limit, memoryLimit(p.MemoryLimitMb, russian)))
+		w.text(fmt.Sprintf("\\begin{problem}{%s}{%s}{%s}{%s}{%s}\n", escape(name), stream(p.InputFile, "\\standardinput"), stream(p.OutputFile, "\\standardoutput"), limit, quantity(tag, p.MemoryLimitMb, 1, "mebibyte")))
 		section := func(s Section) {
 			if h, ok := headings[s.Name]; ok {
 				w.text(h + "\n")
@@ -171,42 +202,27 @@ func NewDocument(c Contest) Document {
 	return Document{Source: w.String(), spans: spans}
 }
 
-func stream(file, ru, en string, russian bool) string {
-	switch {
-	case file != "":
-		return escape(file)
-	case russian:
-		return ru
-	default:
-		return en
+func stream(file, standard string) string {
+	if file == "" {
+		return standard
 	}
+	return escape(file)
 }
 
-func timeLimit(ms int, russian bool) string {
-	s := fmt.Sprintf("%g", float64(ms)/1000)
-	if !strings.Contains(s, ".") {
-		s += ".0"
+// quantity prints value/scale in the language with up to three decimals and the unit's word in the plural form CLDR picks for it.
+func quantity(tag language.Tag, value, scale int, unit string) string {
+	whole, fraction := value/scale, strconv.Itoa(value%scale+scale)[1:]
+	fraction = strings.TrimRight(fraction, "0")
+	digits := 0
+	if fraction != "" {
+		digits, _ = strconv.Atoi(fraction)
 	}
-	switch {
-	case russian:
-		return s + " сек"
-	case ms == 1000:
-		return s + " second"
-	default:
-		return s + " seconds"
-	}
+	form := plural.Cardinal.MatchPlural(tag, whole, len(fraction), len(fraction), digits, digits)
+	n := message.NewPrinter(tag).Sprint(number.Decimal(float64(value)/float64(scale), number.NoSeparator(), number.MaxFractionDigits(3)))
+	return fmt.Sprintf("%s~\\limitunit{%s}{%s}", n, unit, forms[form])
 }
 
-func memoryLimit(mb int, russian bool) string {
-	unit, value := "megabytes", mb
-	if mb >= 1024 && mb%1024 == 0 {
-		unit, value = "gigabytes", mb/1024
-	}
-	if russian {
-		unit = map[string]string{"megabytes": "МБ", "gigabytes": "ГБ"}[unit]
-	}
-	return fmt.Sprintf("%d %s", value, unit)
-}
+var forms = map[plural.Form]string{plural.Zero: "zero", plural.One: "one", plural.Two: "two", plural.Few: "few", plural.Many: "many", plural.Other: "other"}
 
 // olymp.sty reads samples verbatim up to a final newline.
 func sample(s string) string {

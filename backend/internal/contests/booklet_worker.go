@@ -122,7 +122,7 @@ func (w *BookletWorker) compile(ctx context.Context, job contestsmodel.BookletJo
 	}
 	in := booklets[i].BookletInputs
 	doc := statement.Contest{Title: in.Title, Place: in.Place, Date: in.Date, Language: in.Language}
-	files := map[string][]byte{"olymp.sty": statement.OlympSty}
+	files := statement.Files(in.Language)
 	for n, p := range in.Problems {
 		printed, err := w.Statements.ReadPrinted(ctx, p.ProblemID, p.PackageID, in.Language)
 		if err != nil {

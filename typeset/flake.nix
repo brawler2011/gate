@@ -16,18 +16,29 @@
       pkgs = nixpkgs.legacyPackages.${system};
       n2c = nix2container.packages.${system}.nix2container;
 
-      # metafont generates Cyrillic font metrics on demand.
       tex = pkgs.texliveBasic.withPackages (
         ps: with ps; [
           amsfonts
           amsmath
-          babel-russian
-          cm-super
-          cyrillic
+          babel
+          cm-unicode
           dvisvgm
+          fontspec
           graphics
+          hyphen-afrikaans
+          hyphen-estonian
+          hyphen-finnish
+          hyphen-german
+          hyphen-icelandic
+          hyphen-latvian
+          hyphen-lithuanian
+          hyphen-norwegian
+          hyphen-polish
           hyphen-russian
-          lh
+          hyphen-swedish
+          hyphen-ukrainian
+          luaotfload
+          luatex
           metafont
           metapost
           wrapfig
@@ -36,6 +47,42 @@
 
       # rsvg-convert renders SVG text with these fonts only.
       fonts = pkgs.makeFontsConf { fontDirectories = [ pkgs.dejavu_fonts ]; };
+
+      # Regional subsets: LuaTeX holds a whole font per size in memory, and Pan-CJK has 65k glyphs.
+      noto = "https://github.com/notofonts/noto-cjk/raw/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/SubsetOTF";
+      cjk = pkgs.runCommand "noto-serif-cjk-subsets" { } ''
+          mkdir -p $out
+          cp ${pkgs.fetchurl { url = "${noto}/JP/NotoSerifJP-Regular.otf"; hash = "sha256-LJoS29TyQIxGEMfuhKEIti1yNsN3W67WGMZNnLRLLwQ="; }} $out/NotoSerifJP-Regular.otf
+          cp ${pkgs.fetchurl { url = "${noto}/JP/NotoSerifJP-Bold.otf"; hash = "sha256-HgNIig1egZ8H/NdPVHA6eWG6Rm066QD4oqcwVB5tRUM="; }} $out/NotoSerifJP-Bold.otf
+          cp ${pkgs.fetchurl { url = "${noto}/SC/NotoSerifSC-Regular.otf"; hash = "sha256-6POW3swfCWOgFqmJw9iFLoY9E1CZb1c4YKgHZ8g6HNM="; }} $out/NotoSerifSC-Regular.otf
+          cp ${pkgs.fetchurl { url = "${noto}/SC/NotoSerifSC-Bold.otf"; hash = "sha256-JGk9SL25FS8KBrAq9iVjihCXq9beQBDrugJ/boJxBSc="; }} $out/NotoSerifSC-Bold.otf
+      '';
+
+      # luaotfload's font database and parsed fonts; without them every sandboxed run rebuilds them for seconds.
+      fontCache = pkgs.runCommand "typeset-font-cache" { nativeBuildInputs = [ tex ]; } ''
+        export HOME=$TMPDIR OSFONTDIR=${cjk} TEXMFVAR=$out TEXMFCACHE=$out
+        mkdir -p $out
+        cat > warm.tex <<'EOF'
+        \documentclass{article}
+        \usepackage{fontspec}
+        \begin{document}
+        \fontspec{cmunrm.otf}[BoldFont=cmunbx.otf, ItalicFont=cmunti.otf, BoldItalicFont=cmunbi.otf]a\textbf{a}\textit{a}\textbf{\textit{a}}
+        \fontspec{cmunss.otf}[BoldFont=cmunsx.otf, ItalicFont=cmunsi.otf, BoldItalicFont=cmunso.otf]a\textbf{a}\textit{a}\textbf{\textit{a}}
+        \fontspec{cmuntt.otf}[BoldFont=cmuntb.otf, ItalicFont=cmunit.otf, BoldItalicFont=cmuntx.otf]a\textbf{a}\textit{a}\textbf{\textit{a}}
+        \fontspec{NotoSerifJP-Regular.otf}[Renderer=HarfBuzz, BoldFont=NotoSerifJP-Bold.otf]字\textbf{字}
+        \fontspec{NotoSerifSC-Regular.otf}[Renderer=HarfBuzz, BoldFont=NotoSerifSC-Bold.otf]字\textbf{字}
+        \end{document}
+        EOF
+        lualatex -interaction=nonstopmode -halt-on-error warm.tex
+      '';
+
+      # The typeset scripts source this before LuaLaTeX. luaotfload reads its font database only from the writable cache.
+      typesetEnv = pkgs.writeTextDir "bin/typeset-env" ''
+        export OSFONTDIR=${cjk} TEXMFCACHE=/tmp/texmf-var:${fontCache}
+        mkdir -p /tmp/texmf-var/luatex-cache/generic
+        cp -r ${fontCache}/luatex-cache/generic/names /tmp/texmf-var/luatex-cache/generic/
+        chmod -R u+w /tmp/texmf-var/luatex-cache
+      '';
 
       # Expose the Nix runtime as /usr/bin and /bin in mount.yaml.
       runtime = pkgs.buildEnv {
@@ -47,6 +94,7 @@
           pkgs.librsvg
           pkgs.pandoc
           tex
+          typesetEnv
         ];
       };
 
@@ -83,6 +131,8 @@
             pkgs.dejavu_fonts
           ])
           (layer [ pkgs.ghostscript ])
+          (layer [ cjk ])
+          (layer [ fontCache ])
           (layer [ pkgs.go-judge ])
         ];
         perms = [

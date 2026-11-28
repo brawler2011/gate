@@ -10,6 +10,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
 )
 
 func TestSplitTeXReadsImportedStatements(t *testing.T) {
@@ -116,5 +117,41 @@ func TestHTMLSkipsOnlyLayoutCommands(t *testing.T) {
 	} {
 		_, err := HTML(context.Background(), pandocStub{html: out, skipped: skipped}, []Section{{Name: "legend", Text: skipped + "Text."}}, nil)
 		require.Equal(t, !layout, err != nil, skipped)
+	}
+}
+
+func TestQuantityPicksPluralFormAndSeparator(t *testing.T) {
+	for _, c := range []struct {
+		lang         string
+		value, scale int
+		unit, want   string
+	}{
+		{"ru", 2500, 1000, "second", "2,5~\\limitunit{second}{other}"},
+		{"uk", 1000, 1000, "second", "1~\\limitunit{second}{one}"},
+		{"en", 2500, 1000, "second", "2.5~\\limitunit{second}{other}"},
+		{"en", 1000, 1000, "second", "1~\\limitunit{second}{one}"},
+		{"en", 1050, 1000, "second", "1.05~\\limitunit{second}{other}"},
+		{"ru", 256, 1, "mebibyte", "256~\\limitunit{mebibyte}{many}"},
+		{"ru", 1024, 1, "mebibyte", "1024~\\limitunit{mebibyte}{few}"},
+		{"en", 1024, 1, "mebibyte", "1024~\\limitunit{mebibyte}{other}"},
+		{"lv", 10000, 1000, "second", "10~\\limitunit{second}{zero}"},
+		{"lt", 1500, 1000, "second", "1,5~\\limitunit{second}{many}"},
+	} {
+		require.Equal(t, c.want, quantity(language.Make(c.lang), c.value, c.scale, c.unit), "%s %d", c.lang, c.value)
+	}
+}
+
+// Every plural form CLDR picks for a limit must have a word in the language file.
+func TestLanguageFilesHaveEveryPluralForm(t *testing.T) {
+	require.Contains(t, Languages, "en")
+	for _, lang := range Languages {
+		text := string(Files(lang)["languages/"+lang+".tex"])
+		for _, ms := range []int{0, 1000, 2000, 5000, 11000, 21000, 1500, 2500, 100, 1050} {
+			for _, unit := range []string{"second", "mebibyte"} {
+				q := quantity(language.Make(lang), ms, 1000, unit)
+				form := q[strings.LastIndex(q, "{")+1 : len(q)-1]
+				require.Contains(t, text, "\\def\\kw@"+unit+"@"+form+"{", "%s %d %s", lang, ms, unit)
+			}
+		}
 	}
 }

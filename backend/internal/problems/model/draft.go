@@ -17,18 +17,19 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 )
 
 // Draft holds typed entries; package paths are assigned only during build, import and export.
 type Draft struct {
-	ProblemID     uuid.UUID     `json:"problem_id"`
-	Revision      int64         `json:"revision"`
-	Title         string        `json:"title"`
-	ShortName     string        `json:"short_name"`
-	Type          string        `json:"type"`
-	Grading       string        `json:"grading"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	Revision  int64     `json:"revision"`
+	Title     string    `json:"title"`
+	ShortName string    `json:"short_name"`
+	Type      string    `json:"type"`
+	Grading   string    `json:"grading"`
 	// TimeLimitMs is nil when the build derives it by TimeRule.
 	TimeLimitMs   *int          `json:"time_limit_ms"`
 	MemoryLimitMb int           `json:"memory_limit_mb"`
@@ -52,9 +53,9 @@ type DraftContent struct {
 	// SolutionName is the module or class name under which graders import the solution; languages that need it are unavailable while it is empty.
 	SolutionName string `json:"solution_name"`
 	// Attachments are given to participants with the statement.
-	Attachments  []DraftFile         `json:"attachments"`
-	Statements   []DraftStatement    `json:"statements"`
-	Assets       []DraftAsset        `json:"assets"`
+	Attachments []DraftFile      `json:"attachments"`
+	Statements  []DraftStatement `json:"statements"`
+	Assets      []DraftAsset     `json:"assets"`
 	// Testset is the root group of every test.
 	Testset DraftGroup  `json:"testset"`
 	Tests   []DraftTest `json:"tests"`
@@ -267,8 +268,8 @@ type BuildLimits struct {
 	WallFactor int `json:"wall_factor" yaml:"wall_factor"`
 	// TimeCeiling bounds accepted solutions while a build derives the time limit from their run times.
 	TimeCeiling time.Duration         `json:"time_ceiling" yaml:"time_ceiling"`
-	Compile    sandbox.FileRunLimits `json:"compile" yaml:"compile"`
-	Auxiliary  sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
+	Compile     sandbox.FileRunLimits `json:"compile" yaml:"compile"`
+	Auxiliary   sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
 	// Typesetting runs in its own sandbox, outside build snapshots.
 	Typeset sandbox.FileRunLimits `json:"-" yaml:"typeset"`
 }
@@ -500,8 +501,7 @@ func ValidFileName(name string) bool {
 }
 
 var (
-	languageKey       = regexp.MustCompile(`^[a-z0-9][a-z0-9+_.-]{0,31}$`)
-	statementLanguage = regexp.MustCompile(`^[a-z]{2,8}(-[a-z0-9]{2,8})*$`)
+	languageKey = regexp.MustCompile(`^[a-z0-9][a-z0-9+_.-]{0,31}$`)
 )
 
 // EachObject visits every stored object reference with a description of it; f may replace the ID.
@@ -871,7 +871,11 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	languages := make(map[string]bool)
 	for i, s := range d.Statements {
 		at := fmt.Sprintf("/statements/%d", i)
-		v.name(at+"/language", s.Language, statementLanguage.MatchString(s.Language), languages)
+		if slices.Contains(statement.Languages, s.Language) {
+			v.name(at+"/language", s.Language, true, languages)
+		} else {
+			v.fail(at+"/language", pkg.ErrUnknown, value(s.Language), "statements cannot be written in %q", s.Language)
+		}
 		v.title(at+"/title", s.Title)
 		for _, name := range StatementSections {
 			text(at+"/"+name, *s.Section(name))

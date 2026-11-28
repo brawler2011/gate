@@ -65,8 +65,10 @@ func TestTypesetStatements(t *testing.T) {
 
 	t.Run("PDF prints Cyrillic outline fonts and SVG images", func(t *testing.T) {
 		svg := `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><text x="0" y="15">A</text></svg>`
-		doc := statement.NewDocument(problem("\\pdfcompresslevel=0 Сложите числа.\n\n\\includegraphics{pic.svg}"))
-		pdf, err := ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty, "assets/pic.svg": []byte(svg)})
+		doc := statement.NewDocument(problem("\\pdfvariable compresslevel=0 Сложите числа.\n\n\\includegraphics{pic.svg}"))
+		files := statement.Files("ru")
+		files["assets/pic.svg"] = []byte(svg)
+		pdf, err := ts.PDF(ctx, doc.Source, files)
 		require.NoError(t, err)
 		require.True(t, strings.HasPrefix(string(pdf), "%PDF"))
 		require.NotContains(t, string(pdf), "/Type3", "Cyrillic text falls back to bitmap fonts")
@@ -76,7 +78,9 @@ func TestTypesetStatements(t *testing.T) {
 		doc := statement.NewDocument(problem("\\noindent\\illustration{0.3}{pic.png}{By X}Text.\\begin{shortitems}\\item one\\end{shortitems}"))
 		png, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==")
 		require.NoError(t, err)
-		_, err = ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty, "assets/pic.png": png})
+		files := statement.Files("ru")
+		files["assets/pic.png"] = png
+		_, err = ts.PDF(ctx, doc.Source, files)
 		require.NoError(t, err)
 	})
 
@@ -92,9 +96,21 @@ func TestTypesetStatements(t *testing.T) {
 		}
 	})
 
+	t.Run("PDF typesets every statement language", func(t *testing.T) {
+		text := "Sample: Þ ð ä ö å ø ł ą ė ū ā š ž ü ß Привіт 你好 こんにちは."
+		for _, lang := range statement.Languages {
+			c := problem(text)
+			c.Language = lang
+			doc := statement.NewDocument(c)
+			pdf, err := ts.PDF(ctx, doc.Source, statement.Files(lang))
+			require.NoError(t, err, lang)
+			require.True(t, strings.HasPrefix(string(pdf), "%PDF"), lang)
+		}
+	})
+
 	t.Run("PDF errors name the section and its line", func(t *testing.T) {
 		doc := statement.NewDocument(problem("First line.\n\\undefinedmacro"))
-		_, err := ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty})
+		_, err := ts.PDF(ctx, doc.Source, statement.Files("ru"))
 		var e *statement.Error
 		require.ErrorAs(t, doc.Explain(err), &e)
 		require.Equal(t, "legend", e.Section)
@@ -104,7 +120,7 @@ func TestTypesetStatements(t *testing.T) {
 
 	t.Run("PDF names a missing image", func(t *testing.T) {
 		doc := statement.NewDocument(problem("Text.\n\\includegraphics{nope}"))
-		_, err := ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty})
+		_, err := ts.PDF(ctx, doc.Source, statement.Files("ru"))
 		var e *statement.Error
 		require.ErrorAs(t, doc.Explain(err), &e)
 		require.Equal(t, "legend", e.Section)
@@ -135,7 +151,7 @@ func TestTypesetStatements(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, html["legend"], "<td style=\"text-align: right\">2</td>")
 		doc := statement.NewDocument(statement.Contest{Language: "en", Problems: []statement.Problem{{Title: "Sum", Sections: sections}}})
-		_, err = ts.PDF(ctx, doc.Source, map[string][]byte{"olymp.sty": statement.OlympSty})
+		_, err = ts.PDF(ctx, doc.Source, statement.Files("en"))
 		require.NoError(t, err)
 	})
 }

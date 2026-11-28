@@ -185,6 +185,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/statement-languages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the languages statements can be written in */
+        get: operations["GetStatementLanguages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lib": {
         parameters: {
             query?: never;
@@ -4759,6 +4776,19 @@ export interface components {
             languages: components["schemas"]["SupportedLanguage"][];
         };
         /**
+         * @description Codes of the languages statements can be written in, sorted.
+         * @example {
+         *       "languages": [
+         *         "en",
+         *         "ru",
+         *         "uk"
+         *       ]
+         *     }
+         */
+        StatementLanguagesResponse: {
+            languages: string[];
+        };
+        /**
          * @description Fields for the create contest draft request.
          * @example {
          *       "code": "#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; }"
@@ -5720,6 +5750,7 @@ export type SystemLibrary = components['schemas']['SystemLibrary'];
 export type SystemChecker = components['schemas']['SystemChecker'];
 export type SystemLibraryFile = components['schemas']['SystemLibraryFile'];
 export type SupportedLanguagesResponse = components['schemas']['SupportedLanguagesResponse'];
+export type StatementLanguagesResponse = components['schemas']['StatementLanguagesResponse'];
 export type CreateContestDraftRequestModel = components['schemas']['CreateContestDraftRequestModel'];
 export type ContestDraftModel = components['schemas']['ContestDraftModel'];
 export type ListContestDraftsResponseModel = components['schemas']['ListContestDraftsResponseModel'];
@@ -6137,6 +6168,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SupportedLanguagesResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetStatementLanguages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementLanguagesResponse"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -463,6 +463,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}/draft/objects/{objectId}
 	GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (GetProblemDraftObjectOK, error)
+	// GetStatementLanguages implements GetStatementLanguages operation.
+	//
+	// Get the languages statements can be written in.
+	//
+	// GET /statement-languages
+	GetStatementLanguages(ctx context.Context) (*StatementLanguagesResponse, error)
 	// GetSubmission implements GetSubmission operation.
 	//
 	// Get submission.

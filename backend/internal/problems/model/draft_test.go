@@ -85,6 +85,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 		}, "/validators/0/groups/0", pkg.ErrInconsistent.Code},
 		"group arguments of a testlib checker": {func(d *Draft) { d.Testset.Groups[0].CheckerArgs = []string{"case_sensitive"} }, "/testset/groups/0/checker_args", pkg.ErrInconsistent.Code},
 		"arguments of a testlib checker": {func(d *Draft) { d.Checker.Args = []string{"case_sensitive"} }, "/checker/args", pkg.ErrInconsistent.Code},
+		"statement in a language without a file": {func(d *Draft) { d.Statements[0].Language = "fr" }, "/statements/0/language", pkg.ErrUnknown.Code},
 	} {
 		t.Run(name, func(t *testing.T) {
 			d := validDraft()

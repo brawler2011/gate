@@ -23,19 +23,19 @@ var (
 	rn94AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn129AllowedHeaders = map[string]string{
+	rn131AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn138AllowedHeaders = map[string]string{
-		"POST": "Content-Type",
-	}
-	rn145AllowedHeaders = map[string]string{
+	rn140AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn147AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn149AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn151AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn46AllowedHeaders = map[string]string{
@@ -56,19 +56,19 @@ var (
 	rn49AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn115AllowedHeaders = map[string]string{
+	rn117AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn27AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn141AllowedHeaders = map[string]string{
+	rn143AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
 	rn71AllowedHeaders = map[string]string{
 		"PATCH": "Content-Type",
 	}
-	rn140AllowedHeaders = map[string]string{
+	rn142AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn50AllowedHeaders = map[string]string{
@@ -86,7 +86,7 @@ var (
 	rn2AllowedHeaders = map[string]string{
 		"PATCH": "Content-Type",
 	}
-	rn116AllowedHeaders = map[string]string{
+	rn118AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn21AllowedHeaders = map[string]string{
@@ -116,16 +116,16 @@ var (
 	rn107AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn136AllowedHeaders = map[string]string{
+	rn138AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn137AllowedHeaders = map[string]string{
+	rn139AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn148AllowedHeaders = map[string]string{
+	rn150AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn114AllowedHeaders = map[string]string{
+	rn116AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn30AllowedHeaders = map[string]string{
@@ -152,7 +152,7 @@ var (
 	rn41AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn143AllowedHeaders = map[string]string{
+	rn145AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn63AllowedHeaders = map[string]string{
@@ -476,7 +476,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn129AllowedHeaders,
+										allowedHeaders: rn131AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -540,7 +540,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn138AllowedHeaders,
+										allowedHeaders: rn140AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -577,7 +577,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn145AllowedHeaders,
+											allowedHeaders: rn147AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -602,7 +602,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn147AllowedHeaders,
+											allowedHeaders: rn149AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -631,7 +631,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn149AllowedHeaders,
+									allowedHeaders: rn151AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -991,7 +991,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,POST",
-										allowedHeaders: rn115AllowedHeaders,
+										allowedHeaders: rn117AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -1225,7 +1225,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											default:
 												s.notAllowed(w, r, notAllowedParams{
 													allowedMethods: "PUT",
-													allowedHeaders: rn141AllowedHeaders,
+													allowedHeaders: rn143AllowedHeaders,
 													acceptPost:     "",
 													acceptPatch:    "",
 												})
@@ -1418,7 +1418,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn140AllowedHeaders,
+											allowedHeaders: rn142AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -2116,7 +2116,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,POST",
-										allowedHeaders: rn116AllowedHeaders,
+										allowedHeaders: rn118AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -2728,7 +2728,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn136AllowedHeaders,
+														allowedHeaders: rn138AllowedHeaders,
 														acceptPost:     "application/json",
 														acceptPatch:    "",
 													})
@@ -2755,7 +2755,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 													default:
 														s.notAllowed(w, r, notAllowedParams{
 															allowedMethods: "POST",
-															allowedHeaders: rn137AllowedHeaders,
+															allowedHeaders: rn139AllowedHeaders,
 															acceptPost:     "application/json",
 															acceptPatch:    "",
 														})
@@ -2784,7 +2784,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn148AllowedHeaders,
+														allowedHeaders: rn150AllowedHeaders,
 														acceptPost:     "multipart/form-data",
 														acceptPatch:    "",
 													})
@@ -2842,7 +2842,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "POST",
-												allowedHeaders: rn114AllowedHeaders,
+												allowedHeaders: rn116AllowedHeaders,
 												acceptPost:     "multipart/form-data",
 												acceptPatch:    "",
 											})
@@ -3039,127 +3039,166 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				}
 
-			case 's': // Prefix: "submissions"
+			case 's': // Prefix: "s"
 
-				if l := len("submissions"); len(elem) >= l && elem[0:l] == "submissions" {
+				if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					switch r.Method {
-					case "GET":
-						s.handleListSubmissionsRequest([0]string{}, elemIsEscaped, w, r)
-					case "POST":
-						s.handleCreateSubmissionRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, notAllowedParams{
-							allowedMethods: "GET,POST",
-							allowedHeaders: rn61AllowedHeaders,
-							acceptPost:     "application/json",
-							acceptPatch:    "",
-						})
-					}
-
-					return
+					break
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case 't': // Prefix: "tatement-languages"
 
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("tatement-languages"); len(elem) >= l && elem[0:l] == "tatement-languages" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleGetStatementLanguagesRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "GET",
+								allowedHeaders: nil,
+								acceptPost:     "",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
+				case 'u': // Prefix: "ubmissions"
+
+					if l := len("ubmissions"); len(elem) >= l && elem[0:l] == "ubmissions" {
+						elem = elem[l:]
+					} else {
 						break
 					}
-					switch elem[0] {
-					case 'o': // Prefix: "outputs"
-						origElem := elem
-						if l := len("outputs"); len(elem) >= l && elem[0:l] == "outputs" {
-							elem = elem[l:]
-						} else {
-							break
-						}
-
-						if len(elem) == 0 {
-							// Leaf node.
-							switch r.Method {
-							case "POST":
-								s.handleCreateOutputsSubmissionRequest([0]string{}, elemIsEscaped, w, r)
-							default:
-								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "POST",
-									allowedHeaders: rn56AllowedHeaders,
-									acceptPost:     "multipart/form-data",
-									acceptPatch:    "",
-								})
-							}
-
-							return
-						}
-
-						elem = origElem
-					}
-					// Param: "submission_id"
-					// Match until "/"
-					idx := strings.IndexByte(elem, '/')
-					if idx < 0 {
-						idx = len(elem)
-					}
-					args[0] = elem[:idx]
-					elem = elem[idx:]
 
 					if len(elem) == 0 {
 						switch r.Method {
 						case "GET":
-							s.handleGetSubmissionRequest([1]string{
-								args[0],
-							}, elemIsEscaped, w, r)
-						case "PATCH":
-							s.handleUpdateSubmissionRequest([1]string{
-								args[0],
-							}, elemIsEscaped, w, r)
+							s.handleListSubmissionsRequest([0]string{}, elemIsEscaped, w, r)
+						case "POST":
+							s.handleCreateSubmissionRequest([0]string{}, elemIsEscaped, w, r)
 						default:
 							s.notAllowed(w, r, notAllowedParams{
-								allowedMethods: "GET,PATCH",
-								allowedHeaders: rn87AllowedHeaders,
-								acceptPost:     "",
-								acceptPatch:    "application/json",
+								allowedMethods: "GET,POST",
+								allowedHeaders: rn61AllowedHeaders,
+								acceptPost:     "application/json",
+								acceptPatch:    "",
 							})
 						}
 
 						return
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/outputs.zip"
+					case '/': // Prefix: "/"
 
-						if l := len("/outputs.zip"); len(elem) >= l && elem[0:l] == "/outputs.zip" {
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
+							break
+						}
+						switch elem[0] {
+						case 'o': // Prefix: "outputs"
+							origElem := elem
+							if l := len("outputs"); len(elem) >= l && elem[0:l] == "outputs" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleCreateOutputsSubmissionRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn56AllowedHeaders,
+										acceptPost:     "multipart/form-data",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+							elem = origElem
+						}
+						// Param: "submission_id"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
 							switch r.Method {
 							case "GET":
-								s.handleDownloadSubmissionOutputsRequest([1]string{
+								s.handleGetSubmissionRequest([1]string{
+									args[0],
+								}, elemIsEscaped, w, r)
+							case "PATCH":
+								s.handleUpdateSubmissionRequest([1]string{
 									args[0],
 								}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "GET",
-									allowedHeaders: nil,
+									allowedMethods: "GET,PATCH",
+									allowedHeaders: rn87AllowedHeaders,
 									acceptPost:     "",
-									acceptPatch:    "",
+									acceptPatch:    "application/json",
 								})
 							}
 
 							return
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/outputs.zip"
+
+							if l := len("/outputs.zip"); len(elem) >= l && elem[0:l] == "/outputs.zip" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleDownloadSubmissionOutputsRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: nil,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
 						}
 
 					}
@@ -3505,7 +3544,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn143AllowedHeaders,
+											allowedHeaders: rn145AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -6624,135 +6663,174 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 				}
 
-			case 's': // Prefix: "submissions"
+			case 's': // Prefix: "s"
 
-				if l := len("submissions"); len(elem) >= l && elem[0:l] == "submissions" {
+				if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					switch method {
-					case "GET":
-						r.name = ListSubmissionsOperation
-						r.summary = "List submissions"
-						r.operationID = "ListSubmissions"
-						r.operationGroup = ""
-						r.pathPattern = "/submissions"
-						r.args = args
-						r.count = 0
-						return r, true
-					case "POST":
-						r.name = CreateSubmissionOperation
-						r.summary = "Create submission"
-						r.operationID = "CreateSubmission"
-						r.operationGroup = ""
-						r.pathPattern = "/submissions"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
-					}
+					break
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case 't': // Prefix: "tatement-languages"
 
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("tatement-languages"); len(elem) >= l && elem[0:l] == "tatement-languages" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = GetStatementLanguagesOperation
+							r.summary = "Get the languages statements can be written in"
+							r.operationID = "GetStatementLanguages"
+							r.operationGroup = ""
+							r.pathPattern = "/statement-languages"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'u': // Prefix: "ubmissions"
+
+					if l := len("ubmissions"); len(elem) >= l && elem[0:l] == "ubmissions" {
+						elem = elem[l:]
+					} else {
 						break
 					}
-					switch elem[0] {
-					case 'o': // Prefix: "outputs"
-						origElem := elem
-						if l := len("outputs"); len(elem) >= l && elem[0:l] == "outputs" {
-							elem = elem[l:]
-						} else {
-							break
-						}
-
-						if len(elem) == 0 {
-							// Leaf node.
-							switch method {
-							case "POST":
-								r.name = CreateOutputsSubmissionOperation
-								r.summary = "Submit outputs to an output-only problem"
-								r.operationID = "CreateOutputsSubmission"
-								r.operationGroup = ""
-								r.pathPattern = "/submissions/outputs"
-								r.args = args
-								r.count = 0
-								return r, true
-							default:
-								return
-							}
-						}
-
-						elem = origElem
-					}
-					// Param: "submission_id"
-					// Match until "/"
-					idx := strings.IndexByte(elem, '/')
-					if idx < 0 {
-						idx = len(elem)
-					}
-					args[0] = elem[:idx]
-					elem = elem[idx:]
 
 					if len(elem) == 0 {
 						switch method {
 						case "GET":
-							r.name = GetSubmissionOperation
-							r.summary = "Get submission"
-							r.operationID = "GetSubmission"
+							r.name = ListSubmissionsOperation
+							r.summary = "List submissions"
+							r.operationID = "ListSubmissions"
 							r.operationGroup = ""
-							r.pathPattern = "/submissions/{submission_id}"
+							r.pathPattern = "/submissions"
 							r.args = args
-							r.count = 1
+							r.count = 0
 							return r, true
-						case "PATCH":
-							r.name = UpdateSubmissionOperation
-							r.summary = "Block or unblock a contest submission"
-							r.operationID = "UpdateSubmission"
+						case "POST":
+							r.name = CreateSubmissionOperation
+							r.summary = "Create submission"
+							r.operationID = "CreateSubmission"
 							r.operationGroup = ""
-							r.pathPattern = "/submissions/{submission_id}"
+							r.pathPattern = "/submissions"
 							r.args = args
-							r.count = 1
+							r.count = 0
 							return r, true
 						default:
 							return
 						}
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/outputs.zip"
+					case '/': // Prefix: "/"
 
-						if l := len("/outputs.zip"); len(elem) >= l && elem[0:l] == "/outputs.zip" {
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
+							break
+						}
+						switch elem[0] {
+						case 'o': // Prefix: "outputs"
+							origElem := elem
+							if l := len("outputs"); len(elem) >= l && elem[0:l] == "outputs" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = CreateOutputsSubmissionOperation
+									r.summary = "Submit outputs to an output-only problem"
+									r.operationID = "CreateOutputsSubmission"
+									r.operationGroup = ""
+									r.pathPattern = "/submissions/outputs"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+							elem = origElem
+						}
+						// Param: "submission_id"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
 							switch method {
 							case "GET":
-								r.name = DownloadSubmissionOutputsOperation
-								r.summary = "Download the outputs of an output-only submission"
-								r.operationID = "DownloadSubmissionOutputs"
+								r.name = GetSubmissionOperation
+								r.summary = "Get submission"
+								r.operationID = "GetSubmission"
 								r.operationGroup = ""
-								r.pathPattern = "/submissions/{submission_id}/outputs.zip"
+								r.pathPattern = "/submissions/{submission_id}"
+								r.args = args
+								r.count = 1
+								return r, true
+							case "PATCH":
+								r.name = UpdateSubmissionOperation
+								r.summary = "Block or unblock a contest submission"
+								r.operationID = "UpdateSubmission"
+								r.operationGroup = ""
+								r.pathPattern = "/submissions/{submission_id}"
 								r.args = args
 								r.count = 1
 								return r, true
 							default:
 								return
 							}
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/outputs.zip"
+
+							if l := len("/outputs.zip"); len(elem) >= l && elem[0:l] == "/outputs.zip" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = DownloadSubmissionOutputsOperation
+									r.summary = "Download the outputs of an output-only submission"
+									r.operationID = "DownloadSubmissionOutputs"
+									r.operationGroup = ""
+									r.pathPattern = "/submissions/{submission_id}/outputs.zip"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
 						}
 
 					}

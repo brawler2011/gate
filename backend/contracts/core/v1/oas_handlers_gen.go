@@ -7606,6 +7606,82 @@ func (s *Server) handleGetProblemDraftObjectRequest(args [2]string, argsEscaped 
 	}
 }
 
+// handleGetStatementLanguagesRequest handles GetStatementLanguages operation.
+//
+// Get the languages statements can be written in.
+//
+// GET /statement-languages
+func (s *Server) handleGetStatementLanguagesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err error
+	)
+
+	var rawBody []byte
+
+	var response *StatementLanguagesResponse
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetStatementLanguagesOperation,
+			OperationSummary: "Get the languages statements can be written in",
+			OperationID:      "GetStatementLanguages",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = *StatementLanguagesResponse
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetStatementLanguages(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetStatementLanguages(ctx)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*ProblemStatusCodeWithHeaders](err); ok {
+			if err := encodeErrorResponse(errRes, w); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeGetStatementLanguagesResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetSubmissionRequest handles GetSubmission operation.
 //
 // Get submission.
