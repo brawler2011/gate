@@ -75,8 +75,9 @@ type Config struct {
 	Langs map[string]Language
 	// Order preserves the catalog display order.
 	Order []string
-	// Missing names the catalog's languages that this image lacks, by ID.
-	Missing map[string]string
+	// Missing holds the catalog's languages that this image lacks.
+	Missing      map[string]Language
+	missingOrder []string
 }
 
 // NotInstalledError is a catalog language that the running judge image lacks.
@@ -93,8 +94,8 @@ func (c *Config) Lookup(id string) (Language, error) {
 	if lang, ok := c.Langs[id]; ok {
 		return lang, nil
 	}
-	if name, ok := c.Missing[id]; ok {
-		return Language{}, &NotInstalledError{ID: id, Name: name}
+	if lang, ok := c.Missing[id]; ok {
+		return Language{}, &NotInstalledError{ID: id, Name: lang.Name}
 	}
 	return Language{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, id)
 }
@@ -136,7 +137,7 @@ func ParseConfig(data []byte, variant string) (*Config, error) {
 	if len(langs) == 0 {
 		return nil, fmt.Errorf("sandbox languages config defines no languages")
 	}
-	cfg := &Config{Langs: map[string]Language{}, Missing: map[string]string{}}
+	cfg := &Config{Langs: map[string]Language{}, Missing: map[string]Language{}}
 	for _, key := range meta.Keys() {
 		if len(key) != 1 {
 			continue
@@ -158,7 +159,8 @@ func ParseConfig(data []byte, variant string) (*Config, error) {
 			return nil, fmt.Errorf("language %q graders need code_file and an entry or ${graders} in compile", id)
 		}
 		if lang.Variant == VariantFull && variant != VariantFull {
-			cfg.Missing[id] = lang.Name
+			cfg.Missing[id] = lang
+			cfg.missingOrder = append(cfg.missingOrder, id)
 			continue
 		}
 		cfg.Langs[id] = lang
@@ -217,10 +219,16 @@ func (c *Config) Graded(graders []string, solution string) []string {
 	return langs
 }
 
+// ForPath prefers installed languages but falls back to missing ones, which Lookup then reports as not installed.
 func (c *Config) ForPath(file string) string {
 	ext := strings.ToLower(strings.TrimPrefix(path.Ext(file), "."))
 	for _, id := range c.Order {
 		if slices.Contains(c.Langs[id].Extensions, ext) {
+			return id
+		}
+	}
+	for _, id := range c.missingOrder {
+		if slices.Contains(c.Missing[id].Extensions, ext) {
 			return id
 		}
 	}

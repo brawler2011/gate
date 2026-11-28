@@ -95,7 +95,7 @@ variant = "full"
 	minimal, err := LoadConfig(path, VariantMinimal)
 	require.NoError(t, err)
 	require.Equal(t, []string{"c"}, minimal.Order)
-	require.Empty(t, minimal.ForPath("a.kt"))
+	require.Equal(t, "kotlin", minimal.ForPath("a.kt"))
 	_, err = minimal.Lookup("kotlin")
 	require.ErrorIs(t, err, ErrUnknownLanguage)
 	require.EqualError(t, err, "language kotlin (Kotlin) is not installed on this server")
