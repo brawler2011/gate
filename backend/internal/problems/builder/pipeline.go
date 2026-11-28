@@ -192,6 +192,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.checkSolutions(ctx); err != nil {
 		return uuid.Nil, err
 	}
+	// After runTests, so PDFs print the time limit it may derive.
 	statements, pdfs, err := e.typeset(ctx)
 	if err != nil {
 		return uuid.Nil, err

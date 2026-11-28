@@ -160,7 +160,6 @@ func NewDocument(c Contest) Document {
 			w.text(fmt.Sprintf("\\graphicspath{{%s/}}\n", p.Assets))
 		}
 		var limit string
-		// FIXME(#481): builds print the draft's limit, so a limit the build derives leaves the time line out.
 		if p.TimeLimitMs != nil {
 			limit = quantity(tag, *p.TimeLimitMs, 1000, "second")
 		}
