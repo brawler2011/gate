@@ -38,11 +38,12 @@ func (s *IntegrationTestSuite) loadPackage(id uuid.UUID) *judging.LoadedPackage 
 
 // Exported builtin templates import back, publish their checker/interactor sources and accept the main solution.
 func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
-	admin := s.createUser("admin_roles", accessmodel.UserRoleAdmin)
-	org := s.createOrganization("roles-org", "Roles Organization", admin.Id)
-	ctx := withTestUser(s.ctx, admin.Id)
 	for _, template := range templates.ListBuiltinTemplates() {
-		s.Run(template.ID, func() {
+		// Builds claim the next queued build, so each template gets its own database.
+		runIsolated(s.T(), template.ID, func(s *IntegrationTestSuite) {
+			admin := s.createUser("admin_roles", accessmodel.UserRoleAdmin)
+			org := s.createOrganization("roles-org", "Roles Organization", admin.Id)
+			ctx := withTestUser(s.ctx, admin.Id)
 			source, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{Title: template.ID, OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: template.ID})
 			s.Require().NoError(err)
 			before, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: source.ID})
