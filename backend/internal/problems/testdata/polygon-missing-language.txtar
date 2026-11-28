@@ -1,0 +1,17 @@
+A Polygon Kotlin solution on a judge image without Kotlin.
+
+-- problem.xml --
+<problem short-name="kotlin">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+    <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+    <tests><test method="manual"/></tests>
+  </testset></judging>
+  <assets><solutions>
+    <solution tag="main"><source path="solutions/main.kt" type="kotlin19"/></solution>
+  </solutions></assets>
+</problem>
+-- solutions/main.kt --
+fun main() {}
+-- tests/01 --
+1

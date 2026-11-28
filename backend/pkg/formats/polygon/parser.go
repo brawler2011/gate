@@ -12,8 +12,8 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
-	"github.com/brawler2011/gate/backend/pkg/statement"
 	"github.com/brawler2011/gate/backend/pkg/points"
+	"github.com/brawler2011/gate/backend/pkg/statement"
 )
 
 func Read(fsys fs.FS) (*spec.Problem, error) {
@@ -162,34 +162,46 @@ func program(s Source) (*spec.Program, error) {
 }
 
 var (
-	// GCC type names encode versions and builds; a bare cpp.g++ specifies no standard.
-	gccType  = regexp.MustCompile(`^cpp\.(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?g\+\+(\d\d)$`)
-	javaType = regexp.MustCompile(`^java\d*$`)
+	// GCC type names encode versions and builds.
+	gccType = regexp.MustCompile(`^cpp\.(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?g\+\+(\d\d)$`)
+	// Versions in these type names are compiler versions, which share one configuration named like the language.
+	versionedType = regexp.MustCompile(`^(java|kotlin|scala|csharp|ruby|php)(?:\d+|\.(?:\d+|mono|dotnet\d*))?$`)
 )
 
-// Compiler versions share a configuration; language standards and implementations must match exactly.
-// An unsupported source type is an error; an absent type defers to the file extension.
+// C++11, C++14 and C++ without a standard build as C++17, which accepts nearly all of their code.
 func Language(sourceType string) (string, error) {
 	if m := gccType.FindStringSubmatch(sourceType); m != nil {
+		if m[1] == "11" || m[1] == "14" {
+			return "cpp17", nil
+		}
 		return "cpp" + m[1], nil
 	}
-	switch {
-	case sourceType == "":
-		return "", nil
-	case strings.HasPrefix(sourceType, "c.gcc"):
+	if m := versionedType.FindStringSubmatch(sourceType); m != nil {
+		return m[1], nil
+	}
+	if strings.HasPrefix(sourceType, "c.gcc") {
 		return "c", nil
-	case sourceType == "python.3":
+	}
+	switch sourceType {
+	case "":
+		return "", nil
+	case "cpp.g++", "cpp.ms":
+		return "cpp17", nil
+	case "python.3":
 		return "python3", nil
-	case sourceType == "python.pypy3" || sourceType == "python.pypy3-64":
+	case "python.pypy3", "python.pypy3-64":
 		return "pypy3", nil
-	case javaType.MatchString(sourceType):
-		return "java", nil
-	case sourceType == "go":
+	case "go":
 		return "go", nil
-	case sourceType == "rust":
-		return "rust", nil
-	case sourceType == "js.node" || sourceType == "javascript.node":
+	// Polygon's plain rust predates the 2024 edition.
+	case "rust", "rust.2021":
+		return "rust2021", nil
+	case "js.node", "javascript.node":
 		return "node", nil
+	case "d":
+		return "d", nil
+	case "pas.fpc", "pas.dpr", "delphi":
+		return "pascal", nil
 	}
 	return "", spec.Fail(pkg.ErrUnsupported, "", sourceType, "unsupported Polygon source type %q", sourceType)
 }

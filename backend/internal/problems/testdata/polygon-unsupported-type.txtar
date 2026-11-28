@@ -1,4 +1,4 @@
-A Polygon Free Pascal solution: no Gate configuration runs it.
+A source type Polygon does not have: no Gate configuration runs it.
 
 -- problem.xml --
 <problem short-name="pascal">

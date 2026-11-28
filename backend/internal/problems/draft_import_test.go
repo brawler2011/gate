@@ -39,14 +39,17 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 
 // testCatalog has two configurations for .cpp; the extension suggests the first.
 var testCatalog = &sandbox.Config{
-	Order: []string{"c", "cpp17", "cpp20", "python3", "go", "java"},
+	Order:   []string{"c", "cpp17", "cpp20", "python3", "go", "java", "rust2021", "node"},
+	Missing: map[string]sandbox.Language{"kotlin": {Name: "Kotlin", Extensions: []string{"kt"}}},
 	Langs: map[string]sandbox.Language{
-		"c":       {Extensions: []string{"c"}},
-		"cpp17":   {Extensions: []string{"cpp", "cc", "cxx"}},
-		"cpp20":   {Extensions: []string{"cpp", "cc", "cxx"}},
-		"python3": {Extensions: []string{"py"}},
-		"go":      {Extensions: []string{"go"}},
-		"java":    {Extensions: []string{"java"}},
+		"c":        {Extensions: []string{"c"}},
+		"cpp17":    {Extensions: []string{"cpp", "cc", "cxx"}},
+		"cpp20":    {Extensions: []string{"cpp", "cc", "cxx"}},
+		"python3":  {Extensions: []string{"py"}},
+		"go":       {Extensions: []string{"go"}},
+		"java":     {Extensions: []string{"java"}},
+		"rust2021": {Extensions: []string{"rs"}},
+		"node":     {Extensions: []string{"js"}},
 	},
 }
 
@@ -496,8 +499,8 @@ func TestImportKeepsSeveralValidators(t *testing.T) {
 }
 
 func TestImportRejectsUnknownSourceExtension(t *testing.T) {
-	_, err := importAPlusB(t, map[string]string{"solutions/main.rs": "fn main() {}\n"})
-	require.ErrorContains(t, err, "no language configuration accepts solutions/main.rs")
+	_, err := importAPlusB(t, map[string]string{"solutions/main.cob": "DISPLAY 'HI'.\n"})
+	require.ErrorContains(t, err, "no language configuration accepts solutions/main.cob")
 }
 
 // Statement sections come from olymp.sty commands in a Polygon statement.
@@ -689,12 +692,14 @@ func TestImportKeepsPolygonSourceTypes(t *testing.T) {
 	for _, s := range plan.draft.Solutions {
 		languages[s.Name] = s.Language
 	}
-	require.Equal(t, map[string]string{"main": "cpp20", "old": "cpp17", "plain": "cpp17", "script": "python3"}, languages)
+	require.Equal(t, map[string]string{"main": "cpp20", "old": "cpp17", "plain": "cpp17", "script": "python3", "old14": "cpp17", "bare": "cpp17", "fast": "rust2021", "web": "node"}, languages)
 }
 
 func TestImportRejectsUnsupportedPolygonSourceTypes(t *testing.T) {
 	_, err := importDir(t, unpack(t, "polygon-unsupported-standard"), nil)
-	require.ErrorContains(t, err, "unsupported language configuration cpp14 of solutions/main.cpp")
+	require.ErrorContains(t, err, "unsupported language configuration cpp26 of solutions/main.cpp")
+	_, err = importDir(t, unpack(t, "polygon-missing-language"), nil)
+	require.ErrorContains(t, err, "language kotlin (Kotlin) is not installed on this server of solutions/main.kt")
 	_, err = importDir(t, unpack(t, "polygon-unsupported-type"), nil)
 	require.ErrorContains(t, err, `solutions/main.pas: unsupported Polygon source type "pascal.fpc"`)
 }
